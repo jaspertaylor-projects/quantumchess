@@ -1,0 +1,161 @@
+# docker-compose.yml
+# Purpose: Dev stack that avoids port collisions by publishing to ephemeral host ports by default, gates frontend on backend health, and preserves runtime venv persistence with pinned Python for uv.
+# Imports From: ./backend/Dockerfile, ./frontend/Dockerfile
+# Exported To: Docker daemon; persists ./logs and ./backend/.venv (runtime installs).
+
+services:
+  # Ensure host ./logs is owned by ${UID:-1000}:${GID:-1000} before others start.
+  log-perms:
+    image: alpine:3.20
+    user: "0:0"
+    working_dir: /logs
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /logs
+        if [ -f /logs ]; then
+          echo "Error: /logs exists as a file; expected a directory" >&2
+          exit 1
+        fi
+        chown -R ${UID:-1000}:${GID:-1000} /logs
+        chmod -R u+rwX,g+rwX /logs
+        echo "log-perms: fixed ownership to UID=${UID:-1000} GID=${GID:-1000}"
+    volumes:
+      - ./logs:/logs
+
+  # Ensure host ./backend/.venv exists and is owned correctly so uv can write to it.
+  venv-perms:
+    image: alpine:3.20
+    user: "0:0"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mkdir -p /venv
+        chown -R ${UID:-1000}:${GID:-1000} /venv
+        chmod -R u+rwX,g+rwX /venv
+        echo "venv-perms: fixed ownership of /venv"
+    volumes:
+      - ./backend/.venv:/venv
+
+  backend:
+    user: "${UID:-1000}:${GID:-1000}"
+    build:
+      context: ./backend
+    depends_on:
+      log-perms:
+        condition: service_completed_successfully
+      venv-perms:
+        condition: service_completed_successfully
+    environment:
+      - HOME=/tmp
+      - UV_CACHE_DIR=/tmp/uv-cache
+      - PIP_CACHE_DIR=/tmp/pip-cache
+      - LOG_DIR=/logs
+      # Keep runtime venv installs but pin uv to the image's Python 3.12 to avoid CPython drift/hangs.
+      - UV_PYTHON_PREFER_SYSTEM=1
+      - UV_PYTHON=python3.12
+    ports:
+      # Publish to a free host port by default (published: 0). Override with HOST_BACKEND_PORT if you want a fixed port.
+      - target: 8000
+        published: ${HOST_BACKEND_PORT:-0}
+        protocol: tcp
+    volumes:
+      # App source and lockfiles (hot reload + lock sync)
+      - ./backend/app:/app/app
+      - ./backend/pyproject.toml:/app/pyproject.toml
+      - ./backend/uv.lock:/app/uv.lock
+      # Persist the virtualenv so runtime-installed deps survive container recreation
+      - ./backend/.venv:/app/.venv
+      # Shared logs directory
+      - ./logs:/logs
+    # Deterministic, pinned runtime venv flow; then start uvicorn with reload.
+    command: >
+      sh -c "
+        set -ex
+        if [ ! -d /app/.venv ]; then
+          echo '--- Creating new virtual environment ---'
+          uv venv --python python3.12
+          uv sync --frozen || uv sync
+        else
+          echo '--- Using existing virtual environment ---'
+        fi
+        exec /app/.venv/bin/uvicorn app.bootstrap:asgi \
+          --host 0.0.0.0 \
+          --port 8000 \
+          --loop asyncio \
+          --reload \
+          --reload-dir app \
+          --reload-exclude '.venv/*' \
+          --reload-exclude 'node_modules/*' \
+          --log-config /app/uvicorn-log.json
+      "
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/api/hello"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      log-perms:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+    # Preflight step:
+    # - Pin pnpm store/virtual store (must match Dockerfile/.npmrc).
+    # - Reinstall if node_modules is missing OR metadata is stale vs lockfile/package.json.
+    # - Auto-install lucide-react if require.resolve fails (covers IDE-driven installs & cold starts).
+    # - Drop privileges for the dev server via su-exec.
+    command: >
+      sh -lc "
+        set -eu
+        mkdir -p /app/node_modules
+        chown -R ${UID:-1000}:${GID:-1000} /app/node_modules
+
+        pnpm config set store-dir /pnpm/store --location project >/dev/null 2>&1 || true
+        pnpm config set virtual-store-dir node_modules/.pnpm --location project >/dev/null 2>&1 || true
+
+        MODS=/app/node_modules/.pnpm/.modules.yaml
+        NEED_REINSTALL=0
+        [ ! -d /app/node_modules/.pnpm ] && NEED_REINSTALL=1
+        [ ! -f \"$MODS\" ] && NEED_REINSTALL=1
+        [ /app/pnpm-lock.yaml -nt \"$MODS\" ] && NEED_REINSTALL=1
+        [ /app/package.json -nt \"$MODS\" ] && NEED_REINSTALL=1
+
+
+        if [ \"$NEED_REINSTALL\" -eq 1 ]; then
+          echo '[frontend] Installing dependencies...'
+          pnpm install --frozen-lockfile || pnpm install
+        fi
+
+        # Ensure lucide-react is present for App.jsx imports
+        node -e \"require.resolve('lucide-react')\" 2>/dev/null || pnpm add lucide-react
+
+        exec su-exec ${UID:-1000}:${GID:-1000} pnpm run dev
+      "
+    ports:
+      # Publish to a free host port by default (published: 0). Override with HOST_FRONTEND_PORT if you want a fixed port.
+      - target: 5173
+        published: ${HOST_FRONTEND_PORT:-0}
+        protocol: tcp
+    environment:
+      - WATCHPACK_POLLING=true
+    volumes:
+      # Project source (hot reload)
+      - ./frontend:/app
+      # Make backend source visible to Vite at /app/backend (for full reload on backend changes)
+      - ./backend:/app/backend
+      # Use a named volume for node_modules (persists across down/up)
+      - frontend_node_modules:/app/node_modules
+      # Shared logs directory
+      - ./logs:/logs
+
+volumes:
+  frontend_node_modules:

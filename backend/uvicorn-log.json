@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "uvicorn_default": {
+      "()": "uvicorn.logging.DefaultFormatter",
+      "fmt": "%(levelprefix)s %(message)s",
+      "use_colors": false
+    }
+  },
+  "handlers": {
+    "backend_file": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "ERROR",
+      "formatter": "uvicorn_default",
+      "filename": "/logs/backend-error.log",
+      "maxBytes": 5242880,
+      "backupCount": 5,
+      "encoding": "utf-8"
+    }
+  },
+  "loggers": {
+    "uvicorn": {
+      "handlers": ["backend_file"],
+      "level": "ERROR",
+      "propagate": false
+    },
+    "uvicorn.error": {
+      "handlers": ["backend_file"],
+      "level": "ERROR",
+      "propagate": false
+    },
+    "uvicorn.access": {
+      "handlers": ["backend_file"],
+      "level": "ERROR",
+      "propagate": false
+    }
+  },
+  "root": {
+    "level": "ERROR",
+    "handlers": ["backend_file"]
+  }
+}

@@ -1,0 +1,6 @@
+ignoredBuiltDependencies:
+  - esbuild
+
+storeDir: /pnpm/store
+
+virtualStoreDir: node_modules/.pnpm

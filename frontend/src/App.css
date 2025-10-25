@@ -1,0 +1,37 @@
+/* frontend/src/App.css
+/* Purpose: Defines global styles for the application, using CSS variables populated from theme.js. */
+/* Imports From: None */
+/* Exported To: frontend/src/App.jsx */
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: var(--color-globalText);
+  background-color: var(--color-globalBackground);
+}
+
+body {
+  margin: 0;
+  /* Centering is now handled by App.jsx's container style */
+}
+
+/* Generic button styles - can be overridden by component-specific styles */
+button {
+  border-radius: 8px;
+  border: 1px solid var(--color-buttonGenericBorder);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--color-buttonGenericBackground);
+  color: var(--color-globalText);
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s;
+}
+
+button:hover {
+  border-color: var(--color-buttonGenericBorderHover);
+  background-color: var(--color-buttonGenericBackgroundHover);
+}
