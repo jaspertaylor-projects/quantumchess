@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive header fixed to 15% of viewport height; header PNG icon sizes derive from that height and resize on window changes; renders the interactive board, captured pieces, and settings/rules modals; manages SVG raster cache.
+// Purpose: Render the Quantum Chess UI with a responsive header and interactive board; includes player bars showing name (top half) and rating (bottom half), captured pieces, settings/rules modals, and manages SVG raster cache.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -71,6 +71,8 @@ export default function App() {
 
   const whitePlayer = 'White';
   const blackPlayer = 'Black';
+  const whiteRating = '????';
+  const blackRating = '????';
 
   useEffect(() => {
     const el = boardStageRef.current;
@@ -279,16 +281,38 @@ export default function App() {
         userSelect: 'none',
       };
     },
-    playerName: {
+    playerInfo: {
+      display: 'grid',
+      gridTemplateRows: '1fr 1fr',
+      alignItems: 'stretch',
+      justifyItems: 'start',
+      height: '100%',
+      flex: '1 1 auto',
+      padding: '4px 6px',
+      boxSizing: 'border-box',
+      minWidth: 0,
+    },
+    playerNameRow: {
       display: 'flex',
       alignItems: 'flex-end',
       height: '100%',
-      fontWeight: 700,
+      fontWeight: 800,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
-      fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
+      fontSize: 'clamp(0.9rem, 2.2vw, 1.1rem)',
       color: 'currentColor',
-      paddingBottom: 2,
+      lineHeight: 1,
+    },
+    playerRatingRow: {
+      display: 'flex',
+      alignItems: 'flex-start',
+      height: '100%',
+      fontWeight: 600,
+      letterSpacing: '0.03em',
+      fontSize: 'clamp(0.72rem, 1.8vw, 0.95rem)',
+      color: 'currentColor',
+      opacity: 0.82,
+      lineHeight: 1,
     },
     capturedArea: {
       display: 'flex',
@@ -622,7 +646,14 @@ export default function App() {
               data-side="black"
               ref={topBarRef}
             >
-              <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
+              <div className="qc-player-info qc-player-info--black" style={styles.playerInfo}>
+                <div className="qc-player-name-row qc-player-name-row--black" style={styles.playerNameRow}>
+                  <span className="qc-player-name-text qc-player-name-text--black">{blackPlayer}</span>
+                </div>
+                <div className="qc-player-rating-row qc-player-rating-row--black" style={styles.playerRatingRow}>
+                  <span className="qc-player-rating-text qc-player-rating-text--black">{blackRating}</span>
+                </div>
+              </div>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
                 {blackCaptured.map((p) => (
                   <CapturedIcon key={`capicon-${p.id}`} piece={p} />
@@ -667,7 +698,14 @@ export default function App() {
               data-side="white"
               ref={bottomBarRef}
             >
-              <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
+              <div className="qc-player-info qc-player-info--white" style={styles.playerInfo}>
+                <div className="qc-player-name-row qc-player-name-row--white" style={styles.playerNameRow}>
+                  <span className="qc-player-name-text qc-player-name-text--white">{whitePlayer}</span>
+                </div>
+                <div className="qc-player-rating-row qc-player-rating-row--white" style={styles.playerRatingRow}>
+                  <span className="qc-player-rating-text qc-player-rating-text--white">{whiteRating}</span>
+                </div>
+              </div>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
                 {whiteCaptured.map((p) => (
                   <CapturedIcon key={`capicon-${p.id}`} piece={p} />
