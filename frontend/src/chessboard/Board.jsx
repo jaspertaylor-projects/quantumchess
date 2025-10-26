@@ -1,6 +1,6 @@
 // frontend/src/chessboard/Board.jsx
-// Purpose: Responsive, accessible, and square-perfect chessboard with click-to-square translation and optional coordinate labels and highlights.
-// Imports From: ./useBoardInteractions.js, ./boardUtils.js, ../theme.js
+// Purpose: Responsive, accessible, and square-perfect chessboard with click-to-square translation, optional coordinate labels and highlights, and piece rendering support.
+// Imports From: ./useBoardInteractions.js, ./boardUtils.js, ../theme.js, ./QuantumPiece.jsx
 // Exported To: frontend/src/App.jsx
 
 import React, { useMemo } from 'react';
@@ -13,13 +13,17 @@ import {
   fromBoardIndex,
 } from './boardUtils.js';
 import theme from '../theme.js';
+import QuantumPiece from './QuantumPiece.jsx';
 
 export default function Board({
   orientation = 'white',
   onSquareClick,
   onSquareRightClick,
+  onPieceClick,
   showCoordinates = true,
   highlights = [], // [{ square: 'e4', color: 'rgba(255,255,0,0.4)' }]
+  pieces = [], // [{ id, side, square, possibleTypes }]
+  selectedId = null,
   squareColors = { light: '#f0d9b5', dark: '#b58863' },
   borderColor = theme.border,
   borderRadius = 12,
@@ -37,6 +41,15 @@ export default function Board({
     }
     return map;
   }, [highlights]);
+
+  const pieceBySquare = useMemo(() => {
+    const map = new Map();
+    for (const p of pieces) {
+      if (!p || p.captured || !p.square) continue;
+      map.set(p.square, p);
+    }
+    return map;
+  }, [pieces]);
 
   const styles = {
     root: {
@@ -62,8 +75,6 @@ export default function Board({
       borderRadius,
       userSelect: 'none',
       cursor: 'pointer',
-      // Height fallback for older browsers without aspect-ratio support
-      // The parent has aspectRatio: 1; this ensures square even if not supported
       height: '100%',
       width: '100%',
     },
@@ -121,6 +132,7 @@ export default function Board({
   };
 
   const squares = useMemo(() => new Array(64).fill(0).map((_, i) => i), []);
+  const pieceSize = Math.max(8, Math.floor((dimensions.cell || 0) * 0.86));
 
   return (
     <div
@@ -140,10 +152,9 @@ export default function Board({
       >
         {squares.map((idx) => {
           const { fileIndex, rankIndex } = fromBoardIndex(idx);
-          const row = Math.floor(idx / 8); // 0 top -> 7 bottom
-          const col = idx % 8; // 0 left -> 7 right
+          const row = Math.floor(idx / 8);
+          const col = idx % 8;
 
-          // Determine coordinate labels on edges relative to orientation
           const isBottomEdge = row === 7;
           const isLeftEdge = col === 0;
 
@@ -152,6 +163,8 @@ export default function Board({
           const squareAlg = orientation === 'black' ? squareAlgBlack : squareAlgWhite;
 
           const highlightColor = squareAlg ? highlightMap.get(squareAlg) : undefined;
+
+          const piece = pieceBySquare.get(squareAlg);
 
           return (
             <div
@@ -164,6 +177,18 @@ export default function Board({
             >
               {highlightColor ? (
                 <div className="chessboard-square-highlight" style={styles.highlight(highlightColor)} />
+              ) : null}
+
+              {piece ? (
+                <QuantumPiece
+                  id={piece.id}
+                  side={piece.side}
+                  possibleTypes={piece.possibleTypes}
+                  size={pieceSize}
+                  isSelected={selectedId === piece.id}
+                  onClick={onPieceClick}
+                  ariaLabel={`Piece at ${squareAlg}`}
+                />
               ) : null}
 
               {showCoordinates && isBottomEdge ? (

@@ -1,18 +1,26 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and a board-centered layout, adding top/bottom player info bars and extra bottom site spacing.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board that displays and moves quantum pieces in superposition.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js
 // Exported To: None
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
+import useQuantumGameState from './chessboard/useQuantumGameState.js';
 
 export default function App() {
-  const [lastClick, setLastClick] = useState(null);
   const boardStageRef = useRef(null);
   const [boardSize, setBoardSize] = useState(0);
 
-  // Placeholder player names; in the future, source from game state or props
+  const { pieces, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
+
+  const [selectedId, setSelectedId] = useState(null);
+
+  const selectedMoves = useMemo(() => {
+    if (!selectedId) return [];
+    return getLegalMoves(selectedId);
+  }, [selectedId, getLegalMoves]);
+
   const whitePlayer = 'White';
   const blackPlayer = 'Black';
 
@@ -50,7 +58,7 @@ export default function App() {
       justifyContent: 'flex-start',
       paddingTop: 'env(safe-area-inset-top)',
       paddingRight: 'env(safe-area-inset-right)',
-      paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)', // extra bottom site space
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
       paddingLeft: 'env(safe-area-inset-left)',
       boxSizing: 'border-box',
       gap: '0.5rem',
@@ -96,7 +104,7 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'stretch',
-      gap: 'clamp(8px, 1.5vh, 12px)', // little space above and below the board
+      gap: 'clamp(8px, 1.5vh, 12px)',
       boxSizing: 'border-box',
     },
     playerBar: (side) => ({
@@ -139,6 +147,44 @@ export default function App() {
     },
   };
 
+  const handleSquareClick = (data) => {
+    const { square } = data;
+    const piece = getPieceAtSquare(square);
+
+    if (piece) {
+      setSelectedId(piece.id);
+      return;
+    }
+
+    if (selectedId) {
+      const legal = new Set(getLegalMoves(selectedId));
+      if (legal.has(square)) {
+        movePiece(selectedId, square);
+        setSelectedId(null);
+      } else {
+        setSelectedId(null);
+      }
+    }
+  };
+
+  const handlePieceClick = ({ id }) => {
+    setSelectedId(id);
+  };
+
+  const highlightList = useMemo(() => {
+    const list = [];
+    if (selectedId) {
+      const piece = pieces.find((p) => p.id === selectedId);
+      if (piece && piece.square) {
+        list.push({ square: piece.square, color: 'rgba(97, 218, 251, 0.35)' });
+      }
+      for (const sq of selectedMoves) {
+        list.push({ square: sq, color: 'rgba(255, 206, 84, 0.35)' });
+      }
+    }
+    return list;
+  }, [selectedId, selectedMoves, pieces]);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
@@ -158,9 +204,12 @@ export default function App() {
             <Board
               orientation="white"
               showCoordinates={true}
-              highlights={lastClick ? [{ square: lastClick.square, color: 'rgba(97, 218, 251, 0.35)' }] : []}
-              onSquareClick={(data) => setLastClick(data)}
-              onSquareRightClick={(data) => setLastClick({ ...data, rightClick: true })}
+              highlights={highlightList}
+              onSquareClick={handleSquareClick}
+              onSquareRightClick={() => {}}
+              onPieceClick={handlePieceClick}
+              pieces={pieces}
+              selectedId={selectedId}
               maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
               borderColor="transparent"
               shadow="rgba(0, 0, 0, 0.15)"
