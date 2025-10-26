@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting and simple playback; uses an easy-to-read dash between from-to squares.
+// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting and simple playback; stores and uses side metadata from Redux for accurate pairing.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
@@ -58,8 +58,32 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
 
   const pairs = useMemo(() => {
     const out = [];
-    for (let i = 0; i < moves.length; i += 2) {
-      out.push({ white: moves[i] || null, black: moves[i + 1] || null });
+    let current = null;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      const side = m && (m.side === 'white' || m.side === 'black') ? m.side : (i % 2 === 0 ? 'white' : 'black');
+      if (side === 'white') {
+        if (!current || current.white !== null || current.black !== null) {
+          current = { white: null, black: null, whiteIndex: null, blackIndex: null };
+          out.push(current);
+        }
+        current.white = m;
+        current.whiteIndex = i;
+      } else {
+        if (!current || (current.white === null && current.black === null)) {
+          current = { white: null, black: null, whiteIndex: null, blackIndex: null };
+          out.push(current);
+        }
+        if (current.black === null) {
+          current.black = m;
+          current.blackIndex = i;
+        } else {
+          current = { white: null, black: null, whiteIndex: null, blackIndex: null };
+          out.push(current);
+          current.black = m;
+          current.blackIndex = i;
+        }
+      }
     }
     return out;
   }, [moves]);
@@ -165,9 +189,21 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
     clearRef.current();
   };
 
-  const isRowActive = (rowIdx) => index === rowIdx * 2 || index === rowIdx * 2 + 1;
-  const isWhiteActive = (rowIdx) => index === rowIdx * 2;
-  const isBlackActive = (rowIdx) => index === rowIdx * 2 + 1;
+  const isRowActive = (rowIdx) => {
+    const row = pairs[rowIdx];
+    if (!row) return false;
+    return index === row.whiteIndex || index === row.blackIndex;
+  };
+  const isWhiteActive = (rowIdx) => {
+    const row = pairs[rowIdx];
+    if (!row) return false;
+    return index === row.whiteIndex;
+  };
+  const isBlackActive = (rowIdx) => {
+    const row = pairs[rowIdx];
+    if (!row) return false;
+    return index === row.blackIndex;
+  };
 
   const formatMove = (m) => (m ? `${m.from} - ${m.to}` : '');
 
@@ -250,7 +286,7 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
                 <div
                   className="qc-move-history-cell-white"
                   style={styles.cell(isWhiteActive(rowIdx), !!pair.white)}
-                  onClick={pair.white ? () => setIndex(rowIdx * 2) : undefined}
+                  onClick={pair.white ? () => setIndex(pair.whiteIndex) : undefined}
                   aria-label={pair.white ? `White move ${formatMove(pair.white)}` : 'No move'}
                 >
                   {pair.white ? (
@@ -262,7 +298,7 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
                 <div
                   className="qc-move-history-cell-black"
                   style={styles.cell(isBlackActive(rowIdx), !!pair.black)}
-                  onClick={pair.black ? () => setIndex(rowIdx * 2 + 1) : undefined}
+                  onClick={pair.black ? () => setIndex(pair.blackIndex) : undefined}
                   aria-label={pair.black ? `Black move ${formatMove(pair.black)}` : 'No move'}
                 >
                   {pair.black ? (

@@ -291,7 +291,7 @@ export default function App() {
         const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
         movePiece(selectedId, square);
         if (fromSquare) {
-          dispatch(addMove({ from: fromSquare, to: square }));
+          dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
         }
         setSelectedId(null);
       } else {
@@ -322,7 +322,7 @@ export default function App() {
         const fromSquare = movingPiece.square || null;
         movePiece(selectedId, destSquare);
         if (fromSquare) {
-          dispatch(addMove({ from: fromSquare, to: destSquare }));
+          dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
         }
         setSelectedId(null);
       }
@@ -460,7 +460,7 @@ export default function App() {
     const fromSquare = movingPiece.square || from || null;
     movePiece(id, to);
     if (fromSquare) {
-      dispatch(addMove({ from: fromSquare, to }));
+      dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
     }
     setSelectedId(null);
   }, [pieces, getLegalMoves, movePiece, dispatch]);
