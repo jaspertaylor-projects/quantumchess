@@ -1,5 +1,5 @@
 // frontend/src/chessboard/svgRasterizer.js
-// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize to PNG via Canvas, and cache results in-memory and in localStorage keyed by colors, size, and render hints. Also exposes cache invalidation helpers.
+// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize to PNG via Canvas (DPR-aware), and cache results in-memory and in localStorage keyed by colors, size, DPR, and render hints. Also exposes cache invalidation helpers.
 // Imports From: None
 // Exported To: ./RasterizedSvgImg.jsx, ./QuantumPiece.jsx, ./rasterPrewarm.js
 
@@ -51,7 +51,6 @@ function prefixSvgIds(svgText, prefix) {
     out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(")`, 'g'), `$1${nu}$2`);
   }
   for (const [oldId, nu] of map.entries()) {
-    // Match url(#oldId) exactly; both parentheses must be escaped in the regex source string
     out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\\)`, 'g'), `url(#${nu})`);
     out = out.replace(new RegExp(`([\\"\'])#${escapeRegExp(oldId)}([\\"\'])`, 'g'), `$1#${nu}$2`);
     out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
@@ -133,6 +132,18 @@ function storageSet(key, value) {
   }
 }
 
+function getNormalizedPixelRatio() {
+  let pr = 1;
+  try {
+    pr = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
+  } catch {
+    pr = 1;
+  }
+  // Clamp and quantize to avoid cache explosion from fractional PRs
+  const clamped = Math.max(1, Math.min(3, pr));
+  return Math.round(clamped * 4) / 4; // quarter-step increments
+}
+
 export function clearRasterCaches() {
   console.log('[Rasterizer] Clearing in-memory and persisted PNG caches');
   dataUrlCache.clear();
@@ -149,7 +160,7 @@ export function clearRasterCaches() {
   }
 }
 
-async function rasterizeSvgToDataUrl(svgText, size, renderHint) {
+async function rasterizeSvgToDataUrl(svgText, size, renderHint, pixelRatio) {
   const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(svgBlob);
   try {
@@ -164,11 +175,15 @@ async function rasterizeSvgToDataUrl(svgText, size, renderHint) {
     await p;
 
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    const pr = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+    canvas.width = Math.max(1, Math.round(size * pr));
+    canvas.height = Math.max(1, Math.round(size * pr));
+
     const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (ctx) {
       ctx.imageSmoothingEnabled = renderHint !== 'crisp';
+      // Draw in CSS pixel coordinates with a DPR-scaled backing store
+      if (pr !== 1) ctx.setTransform(pr, 0, 0, pr, 0, 0);
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
       const dataUrl = canvas.toDataURL('image/png');
@@ -183,7 +198,8 @@ async function rasterizeSvgToDataUrl(svgText, size, renderHint) {
 export async function getRasterizedPng({ srcUrl, cssVarMap, idPrefix, size, renderHint = 'precision' }) {
   if (!srcUrl || !size) return '';
   const sig = colorSignature(cssVarMap);
-  const key = `v1|${srcUrl}|${size}|${renderHint}|${sig}`;
+  const pr = getNormalizedPixelRatio();
+  const key = `v1|${srcUrl}|${size}|${renderHint}|pr:${pr}|${sig}`;
   const storageKey = `qcPngCacheV1:${hashString(key)}`;
 
   if (dataUrlCache.has(key)) return dataUrlCache.get(key);
@@ -205,11 +221,11 @@ export async function getRasterizedPng({ srcUrl, cssVarMap, idPrefix, size, rend
       const withCss = internalCss ? injectInternalCss(styled, internalCss) : styled;
       const sized = setExplicitDimensions(withCss, `${size}px`, `${size}px`);
 
-      const dataUrl = await rasterizeSvgToDataUrl(sized, size, renderHint);
+      const dataUrl = await rasterizeSvgToDataUrl(sized, size, renderHint, pr);
       if (dataUrl) {
         dataUrlCache.set(key, dataUrl);
         storageSet(storageKey, dataUrl);
-        console.log(`[Rasterizer] Cached PNG -> key:${storageKey} size:${size} hint:${renderHint}`);
+        console.log(`[Rasterizer] Cached PNG -> key:${storageKey} size:${size} hint:${renderHint} pr:${pr}`);
       } else {
         console.warn('[Rasterizer] Empty data URL generated for', { srcUrl });
       }

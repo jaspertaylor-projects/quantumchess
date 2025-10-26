@@ -361,6 +361,24 @@ export default function App() {
   }, [pieces]);
 
   const CapturedIcon = ({ piece }) => {
+    const wrapRef = useRef(null);
+    const [pxSize, setPxSize] = useState(26);
+
+    useEffect(() => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const cr = entry.contentRect;
+          const raw = Math.min(cr.width, cr.height);
+          const snapped = Math.max(12, Math.floor(raw));
+          if (snapped !== pxSize) setPxSize(snapped);
+        }
+      });
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, [pxSize]);
+
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
     const t = types.length === 1 ? types[0] : 'p';
 
@@ -378,6 +396,7 @@ export default function App() {
 
     return (
       <div
+        ref={wrapRef}
         className="qc-captured-icon-wrap"
         style={styles.capturedIconWrap}
         title={`Captured ${t}`}
@@ -387,10 +406,10 @@ export default function App() {
           srcSvgUrl={srcSvg}
           cssVarMap={sideVars}
           idPrefix={`cap-${piece.id}-${t}`}
-          size={26}
+          size={pxSize}
           renderHint="crisp"
           className="qc-captured-icon-img"
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          style={{ width: `${pxSize}px`, height: `${pxSize}px`, objectFit: 'contain', imageRendering: 'pixelated' }}
           alt={`Captured ${t}`}
         />
       </div>
