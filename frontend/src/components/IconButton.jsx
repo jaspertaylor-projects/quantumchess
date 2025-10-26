@@ -1,7 +1,7 @@
 // frontend/src/components/IconButton.jsx
 // Purpose: Reusable icon button with hover-invert behavior for background and icon colors.
 // Imports From: ../theme.js
-// Exported To: ../tray/SideTray.jsx
+// Exported To: ../tray/SideTray.jsx, ../settings/SettingsModal.jsx
 
 import React, { useMemo, useState } from 'react';
 import theme from '../theme.js';
