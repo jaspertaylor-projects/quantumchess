@@ -211,6 +211,8 @@ export default function App() {
     capturedIconWrap: {
       width: 'clamp(16px, 1.9vw, 22px)',
       height: 'clamp(16px, 1.9vw, 22px)',
+      minWidth: '16px',
+      minHeight: '16px',
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
@@ -327,14 +329,15 @@ export default function App() {
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
-  const CapturedIcon = ({ piece }) => {
+  const CapturedIcon = ({ piece, renderSide }) => {
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
     const label = types.length === 1 ? types[0] : 'captured';
+    const sideForRender = renderSide || piece.side;
     return (
       <div className="qc-captured-icon-wrap" style={styles.capturedIconWrap} title={`Captured ${label}`} aria-label={`Captured ${label}`}>
         <QuantumPiece
           id={`cap-${piece.id}`}
-          side={piece.side}
+          side={sideForRender}
           possibleTypes={types}
           size={22}
           onClick={null}
@@ -382,7 +385,7 @@ export default function App() {
               <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
                 {blackCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} renderSide="black" />
                 ))}
               </div>
             </div>
@@ -423,7 +426,7 @@ export default function App() {
               <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
                 {whiteCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} renderSide="white" />
                 ))}
               </div>
             </div>
