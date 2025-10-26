@@ -160,15 +160,17 @@ export default function App() {
     appTitleRow: {
       display: 'grid',
       gridTemplateColumns: '1fr auto 1fr',
-      alignItems: 'center',
+      alignItems: 'stretch',
       gap: 'clamp(8px, 1.6vw, 16px)',
       padding: '0 clamp(10px, 1.8vw, 16px)',
       borderRadius: 14,
       backgroundColor: '#000',
       boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-      width: 'min(1024px, 96vw)',
+      width: '100vw',
       margin: '0 auto',
       height: 'clamp(56px, 10vh, 88px)',
+      marginLeft: 'calc(50% - 50vw)',
+      marginRight: 'calc(50% - 50vw)',
     },
     appTitleCenterGroup: {
       display: 'flex',
@@ -183,7 +185,7 @@ export default function App() {
     },
     titleStrip: (side) => ({
       display: 'flex',
-      alignItems: 'stretch',
+      alignItems: 'flex-end',
       justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
       gap: 'clamp(6px, 1vw, 12px)',
       width: '100%',
@@ -193,8 +195,9 @@ export default function App() {
     titleIconWrap: {
       height: '100%',
       aspectRatio: '1 / 1',
-      display: 'grid',
-      placeItems: 'center',
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
     },
     appTitleText: {
       margin: 0,
@@ -349,6 +352,9 @@ export default function App() {
       width: `${Math.round(sizeScale * 100)}%`,
       height: `${Math.round(sizeScale * 100)}%`,
       objectFit: 'contain',
+      objectPosition: 'bottom center',
+      display: 'block',
+      alignSelf: 'flex-end',
     }), [sizeScale]);
 
     const renderSize = Math.max(16, Math.floor(pxSize * sizeScale));
