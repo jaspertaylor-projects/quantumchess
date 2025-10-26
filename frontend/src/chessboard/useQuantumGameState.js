@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess game state, including pieces, movement generation, simple captures, and collapse-on-move subset logic.
+// Purpose: Manage Quantum Chess game state, including pieces, movement generation, simple captures, collapse-on-move subset logic, and turn order (white moves first, players alternate turns).
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -167,6 +167,7 @@ function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, toRank, o
 
 export default function useQuantumGameState() {
   const [pieces, setPieces] = useState(() => createStartingPieces());
+  const [sideToMove, setSideToMove] = useState('white');
 
   const occupancy = useMemo(() => buildOccupancy(pieces), [pieces]);
 
@@ -177,6 +178,7 @@ export default function useQuantumGameState() {
   const getLegalMoves = useCallback((pieceId) => {
     const piece = pieces.find((p) => p.id === pieceId && !p.captured);
     if (!piece) return [];
+    if (piece.side !== sideToMove) return [];
     const pos = fromAlgebraic(piece.square);
     if (!pos) return [];
     const { fileIndex: f, rankIndex: r } = pos;
@@ -187,13 +189,15 @@ export default function useQuantumGameState() {
       for (const sq of list) merged.add(sq);
     }
     return Array.from(merged);
-  }, [pieces, occupancy]);
+  }, [pieces, occupancy, sideToMove]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
+    let didMove = false;
     setPieces((prev) => {
       const next = prev.map((p) => ({ ...p }));
       const moving = next.find((p) => p.id === pieceId && !p.captured);
       if (!moving) return prev;
+      if (moving.side !== sideToMove) return prev;
 
       const from = fromAlgebraic(moving.square);
       const to = fromAlgebraic(toSquare);
@@ -201,7 +205,6 @@ export default function useQuantumGameState() {
 
       const tempOcc = buildOccupancy(next);
 
-      // Determine subset of types that could legally make this move now
       const subset = subsetTypesThatCanMakeMove(
         moving.possibleTypes,
         from.fileIndex,
@@ -214,26 +217,29 @@ export default function useQuantumGameState() {
 
       if (subset.length === 0) return prev;
 
-      // Handle capture if an enemy occupies the target square
       const targetPiece = tempOcc.get(toSquare);
       if (targetPiece && targetPiece.side !== moving.side) {
-        // Collapse capture target to its highest non-king value and mark captured
         const highest = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
         targetPiece.captured = true;
         targetPiece.square = null;
         targetPiece.possibleTypes = highest ? [highest] : ['p'];
       }
 
-      // Update moving piece
       moving.square = toSquare;
       moving.possibleTypes = subset;
 
+      didMove = true;
       return next;
     });
-  }, []);
+
+    if (didMove) {
+      setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
+    }
+  }, [sideToMove]);
 
   return {
     pieces,
+    sideToMove,
     getPieceAtSquare,
     getLegalMoves,
     movePiece,

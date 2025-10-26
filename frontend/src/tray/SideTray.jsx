@@ -1,5 +1,5 @@
 // frontend/src/tray/SideTray.jsx
-// Purpose: Right-side tray that matches the chessboard height and shows either matchmaking or move history based on game state; includes a clearly visible settings button on the right.
+// Purpose: Right-side tray that matches the chessboard height and shows either matchmaking or move history based on game state; includes settings and rules access. Renders a footer with a View Rules button beneath the main content.
 // Imports From: ../theme.js, ./FindMatchPanel.jsx, ./MoveHistoryPanel.jsx, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -8,12 +8,13 @@ import { useSelector } from 'react-redux';
 import theme from '../theme.js';
 import FindMatchPanel from './FindMatchPanel.jsx';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Book as BookIcon } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
 
 export default function SideTray({
   height = 0,
   onOpenSettings = () => {},
+  onOpenRules = () => {},
   onSetHighlights = () => {},
   onClearHighlights = () => {},
 }) {
@@ -58,6 +59,29 @@ export default function SideTray({
         flexDirection: 'column',
         overflow: 'hidden',
       },
+      footer: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        padding: 10,
+        borderTop: `1px solid ${theme.border}`,
+        background: 'rgba(255,255,255,0.02)',
+      },
+      rulesButton: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 12px',
+        borderRadius: 8,
+        border: `1px solid ${theme.border}`,
+        background: theme.buttonGenericBackground,
+        color: theme.textPrimary,
+        cursor: 'pointer',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        transition: 'background-color 0.15s ease, transform 0.06s ease',
+      },
     }),
     [height]
   );
@@ -87,6 +111,20 @@ export default function SideTray({
         ) : (
           <FindMatchPanel />
         )}
+      </div>
+
+      <div className="qc-side-tray-footer" style={styles.footer}>
+        <button
+          type="button"
+          className="qc-side-tray-rules-button"
+          style={styles.rulesButton}
+          onClick={onOpenRules}
+          aria-label="View game rules"
+          title="View Rules"
+        >
+          <BookIcon size={18} />
+          <span>View Rules</span>
+        </button>
       </div>
     </aside>
   );

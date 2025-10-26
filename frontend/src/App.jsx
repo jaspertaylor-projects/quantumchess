@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a neon intergalactic title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
+// Purpose: Render a full-viewport Quantum Chess UI with a neon intergalactic title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height. Adds rules modal and enforces turn order (white first, alternating turns) in UI interactions.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
@@ -11,6 +11,7 @@ import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
 import useBoardColors from './settings/useBoardColors.js';
 import SideTray from './tray/SideTray.jsx';
+import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
 
@@ -21,10 +22,11 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
-  const { pieces, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
+  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
@@ -225,15 +227,21 @@ export default function App() {
     const piece = getPieceAtSquare(square);
 
     if (piece) {
-      setSelectedId(piece.id);
-      setTrayHighlights([]);
+      if (piece.side === sideToMove) {
+        setSelectedId(piece.id);
+        setTrayHighlights([]);
+      }
       return;
     }
 
     if (selectedId) {
+      const movingPiece = pieces.find((p) => p.id === selectedId);
+      if (!movingPiece || movingPiece.side !== sideToMove) {
+        setSelectedId(null);
+        return;
+      }
       const legal = new Set(getLegalMoves(selectedId));
       if (legal.has(square)) {
-        const movingPiece = pieces.find((p) => p.id === selectedId);
         const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
         movePiece(selectedId, square);
         if (fromSquare) {
@@ -247,8 +255,11 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
-    setSelectedId(id);
-    setTrayHighlights([]);
+    const p = pieces.find((x) => x.id === id);
+    if (p && p.side === sideToMove) {
+      setSelectedId(id);
+      setTrayHighlights([]);
+    }
   };
 
   const baseHighlights = useMemo(() => {
@@ -325,6 +336,7 @@ export default function App() {
               <SideTray
                 height={trayHeight}
                 onOpenSettings={() => setSettingsOpen(true)}
+                onOpenRules={() => setRulesOpen(true)}
                 onSetHighlights={(arr) => setTrayHighlights(Array.isArray(arr) ? arr : [])}
                 onClearHighlights={() => setTrayHighlights([])}
               />
@@ -355,6 +367,11 @@ export default function App() {
         onChangeBlack={setBlackColors}
         onChangeBoard={setBoardColors}
         onReset={() => { resetColors(); resetBoardColors(); }}
+      />
+
+      <RulesModal
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
       />
     </div>
   );
