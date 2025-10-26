@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports robust inline-SVG overlays with CSS-variable theming and unique ID prefixing to avoid symbol collisions.
+// Purpose: Visual renderer for a quantum chess piece with crisp rendering at small sizes; supports single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -108,9 +108,7 @@ function prefixSvgIds(svgText, prefix) {
 
   // Replace id attributes first
   for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\" )`, 'g'), `$1${nu}$2`);
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\\\/")`, 'g'), `$1${nu}$2`);
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\">)`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\")`, 'g'), `$1${nu}$2`);
   }
 
   // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
@@ -129,23 +127,43 @@ function injectStyleIntoSvg(svgText, styleString) {
   const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
   if (hasStyle) {
     return svgText.replace(
-      /<svg([^>]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
+      /<svg([^>*]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
       (m, p1, p2, p3) => `<svg${p1}${p2} ${styleString}${p3}`
     );
   }
   return svgText.replace(/<svg([^>]*)>/i, `<svg$1 style="${styleString}">`);
 }
 
+function injectInternalCss(svgText, cssText) {
+  if (!svgText || !cssText) return svgText;
+  const styleTag = `<style>${cssText}</style>`;
+  return svgText.replace(/<svg[^>]*>/i, (m) => `${m}${styleTag}`);
+}
+
 // InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables and unique ID prefixes onto the root <svg>.
-function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix }) {
+function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix, renderHint = 'precision' }) {
   const [svgHtml, setSvgHtml] = useState('');
+
+  const hintRootStyle = useMemo(() => {
+    if (renderHint === 'crisp') {
+      return 'shape-rendering: crispEdges; text-rendering: geometricPrecision;';
+    }
+    return 'shape-rendering: geometricPrecision; text-rendering: optimizeLegibility;';
+  }, [renderHint]);
+
+  const internalCss = useMemo(() => {
+    if (renderHint !== 'crisp') return '';
+    return `* { vector-effect: non-scaling-stroke; }
+            path, line, polyline, polygon { shape-rendering: crispEdges; }
+            g, use, symbol { shape-rendering: crispEdges; }`;
+  }, [renderHint]);
 
   const varStyleString = useMemo(() => {
     const entries = Object.entries(cssVarMap || {}).filter(([k]) => k.startsWith('--'));
     const cssVars = entries.map(([k, v]) => `${k}: ${v};`).join(' ');
     const sizeRules = 'width: 100%; height: 100%;';
-    return `${cssVars} ${sizeRules}`.trim();
-  }, [cssVarMap]);
+    return `${cssVars} ${sizeRules} ${hintRootStyle}`.trim();
+  }, [cssVarMap, hintRootStyle]);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,8 +174,9 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix })
         const text = await res.text();
         if (cancelled) return;
         const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
-        const injected = injectStyleIntoSvg(prefixed, varStyleString);
-        setSvgHtml(injected);
+        const injectedStyle = injectStyleIntoSvg(prefixed, varStyleString);
+        const injectedCss = internalCss ? injectInternalCss(injectedStyle, internalCss) : injectedStyle;
+        setSvgHtml(injectedCss);
       } catch {
         setSvgHtml('');
       }
@@ -165,8 +184,10 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix })
 
     if (src) load();
 
-    return () => { cancelled = true; };
-  }, [src, varStyleString, idPrefix]);
+    return () => {
+      cancelled = true;
+    };
+  }, [src, varStyleString, idPrefix, internalCss]);
 
   return (
     <div
@@ -191,7 +212,8 @@ export default function QuantumPiece({
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
 
-  const baseDropShadow = `drop-shadow(0 1px 2px ${theme.shadow})`;
+  const isSmall = size <= 48;
+  const baseDropShadow = isSmall ? 'none' : `drop-shadow(0 1px 2px ${theme.shadow})`;
 
   const baseStyles = {
     container: {
@@ -205,7 +227,9 @@ export default function QuantumPiece({
       userSelect: 'none',
       filter: isSelected ? 'drop-shadow(0 0 8px rgba(97,218,251,0.55))' : 'none',
       transition: 'filter 120ms ease-in-out, transform 80ms ease-in-out',
-      transform: isSelected ? 'translateY(-1px)' : 'none',
+      transform: isSelected ? 'translateY(-1px)' : 'translateZ(0)',
+      contain: 'layout paint size',
+      backfaceVisibility: 'hidden',
     },
     image: {
       width: '88%',
@@ -214,6 +238,7 @@ export default function QuantumPiece({
       display: 'block',
       pointerEvents: 'none',
       filter: baseDropShadow,
+      imageRendering: isSmall ? 'crisp-edges' : 'auto',
     },
     inlineSvg: {
       position: 'relative',
@@ -222,6 +247,9 @@ export default function QuantumPiece({
       objectFit: 'contain',
       pointerEvents: 'none',
       filter: baseDropShadow,
+      imageRendering: isSmall ? 'crisp-edges' : 'auto',
+      contain: 'layout paint size',
+      backfaceVisibility: 'hidden',
     },
     overlayStack: {
       position: 'relative',
@@ -238,9 +266,12 @@ export default function QuantumPiece({
       height: '88%',
       objectFit: 'contain',
       pointerEvents: 'none',
-      opacity: 0.95,
+      opacity: isSmall ? 1 : 0.95,
       filter: baseDropShadow,
       zIndex: z,
+      imageRendering: isSmall ? 'crisp-edges' : 'auto',
+      contain: 'layout paint size',
+      backfaceVisibility: 'hidden',
     }),
   };
 
@@ -251,6 +282,7 @@ export default function QuantumPiece({
 
   // Determine side variables once for all render paths
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
+  const renderHint = isSmall ? 'crisp' : 'precision';
 
   // Single-type rendering (inline SVG so CSS variables apply)
   if (tCount === 1) {
@@ -270,6 +302,7 @@ export default function QuantumPiece({
           cssVarMap={sideVars}
           className="qc-quantum-inline-single"
           idPrefix={`${id}-single-${t}`}
+          renderHint={renderHint}
         />
       </div>
     );
@@ -295,6 +328,7 @@ export default function QuantumPiece({
             cssVarMap={sideVars}
             className="qc-quantum-inline-pair"
             idPrefix={`${id}-pair-${a}-${b}`}
+            renderHint={renderHint}
           />
         </div>
       );
@@ -320,6 +354,7 @@ export default function QuantumPiece({
         cssVarMap={cssVars}
         className="qc-quantum-overlay-inline"
         idPrefix={`${id}-${t}`}
+        renderHint={renderHint}
       />
     );
   });
