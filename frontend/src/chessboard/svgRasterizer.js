@@ -51,7 +51,8 @@ function prefixSvgIds(svgText, prefix) {
     out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(")`, 'g'), `$1${nu}$2`);
   }
   for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\)`, 'g'), `url(#${nu})`);
+    // Match url(#oldId) exactly; both parentheses must be escaped in the regex source string
+    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\\)`, 'g'), `url(#${nu})`);
     out = out.replace(new RegExp(`([\\"\'])#${escapeRegExp(oldId)}([\\"\'])`, 'g'), `$1#${nu}$2`);
     out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
   }
