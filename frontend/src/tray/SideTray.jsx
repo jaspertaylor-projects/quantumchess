@@ -75,8 +75,8 @@ export default function SideTray({
           ariaLabel="Open settings"
           className="qc-side-tray-settings"
           onClick={onOpenSettings}
-          bg={theme.primary}
-          color={theme.secondary}
+          bg={theme.secondary}
+          color={theme.primary}
           hoverInvert={true}
         />
       </div>
