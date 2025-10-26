@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive header where the title fills the header height and aligns on the same baseline as decorative PNG piece icons; renders the interactive board, captured pieces, and settings/rules modals; manages SVG raster cache.
+// Purpose: Render the Quantum Chess UI with a responsive header fixed to 15% of viewport height; header PNG icon sizes derive from that height and resize on window changes; renders the interactive board, captured pieces, and settings/rules modals; manages SVG raster cache.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -150,7 +150,10 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'stretch',
       justifyContent: 'center',
-      minHeight: 'clamp(64px, 12vh, 112px)',
+      height: '15vh',
+      minHeight: '15vh',
+      maxHeight: '15vh',
+      flex: '0 0 auto',
     },
     appTitleWrap: {
       display: 'flex',
@@ -159,7 +162,7 @@ export default function App() {
       width: '100%',
       boxSizing: 'border-box',
       padding: '0',
-      minHeight: 'clamp(56px, 10vh, 88px)',
+      flex: '1 1 auto',
     },
     appTitleRow: {
       display: 'grid',
@@ -234,6 +237,7 @@ export default function App() {
       alignSelf: 'center',
       marginLeft: 'calc(50% - 50vw)',
       marginRight: 'calc(50% - 50vw)',
+      flex: '0 0 auto',
     },
     boardArea: {
       flex: 1,
