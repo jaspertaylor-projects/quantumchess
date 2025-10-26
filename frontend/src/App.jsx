@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color variables and a reset-to-defaults action.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a right-side tray with modes (Find Match, Move History) and an in-tray settings button.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
@@ -9,7 +9,7 @@ import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
-import { Settings as SettingsIcon } from 'lucide-react';
+import SideTray from './tray/SideTray.jsx';
 import { useDispatch } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
 
@@ -21,6 +21,7 @@ export default function App() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [trayHighlights, setTrayHighlights] = useState([]);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
 
@@ -109,7 +110,7 @@ export default function App() {
     boardStack: {
       width: '100%',
       height: '100%',
-      maxWidth: 'min(95vmin, 900px)',
+      maxWidth: 'min(95vmin, 1200px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -155,23 +156,12 @@ export default function App() {
       boxSizing: 'border-box',
       overflow: 'hidden',
     },
-    settingsFab: {
-      position: 'fixed',
-      top: '50%',
-      right: 18,
-      transform: 'translateY(-50%)',
-      width: 56,
-      height: 56,
-      borderRadius: 14,
-      border: `1px solid ${theme.border}`,
-      backgroundColor: theme.cardBackground,
-      boxShadow: `0 6px 18px ${theme.shadow}`,
+    boardRow: {
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      cursor: 'pointer',
-      zIndex: 20,
-      color: theme.textPrimary,
+      gap: 12,
     },
   };
 
@@ -181,6 +171,7 @@ export default function App() {
 
     if (piece) {
       setSelectedId(piece.id);
+      setTrayHighlights([]);
       return;
     }
 
@@ -202,9 +193,10 @@ export default function App() {
 
   const handlePieceClick = ({ id }) => {
     setSelectedId(id);
+    setTrayHighlights([]);
   };
 
-  const highlightList = useMemo(() => {
+  const baseHighlights = useMemo(() => {
     const list = [];
     if (selectedId) {
       const piece = pieces.find((p) => p.id === selectedId);
@@ -218,21 +210,16 @@ export default function App() {
     return list;
   }, [selectedId, selectedMoves, pieces]);
 
+  const combinedHighlights = useMemo(() => {
+    if (!trayHighlights || trayHighlights.length === 0) return baseHighlights;
+    return [...baseHighlights, ...trayHighlights];
+  }, [baseHighlights, trayHighlights]);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
         <h1 className="qc-app-title" style={styles.appTitle}>Quantum Chess</h1>
       </header>
-
-      <button
-        type="button"
-        aria-label="Open settings"
-        className="qc-settings-fab"
-        style={styles.settingsFab}
-        onClick={() => setSettingsOpen(true)}
-      >
-        <SettingsIcon size={28} />
-      </button>
 
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
@@ -244,20 +231,29 @@ export default function App() {
           </div>
 
           <div className="qc-board-stage" style={styles.boardStage} ref={boardStageRef}>
-            <Board
-              orientation="white"
-              showCoordinates={true}
-              highlights={highlightList}
-              onSquareClick={handleSquareClick}
-              onSquareRightClick={() => {}}
-              onPieceClick={handlePieceClick}
-              pieces={pieces}
-              selectedId={selectedId}
-              maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
-              borderColor="transparent"
-              shadow="rgba(0, 0, 0, 0.15)"
-              pieceSvgStyles={svgStyles}
-            />
+            <div className="qc-board-row" style={styles.boardRow}>
+              <Board
+                orientation="white"
+                showCoordinates={true}
+                highlights={combinedHighlights}
+                onSquareClick={handleSquareClick}
+                onSquareRightClick={() => {}}
+                onPieceClick={handlePieceClick}
+                pieces={pieces}
+                selectedId={selectedId}
+                maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
+                borderColor="transparent"
+                shadow="rgba(0, 0, 0, 0.15)"
+                pieceSvgStyles={svgStyles}
+              />
+
+              <SideTray
+                height={boardSize}
+                onOpenSettings={() => setSettingsOpen(true)}
+                onSetHighlights={(arr) => setTrayHighlights(Array.isArray(arr) ? arr : [])}
+                onClearHighlights={() => setTrayHighlights([])}
+              />
+            </div>
           </div>
 
           <div className="qc-player-bar qc-player-bar--bottom" style={styles.playerBar('white')} data-side="white">
