@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece sized exactly to its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
+// Purpose: Visual renderer for a quantum chess piece sized to fit within its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -215,6 +215,9 @@ export default function QuantumPiece({
   const isSmall = size <= 48;
   const baseDropShadow = isSmall ? 'none' : `drop-shadow(0 1px 2px ${theme.shadow})`;
 
+  // 95% visual scale relative to the square
+  const visualScalePercent = '95%';
+
   const baseStyles = {
     container: {
       position: 'relative',
@@ -232,8 +235,8 @@ export default function QuantumPiece({
       backfaceVisibility: 'hidden',
     },
     image: {
-      width: '100%',
-      height: '100%',
+      width: visualScalePercent,
+      height: visualScalePercent,
       objectFit: 'contain',
       display: 'block',
       pointerEvents: 'none',
@@ -242,14 +245,15 @@ export default function QuantumPiece({
     },
     inlineSvg: {
       position: 'relative',
-      width: '100%',
-      height: '100%',
+      width: visualScalePercent,
+      height: visualScalePercent,
       objectFit: 'contain',
       pointerEvents: 'none',
       filter: baseDropShadow,
       imageRendering: isSmall ? 'crisp-edges' : 'auto',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
+      display: 'block',
     },
     overlayStack: {
       position: 'relative',
@@ -260,11 +264,8 @@ export default function QuantumPiece({
     },
     overlaySvg: (z) => ({
       position: 'absolute',
-      inset: 0,
-      margin: 'auto',
-      width: '100%',
-      height: '100%',
-      objectFit: 'contain',
+      inset: '2.5%',
+      margin: '0',
       pointerEvents: 'none',
       opacity: isSmall ? 1 : 0.95,
       filter: baseDropShadow,
