@@ -1,5 +1,5 @@
 /* frontend/src/App.css
-/* Purpose: Defines global styles for the application, using CSS variables populated from theme.js. */
+/* Purpose: Defines global styles for the application, keeping the page non-scrollable and sizing the root to the viewport. */
 /* Imports From: None */
 /* Exported To: frontend/src/App.jsx */
 
@@ -12,9 +12,15 @@
   background-color: var(--color-globalBackground);
 }
 
-body {
+html, body, #root {
+  height: 100%;
+}
+
+html, body {
   margin: 0;
-  /* Centering is now handled by App.jsx's container style */
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Generic button styles - can be overridden by component-specific styles */

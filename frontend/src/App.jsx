@@ -1,112 +1,106 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess board UI without backend demo messaging or Docker scaffold text.
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and a board that always fits without scrolling.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx
 // Exported To: None
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
 
 export default function App() {
   const [lastClick, setLastClick] = useState(null);
+  const boardAreaRef = useRef(null);
+  const [boardSize, setBoardSize] = useState(0);
+
+  useEffect(() => {
+    const el = boardAreaRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const size = Math.floor(Math.min(rect.width, rect.height));
+      setBoardSize(size);
+    };
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('orientationchange', measure);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, []);
 
   const styles = {
     appContainer: {
       backgroundColor: theme.background,
       color: theme.textPrimary,
+      height: '100vh',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'flex-start',
-      padding: '2rem 1rem 4rem 1rem',
+      padding: 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)',
       boxSizing: 'border-box',
-      gap: '1.5rem',
+      gap: '0.5rem',
+      overflow: 'hidden',
     },
     appHeader: {
-      backgroundColor: theme.secondary,
-      padding: '1.5rem',
-      borderRadius: '12px',
+      backgroundColor: 'transparent',
+      padding: 'clamp(8px, 2vh, 16px) 12px 0 12px',
+      borderRadius: 0,
       textAlign: 'center',
       width: '100%',
-      maxWidth: '900px',
       boxSizing: 'border-box',
+      userSelect: 'none',
     },
     appTitle: {
-      color: theme.primary,
       margin: 0,
-      fontSize: '1.75rem',
+      fontSize: 'clamp(1.5rem, 4.5vw, 3rem)',
+      fontWeight: 900,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      backgroundImage: 'linear-gradient(90deg, #61dafb, #a8b2d1 45%, #61dafb)',
+      WebkitBackgroundClip: 'text',
+      backgroundClip: 'text',
+      color: 'transparent',
+      WebkitTextFillColor: 'transparent',
+      textShadow: '0 2px 12px rgba(97,218,251,0.18)',
     },
-    appSubtitle: {
-      color: theme.textSecondary,
-      margin: '0.5rem 0 0 0',
-    },
-    boardPanel: {
-      backgroundColor: theme.cardBackground,
-      borderRadius: '12px',
-      padding: '1rem',
-      border: `1px solid ${theme.border}`,
-      boxShadow: `0 4px 12px ${theme.shadow}`,
+    boardArea: {
+      flex: 1,
       width: '100%',
-      maxWidth: '1100px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       boxSizing: 'border-box',
-      display: 'grid',
-      gridTemplateColumns: '1fr',
-      gap: '1rem',
-      justifyItems: 'center',
-    },
-    boardHeader: {
-      margin: 0,
-      color: theme.textPrimary,
-      fontSize: '1.25rem',
-      textAlign: 'center',
-    },
-    clickReadout: {
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      border: `1px dashed ${theme.border}`,
-      borderRadius: 8,
-      padding: '0.75rem',
-      width: '100%',
-      maxWidth: '900px',
-      color: theme.textSecondary,
-      fontFamily: 'monospace',
-      fontSize: '0.95rem',
-      boxSizing: 'border-box',
-      textAlign: 'center',
+      padding: 'clamp(8px, 2vh, 16px)',
+      overflow: 'hidden',
     },
   };
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
-        <h1 className="qc-app-title" style={styles.appTitle}>
-          Quantum Chess
-        </h1>
-        <p className="qc-app-subtitle" style={styles.appSubtitle}>
-          Superposition pieces that collapse as they move.
-        </p>
+        <h1 className="qc-app-title" style={styles.appTitle}>Quantum Chess</h1>
       </header>
 
-      <section className="qc-board-panel" style={styles.boardPanel}>
-        <h2 className="qc-board-panel__title" style={styles.boardHeader}>Board</h2>
+      <div className="qc-board-area" style={styles.boardArea} ref={boardAreaRef}>
         <Board
           orientation="white"
           showCoordinates={true}
           highlights={lastClick ? [{ square: lastClick.square, color: 'rgba(97, 218, 251, 0.35)' }] : []}
           onSquareClick={(data) => setLastClick(data)}
           onSquareRightClick={(data) => setLastClick({ ...data, rightClick: true })}
-          maxVisualSize="min(85vmin, 720px)"
+          maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
+          borderColor="transparent"
+          shadow="rgba(0, 0, 0, 0.15)"
         />
-        <div className="qc-board-panel__click-readout" style={styles.clickReadout}>
-          {lastClick ? (
-            <span>
-              Clicked: {lastClick.square} | fileIndex: {lastClick.fileIndex} | rankIndex: {lastClick.rankIndex} | index: {lastClick.index}
-            </span>
-          ) : (
-            <span>Click any square to see its coordinates.</span>
-          )}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
