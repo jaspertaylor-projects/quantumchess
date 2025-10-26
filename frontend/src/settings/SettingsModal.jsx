@@ -1,11 +1,12 @@
 // frontend/src/settings/SettingsModal.jsx
-// Purpose: Modal dialog for configuring per-side SVG color variables with native color pickers and a one-click restore-defaults action.
-// Imports From: ../theme.js
+// Purpose: Modal dialog for configuring per-side SVG color variables with native color pickers; includes icon-only actions for restore defaults and close.
+// Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
 import React from 'react';
 import theme from '../theme.js';
 import { X, RotateCcw } from 'lucide-react';
+import IconButton from '../components/IconButton.jsx';
 
 export default function SettingsModal({
   open = false,
@@ -50,18 +51,6 @@ export default function SettingsModal({
       fontSize: '1.125rem',
       fontWeight: 800,
       letterSpacing: '0.04em',
-    },
-    closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      border: `1px solid ${theme.border}`,
-      background: 'transparent',
-      color: theme.textPrimary,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: 'pointer',
     },
     grid: {
       display: 'grid',
@@ -119,17 +108,6 @@ export default function SettingsModal({
       gap: 12,
       marginTop: 16,
     },
-    resetBtn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '8px 12px',
-      borderRadius: 8,
-      border: `1px solid ${theme.border}`,
-      background: 'transparent',
-      color: theme.textPrimary,
-      cursor: 'pointer',
-    },
   };
 
   const handleWhite = (key) => (e) => onChangeWhite({ [key]: e.target.value });
@@ -147,15 +125,22 @@ export default function SettingsModal({
       >
         <div className="qc-settings-header" style={styles.header}>
           <h2 id="qc-settings-title" className="qc-settings-title" style={styles.title}>Settings</h2>
-          <button
-            type="button"
-            aria-label="Close settings"
+          <IconButton
+            icon={X}
+            size={20}
+            title="Close settings"
+            ariaLabel="Close settings"
             className="qc-settings-close"
-            style={styles.closeBtn}
             onClick={onClose}
-          >
-            <X size={20} />
-          </button>
+            width={36}
+            height={36}
+            radius={8}
+            bg="transparent"
+            color={theme.error}
+            hoverInvert={false}
+            shadow="transparent"
+            style={{ border: `1px solid ${theme.border}` }}
+          />
         </div>
 
         <div className="qc-settings-grid" style={styles.grid}>
@@ -250,17 +235,20 @@ export default function SettingsModal({
           <p className="qc-settings-hint" style={styles.hint}>
             Hint: Colors are applied to quantum piece SVGs via CSS variables. Choose contrasting colors for icon and bands for best readability.
           </p>
-          <button
-            type="button"
-            className="qc-settings-reset"
-            style={styles.resetBtn}
-            onClick={onReset}
-            aria-label="Restore default colors"
+          <IconButton
+            icon={RotateCcw}
+            size={18}
             title="Restore default colors"
-          >
-            <RotateCcw size={18} />
-            <span>Restore Defaults</span>
-          </button>
+            ariaLabel="Restore default colors"
+            className="qc-settings-reset"
+            onClick={onReset}
+            width={36}
+            height={36}
+            radius={8}
+            bg={theme.secondary}
+            color={theme.primary}
+            hoverInvert={true}
+          />
         </div>
       </div>
     </div>
