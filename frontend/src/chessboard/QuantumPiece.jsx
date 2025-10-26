@@ -31,13 +31,13 @@ import imgQK from '../assets/qk.svg';
 import imgRK from '../assets/rk.svg';
 import imgRQ from '../assets/rq.svg';
 
-// Quantum overlay assets as inline React components to enable theming via CSS variables
-import { ReactComponent as QSvgP } from '../assets/quantum_p.svg';
-import { ReactComponent as QSvgN } from '../assets/quantum_n.svg';
-import { ReactComponent as QSvgB } from '../assets/quantum_b.svg';
-import { ReactComponent as QSvgR } from '../assets/quantum_r.svg';
-import { ReactComponent as QSvgQ } from '../assets/quantum_q.svg';
-import { ReactComponent as QSvgK } from '../assets/quantum_k.svg';
+// Quantum overlay assets imported as React components via SVGR (?react query)
+import QSvgP from '../assets/quantum_p.svg?react';
+import QSvgN from '../assets/quantum_n.svg?react';
+import QSvgB from '../assets/quantum_b.svg?react';
+import QSvgR from '../assets/quantum_r.svg?react';
+import QSvgQ from '../assets/quantum_q.svg?react';
+import QSvgK from '../assets/quantum_k.svg?react';
 
 const singleMap = {
   p: imgP,
