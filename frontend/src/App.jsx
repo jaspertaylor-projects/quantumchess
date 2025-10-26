@@ -2,7 +2,7 @@
 // Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/QuantumPiece.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
@@ -240,8 +240,6 @@ export default function App() {
     const piece = getPieceAtSquare(square);
 
     if (piece) {
-      // If clicking a piece occupying the square, selection logic will run in handlePieceClick.
-      // This handler is kept permissive for empty squares.
       if (piece.side === sideToMove) {
         setSelectedId(piece.id);
         setTrayHighlights([]);
@@ -279,7 +277,6 @@ export default function App() {
       return;
     }
 
-    // Attempt capture if a friendly piece is selected and the clicked piece is an opponent
     if (selectedId) {
       const movingPiece = pieces.find((p) => p.id === selectedId);
       if (!movingPiece || movingPiece.side !== sideToMove) {
@@ -318,7 +315,6 @@ export default function App() {
     return [...baseHighlights, ...trayHighlights];
   }, [baseHighlights, trayHighlights]);
 
-  // Captured pieces: show pieces captured by each side, sorted by captureIndex so new captures appear at the far right
   const whiteCaptured = useMemo(() => {
     return pieces
       .filter((p) => p.captured && p.side === 'black')
@@ -348,6 +344,12 @@ export default function App() {
       </div>
     );
   };
+
+  const handleBoardResize = useCallback((px) => {
+    setTrayHeight(px);
+  }, []);
+
+  const handleSquareRightClick = useCallback(() => {}, []);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -391,7 +393,7 @@ export default function App() {
                 showCoordinates={showCoordinates}
                 highlights={combinedHighlights}
                 onSquareClick={handleSquareClick}
-                onSquareRightClick={() => {}}
+                onSquareRightClick={handleSquareRightClick}
                 onPieceClick={handlePieceClick}
                 pieces={pieces}
                 selectedId={selectedId}
@@ -399,7 +401,7 @@ export default function App() {
                 borderColor="transparent"
                 shadow="rgba(0, 0, 0, 0.15)"
                 pieceSvgStyles={svgStyles}
-                onResize={(px) => setTrayHeight(px)}
+                onResize={handleBoardResize}
                 squareColors={boardColors}
               />
 
