@@ -251,7 +251,8 @@ export default function App() {
     },
     playerBar: (side) => {
       const bg = side === 'white' ? boardColors.light : boardColors.dark;
-      const txt = side === 'white' ? whiteColors.bandFill : blackColors.bandFill;
+      // Switched text colors between sides
+      const txt = side === 'white' ? blackColors.bandFill : whiteColors.bandFill;
       return {
         width: '100%',
         minHeight: 'clamp(36px, 6.5vh, 64px)',
