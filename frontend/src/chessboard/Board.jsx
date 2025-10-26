@@ -30,6 +30,7 @@ export default function Board({
   shadow = theme.shadow,
   maxVisualSize = 'min(90vmin, 800px)',
   ariaLabel = 'Chessboard',
+  pieceColorFilters = { white: 'none', black: 'none' },
 }) {
   const { surfaceRef, dimensions, eventToSquare } = useBoardInteractions({ orientation });
 
@@ -188,6 +189,7 @@ export default function Board({
                   isSelected={selectedId === piece.id}
                   onClick={onPieceClick}
                   ariaLabel={`Piece at ${squareAlg}`}
+                  colorFilters={pieceColorFilters}
                 />
               ) : null}
 

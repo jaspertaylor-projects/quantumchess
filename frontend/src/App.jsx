@@ -1,12 +1,15 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board that displays and moves quantum pieces in superposition.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color filters.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
+import SettingsModal from './settings/SettingsModal.jsx';
+import usePieceColors from './settings/usePieceColors.js';
+import { Settings as SettingsIcon } from 'lucide-react';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -15,6 +18,9 @@ export default function App() {
   const { pieces, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const { presets, whiteKey, blackKey, setWhiteKey, setBlackKey, colorFilters } = usePieceColors();
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
@@ -145,6 +151,24 @@ export default function App() {
       boxSizing: 'border-box',
       overflow: 'hidden',
     },
+    settingsFab: {
+      position: 'fixed',
+      top: '50%',
+      right: 18,
+      transform: 'translateY(-50%)',
+      width: 56,
+      height: 56,
+      borderRadius: 14,
+      border: `1px solid ${theme.border}`,
+      backgroundColor: theme.cardBackground,
+      boxShadow: `0 6px 18px ${theme.shadow}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      zIndex: 20,
+      color: theme.textPrimary,
+    },
   };
 
   const handleSquareClick = (data) => {
@@ -191,6 +215,16 @@ export default function App() {
         <h1 className="qc-app-title" style={styles.appTitle}>Quantum Chess</h1>
       </header>
 
+      <button
+        type="button"
+        aria-label="Open settings"
+        className="qc-settings-fab"
+        style={styles.settingsFab}
+        onClick={() => setSettingsOpen(true)}
+      >
+        <SettingsIcon size={28} />
+      </button>
+
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
           <div className="qc-player-bar qc-player-bar--top" style={styles.playerBar('black')} data-side="black">
@@ -213,6 +247,7 @@ export default function App() {
               maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
               borderColor="transparent"
               shadow="rgba(0, 0, 0, 0.15)"
+              pieceColorFilters={colorFilters}
             />
           </div>
 
@@ -224,6 +259,16 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        presets={presets}
+        whiteKey={whiteKey}
+        blackKey={blackKey}
+        onChangeWhite={setWhiteKey}
+        onChangeBlack={setBlackKey}
+      />
     </div>
   );
 }

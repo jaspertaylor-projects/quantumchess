@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece that overlays assets based on its possible types and provides interaction hooks.
+// Purpose: Visual renderer for a quantum chess piece that overlays assets based on its possible types and provides interaction hooks, with per-side color filters.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -90,9 +90,14 @@ export default function QuantumPiece({
   isSelected = false,
   onClick,
   ariaLabel,
+  colorFilters = { white: 'none', black: 'none' },
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
+
+  const sideFilter = side === 'white' ? (colorFilters.white || 'none') : (colorFilters.black || 'none');
+  const baseDropShadow = `drop-shadow(0 1px 2px ${theme.shadow})`;
+  const composedFilter = sideFilter === 'none' ? baseDropShadow : `${sideFilter} ${baseDropShadow}`;
 
   const baseStyles = {
     container: {
@@ -114,6 +119,7 @@ export default function QuantumPiece({
       objectFit: 'contain',
       display: 'block',
       pointerEvents: 'none',
+      filter: composedFilter,
     },
     overlayStack: {
       position: 'relative',
@@ -131,7 +137,7 @@ export default function QuantumPiece({
       objectFit: 'contain',
       pointerEvents: 'none',
       opacity: 0.95,
-      filter: `drop-shadow(0 1px 2px ${theme.shadow})`,
+      filter: composedFilter,
       zIndex: z,
     }),
     sideTint: {
