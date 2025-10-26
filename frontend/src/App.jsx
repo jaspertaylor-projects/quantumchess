@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing. Also prewarms rasterized PNGs for SVG pieces and invalidates them on color changes with console confirmations.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./chessboard/rasterPrewarm.js
+// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces using colorized, cached PNGs rasterized from SVGs and stored in browser (memory + localStorage).
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -15,6 +15,15 @@ import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs } from './chessboard/rasterPrewarm.js';
+import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
+
+// Single-type SVG asset URLs used for captured-piece icons
+import imgP from './assets/p.svg?url';
+import imgN from './assets/n.svg?url';
+import imgB from './assets/b.svg?url';
+import imgR from './assets/r.svg?url';
+import imgQ from './assets/q.svg?url';
+import imgK from './assets/k.svg?url';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -85,15 +94,15 @@ export default function App() {
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     console.log('[App] Prewarm PNGs for current piece size', currentPieceSize);
-    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
-  }, [currentPieceSize]);
+    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
+  }, [currentPieceSize, svgStyles]);
 
   // Invalidate and prewarm when piece color settings change
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     console.log('[App] Piece colors changed; invalidating raster cache and regenerating');
     invalidateRasterPngs('piece-colors-changed');
-    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
+    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [svgStyles, currentPieceSize]);
 
   const styles = {
@@ -355,34 +364,34 @@ export default function App() {
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
     const t = types.length === 1 ? types[0] : 'p';
 
-    const typeToPng = {
-      p: '/src/public/stylish_pawn.png',
-      n: '/src/public/stylish_knight.png',
-      b: '/src/public/stylish_bishop.png',
-      r: '/src/public/stylish_rook.png',
-      q: '/src/public/stylish_queen.png',
-      k: '/src/public/stylish_king.png',
+    const typeToSvg = {
+      p: imgP,
+      n: imgN,
+      b: imgB,
+      r: imgR,
+      q: imgQ,
+      k: imgK,
     };
 
-    const src = typeToPng[t] || typeToPng.p;
-    const label = t;
+    const srcSvg = typeToSvg[t] || typeToSvg.p;
+    const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
     return (
       <div
         className="qc-captured-icon-wrap"
         style={styles.capturedIconWrap}
-        title={`Captured ${label}`}
-        aria-label={`Captured ${label}`}
+        title={`Captured ${t}`}
+        aria-label={`Captured ${t}`}
       >
-        <img
+        <RasterizedSvgImg
+          srcSvgUrl={srcSvg}
+          cssVarMap={sideVars}
+          idPrefix={`cap-${piece.id}-${t}`}
+          size={26}
+          renderHint="crisp"
           className="qc-captured-icon-img"
-          src={src}
-          alt={`Captured ${label}`}
-          width={26}
-          height={26}
-          decoding="async"
-          loading="eager"
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          alt={`Captured ${t}`}
         />
       </div>
     );
