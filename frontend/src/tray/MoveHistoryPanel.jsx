@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) and provides playback/highlighting for individual half-moves.
+// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting and simple playback; uses an easy-to-read dash between from-to squares.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
@@ -123,15 +123,17 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
         color: theme.textPrimary,
         fontSize: 14,
         fontWeight: 600,
-        padding: '8px 0',
+        padding: '8px 10px',
         borderRadius: 6,
-        background: isActive ? 'rgba(97,218,251,0.10)' : 'transparent',
+        background: isActive ? 'rgba(97,218,251,0.12)' : 'transparent',
         transition: 'background 120ms ease',
         cursor: interactive ? 'pointer' : 'default',
         userSelect: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-start',
+        width: '100%',
+        boxSizing: 'border-box',
       }),
       cellTextMuted: {
         color: theme.textSecondary,
@@ -161,7 +163,7 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
   const isWhiteActive = (rowIdx) => index === rowIdx * 2;
   const isBlackActive = (rowIdx) => index === rowIdx * 2 + 1;
 
-  const formatMove = (m) => (m ? `${m.from} → ${m.to}` : '');
+  const formatMove = (m) => (m ? `${m.from} - ${m.to}` : '');
 
   return (
     <div className="qc-move-history-root" style={styles.root}>
