@@ -253,7 +253,7 @@ export default function App() {
         width: '100%',
         minHeight: 'clamp(36px, 6.5vh, 64px)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'stretch', // stretch children to enable 95% height icons
         justifyContent: 'space-between',
         padding: '0 12px',
         boxSizing: 'border-box',
@@ -266,6 +266,9 @@ export default function App() {
       };
     },
     playerName: {
+      display: 'flex',
+      alignItems: 'center',
+      height: '100%',
       fontWeight: 700,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
@@ -280,12 +283,13 @@ export default function App() {
       opacity: 0.9,
       fontSize: '0.9rem',
       flex: '0 1 auto',
+      height: '100%',
+      maxHeight: '100%',
     },
     capturedIconWrap: {
-      width: 'clamp(18px, 2.2vw, 26px)',
-      height: 'clamp(18px, 2.2vw, 26px)',
-      minWidth: '18px',
-      minHeight: '18px',
+      height: '95%',
+      aspectRatio: '1 / 1',
+      width: 'auto',
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
