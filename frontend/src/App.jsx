@@ -177,6 +177,10 @@ export default function App() {
       gap: 'clamp(6px, 1.2vw, 10px)',
       flex: '0 1 auto',
       minWidth: 0,
+      backgroundColor: '#000',
+      padding: '6px 14px',
+      borderRadius: 12,
+      boxShadow: '0 0 0 1px rgba(97,218,251,0.18) inset, 0 6px 18px rgba(0,0,0,0.45)',
     },
     titleStrip: {
       display: 'flex',
