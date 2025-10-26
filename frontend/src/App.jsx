@@ -658,7 +658,7 @@ export default function App() {
                   <span className="qc-player-name-text qc-player-name-text--black">{blackPlayer}</span>
                 </div>
                 <div className="qc-player-rating-row qc-player-rating-row--black" style={styles.playerRatingRow}>
-                  <span className="qc-player-rating-text qc-player-rating-text--black">{blackRating}</span>
+                  <span className="qc-player-rating-text qc-player-rating-text--black">Rating: {blackRating}</span>
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
@@ -710,7 +710,7 @@ export default function App() {
                   <span className="qc-player-name-text qc-player-name-text--white">{whitePlayer}</span>
                 </div>
                 <div className="qc-player-rating-row qc-player-rating-row--white" style={styles.playerRatingRow}>
-                  <span className="qc-player-rating-text qc-player-rating-text--white">{whiteRating}</span>
+                  <span className="qc-player-rating-text qc-player-rating-text--white">Rating: {whiteRating}</span>
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
