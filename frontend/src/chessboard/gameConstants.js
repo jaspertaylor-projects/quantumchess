@@ -1,5 +1,5 @@
 // frontend/src/chessboard/gameConstants.js
-// Purpose: Define core constants, helpers, and starting setup for Quantum Chess pieces and board squares.
+// Purpose: Define core constants, helpers, and starting setup for Quantum Chess pieces and board squares; includes capture-collapse priority using least-value first (non-king).
 // Imports From: ./boardUtils.js
 // Exported To: ./useQuantumGameState.js, ../App.jsx
 
@@ -72,7 +72,8 @@ export function createStartingPieces() {
   return pieces;
 }
 
-export const CAPTURE_COLLAPSE_ORDER = ['q', 'r', 'b', 'n', 'p'];
+// Capture collapse priority: least valuable non-king first (P < N < B < R < Q)
+export const CAPTURE_COLLAPSE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
 export function isSide(value) {
   return value === SIDES.WHITE || value === SIDES.BLACK;

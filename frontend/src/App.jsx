@@ -1,11 +1,12 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a neon intergalactic title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height. Adds rules modal and enforces turn order (white first, alternating turns) in UI interactions.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
+// Purpose: Render a full-viewport Quantum Chess UI with a neon title and an interactive board; includes player bars that show captured pieces aligned from the right, a rules modal, and turn-order enforcement.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/QuantumPiece.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
+import QuantumPiece from './chessboard/QuantumPiece.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
@@ -201,9 +202,18 @@ export default function App() {
     capturedArea: {
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'flex-end',
       gap: 6,
       opacity: 0.8,
       fontSize: '0.85rem',
+      flex: '0 1 auto',
+    },
+    capturedIconWrap: {
+      width: 'clamp(16px, 1.9vw, 22px)',
+      height: 'clamp(16px, 1.9vw, 22px)',
+      display: 'grid',
+      placeItems: 'center',
+      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
     },
     boardStage: {
       width: '100%',
@@ -284,6 +294,35 @@ export default function App() {
     return [...baseHighlights, ...trayHighlights];
   }, [baseHighlights, trayHighlights]);
 
+  // Captured pieces: show pieces captured by each side, filled from the right of the player bar
+  const whiteCaptured = useMemo(() => {
+    // White has captured Black pieces
+    return pieces.filter((p) => p.captured && p.side === 'black');
+  }, [pieces]);
+
+  const blackCaptured = useMemo(() => {
+    // Black has captured White pieces
+    return pieces.filter((p) => p.captured && p.side === 'white');
+  }, [pieces]);
+
+  const CapturedIcon = ({ piece }) => {
+    const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
+    const label = types.length === 1 ? types[0] : 'captured';
+    return (
+      <div className="qc-captured-icon-wrap" style={styles.capturedIconWrap} title={`Captured ${label}`} aria-label={`Captured ${label}`}>
+        <QuantumPiece
+          id={`cap-${piece.id}`}
+          side={piece.side}
+          possibleTypes={types}
+          size={22}
+          onClick={null}
+          ariaLabel={`Captured ${label}`}
+          svgStyleBySide={svgStyles}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
@@ -314,7 +353,9 @@ export default function App() {
             >
               <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
-                {/* Captured pieces (black captures) placeholder */}
+                {blackCaptured.map((p) => (
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                ))}
               </div>
             </div>
 
@@ -353,7 +394,9 @@ export default function App() {
             >
               <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
-                {/* Captured pieces (white captures) placeholder */}
+                {whiteCaptured.map((p) => (
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                ))}
               </div>
             </div>
           </div>

@@ -38,8 +38,9 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
       {
         title: 'Captures & Collapse',
         content: [
-          'On capture, the captured piece collapses immediately to its highest non-king value from: Q > R > B > N > P.',
-          'Collapsed capture types count toward global conservation totals.',
+          'On capture, the captured piece collapses immediately to its least valuable non-King possibility: P < N < B < R < Q.',
+          'The captured piece is displayed in the capturing player\'s bar; newly captured icons appear at the far right and fill from right to left.',
+          'Captured pieces count toward the opponent\'s conserved totals. Example: If White captures a Black piece and it collapses to a Knight, and Black already has one Knight confirmed on the board, that becomes two total Knights for Black and Knight must be removed from the remaining possibilities of all other Black pieces as capacity is exhausted.',
           'Kings never appear as the capture collapse result.',
         ],
       },

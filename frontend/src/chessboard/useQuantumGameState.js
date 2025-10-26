@@ -365,10 +365,11 @@ export default function useQuantumGameState() {
 
     const targetPiece = tempOcc.get(toSquare);
     if (targetPiece && targetPiece.side !== moving.side) {
-      const highest = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
+      // Collapse captured piece to least valuable non-king possibility.
+      const least = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
       targetPiece.captured = true;
       targetPiece.square = null;
-      targetPiece.possibleTypes = highest ? [highest] : ['p'];
+      targetPiece.possibleTypes = least ? [least] : ['p'];
     }
 
     moving.square = toSquare;
