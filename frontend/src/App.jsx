@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
@@ -9,6 +9,7 @@ import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
+import useBoardColors from './settings/useBoardColors.js';
 import SideTray from './tray/SideTray.jsx';
 import { useDispatch } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
@@ -27,6 +28,7 @@ export default function App() {
   const [trayHighlights, setTrayHighlights] = useState([]);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
+  const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
 
   const dispatch = useDispatch();
 
@@ -49,7 +51,6 @@ export default function App() {
 
       const topH = topBarRef.current ? topBarRef.current.getBoundingClientRect().height : 0;
       const bottomH = bottomBarRef.current ? bottomBarRef.current.getBoundingClientRect().height : 0;
-      // Two gaps between top-bar/board-row and board-row/bottom-bar; keep in sync with styles.boardStage.gap
       const verticalGaps = 16;
       const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
 
@@ -265,6 +266,7 @@ export default function App() {
                 shadow="rgba(0, 0, 0, 0.15)"
                 pieceSvgStyles={svgStyles}
                 onResize={(px) => setTrayHeight(px)}
+                squareColors={boardColors}
               />
 
               <SideTray
@@ -295,9 +297,11 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
         whiteColors={whiteColors}
         blackColors={blackColors}
+        boardColors={boardColors}
         onChangeWhite={setWhiteColors}
         onChangeBlack={setBlackColors}
-        onReset={resetColors}
+        onChangeBoard={setBoardColors}
+        onReset={() => { resetColors(); resetBoardColors(); }}
       />
     </div>
   );

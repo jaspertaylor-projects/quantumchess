@@ -1,5 +1,5 @@
 // frontend/src/settings/SettingsModal.jsx
-// Purpose: Modal dialog for configuring per-side SVG color variables with native color pickers; includes icon-only actions for restore defaults and close.
+// Purpose: Modal dialog for configuring per-side SVG color variables and board square colors; includes icon-only actions for restore defaults and close.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -13,8 +13,10 @@ export default function SettingsModal({
   onClose = () => {},
   whiteColors = { icon: '#ffffff', bandFill: '#1f2937', bandStroke: '#f2f2f2' },
   blackColors = { icon: '#111827', bandFill: '#e5e7eb', bandStroke: '#111827' },
+  boardColors = { light: '#f0d9b5', dark: '#b58863' },
   onChangeWhite = () => {},
   onChangeBlack = () => {},
+  onChangeBoard = () => {},
   onReset = () => {},
 }) {
   if (!open) return null;
@@ -108,10 +110,14 @@ export default function SettingsModal({
       gap: 12,
       marginTop: 16,
     },
+    fullSpan: {
+      gridColumn: '1 / -1',
+    },
   };
 
   const handleWhite = (key) => (e) => onChangeWhite({ [key]: e.target.value });
   const handleBlack = (key) => (e) => onChangeBlack({ [key]: e.target.value });
+  const handleBoard = (key) => (e) => onChangeBoard({ [key]: e.target.value });
 
   return (
     <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
@@ -229,11 +235,41 @@ export default function SettingsModal({
               />
             </div>
           </div>
+
+          <div className="qc-settings-card qc-settings-card--board" style={{ ...styles.card, ...styles.fullSpan }}>
+            <div className="qc-settings-card-title" style={styles.cardTitle}>Board Squares</div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-board-light" style={styles.label}>Light Squares</label>
+              <input
+                id="qc-board-light"
+                type="color"
+                className="qc-color-input qc-color-input--board-light"
+                style={styles.colorInput}
+                value={boardColors.light}
+                onChange={handleBoard('light')}
+                aria-label="Light square color"
+              />
+            </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-board-dark" style={styles.label}>Dark Squares</label>
+              <input
+                id="qc-board-dark"
+                type="color"
+                className="qc-color-input qc-color-input--board-dark"
+                style={styles.colorInput}
+                value={boardColors.dark}
+                onChange={handleBoard('dark')}
+                aria-label="Dark square color"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="qc-settings-footer" style={styles.footer}>
           <p className="qc-settings-hint" style={styles.hint}>
-            Hint: Colors are applied to quantum piece SVGs via CSS variables. Choose contrasting colors for icon and bands for best readability.
+            Hint: Piece colors apply to quantum piece SVGs via CSS variables. Board colors affect light/dark square backgrounds.
           </p>
           <IconButton
             icon={RotateCcw}
