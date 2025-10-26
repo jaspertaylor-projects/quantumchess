@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color variables.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import './App.css';
@@ -10,6 +10,8 @@ import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
 import { Settings as SettingsIcon } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { addMove } from './store/gameSlice.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -21,6 +23,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
+
+  const dispatch = useDispatch();
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
@@ -183,7 +187,12 @@ export default function App() {
     if (selectedId) {
       const legal = new Set(getLegalMoves(selectedId));
       if (legal.has(square)) {
+        const movingPiece = pieces.find((p) => p.id === selectedId);
+        const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
         movePiece(selectedId, square);
+        if (fromSquare) {
+          dispatch(addMove({ from: fromSquare, to: square }));
+        }
         setSelectedId(null);
       } else {
         setSelectedId(null);
