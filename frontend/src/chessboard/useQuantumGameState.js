@@ -192,50 +192,45 @@ export default function useQuantumGameState() {
   }, [pieces, occupancy, sideToMove]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
-    let didMove = false;
-    setPieces((prev) => {
-      const next = prev.map((p) => ({ ...p }));
-      const moving = next.find((p) => p.id === pieceId && !p.captured);
-      if (!moving) return prev;
-      if (moving.side !== sideToMove) return prev;
+    // Compute move synchronously to avoid relying on async updater side-effects for turn toggling.
+    const prevPieces = pieces;
+    const next = prevPieces.map((p) => ({ ...p }));
+    const moving = next.find((p) => p.id === pieceId && !p.captured);
+    if (!moving) return;
+    if (moving.side !== sideToMove) return;
 
-      const from = fromAlgebraic(moving.square);
-      const to = fromAlgebraic(toSquare);
-      if (!from || !to) return prev;
+    const from = fromAlgebraic(moving.square);
+    const to = fromAlgebraic(toSquare);
+    if (!from || !to) return;
 
-      const tempOcc = buildOccupancy(next);
+    const tempOcc = buildOccupancy(next);
 
-      const subset = subsetTypesThatCanMakeMove(
-        moving.possibleTypes,
-        from.fileIndex,
-        from.rankIndex,
-        to.fileIndex,
-        to.rankIndex,
-        tempOcc,
-        moving.side
-      );
+    const subset = subsetTypesThatCanMakeMove(
+      moving.possibleTypes,
+      from.fileIndex,
+      from.rankIndex,
+      to.fileIndex,
+      to.rankIndex,
+      tempOcc,
+      moving.side
+    );
 
-      if (subset.length === 0) return prev;
+    if (subset.length === 0) return;
 
-      const targetPiece = tempOcc.get(toSquare);
-      if (targetPiece && targetPiece.side !== moving.side) {
-        const highest = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
-        targetPiece.captured = true;
-        targetPiece.square = null;
-        targetPiece.possibleTypes = highest ? [highest] : ['p'];
-      }
-
-      moving.square = toSquare;
-      moving.possibleTypes = subset;
-
-      didMove = true;
-      return next;
-    });
-
-    if (didMove) {
-      setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
+    const targetPiece = tempOcc.get(toSquare);
+    if (targetPiece && targetPiece.side !== moving.side) {
+      const highest = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
+      targetPiece.captured = true;
+      targetPiece.square = null;
+      targetPiece.possibleTypes = highest ? [highest] : ['p'];
     }
-  }, [sideToMove]);
+
+    moving.square = toSquare;
+    moving.possibleTypes = subset;
+
+    setPieces(next);
+    setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
+  }, [pieces, sideToMove]);
 
   return {
     pieces,
