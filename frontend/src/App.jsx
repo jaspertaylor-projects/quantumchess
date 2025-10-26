@@ -147,11 +147,13 @@ export default function App() {
     appTitleUnderline: {
       marginTop: '8px',
       height: '3px',
-      width: 'min(72vw, 640px)',
+      width: '100vw',
       background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
       borderRadius: 3,
       boxShadow: '0 0 18px rgba(180,0,255,0.45), 0 0 28px rgba(0,245,255,0.25)',
       alignSelf: 'center',
+      marginLeft: 'calc(50% - 50vw)',
+      marginRight: 'calc(50% - 50vw)',
     },
     boardArea: {
       flex: 1,
