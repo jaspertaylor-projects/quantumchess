@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, including a styled header with decorative stylish PNG piece icons from public on both sides of the title, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons. Adds move application guards to avoid double moves under React Strict Mode by only dispatching to Redux when a move was applied.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
+// Purpose: Render the Quantum Chess UI with a responsive header where the title fills the header height and aligns on the same baseline as decorative PNG piece icons; renders the interactive board, captured pieces, and settings/rules modals; manages SVG raster cache.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -111,13 +111,11 @@ export default function App() {
 
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
-    console.log('[App] Prewarm PNGs for current piece size', currentPieceSize);
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [currentPieceSize, svgStyles]);
 
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
-    console.log('[App] Piece colors changed; invalidating raster cache and regenerating');
     invalidateRasterPngs('piece-colors-changed');
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [svgStyles, currentPieceSize]);
@@ -142,20 +140,26 @@ export default function App() {
     },
     appHeader: {
       backgroundColor: '#000',
-      padding: 'clamp(10px, 2.2vh, 18px) 12px 0 12px',
+      padding: '0 12px',
       borderRadius: 0,
       textAlign: 'center',
       width: '100%',
       boxSizing: 'border-box',
       userSelect: 'none',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      justifyContent: 'center',
+      minHeight: 'clamp(64px, 12vh, 112px)',
     },
     appTitleWrap: {
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'stretch',
       justifyContent: 'center',
       width: '100%',
       boxSizing: 'border-box',
-      padding: '4px 8px',
+      padding: '0',
+      minHeight: 'clamp(56px, 10vh, 88px)',
     },
     appTitleRow: {
       display: 'grid',
@@ -168,13 +172,13 @@ export default function App() {
       boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
       width: '100vw',
       margin: '0 auto',
-      height: 'clamp(56px, 10vh, 88px)',
+      height: '100%',
       marginLeft: 'calc(50% - 50vw)',
       marginRight: 'calc(50% - 50vw)',
     },
     appTitleCenterGroup: {
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'center',
       gap: 'clamp(6px, 1.2vw, 10px)',
       flex: '0 1 auto',
@@ -182,6 +186,7 @@ export default function App() {
       backgroundColor: 'transparent',
       padding: '0 14px',
       borderRadius: 12,
+      height: '100%',
     },
     titleStrip: (side) => ({
       display: 'flex',
@@ -215,10 +220,12 @@ export default function App() {
         '0 0 12px rgba(180,0,255,0.35)',
         '0 0 22px rgba(255,59,127,0.35)'
       ].join(', '),
-      lineHeight: 1.1,
+      lineHeight: 1,
+      display: 'block',
+      alignSelf: 'flex-end',
     },
     appTitleUnderline: {
-      marginTop: '8px',
+      marginTop: '4px',
       height: '3px',
       width: '100vw',
       background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
@@ -251,13 +258,12 @@ export default function App() {
     },
     playerBar: (side) => {
       const bg = side === 'white' ? boardColors.light : boardColors.dark;
-      // Switched text colors between sides
       const txt = side === 'white' ? blackColors.bandFill : whiteColors.bandFill;
       return {
         width: '100%',
         minHeight: 'clamp(36px, 6.5vh, 64px)',
         display: 'flex',
-        alignItems: 'stretch', // stretch children to enable 95% height icons
+        alignItems: 'stretch',
         justifyContent: 'space-between',
         padding: '0 12px',
         boxSizing: 'border-box',
@@ -271,13 +277,14 @@ export default function App() {
     },
     playerName: {
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       height: '100%',
       fontWeight: 700,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
       fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
       color: 'currentColor',
+      paddingBottom: 2,
     },
     capturedArea: {
       display: 'flex',
@@ -344,9 +351,9 @@ export default function App() {
     const pngSrc = TYPE_TO_STYLISH_PNG[t] || TYPE_TO_STYLISH_PNG.p;
 
     const sizeScale = useMemo(() => {
-      if (t === 'q' || t === 'k') return 1.0; // biggest
-      if (t === 'p') return 0.8; // smallest
-      return 0.9; // medium for n, b, r
+      if (t === 'q' || t === 'k') return 1.0;
+      if (t === 'p') return 0.8;
+      return 0.9;
     }, [t]);
 
     const innerStyle = useMemo(() => ({
