@@ -216,7 +216,7 @@ export default function QuantumPiece({
   const baseDropShadow = isSmall ? 'none' : `drop-shadow(0 1px 2px ${theme.shadow})`;
 
   // 95% visual scale relative to the square
-  const visualScalePercent = '10%';
+  const visualScalePercent = '90%';
 
   const baseStyles = {
     container: {
