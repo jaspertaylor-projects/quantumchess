@@ -1,5 +1,5 @@
 // frontend/src/settings/usePieceColors.js
-// Purpose: Manage per-side inline-SVG theming colors (icon, band fill, band stroke) and persist them to localStorage; exposes styles for SVG CSS variables.
+// Purpose: Manage per-side inline-SVG theming colors (icon, band fill, band stroke), persist them to localStorage, and expose a reset-to-defaults action.
 // Imports From: None
 // Exported To: ../App.jsx, ./SettingsModal.jsx
 
@@ -11,15 +11,15 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_WHITE = {
-  icon: '#10b981', // emerald
-  bandFill: '#222222',
+  icon: '#ffffff',
+  bandFill: '#1f2937',
   bandStroke: '#f2f2f2',
 };
 
 const DEFAULT_BLACK = {
-  icon: '#f59e0b', // amber
-  bandFill: '#222222',
-  bandStroke: '#f2f2f2',
+  icon: '#111827',
+  bandFill: '#e5e7eb',
+  bandStroke: '#111827',
 };
 
 function readStorage(key, fallback) {
@@ -66,6 +66,17 @@ export default function usePieceColors() {
     });
   }, []);
 
+  const resetColors = useCallback(() => {
+    setWhiteColorsState(() => {
+      writeStorage(STORAGE_KEYS.white, DEFAULT_WHITE);
+      return { ...DEFAULT_WHITE };
+    });
+    setBlackColorsState(() => {
+      writeStorage(STORAGE_KEYS.black, DEFAULT_BLACK);
+      return { ...DEFAULT_BLACK };
+    });
+  }, []);
+
   const svgStyles = useMemo(() => ({
     white: {
       ['--band-fill']: whiteColors.bandFill,
@@ -84,6 +95,7 @@ export default function usePieceColors() {
     blackColors,
     setWhiteColors,
     setBlackColors,
+    resetColors,
     svgStyles,
   };
 }

@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports SVGR-based inline SVG overlays with robust fallback inlining when SVGR is unavailable.
+// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports robust inline-SVG overlays with CSS-variable theming and unique ID prefixing to avoid symbol collisions.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -31,14 +31,13 @@ import imgQK from '../assets/qk.svg';
 import imgRK from '../assets/rk.svg';
 import imgRQ from '../assets/rq.svg';
 
-// Quantum overlay assets imported as React components via SVGR
-// Note: Requires vite-plugin-svgr. If the plugin is unavailable, these imports will resolve to URL strings.
-import QSvgP from '../assets/quantum_p.svg?react';
-import QSvgN from '../assets/quantum_n.svg?react';
-import QSvgB from '../assets/quantum_b.svg?react';
-import QSvgR from '../assets/quantum_r.svg?react';
-import QSvgQ from '../assets/quantum_q.svg?react';
-import QSvgK from '../assets/quantum_k.svg?react';
+// Quantum overlay assets as URL strings to inline and prefix IDs at runtime
+import qUrlP from '../assets/quantum_p.svg?url';
+import qUrlN from '../assets/quantum_n.svg?url';
+import qUrlB from '../assets/quantum_b.svg?url';
+import qUrlR from '../assets/quantum_r.svg?url';
+import qUrlQ from '../assets/quantum_q.svg?url';
+import qUrlK from '../assets/quantum_k.svg?url';
 
 const singleMap = {
   p: imgP,
@@ -69,13 +68,13 @@ const pairAssetMap = new Map([
   ['q|r', imgRQ],
 ]);
 
-const quantumComponentMap = {
-  p: QSvgP,
-  n: QSvgN,
-  b: QSvgB,
-  r: QSvgR,
-  q: QSvgQ,
-  k: QSvgK,
+const quantumUrlMap = {
+  p: qUrlP,
+  n: qUrlN,
+  b: qUrlB,
+  r: qUrlR,
+  q: qUrlQ,
+  k: qUrlK,
 };
 
 function canonicalPairKey(a, b) {
@@ -83,15 +82,55 @@ function canonicalPairKey(a, b) {
   return `${x}|${y}`;
 }
 
-// InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables onto the root <svg>.
-// This ensures theming works even if vite-plugin-svgr is unavailable and imports resolve to URL strings.
-function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className }) {
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Prefix all IDs within an SVG and update internal references to avoid collisions when overlaying multiple SVGs.
+function prefixSvgIds(svgText, prefix) {
+  if (!svgText || !prefix) return svgText;
+
+  const idRegex = /\sid="([^"]+)"/g;
+  const ids = new Set();
+  let m;
+  while ((m = idRegex.exec(svgText)) !== null) {
+    ids.add(m[1]);
+  }
+  if (ids.size === 0) return svgText;
+
+  let out = svgText;
+  const map = new Map();
+  for (const oldId of ids) {
+    const safePrefix = prefix.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const nu = `${safePrefix}__${oldId}`;
+    map.set(oldId, nu);
+  }
+
+  // Replace id attributes first
+  for (const [oldId, nu] of map.entries()) {
+    const re = new RegExp(`(\\sid=")${escapeRegExp(oldId)}(" )|(\\sid=")${escapeRegExp(oldId)}("\\/>)|(\\sid=")${escapeRegExp(oldId)}("\\>)`, 'g');
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(" )`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}("\\/>)`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}("\\>)`, 'g'), `$1${nu}$2`);
+  }
+
+  // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
+  for (const [oldId, nu] of map.entries()) {
+    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\\)`, 'g'), `url(#${nu})`);
+    out = out.replace(new RegExp(`([\"\'])#${escapeRegExp(oldId)}([\"\'])`, 'g'), `$1#${nu}$2`);
+    out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
+  }
+
+  return out;
+}
+
+// InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables and unique ID prefixes onto the root <svg>.
+function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix }) {
   const [svgHtml, setSvgHtml] = useState('');
 
   const varStyleString = useMemo(() => {
     const entries = Object.entries(cssVarMap || {}).filter(([k]) => k.startsWith('--'));
     const cssVars = entries.map(([k, v]) => `${k}: ${v};`).join(' ');
-    // Ensure the inlined SVG fills its wrapper
     const sizeRules = 'width: 100%; height: 100%;';
     return `${cssVars} ${sizeRules}`.trim();
   }, [cssVarMap]);
@@ -104,7 +143,8 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className }) {
         const res = await fetch(src, { cache: 'force-cache' });
         const text = await res.text();
         if (cancelled) return;
-        const injected = injectStyleIntoSvg(text, varStyleString);
+        const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
+        const injected = injectStyleIntoSvg(prefixed, varStyleString);
         setSvgHtml(injected);
       } catch {
         setSvgHtml('');
@@ -114,7 +154,7 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className }) {
     if (src) load();
 
     return () => { cancelled = true; };
-  }, [src, varStyleString]);
+  }, [src, varStyleString, idPrefix]);
 
   return (
     <div
@@ -129,8 +169,6 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className }) {
 function injectStyleIntoSvg(svgText, styleString) {
   if (!svgText || !styleString) return svgText;
 
-  // If the SVG already has a style attribute, append our vars; otherwise, add a new style.
-  // Keep it simple and safe: operate on the first <svg ...> tag only.
   const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
   if (hasStyle) {
     return svgText.replace(
@@ -197,17 +235,6 @@ export default function QuantumPiece({
       filter: baseDropShadow,
       zIndex: z,
     }),
-    sideTint: {
-      position: 'absolute',
-      top: 2,
-      right: 2,
-      width: 10,
-      height: 10,
-      borderRadius: 999,
-      backgroundColor: side === 'white' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)',
-      border: `1px solid ${side === 'white' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.35)'}`,
-      pointerEvents: 'none',
-    },
   };
 
   const handleClick = (e) => {
@@ -228,7 +255,6 @@ export default function QuantumPiece({
         aria-label={ariaLabel || `Piece ${t}`}
       >
         <img src={src} alt={t} style={baseStyles.image} />
-        <span style={baseStyles.sideTint} />
       </div>
     );
   }
@@ -248,7 +274,6 @@ export default function QuantumPiece({
           aria-label={ariaLabel || `Piece ${a}/${b}`}
         >
           <img src={src} alt={`${a}${b}`} style={baseStyles.image} />
-          <span style={baseStyles.sideTint} />
         </div>
       );
     }
@@ -264,27 +289,18 @@ export default function QuantumPiece({
     return { layout, cssVars };
   };
 
-  // If vite-plugin-svgr is not active, the imports above may resolve to URL strings.
-  // Provide a safe runtime fallback by inlining the SVG content so CSS variables apply correctly.
   const overlays = types.map((t, i) => {
-    const Imported = quantumComponentMap[t];
-    if (!Imported) return null;
-
+    const src = quantumUrlMap[t];
+    if (!src) return null;
     const { layout, cssVars } = splitOverlayStyles(i + 1);
-
-    // SVGR active: Imported is a function/component
-    if (typeof Imported === 'function') {
-      return <Imported key={`${id}-${t}`} style={{ ...layout, ...cssVars }} className="qc-quantum-overlay-svg" />;
-    }
-
-    // Fallback: Imported is a URL string. Inline it and inject CSS variables onto the root <svg>.
     return (
       <InlineSvgFromUrl
         key={`${id}-${t}`}
-        src={Imported}
+        src={src}
         wrapperStyle={layout}
         cssVarMap={cssVars}
         className="qc-quantum-overlay-inline"
+        idPrefix={`${id}-${t}`}
       />
     );
   });
@@ -298,7 +314,6 @@ export default function QuantumPiece({
       aria-label={ariaLabel || `Quantum piece: ${types.join('/')}`}
     >
       <div className="qc-quantum-overlay-stack" style={baseStyles.overlayStack}>{overlays}</div>
-      <span style={baseStyles.sideTint} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color variables.
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color variables and a reset-to-defaults action.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -22,7 +22,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
+  const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
 
   const dispatch = useDispatch();
 
@@ -276,6 +276,7 @@ export default function App() {
         blackColors={blackColors}
         onChangeWhite={setWhiteColors}
         onChangeBlack={setBlackColors}
+        onReset={resetColors}
       />
     </div>
   );

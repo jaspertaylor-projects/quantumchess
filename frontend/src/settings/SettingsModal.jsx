@@ -1,19 +1,20 @@
 // frontend/src/settings/SettingsModal.jsx
-// Purpose: A modal dialog for configuring per-side inline SVG color variables using native color pickers; accessible and simple UI.
-// Imports From: ./usePieceColors.js
+// Purpose: Modal dialog for configuring per-side SVG color variables with native color pickers and a one-click restore-defaults action.
+// Imports From: ../theme.js
 // Exported To: ../App.jsx
 
 import React from 'react';
 import theme from '../theme.js';
-import { X } from 'lucide-react';
+import { X, RotateCcw } from 'lucide-react';
 
 export default function SettingsModal({
   open = false,
   onClose = () => {},
-  whiteColors = { icon: '#10b981', bandFill: '#222222', bandStroke: '#f2f2f2' },
-  blackColors = { icon: '#f59e0b', bandFill: '#222222', bandStroke: '#f2f2f2' },
+  whiteColors = { icon: '#ffffff', bandFill: '#1f2937', bandStroke: '#f2f2f2' },
+  blackColors = { icon: '#111827', bandFill: '#e5e7eb', bandStroke: '#111827' },
   onChangeWhite = () => {},
   onChangeBlack = () => {},
+  onReset = () => {},
 }) {
   if (!open) return null;
 
@@ -110,6 +111,24 @@ export default function SettingsModal({
       fontSize: 12,
       color: theme.textSecondary,
       lineHeight: 1.4,
+    },
+    footer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginTop: 16,
+    },
+    resetBtn: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '8px 12px',
+      borderRadius: 8,
+      border: `1px solid ${theme.border}`,
+      background: 'transparent',
+      color: theme.textPrimary,
+      cursor: 'pointer',
     },
   };
 
@@ -227,9 +246,22 @@ export default function SettingsModal({
           </div>
         </div>
 
-        <p className="qc-settings-hint" style={styles.hint}>
-          Hint: Colors are applied to quantum piece SVGs via CSS variables. Choose contrasting colors for icon and bands for best readability.
-        </p>
+        <div className="qc-settings-footer" style={styles.footer}>
+          <p className="qc-settings-hint" style={styles.hint}>
+            Hint: Colors are applied to quantum piece SVGs via CSS variables. Choose contrasting colors for icon and bands for best readability.
+          </p>
+          <button
+            type="button"
+            className="qc-settings-reset"
+            style={styles.resetBtn}
+            onClick={onReset}
+            aria-label="Restore default colors"
+            title="Restore default colors"
+          >
+            <RotateCcw size={18} />
+            <span>Restore Defaults</span>
+          </button>
+        </div>
       </div>
     </div>
   );
