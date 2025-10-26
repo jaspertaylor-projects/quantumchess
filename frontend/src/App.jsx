@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing.
+// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -384,6 +384,41 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
+  // Drag-and-drop handlers wired into Board
+  const handlePieceDragStart = useCallback((piece) => {
+    if (!piece) return false;
+    if (piece.side !== sideToMove) return false;
+    setSelectedId(piece.id);
+    setTrayHighlights([]);
+    return true;
+  }, [sideToMove]);
+
+  const handlePieceDrop = useCallback(({ id, from, to }) => {
+    const movingPiece = pieces.find((p) => p.id === id);
+    if (!movingPiece) {
+      setSelectedId(null);
+      return;
+    }
+    if (!to) {
+      // Cancel or invalid drop; keep selection if dropped back on origin otherwise clear
+      setSelectedId(null);
+      return;
+    }
+    const legal = new Set(getLegalMoves(id));
+    if (!legal.has(to)) {
+      setSelectedId(null);
+      return;
+    }
+    const fromSquare = movingPiece.square || from || null;
+    movePiece(id, to);
+    if (fromSquare) {
+      dispatch(addMove({ from: fromSquare, to }));
+    }
+    setSelectedId(null);
+  }, [pieces, getLegalMoves, movePiece, dispatch]);
+
+  const handleDragHover = useCallback(() => {}, []);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
@@ -428,8 +463,12 @@ export default function App() {
                 onSquareClick={handleSquareClick}
                 onSquareRightClick={handleSquareRightClick}
                 onPieceClick={handlePieceClick}
+                onPieceDragStart={handlePieceDragStart}
+                onPieceDrop={handlePieceDrop}
+                onDragHover={handleDragHover}
                 pieces={pieces}
                 selectedId={selectedId}
+                legalMoves={selectedMoves}
                 maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
                 borderColor="transparent"
                 shadow="rgba(0, 0, 0, 0.15)"

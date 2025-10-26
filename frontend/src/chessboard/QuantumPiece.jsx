@@ -7,29 +7,29 @@ import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 
 // Single-type assets
-import imgP from '../assets/p.svg';
-import imgN from '../assets/n.svg';
-import imgB from '../assets/b.svg';
-import imgR from '../assets/r.svg';
-import imgQ from '../assets/q.svg';
-import imgK from '../assets/k.svg';
+import imgP from '../assets/p.svg?url';
+import imgN from '../assets/n.svg?url';
+import imgB from '../assets/b.svg?url';
+import imgR from '../assets/r.svg?url';
+import imgQ from '../assets/q.svg?url';
+import imgK from '../assets/k.svg?url';
 
 // Two-type composite assets
-import imgBK from '../assets/bk.svg';
-import imgBQ from '../assets/bq.svg';
-import imgBR from '../assets/br.svg';
-import imgNB from '../assets/nb.svg';
-import imgNK from '../assets/nk.svg';
-import imgNQ from '../assets/nq.svg';
-import imgNR from '../assets/nr.svg';
-import imgPB from '../assets/pb.svg';
-import imgPK from '../assets/pk.svg';
-import imgPN from '../assets/pn.svg';
-import imgPQ from '../assets/pq.svg';
-import imgPR from '../assets/pr.svg';
-import imgQK from '../assets/qk.svg';
-import imgRK from '../assets/rk.svg';
-import imgRQ from '../assets/rq.svg';
+import imgBK from '../assets/bk.svg?url';
+import imgBQ from '../assets/bq.svg?url';
+import imgBR from '../assets/br.svg?url';
+import imgNB from '../assets/nb.svg?url';
+import imgNK from '../assets/nk.svg?url';
+import imgNQ from '../assets/nq.svg?url';
+import imgNR from '../assets/nr.svg?url';
+import imgPB from '../assets/pb.svg?url';
+import imgPK from '../assets/pk.svg?url';
+import imgPN from '../assets/pn.svg?url';
+import imgPQ from '../assets/pq.svg?url';
+import imgPR from '../assets/pr.svg?url';
+import imgQK from '../assets/qk.svg?url';
+import imgRK from '../assets/rk.svg?url';
+import imgRQ from '../assets/rq.svg?url';
 
 // Quantum overlay assets as URL strings to inline and prefix IDs at runtime
 import qUrlP from '../assets/quantum_p.svg?url';
@@ -113,8 +113,8 @@ function prefixSvgIds(svgText, prefix) {
 
   // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
   for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\\)`, 'g'), `url(#${nu})`);
-    out = out.replace(new RegExp(`([\\"\\'])#${escapeRegExp(oldId)}([\\"\\'])`, 'g'), `$1#${nu}$2`);
+    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\)`, 'g'), `url(#${nu})`);
+    out = out.replace(new RegExp(`([\\"\'])#${escapeRegExp(oldId)}([\\"\'])`, 'g'), `$1#${nu}$2`);
     out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
   }
 
@@ -206,6 +206,7 @@ export default function QuantumPiece({
   size = 64,
   isSelected = false,
   onClick,
+  onPointerDown,
   ariaLabel,
   svgStyleBySide = { white: {}, black: {} },
 }) {
@@ -233,6 +234,7 @@ export default function QuantumPiece({
       transform: isSelected ? 'translateY(-1px)' : 'translateZ(0)',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
+      touchAction: 'none',
     },
     image: {
       width: visualScalePercent,
@@ -281,6 +283,11 @@ export default function QuantumPiece({
     if (onClick) onClick({ id, side, types });
   };
 
+  const handlePointerDown = (e) => {
+    e.stopPropagation();
+    if (onPointerDown) onPointerDown(e);
+  };
+
   // Determine side variables once for all render paths
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
   const renderHint = isSmall ? 'crisp' : 'precision';
@@ -294,6 +301,7 @@ export default function QuantumPiece({
         className="qc-quantum-piece qc-quantum-piece--single"
         style={baseStyles.container}
         onClick={handleClick}
+        onPointerDown={handlePointerDown}
         role="img"
         aria-label={ariaLabel || `Piece ${t}`}
       >
@@ -320,6 +328,7 @@ export default function QuantumPiece({
           className="qc-quantum-piece qc-quantum-piece--pair"
           style={baseStyles.container}
           onClick={handleClick}
+          onPointerDown={handlePointerDown}
           role="img"
           aria-label={ariaLabel || `Piece ${a}/${b}`}
         >
@@ -365,6 +374,7 @@ export default function QuantumPiece({
       className="qc-quantum-piece qc-quantum-piece--overlay"
       style={baseStyles.container}
       onClick={handleClick}
+      onPointerDown={handlePointerDown}
       role="img"
       aria-label={ariaLabel || `Quantum piece: ${types.join('/')}`}
     >
