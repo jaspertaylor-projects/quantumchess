@@ -1,10 +1,11 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece sized to fit within its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing. Maximizes in-square scale and promotes crisp rendering at small sizes.
-// Imports From: ../theme.js
+// Purpose: Visual renderer for a quantum chess piece sized to fit within its square using rasterized PNGs generated from SVGs; supports single, pair, and multi-type overlays. Colors propagate via CSS variables and trigger re-rasterization.
+// Imports From: ../theme.js, ./RasterizedSvgImg.jsx
 // Exported To: ./Board.jsx
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import theme from '../theme.js';
+import RasterizedSvgImg from './RasterizedSvgImg.jsx';
 
 // Single-type assets
 import imgP from '../assets/p.svg?url';
@@ -31,7 +32,7 @@ import imgQK from '../assets/qk.svg?url';
 import imgRK from '../assets/rk.svg?url';
 import imgRQ from '../assets/rq.svg?url';
 
-// Quantum overlay assets as URL strings to inline and prefix IDs at runtime
+// Quantum overlay assets (per-type SVGs)
 import qUrlP from '../assets/quantum_p.svg?url';
 import qUrlN from '../assets/quantum_n.svg?url';
 import qUrlB from '../assets/quantum_b.svg?url';
@@ -49,7 +50,6 @@ const singleMap = {
 };
 
 // Keys are canonicalized two-type sets in alphabetical order joined with '|'
-// Values are actual provided composite asset images.
 const pairAssetMap = new Map([
   ['b|k', imgBK],
   ['b|q', imgBQ],
@@ -80,123 +80,6 @@ const quantumUrlMap = {
 function canonicalPairKey(a, b) {
   const [x, y] = [a, b].sort();
   return `${x}|${y}`;
-}
-
-function escapeRegExp(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Prefix all IDs within an SVG and update internal references to avoid collisions when overlaying multiple SVGs.
-function prefixSvgIds(svgText, prefix) {
-  if (!svgText || !prefix) return svgText;
-
-  const idRegex = /\sid="([^"]+)"/g;
-  const ids = new Set();
-  let m;
-  while ((m = idRegex.exec(svgText)) !== null) {
-    ids.add(m[1]);
-  }
-  if (ids.size === 0) return svgText;
-
-  let out = svgText;
-  const map = new Map();
-  for (const oldId of ids) {
-    const safePrefix = prefix.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const nu = `${safePrefix}__${oldId}`;
-    map.set(oldId, nu);
-  }
-
-  // Replace id attributes first
-  for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(")`, 'g'), `$1${nu}$2`);
-  }
-
-  // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
-  for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\)`, 'g'), `url(#${nu})`);
-    out = out.replace(new RegExp(`([\\"\'])#${escapeRegExp(oldId)}([\\"\'])`, 'g'), `$1#${nu}$2`);
-    out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
-  }
-
-  return out;
-}
-
-function injectStyleIntoSvg(svgText, styleString) {
-  if (!svgText || !styleString) return svgText;
-
-  const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
-  if (hasStyle) {
-    return svgText.replace(
-      /<svg([^>*]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
-      (m, p1, p2, p3) => `<svg${p1}${p2} ${styleString}${p3}`
-    );
-  }
-  return svgText.replace(/<svg([^>]*)>/i, `<svg$1 style="${styleString}">`);
-}
-
-function injectInternalCss(svgText, cssText) {
-  if (!svgText || !cssText) return svgText;
-  const styleTag = `<style>${cssText}</style>`;
-  return svgText.replace(/<svg[^>]*>/i, (m) => `${m}${styleTag}`);
-}
-
-// InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables and unique ID prefixes onto the root <svg>.
-function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix, renderHint = 'precision' }) {
-  const [svgHtml, setSvgHtml] = useState('');
-
-  const hintRootStyle = useMemo(() => {
-    if (renderHint === 'crisp') {
-      return 'shape-rendering: crispEdges; text-rendering: geometricPrecision;';
-    }
-    return 'shape-rendering: geometricPrecision; text-rendering: optimizeLegibility;';
-  }, [renderHint]);
-
-  const internalCss = useMemo(() => {
-    if (renderHint !== 'crisp') return '';
-    return `* { vector-effect: non-scaling-stroke; }
-            path, line, polyline, polygon { shape-rendering: crispEdges; }
-            g, use, symbol { shape-rendering: crispEdges; }`;
-  }, [renderHint]);
-
-  const varStyleString = useMemo(() => {
-    const entries = Object.entries(cssVarMap || {}).filter(([k]) => k.startsWith('--'));
-    const cssVars = entries.map(([k, v]) => `${k}: ${v};`).join(' ');
-    const sizeRules = 'width: 100%; height: 100%;';
-    return `${cssVars} ${sizeRules} ${hintRootStyle}`.trim();
-  }, [cssVarMap, hintRootStyle]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch(src, { cache: 'force-cache' });
-        const text = await res.text();
-        if (cancelled) return;
-        const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
-        const injectedStyle = injectStyleIntoSvg(prefixed, varStyleString);
-        const injectedCss = internalCss ? injectInternalCss(injectedStyle, internalCss) : injectedStyle;
-        setSvgHtml(injectedCss);
-      } catch {
-        setSvgHtml('');
-      }
-    }
-
-    if (src) load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [src, varStyleString, idPrefix, internalCss]);
-
-  return (
-    <div
-      className={className || 'qc-inline-svg-wrapper'}
-      style={wrapperStyle}
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: svgHtml }}
-    />
-  );
 }
 
 export default function QuantumPiece({
@@ -236,26 +119,16 @@ export default function QuantumPiece({
       backfaceVisibility: 'hidden',
       touchAction: 'none',
     },
-    image: {
+    rasterImg: {
       width: visualScalePercent,
       height: visualScalePercent,
       objectFit: 'contain',
       display: 'block',
-      pointerEvents: 'none',
-      filter: baseDropShadow,
-      imageRendering: isSmall ? 'pixelated' : 'auto',
-    },
-    inlineSvg: {
-      position: 'relative',
-      width: visualScalePercent,
-      height: visualScalePercent,
-      objectFit: 'contain',
       pointerEvents: 'none',
       filter: baseDropShadow,
       imageRendering: isSmall ? 'pixelated' : 'auto',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
-      display: 'block',
     },
     overlayStack: {
       position: 'relative',
@@ -264,7 +137,7 @@ export default function QuantumPiece({
       display: 'grid',
       placeItems: 'center',
     },
-    overlaySvg: (z) => ({
+    overlayImg: (z) => ({
       position: 'absolute',
       inset: '1%',
       margin: '0',
@@ -275,6 +148,8 @@ export default function QuantumPiece({
       imageRendering: isSmall ? 'pixelated' : 'auto',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
+      width: '98%',
+      height: '98%',
     }),
   };
 
@@ -288,11 +163,10 @@ export default function QuantumPiece({
     if (onPointerDown) onPointerDown(e);
   };
 
-  // Determine side variables once for all render paths
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
   const renderHint = isSmall ? 'crisp' : 'precision';
 
-  // Single-type rendering (inline SVG so CSS variables apply)
+  // Single-type rendering as rasterized PNG
   if (tCount === 1) {
     const t = types[0];
     const src = singleMap[t];
@@ -305,19 +179,21 @@ export default function QuantumPiece({
         role="img"
         aria-label={ariaLabel || `Piece ${t}`}
       >
-        <InlineSvgFromUrl
-          src={src}
-          wrapperStyle={baseStyles.inlineSvg}
+        <RasterizedSvgImg
+          srcSvgUrl={src}
           cssVarMap={sideVars}
-          className="qc-quantum-inline-single"
           idPrefix={`${id}-single-${t}`}
+          size={size}
           renderHint={renderHint}
+          className="qc-quantum-raster-single"
+          style={baseStyles.rasterImg}
+          alt=""
         />
       </div>
     );
   }
 
-  // Two-type composite rendering (inline SVG so CSS variables apply)
+  // Two-type composite rendering as rasterized PNG
   if (tCount === 2) {
     const [a, b] = types;
     const key = canonicalPairKey(a, b);
@@ -332,39 +208,36 @@ export default function QuantumPiece({
           role="img"
           aria-label={ariaLabel || `Piece ${a}/${b}`}
         >
-          <InlineSvgFromUrl
-            src={src}
-            wrapperStyle={baseStyles.inlineSvg}
+          <RasterizedSvgImg
+            srcSvgUrl={src}
             cssVarMap={sideVars}
-            className="qc-quantum-inline-pair"
             idPrefix={`${id}-pair-${a}-${b}`}
+            size={size}
             renderHint={renderHint}
+            className="qc-quantum-raster-pair"
+            style={baseStyles.rasterImg}
+            alt=""
           />
         </div>
       );
     }
   }
 
-  // 3+ types: overlay quantum inline SVGs with per-side CSS variables
-  const splitOverlayStyles = (z) => {
-    const layout = baseStyles.overlaySvg(z);
-    const cssVars = sideVars;
-    return { layout, cssVars };
-  };
-
+  // 3+ types: overlay quantum rasterized PNGs
   const overlays = types.map((t, i) => {
     const src = quantumUrlMap[t];
     if (!src) return null;
-    const { layout, cssVars } = splitOverlayStyles(i + 1);
     return (
-      <InlineSvgFromUrl
+      <RasterizedSvgImg
         key={`${id}-${t}`}
-        src={src}
-        wrapperStyle={layout}
-        cssVarMap={cssVars}
-        className="qc-quantum-overlay-inline"
+        srcSvgUrl={src}
+        cssVarMap={sideVars}
         idPrefix={`${id}-${t}`}
+        size={size}
         renderHint={renderHint}
+        className="qc-quantum-raster-overlay"
+        style={baseStyles.overlayImg(i + 1)}
+        alt=""
       />
     );
   });
