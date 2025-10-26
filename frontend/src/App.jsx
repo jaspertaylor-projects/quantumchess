@@ -468,7 +468,9 @@ export default function App() {
     }, [pxSize]);
 
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
-    const t = types.length === 1 ? types[0] : 'p';
+    const order = ['p', 'n', 'b', 'r', 'q'];
+    const pickType = order.find((x) => types.includes(x));
+    const t = pickType || (types.includes('k') ? 'p' : 'p');
 
     const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
     const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
@@ -486,9 +488,9 @@ export default function App() {
           cssVarMap={sideVars}
           idPrefix={`cap-${piece.id}-${t}`}
           size={pxSize}
-          renderHint="crisp"
+          renderHint="precision"
           className="qc-captured-icon-img"
-          style={{ width: `${pxSize}px`, height: `${pxSize}px`, objectFit: 'contain', imageRendering: 'pixelated' }}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           alt={`Captured ${t}`}
         />
       </div>
