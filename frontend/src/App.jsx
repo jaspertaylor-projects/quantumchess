@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height.
+// Purpose: Render a full-viewport Quantum Chess UI with a neon intergalactic title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -90,25 +90,65 @@ export default function App() {
     },
     appHeader: {
       backgroundColor: 'transparent',
-      padding: 'clamp(8px, 2vh, 16px) 12px 0 12px',
+      padding: 'clamp(10px, 2.2vh, 18px) 12px 0 12px',
       borderRadius: 0,
       textAlign: 'center',
       width: '100%',
       boxSizing: 'border-box',
       userSelect: 'none',
     },
-    appTitle: {
+    appTitleWrap: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      boxSizing: 'border-box',
+      padding: '4px 8px',
+    },
+    appTitleRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'clamp(8px, 1.6vw, 16px)',
+      padding: 'clamp(6px, 0.8vw, 10px) clamp(10px, 1.8vw, 16px)',
+      borderRadius: 14,
+      background: 'linear-gradient(180deg, rgba(40,44,52,0.55), rgba(32,35,42,0.55))',
+      boxShadow: '0 0 0 1px rgba(97,218,251,0.18) inset, 0 8px 24px rgba(0,0,0,0.35), 0 0 64px rgba(180,0,255,0.16)',
+      backdropFilter: 'blur(6px)',
+    },
+    appTitleIcon: {
+      width: 'clamp(24px, 4.5vw, 40px)',
+      height: 'clamp(24px, 4.5vw, 40px)',
+      objectFit: 'contain',
+      filter: 'drop-shadow(0 0 6px rgba(0,245,255,0.65)) drop-shadow(0 0 10px rgba(255,59,127,0.4))',
+      transform: 'translateZ(0)',
+    },
+    appTitleText: {
       margin: 0,
-      fontSize: 'clamp(1.5rem, 4.5vw, 3rem)',
-      fontWeight: 900,
-      letterSpacing: '0.08em',
+      fontSize: 'clamp(1.6rem, 5vw, 3.2rem)',
+      fontWeight: 1000,
+      letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      backgroundImage: 'linear-gradient(90deg, #61dafb, #a8b2d1 45%, #61dafb)',
+      backgroundImage: 'linear-gradient(90deg, #00f5ff 0%, #b400ff 38%, #ff3b7f 64%, #00f5ff 100%)',
       WebkitBackgroundClip: 'text',
       backgroundClip: 'text',
       color: 'transparent',
       WebkitTextFillColor: 'transparent',
-      textShadow: '0 2px 12px rgba(97,218,251,0.18)',
+      textShadow: [
+        '0 0 6px rgba(0,245,255,0.45)',
+        '0 0 12px rgba(180,0,255,0.35)',
+        '0 0 22px rgba(255,59,127,0.35)'
+      ].join(', '),
+      lineHeight: 1.1,
+    },
+    appTitleUnderline: {
+      marginTop: '8px',
+      height: '3px',
+      width: 'min(72vw, 640px)',
+      background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
+      borderRadius: 3,
+      boxShadow: '0 0 18px rgba(180,0,255,0.45), 0 0 28px rgba(0,245,255,0.25)',
+      alignSelf: 'center',
     },
     boardArea: {
       flex: 1,
@@ -233,7 +273,20 @@ export default function App() {
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
-        <h1 className="qc-app-title" style={styles.appTitle}>Quantum Chess</h1>
+        <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
+          <div className="qc-app-title-row" style={styles.appTitleRow}>
+            <img
+              className="qc-app-title-icon"
+              style={styles.appTitleIcon}
+              src="/src/public/favicon.ico"
+              alt="Quantum Chess neon knight icon"
+              decoding="async"
+              fetchpriority="high"
+            />
+            <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
+          </div>
+        </div>
+        <div className="qc-app-title-underline" style={styles.appTitleUnderline} />
       </header>
 
       <div className="qc-board-area" style={styles.boardArea}>
