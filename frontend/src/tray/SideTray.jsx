@@ -1,6 +1,6 @@
 // frontend/src/tray/SideTray.jsx
 // Purpose: Right-side tray that matches the chessboard height and shows either matchmaking or move history based on game state; includes a clearly visible settings button on the right.
-// Imports From: ../theme.js, ./FindMatchPanel.jsx, ./MoveHistoryPanel.jsx
+// Imports From: ../theme.js, ./FindMatchPanel.jsx, ./MoveHistoryPanel.jsx, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
 import React, { useMemo } from 'react';
@@ -9,6 +9,7 @@ import theme from '../theme.js';
 import FindMatchPanel from './FindMatchPanel.jsx';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import { Settings as SettingsIcon } from 'lucide-react';
+import IconButton from '../components/IconButton.jsx';
 
 export default function SideTray({
   height = 0,
@@ -51,19 +52,6 @@ export default function SideTray({
         textTransform: 'uppercase',
         fontWeight: 800,
       },
-      settingsBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        border: 'none',
-        background: theme.primary,
-        color: theme.secondary,
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        boxShadow: `0 2px 8px ${theme.shadow}`,
-      },
       content: {
         flex: 1,
         display: 'flex',
@@ -80,16 +68,17 @@ export default function SideTray({
     <aside className="qc-side-tray-root" style={styles.root} aria-label="Right side game tray">
       <div className="qc-side-tray-header" style={styles.header}>
         <div className="qc-side-tray-title" style={styles.title}>{headerTitle}</div>
-        <button
-          type="button"
-          aria-label="Open settings"
+        <IconButton
+          icon={SettingsIcon}
+          size={18}
           title="Settings"
+          ariaLabel="Open settings"
           className="qc-side-tray-settings"
-          style={styles.settingsBtn}
           onClick={onOpenSettings}
-        >
-          <SettingsIcon size={18} />
-        </button>
+          bg={theme.primary}
+          color={theme.secondary}
+          hoverInvert={true}
+        />
       </div>
 
       <div className="qc-side-tray-content" style={styles.content}>
