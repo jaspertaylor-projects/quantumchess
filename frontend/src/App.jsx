@@ -1,12 +1,11 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/QuantumPiece.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
-import QuantumPiece from './chessboard/QuantumPiece.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
@@ -331,20 +330,38 @@ export default function App() {
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
-  const CapturedIcon = ({ piece, renderSide }) => {
+  const CapturedIcon = ({ piece }) => {
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
-    const label = types.length === 1 ? types[0] : 'captured';
-    const sideForRender = renderSide || piece.side;
+    const t = types.length === 1 ? types[0] : 'p';
+
+    const typeToPng = {
+      p: '/src/public/stylish_pawn.png',
+      n: '/src/public/stylish_knight.png',
+      b: '/src/public/stylish_bishop.png',
+      r: '/src/public/stylish_rook.png',
+      q: '/src/public/stylish_queen.png',
+      k: '/src/public/stylish_king.png',
+    };
+
+    const src = typeToPng[t] || typeToPng.p;
+    const label = t;
+
     return (
-      <div className="qc-captured-icon-wrap" style={styles.capturedIconWrap} title={`Captured ${label}`} aria-label={`Captured ${label}`}>
-        <QuantumPiece
-          id={`cap-${piece.id}`}
-          side={sideForRender}
-          possibleTypes={types}
-          size={26}
-          onClick={null}
-          ariaLabel={`Captured ${label}`}
-          svgStyleBySide={svgStyles}
+      <div
+        className="qc-captured-icon-wrap"
+        style={styles.capturedIconWrap}
+        title={`Captured ${label}`}
+        aria-label={`Captured ${label}`}
+      >
+        <img
+          className="qc-captured-icon-img"
+          src={src}
+          alt={`Captured ${label}`}
+          width={26}
+          height={26}
+          decoding="async"
+          loading="eager"
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         />
       </div>
     );
@@ -398,7 +415,7 @@ export default function App() {
               <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
                 {blackCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} renderSide="black" />
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
                 ))}
               </div>
             </div>
@@ -439,7 +456,7 @@ export default function App() {
               <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
                 {whiteCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} renderSide="white" />
+                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
                 ))}
               </div>
             </div>
