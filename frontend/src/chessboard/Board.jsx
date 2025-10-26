@@ -140,7 +140,7 @@ export default function Board({
   };
 
   const squares = useMemo(() => new Array(64).fill(0).map((_, i) => i), []);
-  const pieceSize = Math.max(8, Math.floor((dimensions.cell || 0) * 0.86));
+  const pieceSize = Math.max(8, Math.floor(dimensions.cell || 0));
 
   return (
     <div

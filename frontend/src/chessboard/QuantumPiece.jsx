@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece with crisp rendering at small sizes; supports single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
+// Purpose: Visual renderer for a quantum chess piece sized exactly to its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -218,8 +218,8 @@ export default function QuantumPiece({
   const baseStyles = {
     container: {
       position: 'relative',
-      width: size,
-      height: size,
+      width: '100%',
+      height: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -232,8 +232,8 @@ export default function QuantumPiece({
       backfaceVisibility: 'hidden',
     },
     image: {
-      width: '88%',
-      height: '88%',
+      width: '100%',
+      height: '100%',
       objectFit: 'contain',
       display: 'block',
       pointerEvents: 'none',
@@ -242,8 +242,8 @@ export default function QuantumPiece({
     },
     inlineSvg: {
       position: 'relative',
-      width: '88%',
-      height: '88%',
+      width: '100%',
+      height: '100%',
       objectFit: 'contain',
       pointerEvents: 'none',
       filter: baseDropShadow,
@@ -262,8 +262,8 @@ export default function QuantumPiece({
       position: 'absolute',
       inset: 0,
       margin: 'auto',
-      width: '88%',
-      height: '88%',
+      width: '100%',
+      height: '100%',
       objectFit: 'contain',
       pointerEvents: 'none',
       opacity: isSmall ? 1 : 0.95,
