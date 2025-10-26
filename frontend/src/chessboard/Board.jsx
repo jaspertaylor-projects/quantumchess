@@ -1,9 +1,9 @@
 // frontend/src/chessboard/Board.jsx
-// Purpose: Responsive, accessible, and square-perfect chessboard with click-to-square translation, optional coordinate labels and highlights, and piece rendering support.
+// Purpose: Responsive, accessible, and square-perfect chessboard with click-to-square translation, optional coordinate labels and highlights, and piece rendering support; reports the rendered surface size to parent via onResize.
 // Imports From: ./useBoardInteractions.js, ./boardUtils.js, ../theme.js, ./QuantumPiece.jsx
 // Exported To: frontend/src/App.jsx
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import useBoardInteractions from './useBoardInteractions.js';
 import {
   isDarkSquare,
@@ -31,8 +31,15 @@ export default function Board({
   maxVisualSize = 'min(90vmin, 800px)',
   ariaLabel = 'Chessboard',
   pieceSvgStyles = { white: {}, black: {} },
+  onResize = () => {},
 }) {
   const { surfaceRef, dimensions, eventToSquare } = useBoardInteractions({ orientation });
+
+  useEffect(() => {
+    if (typeof onResize === 'function' && dimensions && dimensions.height > 0) {
+      onResize(dimensions.height);
+    }
+  }, [dimensions.height, onResize]);
 
   const highlightMap = useMemo(() => {
     const map = new Map();

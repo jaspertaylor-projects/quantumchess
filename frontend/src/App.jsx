@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a right-side tray with modes (Find Match, Move History) and an in-tray settings button.
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a right-side tray with modes (Find Match, Move History) and an in-tray settings button. Keeps the side tray height equal to the rendered chessboard surface height.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -16,6 +16,7 @@ import { addMove } from './store/gameSlice.js';
 export default function App() {
   const boardStageRef = useRef(null);
   const [boardSize, setBoardSize] = useState(0);
+  const [trayHeight, setTrayHeight] = useState(0);
 
   const { pieces, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
 
@@ -245,10 +246,11 @@ export default function App() {
                 borderColor="transparent"
                 shadow="rgba(0, 0, 0, 0.15)"
                 pieceSvgStyles={svgStyles}
+                onResize={(px) => setTrayHeight(px)}
               />
 
               <SideTray
-                height={boardSize}
+                height={trayHeight}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onSetHighlights={(arr) => setTrayHighlights(Array.isArray(arr) ? arr : [])}
                 onClearHighlights={() => setTrayHighlights([])}
