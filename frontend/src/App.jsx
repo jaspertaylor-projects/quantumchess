@@ -247,27 +247,31 @@ export default function App() {
       gap: '8px',
       boxSizing: 'border-box',
     },
-    playerBar: (side) => ({
-      width: '100%',
-      minHeight: 'clamp(36px, 6.5vh, 64px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 12px',
-      boxSizing: 'border-box',
-      border: `1px solid ${theme.border}`,
-      borderRadius: 10,
-      backgroundColor: theme.cardBackground,
-      boxShadow: `0 4px 12px ${theme.shadow}`,
-      color: theme.textSecondary,
-      userSelect: 'none',
-    }),
+    playerBar: (side) => {
+      const bg = side === 'white' ? boardColors.light : boardColors.dark;
+      const txt = side === 'white' ? whiteColors.bandFill : blackColors.bandFill;
+      return {
+        width: '100%',
+        minHeight: 'clamp(36px, 6.5vh, 64px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 12px',
+        boxSizing: 'border-box',
+        border: `1px solid ${theme.border}`,
+        borderRadius: 10,
+        backgroundColor: bg,
+        boxShadow: `0 4px 12px ${theme.shadow}`,
+        color: txt,
+        userSelect: 'none',
+      };
+    },
     playerName: {
       fontWeight: 700,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
       fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
-      color: theme.textPrimary,
+      color: 'currentColor',
     },
     capturedArea: {
       display: 'flex',
