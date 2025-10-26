@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess game state, including pieces, movement generation, captures, collapse-on-move subset logic, turn order, and global type-capacity collapse.
+// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, and global type-capacity collapse.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -211,7 +211,6 @@ function powersetTypes(allTypes) {
 }
 
 function enforceGlobalTypeConstraintsOnce(pieces) {
-  // Process each side independently to avoid cross-pollination.
   const updated = clonePieces(pieces);
   const sides = ['white', 'black'];
 
@@ -222,7 +221,6 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
 
       const remaining = computeRemainingCapacityForSide(updated, side);
 
-      // Step 1: Remove types with zero remaining capacity from non-confirmed pieces of this side.
       for (const p of updated) {
         if (p.side !== side) continue;
         if (p.possibleTypes.length <= 1) continue;
@@ -234,14 +232,10 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
         }
       }
 
-      // Step 2: Subset saturation (Hall-like) pruning.
-      // Consider all subsets S of piece-types; if exactly cap(S) pieces have domains within S,
-      // then all other pieces cannot use any type in S.
       const candidatePieces = updated.filter(
         (p) => p.side === side && !p.captured && p.possibleTypes.length >= 1 && p.possibleTypes.length <= PIECE_TYPES.length
       );
 
-      // Skip if no candidates or nothing left to allocate.
       const totalRemaining = sumCapacity(remaining, PIECE_TYPES);
       if (candidatePieces.length === 0 || totalRemaining === 0) continue;
 
@@ -249,10 +243,8 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
         const capS = sumCapacity(remaining, S);
         if (capS === 0) continue;
 
-        // Pieces whose entire domain is contained in S
         const group = [];
         for (const p of candidatePieces) {
-          // Only consider non-confirmed pieces for the group evaluation
           if (p.possibleTypes.length === 1) continue;
           let subset = true;
           for (const t of p.possibleTypes) {
@@ -267,7 +259,6 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
         if (group.length === 0) continue;
 
         if (group.length === capS) {
-          // The group will consume all capacity in S; prune S from all other pieces
           for (const p of candidatePieces) {
             if (group.includes(p)) continue;
             if (p.possibleTypes.length <= 1) continue;
@@ -288,7 +279,6 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
 
 function enforceGlobalTypeConstraintsToFixpoint(pieces) {
   let current = clonePieces(pieces);
-  // Iterate to a global fixpoint across both sides.
   while (true) {
     const next = enforceGlobalTypeConstraintsOnce(current);
     let diff = false;
@@ -315,6 +305,7 @@ function enforceGlobalTypeConstraintsToFixpoint(pieces) {
 export default function useQuantumGameState() {
   const [pieces, setPieces] = useState(() => createStartingPieces());
   const [sideToMove, setSideToMove] = useState('white');
+  const [captureCounter, setCaptureCounter] = useState(0);
 
   const occupancy = useMemo(() => buildOccupancy(pieces), [pieces]);
 
@@ -365,11 +356,11 @@ export default function useQuantumGameState() {
 
     const targetPiece = tempOcc.get(toSquare);
     if (targetPiece && targetPiece.side !== moving.side) {
-      // Collapse captured piece to least valuable non-king possibility.
       const least = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
       targetPiece.captured = true;
       targetPiece.square = null;
       targetPiece.possibleTypes = least ? [least] : ['p'];
+      targetPiece.captureIndex = captureCounter;
     }
 
     moving.square = toSquare;
@@ -379,7 +370,10 @@ export default function useQuantumGameState() {
 
     setPieces(constrained);
     setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
-  }, [pieces, sideToMove]);
+    if (targetPiece && targetPiece.captured) {
+      setCaptureCounter((c) => c + 1);
+    }
+  }, [pieces, sideToMove, captureCounter]);
 
   return {
     pieces,

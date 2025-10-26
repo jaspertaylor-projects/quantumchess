@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a neon title and an interactive board; includes player bars that show captured pieces aligned from the right, a rules modal, and turn-order enforcement.
+// Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/QuantumPiece.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -240,6 +240,8 @@ export default function App() {
     const piece = getPieceAtSquare(square);
 
     if (piece) {
+      // If clicking a piece occupying the square, selection logic will run in handlePieceClick.
+      // This handler is kept permissive for empty squares.
       if (piece.side === sideToMove) {
         setSelectedId(piece.id);
         setTrayHighlights([]);
@@ -268,10 +270,32 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
-    const p = pieces.find((x) => x.id === id);
-    if (p && p.side === sideToMove) {
+    const clicked = pieces.find((x) => x.id === id);
+    if (!clicked) return;
+
+    if (clicked.side === sideToMove) {
       setSelectedId(id);
       setTrayHighlights([]);
+      return;
+    }
+
+    // Attempt capture if a friendly piece is selected and the clicked piece is an opponent
+    if (selectedId) {
+      const movingPiece = pieces.find((p) => p.id === selectedId);
+      if (!movingPiece || movingPiece.side !== sideToMove) {
+        setSelectedId(null);
+        return;
+      }
+      const legal = new Set(getLegalMoves(selectedId));
+      const destSquare = clicked.square;
+      if (destSquare && legal.has(destSquare)) {
+        const fromSquare = movingPiece.square || null;
+        movePiece(selectedId, destSquare);
+        if (fromSquare) {
+          dispatch(addMove({ from: fromSquare, to: destSquare }));
+        }
+        setSelectedId(null);
+      }
     }
   };
 
@@ -294,15 +318,17 @@ export default function App() {
     return [...baseHighlights, ...trayHighlights];
   }, [baseHighlights, trayHighlights]);
 
-  // Captured pieces: show pieces captured by each side, filled from the right of the player bar
+  // Captured pieces: show pieces captured by each side, sorted by captureIndex so new captures appear at the far right
   const whiteCaptured = useMemo(() => {
-    // White has captured Black pieces
-    return pieces.filter((p) => p.captured && p.side === 'black');
+    return pieces
+      .filter((p) => p.captured && p.side === 'black')
+      .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
   const blackCaptured = useMemo(() => {
-    // Black has captured White pieces
-    return pieces.filter((p) => p.captured && p.side === 'white');
+    return pieces
+      .filter((p) => p.captured && p.side === 'white')
+      .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
   const CapturedIcon = ({ piece }) => {
