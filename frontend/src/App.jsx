@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, including a styled header with decorative piece icons, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons. Adds move application guards to avoid double moves under React Strict Mode by only dispatching to Redux when a move was applied.
+// Purpose: Render the Quantum Chess UI, including a styled header with decorative stylish PNG piece icons from public on both sides of the title, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons. Adds move application guards to avoid double moves under React Strict Mode by only dispatching to Redux when a move was applied.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -32,6 +32,16 @@ const TYPE_TO_SVG = {
   r: imgR,
   q: imgQ,
   k: imgK,
+};
+
+// Public stylish PNGs served by Vite from /src/public
+const TYPE_TO_STYLISH_PNG = {
+  p: '/src/public/stylish_pawn.png',
+  n: '/src/public/stylish_knight.png',
+  b: '/src/public/stylish_bishop.png',
+  r: '/src/public/stylish_rook.png',
+  q: '/src/public/stylish_queen.png',
+  k: '/src/public/stylish_king.png',
 };
 
 export default function App() {
@@ -164,7 +174,7 @@ export default function App() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 'clamp(8px, 1.2vw, 12px)',
+      gap: 'clamp(6px, 1.2vw, 10px)',
       flex: '0 1 auto',
       minWidth: 0,
     },
@@ -182,13 +192,6 @@ export default function App() {
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 0 6px rgba(0,245,255,0.65)) drop-shadow(0 0 10px rgba(255,59,127,0.4))',
-    },
-    appTitleIcon: {
-      width: 'clamp(24px, 4.5vw, 40px)',
-      height: 'clamp(24px, 4.5vw, 40px)',
-      objectFit: 'contain',
-      filter: 'drop-shadow(0 0 6px rgba(0,245,255,0.65)) drop-shadow(0 0 10px rgba(255,59,127,0.4))',
-      transform: 'translateZ(0)',
     },
     appTitleText: {
       margin: 0,
@@ -323,19 +326,14 @@ export default function App() {
     const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
     const sideVars = svgStyles.white || {};
 
-    // Try to use a public asset first; fall back to rasterized imported SVG if it fails
-    const publicSrcCandidates = [
-      `/src/public/${t}.svg`,
-      `/public/${t}.svg`,
-      `/${t}.svg`,
-    ];
+    const pngSrc = TYPE_TO_STYLISH_PNG[t] || TYPE_TO_STYLISH_PNG.p;
 
     return (
       <div ref={wrapRef} className="qc-title-icon-wrap" style={styles.titleIconWrap} aria-hidden>
         {!useFallback ? (
           <img
             className="qc-title-icon-img"
-            src={publicSrcCandidates[0]}
+            src={pngSrc}
             alt=""
             decoding="async"
             fetchpriority="high"
@@ -558,14 +556,6 @@ export default function App() {
               <HeaderPieceIcon t="q" />
             </div>
             <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
-              <img
-                className="qc-app-title-icon"
-                style={styles.appTitleIcon}
-                src="/src/public/favicon.ico"
-                alt="Quantum Chess neon knight icon"
-                decoding="async"
-                fetchpriority="high"
-              />
               <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
             </div>
             <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip} aria-hidden>
