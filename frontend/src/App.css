@@ -1,7 +1,7 @@
-/* frontend/src/App.css
-/* Purpose: Defines global styles for the application, keeping the page non-scrollable and sizing the root to the viewport. */
-/* Imports From: None */
-/* Exported To: frontend/src/App.jsx */
+/* frontend/src/App.css */
+/* Purpose: Defines global styles for the application, disables zoom-related gestures, keeps the page non-scrollable, and sizes the root to the viewport.
+   Imports From: None
+   Exported To: frontend/src/App.jsx */
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -21,6 +21,8 @@ html, body {
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  /* Hint to browsers to treat taps as clicks (reduces double-tap zoom triggers) */
+  touch-action: manipulation;
 }
 
 /* Generic button styles - can be overridden by component-specific styles */

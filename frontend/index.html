@@ -1,6 +1,6 @@
 <!-- frontend/index.html -->
 <!--
-Purpose: Entry HTML for the React frontend; defines document metadata (title and favicon) and mounts the SPA root.
+Purpose: Entry HTML for the React frontend; sets metadata, mounts the SPA root, and globally disables browser zoom to preserve layout integrity.
 Imports From: frontend/src/main.jsx
 Exported To: None
 -->
@@ -9,11 +9,49 @@ Exported To: None
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/src/public/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Quantum Chess</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Disable zoom across browsers and devices
+      (function disableZoomGlobally() {
+        const prevent = (e) => { e.preventDefault(); };
+
+        // Prevent pinch-zoom on Safari/iOS and some webkit variants
+        ['gesturestart', 'gesturechange', 'gestureend'].forEach((evt) => {
+          document.addEventListener(evt, prevent, { passive: false });
+        });
+
+        // Block Ctrl/Cmd + +/-/0 zoom keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            const k = e.key;
+            if (k === '+' || k === '=' || k === '-' || k === '0') {
+              e.preventDefault();
+            }
+          }
+        }, { passive: false });
+
+        // Block Ctrl/Cmd + mouse wheel zooming
+        document.addEventListener('wheel', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        // Reduce double-tap-to-zoom on mobile
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+          const now = Date.now();
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, { passive: false });
+      })();
+    </script>
   </body>
 </html>
