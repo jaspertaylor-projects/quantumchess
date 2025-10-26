@@ -1,7 +1,7 @@
 // frontend/src/chessboard/svgRasterizer.js
-// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize to PNG via Canvas, and cache results in-memory and in localStorage keyed by colors and size.
+// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize to PNG via Canvas, and cache results in-memory and in localStorage keyed by colors, size, and render hints. Also exposes cache invalidation helpers.
 // Imports From: None
-// Exported To: ./RasterizedSvgImg.jsx, ./QuantumPiece.jsx
+// Exported To: ./RasterizedSvgImg.jsx, ./QuantumPiece.jsx, ./rasterPrewarm.js
 
 // In-memory caches to avoid duplicate work during a session
 const dataUrlCache = new Map(); // key -> dataURL
@@ -77,17 +77,28 @@ function injectInternalCss(svgText, cssText) {
 }
 
 function setExplicitDimensions(svgText, width, height) {
-  // Ensure width/height attributes exist on root SVG for consistent raster size
-  const hasWidth = /<svg[^>]*\swidth=/i.test(svgText);
-  const hasHeight = /<svg[^>]*\sheight=/i.test(svgText);
-  let out = svgText;
-  if (!hasWidth) out = out.replace(/<svg/i, `<svg width="${width}"`);
-  else out = out.replace(/(<svg[^>]*\swidth=["'])[^"]+(["'][^>]*>)/i, `$1${width}$2`);
+  if (!svgText) return svgText;
+  const match = svgText.match(/<svg[^>]*>/i);
+  if (!match) return svgText;
+  const open = match[0];
+  let updated = open;
 
-  if (!hasHeight) out = out.replace(/<svg/i, `<svg height="${height}"`);
-  else out = out.replace(/(<svg[^>]*\sheight=["'])[^"]+(["'][^>]*>)/i, `$1${height}$2`);
+  const hasWidth = /\swidth=/.test(open);
+  const hasHeight = /\sheight=/.test(open);
 
-  return out;
+  if (hasWidth) {
+    updated = updated.replace(/(\swidth=["'])[^"]+(["'])/i, `$1${width}$2`);
+  } else {
+    updated = updated.replace(/>$/, ` width="${width}">`);
+  }
+
+  if (hasHeight) {
+    updated = updated.replace(/(\sheight=["'])[^"]+(["'])/i, `$1${height}$2`);
+  } else {
+    updated = updated.replace(/>$/, ` height="${height}">`);
+  }
+
+  return svgText.replace(open, updated);
 }
 
 function buildRootStyle(cssVarMap, renderHint) {
@@ -122,9 +133,9 @@ function storageSet(key, value) {
 }
 
 export function clearRasterCaches() {
+  console.log('[Rasterizer] Clearing in-memory and persisted PNG caches');
   dataUrlCache.clear();
   promiseCache.clear();
-  // Optional: purge persisted cache keys to reclaim space
   try {
     const keys = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -184,21 +195,30 @@ export async function getRasterizedPng({ srcUrl, cssVarMap, idPrefix, size, rend
   }
 
   const promise = (async () => {
-    const res = await fetch(srcUrl, { cache: 'force-cache' });
-    const text = await res.text();
-    const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
-    const styled = injectStyleIntoSvg(prefixed, buildRootStyle(cssVarMap, renderHint));
-    const internalCss = buildInternalCss(renderHint);
-    const withCss = internalCss ? injectInternalCss(styled, internalCss) : styled;
-    const sized = setExplicitDimensions(withCss, `${size}px`, `${size}px`);
+    try {
+      const res = await fetch(srcUrl, { cache: 'force-cache' });
+      const text = await res.text();
+      const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
+      const styled = injectStyleIntoSvg(prefixed, buildRootStyle(cssVarMap, renderHint));
+      const internalCss = buildInternalCss(renderHint);
+      const withCss = internalCss ? injectInternalCss(styled, internalCss) : styled;
+      const sized = setExplicitDimensions(withCss, `${size}px`, `${size}px`);
 
-    const dataUrl = await rasterizeSvgToDataUrl(sized, size, renderHint);
-    if (dataUrl) {
-      dataUrlCache.set(key, dataUrl);
-      storageSet(storageKey, dataUrl);
+      const dataUrl = await rasterizeSvgToDataUrl(sized, size, renderHint);
+      if (dataUrl) {
+        dataUrlCache.set(key, dataUrl);
+        storageSet(storageKey, dataUrl);
+        console.log(`[Rasterizer] Cached PNG -> key:${storageKey} size:${size} hint:${renderHint}`);
+      } else {
+        console.warn('[Rasterizer] Empty data URL generated for', { srcUrl });
+      }
+      return dataUrl;
+    } catch (err) {
+      console.error('[Rasterizer] Failed to rasterize', srcUrl, err);
+      return '';
+    } finally {
+      promiseCache.delete(key);
     }
-    promiseCache.delete(key);
-    return dataUrl;
   })();
 
   promiseCache.set(key, promise);

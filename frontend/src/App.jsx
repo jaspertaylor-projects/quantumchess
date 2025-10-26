@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
+// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing. Also prewarms rasterized PNGs for SVG pieces and invalidates them on color changes with console confirmations.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./chessboard/rasterPrewarm.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -14,6 +14,7 @@ import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
+import { prewarmAllPiecePngs, invalidateRasterPngs } from './chessboard/rasterPrewarm.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -74,6 +75,26 @@ export default function App() {
       window.removeEventListener('orientationchange', measure);
     };
   }, []);
+
+  const currentPieceSize = useMemo(() => {
+    if (!boardSize || boardSize <= 0) return 64;
+    return Math.max(8, Math.floor(boardSize / 8));
+  }, [boardSize]);
+
+  // Prewarm on initial mount and whenever board sizing stabilizes
+  useEffect(() => {
+    if (!currentPieceSize || currentPieceSize <= 0) return;
+    console.log('[App] Prewarm PNGs for current piece size', currentPieceSize);
+    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
+  }, [currentPieceSize]);
+
+  // Invalidate and prewarm when piece color settings change
+  useEffect(() => {
+    if (!currentPieceSize || currentPieceSize <= 0) return;
+    console.log('[App] Piece colors changed; invalidating raster cache and regenerating');
+    invalidateRasterPngs('piece-colors-changed');
+    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
+  }, [svgStyles, currentPieceSize]);
 
   const styles = {
     appContainer: {
@@ -400,7 +421,6 @@ export default function App() {
       return;
     }
     if (!to) {
-      // Cancel or invalid drop; keep selection if dropped back on origin otherwise clear
       setSelectedId(null);
       return;
     }

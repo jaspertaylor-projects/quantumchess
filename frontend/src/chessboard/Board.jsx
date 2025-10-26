@@ -168,11 +168,17 @@ export default function Board({
     return { x, y };
   }, [surfaceRef]);
 
+  const defer = (fn) => {
+    if (typeof fn !== 'function') return;
+    // Defer to avoid parent state updates during child render phase
+    setTimeout(fn, 0);
+  };
+
   const handleClick = (e) => {
     if (dragState) return; // ignore clicks while dragging
     if (!onSquareClick) return;
     const data = eventToSquare(e);
-    if (data && data.square) onSquareClick(data);
+    if (data && data.square) defer(() => onSquareClick(data));
   };
 
   const handleContextMenu = (e) => {
@@ -180,7 +186,7 @@ export default function Board({
     if (!onSquareRightClick) return;
     e.preventDefault();
     const data = eventToSquare(e);
-    if (data && data.square) onSquareRightClick(data);
+    if (data && data.square) defer(() => onSquareRightClick(data));
   };
 
   // Global pointer move/up handlers during drag
@@ -194,7 +200,7 @@ export default function Board({
       const overSquare = data && data.square ? data.square : null;
       setDragState((s) => (s ? { ...s, localX: x, localY: y, currentSquare: overSquare } : s));
       if (onDragHover && dragState) {
-        onDragHover({ id: dragState.id, from: dragState.fromSquare, over: overSquare });
+        defer(() => onDragHover({ id: dragState.id, from: dragState.fromSquare, over: overSquare }));
       }
     };
 
@@ -203,12 +209,11 @@ export default function Board({
       e.stopPropagation();
       setDragState((s) => {
         const finalSquare = s && s.currentSquare ? s.currentSquare : null;
-        if (s && finalSquare && onPieceDrop) {
-          const isLegal = legalSet.size > 0 ? legalSet.has(finalSquare) : true;
-          if (isLegal) onPieceDrop({ id: s.id, from: s.fromSquare, to: finalSquare });
-          else onPieceDrop({ id: s.id, from: s.fromSquare, to: null });
-        } else if (s && onPieceDrop) {
-          onPieceDrop({ id: s.id, from: s.fromSquare, to: null });
+        if (s && onPieceDrop) {
+          const payload = finalSquare
+            ? { id: s.id, from: s.fromSquare, to: finalSquare }
+            : { id: s.id, from: s.fromSquare, to: null };
+          defer(() => onPieceDrop(payload));
         }
         return null;
       });
