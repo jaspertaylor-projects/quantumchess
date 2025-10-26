@@ -1,9 +1,9 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports SVGR-based inline SVG overlays with safe fallbacks.
+// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports SVGR-based inline SVG overlays with robust fallback inlining when SVGR is unavailable.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 
 // Single-type assets
@@ -81,6 +81,64 @@ const quantumComponentMap = {
 function canonicalPairKey(a, b) {
   const [x, y] = [a, b].sort();
   return `${x}|${y}`;
+}
+
+// InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables onto the root <svg>.
+// This ensures theming works even if vite-plugin-svgr is unavailable and imports resolve to URL strings.
+function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className }) {
+  const [svgHtml, setSvgHtml] = useState('');
+
+  const varStyleString = useMemo(() => {
+    const entries = Object.entries(cssVarMap || {}).filter(([k]) => k.startsWith('--'));
+    const cssVars = entries.map(([k, v]) => `${k}: ${v};`).join(' ');
+    // Ensure the inlined SVG fills its wrapper
+    const sizeRules = 'width: 100%; height: 100%;';
+    return `${cssVars} ${sizeRules}`.trim();
+  }, [cssVarMap]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch(src, { cache: 'force-cache' });
+        const text = await res.text();
+        if (cancelled) return;
+        const injected = injectStyleIntoSvg(text, varStyleString);
+        setSvgHtml(injected);
+      } catch {
+        setSvgHtml('');
+      }
+    }
+
+    if (src) load();
+
+    return () => { cancelled = true; };
+  }, [src, varStyleString]);
+
+  return (
+    <div
+      className={className || 'qc-inline-svg-wrapper'}
+      style={wrapperStyle}
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: svgHtml }}
+    />
+  );
+}
+
+function injectStyleIntoSvg(svgText, styleString) {
+  if (!svgText || !styleString) return svgText;
+
+  // If the SVG already has a style attribute, append our vars; otherwise, add a new style.
+  // Keep it simple and safe: operate on the first <svg ...> tag only.
+  const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
+  if (hasStyle) {
+    return svgText.replace(
+      /<svg([^>]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
+      (m, p1, p2, p3) => `<svg${p1}${p2} ${styleString}${p3}`
+    );
+  }
+  return svgText.replace(/<svg([^>]*)>/i, `<svg$1 style="${styleString}">`);
 }
 
 export default function QuantumPiece({
@@ -199,21 +257,36 @@ export default function QuantumPiece({
   // 3+ types: overlay quantum inline SVGs with per-side CSS variables
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
 
+  // Split layout styles and CSS variable styles for robust fallback handling
+  const splitOverlayStyles = (z) => {
+    const layout = baseStyles.overlaySvg(z);
+    const cssVars = sideVars;
+    return { layout, cssVars };
+  };
+
   // If vite-plugin-svgr is not active, the imports above may resolve to URL strings.
-  // Provide a safe runtime fallback by rendering <img> elements to avoid crashes.
+  // Provide a safe runtime fallback by inlining the SVG content so CSS variables apply correctly.
   const overlays = types.map((t, i) => {
     const Imported = quantumComponentMap[t];
     if (!Imported) return null;
 
-    const style = { ...baseStyles.overlaySvg(i + 1), ...sideVars };
+    const { layout, cssVars } = splitOverlayStyles(i + 1);
 
     // SVGR active: Imported is a function/component
     if (typeof Imported === 'function') {
-      return <Imported key={`${id}-${t}`} style={style} />;
+      return <Imported key={`${id}-${t}`} style={{ ...layout, ...cssVars }} className="qc-quantum-overlay-svg" />;
     }
 
-    // Fallback: Imported is a URL string; variables won't apply inside the SVG, but avoid runtime errors
-    return <img key={`${id}-${t}`} src={Imported} alt={t} style={style} />;
+    // Fallback: Imported is a URL string. Inline it and inject CSS variables onto the root <svg>.
+    return (
+      <InlineSvgFromUrl
+        key={`${id}-${t}`}
+        src={Imported}
+        wrapperStyle={layout}
+        cssVarMap={cssVars}
+        className="qc-quantum-overlay-inline"
+      />
+    );
   });
 
   return (
@@ -224,7 +297,7 @@ export default function QuantumPiece({
       role="img"
       aria-label={ariaLabel || `Quantum piece: ${types.join('/')}`}
     >
-      <div style={baseStyles.overlayStack}>{overlays}</div>
+      <div className="qc-quantum-overlay-stack" style={baseStyles.overlayStack}>{overlays}</div>
       <span style={baseStyles.sideTint} />
     </div>
   );
