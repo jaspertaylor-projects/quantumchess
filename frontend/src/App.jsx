@@ -354,6 +354,17 @@ export default function App() {
 
   const handleSquareRightClick = useCallback(() => {}, []);
 
+  const handleSetHighlights = useCallback((arr) => {
+    setTrayHighlights(Array.isArray(arr) ? arr : []);
+  }, []);
+
+  const handleClearHighlights = useCallback(() => {
+    setTrayHighlights([]);
+  }, []);
+
+  const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
+  const handleOpenRules = useCallback(() => setRulesOpen(true), []);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
@@ -410,10 +421,10 @@ export default function App() {
 
               <SideTray
                 height={trayHeight}
-                onOpenSettings={() => setSettingsOpen(true)}
-                onOpenRules={() => setRulesOpen(true)}
-                onSetHighlights={(arr) => setTrayHighlights(Array.isArray(arr) ? arr : [])}
-                onClearHighlights={() => setTrayHighlights([])}
+                onOpenSettings={handleOpenSettings}
+                onOpenRules={handleOpenRules}
+                onSetHighlights={handleSetHighlights}
+                onClearHighlights={handleClearHighlights}
               />
             </div>
 

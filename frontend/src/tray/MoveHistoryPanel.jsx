@@ -3,7 +3,7 @@
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import { useSelector } from 'react-redux';
 import {
@@ -21,17 +21,23 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
 
+  // Keep stable refs for callbacks to avoid re-running effects due to identity changes
+  const highlightRef = useRef(onHighlightMove);
+  const clearRef = useRef(onClearHighlights);
+  useEffect(() => { highlightRef.current = onHighlightMove; }, [onHighlightMove]);
+  useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
+
   useEffect(() => {
     if (index >= 0 && index < moves.length) {
       const m = moves[index];
-      onHighlightMove([
+      highlightRef.current([
         { square: m.from, color: 'rgba(97, 218, 251, 0.35)' },
         { square: m.to, color: 'rgba(255, 206, 84, 0.4)' },
       ]);
     } else {
-      onClearHighlights();
+      clearRef.current();
     }
-  }, [index, moves, onHighlightMove, onClearHighlights]);
+  }, [index, moves]);
 
   useEffect(() => {
     if (!playing) return;
@@ -156,7 +162,7 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
   const handleClear = () => {
     setPlaying(false);
     setIndex(-1);
-    onClearHighlights();
+    clearRef.current();
   };
 
   const isRowActive = (rowIdx) => index === rowIdx * 2 || index === rowIdx * 2 + 1;
