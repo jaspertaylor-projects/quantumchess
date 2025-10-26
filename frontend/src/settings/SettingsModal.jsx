@@ -141,11 +141,10 @@ export default function SettingsModal({
             width={36}
             height={36}
             radius={8}
-            bg="transparent"
+            bg={theme.secondary}
             color={theme.error}
-            hoverInvert={false}
+            hoverInvert={true}
             shadow="transparent"
-            style={{ border: `1px solid ${theme.border}` }}
           />
         </div>
 
