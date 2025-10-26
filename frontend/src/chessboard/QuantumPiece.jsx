@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece that overlays assets based on its possible types and provides interaction hooks; uses inline SVG vars for quantum overlays.
+// Purpose: Visual renderer for a quantum chess piece; renders single, pair, or multi-type overlays and supports SVGR-based inline SVG overlays with safe fallbacks.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -32,6 +32,7 @@ import imgRK from '../assets/rk.svg';
 import imgRQ from '../assets/rq.svg';
 
 // Quantum overlay assets imported as React components via SVGR
+// Note: Requires vite-plugin-svgr. If the plugin is unavailable, these imports will resolve to URL strings.
 import QSvgP from '../assets/quantum_p.svg?react';
 import QSvgN from '../assets/quantum_n.svg?react';
 import QSvgB from '../assets/quantum_b.svg?react';
@@ -197,10 +198,22 @@ export default function QuantumPiece({
 
   // 3+ types: overlay quantum inline SVGs with per-side CSS variables
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
+
+  // If vite-plugin-svgr is not active, the imports above may resolve to URL strings.
+  // Provide a safe runtime fallback by rendering <img> elements to avoid crashes.
   const overlays = types.map((t, i) => {
-    const Cmp = quantumComponentMap[t];
-    if (!Cmp) return null;
-    return <Cmp key={`${id}-${t}`} style={{ ...baseStyles.overlaySvg(i + 1), ...sideVars }} />;
+    const Imported = quantumComponentMap[t];
+    if (!Imported) return null;
+
+    const style = { ...baseStyles.overlaySvg(i + 1), ...sideVars };
+
+    // SVGR active: Imported is a function/component
+    if (typeof Imported === 'function') {
+      return <Imported key={`${id}-${t}`} style={style} />;
+    }
+
+    // Fallback: Imported is a URL string; variables won't apply inside the SVG, but avoid runtime errors
+    return <img key={`${id}-${t}`} src={Imported} alt={t} style={style} />;
   });
 
   return (
