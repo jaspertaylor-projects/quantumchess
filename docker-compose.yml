@@ -73,26 +73,20 @@ services:
       # Shared logs directory
       - ./logs:/logs
     # Deterministic, pinned runtime venv flow; then start uvicorn with reload.
-    command: >
-      sh -c "
+    command:
+      - sh
+      - -c
+      - |
         set -ex
-        if [ ! -d /app/.venv ]; then
-          echo '--- Creating new virtual environment ---'
+        if [ ! -d /app/.venv ] || [ ! -x /app/.venv/bin/uvicorn ]; then
+          echo '--- Creating or repairing virtual environment ---'
           uv venv --python python3.12
           uv sync --frozen || uv sync
         else
           echo '--- Using existing virtual environment ---'
         fi
-        exec /app/.venv/bin/uvicorn app.bootstrap:asgi \
-          --host 0.0.0.0 \
-          --port 8000 \
-          --loop asyncio \
-          --reload \
-          --reload-dir app \
-          --reload-exclude '.venv/*' \
-          --reload-exclude 'node_modules/*' \
-          --log-config /app/uvicorn-log.json
-      "
+        exec /app/.venv/bin/uvicorn app.bootstrap:asgi --host 0.0.0.0 --port 8000 --loop asyncio --reload --reload-dir app --reload-exclude '.venv/*' --reload-exclude 'node_modules/*' --log-config /app/uvicorn-log.json
+
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8000/api/hello"]
       interval: 5s
@@ -114,7 +108,7 @@ services:
     # - Auto-install lucide-react if require.resolve fails (covers IDE-driven installs & cold starts).
     # - Drop privileges for the dev server via su-exec.
     command: >
-      sh -lc "
+      sh -lc '
         set -eu
         mkdir -p /app/node_modules
         chown -R ${UID:-1000}:${GID:-1000} /app/node_modules
@@ -122,24 +116,16 @@ services:
         pnpm config set store-dir /pnpm/store --location project >/dev/null 2>&1 || true
         pnpm config set virtual-store-dir node_modules/.pnpm --location project >/dev/null 2>&1 || true
 
-        MODS=/app/node_modules/.pnpm/.modules.yaml
-        NEED_REINSTALL=0
-        [ ! -d /app/node_modules/.pnpm ] && NEED_REINSTALL=1
-        [ ! -f \"$MODS\" ] && NEED_REINSTALL=1
-        [ /app/pnpm-lock.yaml -nt \"$MODS\" ] && NEED_REINSTALL=1
-        [ /app/package.json -nt \"$MODS\" ] && NEED_REINSTALL=1
-
-
-        if [ \"$NEED_REINSTALL\" -eq 1 ]; then
-          echo '[frontend] Installing dependencies...'
+        # Check for reinstall necessity
+        MODS="/app/node_modules/.pnpm/.modules.yaml"
+        if [ ! -d /app/node_modules/.pnpm ] || [ ! -f "$MODS" ] \
+          || [ /app/pnpm-lock.yaml -nt "$MODS" ] || [ /app/package.json -nt "$MODS" ]; then
+          echo "[frontend] Installing dependencies..."
           pnpm install --frozen-lockfile || pnpm install
         fi
 
-        # Ensure lucide-react is present for App.jsx imports
-        node -e \"require.resolve('lucide-react')\" 2>/dev/null || pnpm add lucide-react
-
         exec su-exec ${UID:-1000}:${GID:-1000} pnpm run dev
-      "
+      '
     ports:
       # Publish to a free host port by default (published: 0). Override with HOST_FRONTEND_PORT if you want a fixed port.
       - target: 5173
