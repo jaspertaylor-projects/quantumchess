@@ -74,7 +74,6 @@ function fullReloadOnBackendPy() {
 function injectClientReporter() {
   return {
     name: 'inject-client-error-reporter',
-    // apply to both dev and build so production bundles include the reporter as well
     transformIndexHtml() {
       return [
         {
@@ -88,7 +87,8 @@ function injectClientReporter() {
 }
 
 export default defineConfig({
-  plugins: [errorFileLogger(), react(), svgr(), fullReloadOnBackendPy(), injectClientReporter()],
+  // Ensure SVGR runs before React so .svg modules are transformed into components
+  plugins: [errorFileLogger(), svgr(), react(), fullReloadOnBackendPy(), injectClientReporter()],
   server: {
     host: true,
     port: 5173,

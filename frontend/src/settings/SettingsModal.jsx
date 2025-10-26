@@ -7,7 +7,14 @@ import React from 'react';
 import theme from '../theme.js';
 import { X } from 'lucide-react';
 
-export default function SettingsModal({ open, onClose, whiteColors, blackColors, onChangeWhite, onChangeBlack }) {
+export default function SettingsModal({
+  open = false,
+  onClose = () => {},
+  whiteColors = { icon: '#10b981', bandFill: '#222222', bandStroke: '#f2f2f2' },
+  blackColors = { icon: '#f59e0b', bandFill: '#222222', bandStroke: '#f2f2f2' },
+  onChangeWhite = () => {},
+  onChangeBlack = () => {},
+}) {
   if (!open) return null;
 
   const styles = {
