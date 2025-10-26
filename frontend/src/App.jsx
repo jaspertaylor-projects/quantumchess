@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color filters.
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a settings panel to configure per-side SVG color variables.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -20,7 +20,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const { presets, whiteKey, blackKey, setWhiteKey, setBlackKey, colorFilters } = usePieceColors();
+  const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
@@ -247,7 +247,7 @@ export default function App() {
               maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
               borderColor="transparent"
               shadow="rgba(0, 0, 0, 0.15)"
-              pieceColorFilters={colorFilters}
+              pieceSvgStyles={svgStyles}
             />
           </div>
 
@@ -263,11 +263,10 @@ export default function App() {
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        presets={presets}
-        whiteKey={whiteKey}
-        blackKey={blackKey}
-        onChangeWhite={setWhiteKey}
-        onChangeBlack={setBlackKey}
+        whiteColors={whiteColors}
+        blackColors={blackColors}
+        onChangeWhite={setWhiteColors}
+        onChangeBlack={setBlackColors}
       />
     </div>
   );

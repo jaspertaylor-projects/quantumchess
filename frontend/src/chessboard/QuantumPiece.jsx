@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece that overlays assets based on its possible types and provides interaction hooks, with per-side color filters.
+// Purpose: Visual renderer for a quantum chess piece that overlays assets based on its possible types and provides interaction hooks; uses inline SVG vars for quantum overlays.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -31,13 +31,13 @@ import imgQK from '../assets/qk.svg';
 import imgRK from '../assets/rk.svg';
 import imgRQ from '../assets/rq.svg';
 
-// Quantum overlay assets
-import qImgP from '../assets/quantum_p.svg';
-import qImgN from '../assets/quantum_n.svg';
-import qImgB from '../assets/quantum_b.svg';
-import qImgR from '../assets/quantum_r.svg';
-import qImgQ from '../assets/quantum_q.svg';
-import qImgK from '../assets/quantum_k.svg';
+// Quantum overlay assets as inline React components to enable theming via CSS variables
+import { ReactComponent as QSvgP } from '../assets/quantum_p.svg';
+import { ReactComponent as QSvgN } from '../assets/quantum_n.svg';
+import { ReactComponent as QSvgB } from '../assets/quantum_b.svg';
+import { ReactComponent as QSvgR } from '../assets/quantum_r.svg';
+import { ReactComponent as QSvgQ } from '../assets/quantum_q.svg';
+import { ReactComponent as QSvgK } from '../assets/quantum_k.svg';
 
 const singleMap = {
   p: imgP,
@@ -68,13 +68,13 @@ const pairAssetMap = new Map([
   ['q|r', imgRQ],
 ]);
 
-const quantumMap = {
-  p: qImgP,
-  n: qImgN,
-  b: qImgB,
-  r: qImgR,
-  q: qImgQ,
-  k: qImgK,
+const quantumComponentMap = {
+  p: QSvgP,
+  n: QSvgN,
+  b: QSvgB,
+  r: QSvgR,
+  q: QSvgQ,
+  k: QSvgK,
 };
 
 function canonicalPairKey(a, b) {
@@ -90,14 +90,12 @@ export default function QuantumPiece({
   isSelected = false,
   onClick,
   ariaLabel,
-  colorFilters = { white: 'none', black: 'none' },
+  svgStyleBySide = { white: {}, black: {} },
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
 
-  const sideFilter = side === 'white' ? (colorFilters.white || 'none') : (colorFilters.black || 'none');
   const baseDropShadow = `drop-shadow(0 1px 2px ${theme.shadow})`;
-  const composedFilter = sideFilter === 'none' ? baseDropShadow : `${sideFilter} ${baseDropShadow}`;
 
   const baseStyles = {
     container: {
@@ -119,7 +117,7 @@ export default function QuantumPiece({
       objectFit: 'contain',
       display: 'block',
       pointerEvents: 'none',
-      filter: composedFilter,
+      filter: baseDropShadow,
     },
     overlayStack: {
       position: 'relative',
@@ -128,7 +126,7 @@ export default function QuantumPiece({
       display: 'grid',
       placeItems: 'center',
     },
-    overlayImg: (z) => ({
+    overlaySvg: (z) => ({
       position: 'absolute',
       inset: 0,
       margin: 'auto',
@@ -137,7 +135,7 @@ export default function QuantumPiece({
       objectFit: 'contain',
       pointerEvents: 'none',
       opacity: 0.95,
-      filter: composedFilter,
+      filter: baseDropShadow,
       zIndex: z,
     }),
     sideTint: {
@@ -197,10 +195,12 @@ export default function QuantumPiece({
     }
   }
 
-  // 3+ types: overlay quantum images
+  // 3+ types: overlay quantum inline SVGs with per-side CSS variables
+  const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
   const overlays = types.map((t, i) => {
-    const src = quantumMap[t];
-    return <img key={`${id}-${t}`} src={src} alt={t} style={baseStyles.overlayImg(i + 1)} />;
+    const Cmp = quantumComponentMap[t];
+    if (!Cmp) return null;
+    return <Cmp key={`${id}-${t}`} style={{ ...baseStyles.overlaySvg(i + 1), ...sideVars }} />;
   });
 
   return (

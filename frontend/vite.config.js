@@ -1,10 +1,11 @@
 // frontend/vite.config.js
-// Purpose: Vite config for the scaffolded app. Logs dev-server errors to logs/frontend-error.log, injects a browser error reporter module into index.html so runtime errors are posted to /api/client-error, and triggers full reload on backend Python changes.
+// Purpose: Vite config for the scaffolded app. Logs dev-server errors, injects a browser error reporter, reloads on backend changes, and enables importing SVGs as React components.
 // Imports From: None
 // Exported To: 'pnpm run dev' and production builds.
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -87,7 +88,7 @@ function injectClientReporter() {
 }
 
 export default defineConfig({
-  plugins: [errorFileLogger(), react(), fullReloadOnBackendPy(), injectClientReporter()],
+  plugins: [errorFileLogger(), react(), svgr(), fullReloadOnBackendPy(), injectClientReporter()],
   server: {
     host: true,
     port: 5173,

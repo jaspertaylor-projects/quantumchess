@@ -1,75 +1,89 @@
 // frontend/src/settings/usePieceColors.js
-// Purpose: Manage per-side piece color presets and compute CSS filters to tint SVG assets; persists selection to localStorage.
+// Purpose: Manage per-side inline-SVG theming colors (icon, band fill, band stroke) and persist them to localStorage; exposes styles for SVG CSS variables.
 // Imports From: None
 // Exported To: ../App.jsx, ./SettingsModal.jsx
 
 import { useCallback, useMemo, useState } from 'react';
 
 const STORAGE_KEYS = {
-  white: 'qcWhiteColorPreset',
-  black: 'qcBlackColorPreset',
+  white: 'qcWhiteSvgColors',
+  black: 'qcBlackSvgColors',
 };
 
-const COLOR_PRESETS = [
-  { key: 'teal', label: 'Teal', filter: 'invert(52%) sepia(10%) saturate(1348%) hue-rotate(132deg) brightness(92%) contrast(85%)' },
-  { key: 'orange', label: 'Orange', filter: 'invert(59%) sepia(71%) saturate(4597%) hue-rotate(2deg) brightness(100%) contrast(104%)' },
-  { key: 'purple', label: 'Purple', filter: 'invert(27%) sepia(89%) saturate(2234%) hue-rotate(246deg) brightness(86%) contrast(95%)' },
-  { key: 'blue', label: 'Blue', filter: 'invert(42%) sepia(62%) saturate(2025%) hue-rotate(169deg) brightness(93%) contrast(92%)' },
-  { key: 'green', label: 'Green', filter: 'invert(56%) sepia(15%) saturate(1434%) hue-rotate(75deg) brightness(95%) contrast(86%)' },
-  { key: 'red', label: 'Red', filter: 'invert(19%) sepia(86%) saturate(6479%) hue-rotate(353deg) brightness(93%) contrast(118%)' },
-  { key: 'gold', label: 'Gold', filter: 'invert(77%) sepia(42%) saturate(1318%) hue-rotate(8deg) brightness(104%) contrast(102%)' },
-  { key: 'pink', label: 'Pink', filter: 'invert(58%) sepia(43%) saturate(5365%) hue-rotate(309deg) brightness(102%) contrast(106%)' },
-  { key: 'gray', label: 'Gray', filter: 'invert(8%) sepia(8%) saturate(12%) hue-rotate(314deg) brightness(97%) contrast(88%)' },
-];
+const DEFAULT_WHITE = {
+  icon: '#10b981', // emerald
+  bandFill: '#222222',
+  bandStroke: '#f2f2f2',
+};
+
+const DEFAULT_BLACK = {
+  icon: '#f59e0b', // amber
+  bandFill: '#222222',
+  bandStroke: '#f2f2f2',
+};
 
 function readStorage(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
-    return raw;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+    return {
+      icon: typeof parsed.icon === 'string' ? parsed.icon : fallback.icon,
+      bandFill: typeof parsed.bandFill === 'string' ? parsed.bandFill : fallback.bandFill,
+      bandStroke: typeof parsed.bandStroke === 'string' ? parsed.bandStroke : fallback.bandStroke,
+    };
   } catch {
     return fallback;
   }
 }
 
-function writeStorage(key, value) {
+function writeStorage(key, obj) {
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(key, JSON.stringify(obj));
   } catch {
     // ignore
   }
 }
 
 export default function usePieceColors() {
-  const [whiteKey, setWhiteKeyState] = useState(() => readStorage(STORAGE_KEYS.white, 'teal'));
-  const [blackKey, setBlackKeyState] = useState(() => readStorage(STORAGE_KEYS.black, 'orange'));
+  const [whiteColors, setWhiteColorsState] = useState(() => readStorage(STORAGE_KEYS.white, DEFAULT_WHITE));
+  const [blackColors, setBlackColorsState] = useState(() => readStorage(STORAGE_KEYS.black, DEFAULT_BLACK));
 
-  const setWhiteKey = useCallback((key) => {
-    setWhiteKeyState(key);
-    writeStorage(STORAGE_KEYS.white, key);
+  const setWhiteColors = useCallback((partial) => {
+    setWhiteColorsState((prev) => {
+      const next = { ...prev, ...partial };
+      writeStorage(STORAGE_KEYS.white, next);
+      return next;
+    });
   }, []);
 
-  const setBlackKey = useCallback((key) => {
-    setBlackKeyState(key);
-    writeStorage(STORAGE_KEYS.black, key);
+  const setBlackColors = useCallback((partial) => {
+    setBlackColorsState((prev) => {
+      const next = { ...prev, ...partial };
+      writeStorage(STORAGE_KEYS.black, next);
+      return next;
+    });
   }, []);
 
-  const filterByKey = useCallback((key) => {
-    const preset = COLOR_PRESETS.find((p) => p.key === key);
-    return preset ? preset.filter : 'none';
-  }, []);
-
-  const colorFilters = useMemo(() => ({
-    white: filterByKey(whiteKey),
-    black: filterByKey(blackKey),
-  }), [whiteKey, blackKey, filterByKey]);
+  const svgStyles = useMemo(() => ({
+    white: {
+      ['--band-fill']: whiteColors.bandFill,
+      ['--band-stroke']: whiteColors.bandStroke,
+      ['--icon-color']: whiteColors.icon,
+    },
+    black: {
+      ['--band-fill']: blackColors.bandFill,
+      ['--band-stroke']: blackColors.bandStroke,
+      ['--icon-color']: blackColors.icon,
+    },
+  }), [whiteColors, blackColors]);
 
   return {
-    presets: COLOR_PRESETS,
-    whiteKey,
-    blackKey,
-    setWhiteKey,
-    setBlackKey,
-    colorFilters,
+    whiteColors,
+    blackColors,
+    setWhiteColors,
+    setBlackColors,
+    svgStyles,
   };
 }
