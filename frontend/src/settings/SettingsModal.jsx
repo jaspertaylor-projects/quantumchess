@@ -1,5 +1,5 @@
 // frontend/src/settings/SettingsModal.jsx
-// Purpose: Modal dialog for configuring per-side SVG color variables and board square colors; includes icon-only actions for restore defaults and close.
+// Purpose: Modal dialog for configuring per-side SVG color variables, board square colors, and toggling coordinate labels; includes icon-only actions for restore defaults and close.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -18,6 +18,8 @@ export default function SettingsModal({
   onChangeBlack = () => {},
   onChangeBoard = () => {},
   onReset = () => {},
+  showCoordinates = false,
+  onChangeShowCoordinates = () => {},
 }) {
   if (!open) return null;
 
@@ -96,6 +98,13 @@ export default function SettingsModal({
       border: `1px solid ${theme.border}`,
       background: 'transparent',
       cursor: 'pointer',
+    },
+    checkboxInput: {
+      width: 44,
+      height: 24,
+      display: 'inline-block',
+      cursor: 'pointer',
+      accentColor: theme.primary,
     },
     hint: {
       marginTop: 12,
@@ -261,6 +270,19 @@ export default function SettingsModal({
                 value={boardColors.dark}
                 onChange={handleBoard('dark')}
                 aria-label="Dark square color"
+              />
+            </div>
+
+            <div className="qc-settings-row qc-settings-row--coordinates" style={styles.row}>
+              <label htmlFor="qc-board-coordinates-toggle" style={styles.label}>Show Coordinates</label>
+              <input
+                id="qc-board-coordinates-toggle"
+                type="checkbox"
+                className="qc-checkbox-input qc-checkbox-input--coordinates"
+                style={styles.checkboxInput}
+                checked={!!showCoordinates}
+                onChange={(e) => onChangeShowCoordinates(e.target.checked)}
+                aria-label="Toggle board coordinates"
               />
             </div>
           </div>

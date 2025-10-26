@@ -28,6 +28,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
+  const [showCoordinates, setShowCoordinates] = useState(false);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
@@ -318,7 +319,7 @@ export default function App() {
             <div className="qc-board-row" style={styles.boardRow}>
               <Board
                 orientation="white"
-                showCoordinates={true}
+                showCoordinates={showCoordinates}
                 highlights={combinedHighlights}
                 onSquareClick={handleSquareClick}
                 onSquareRightClick={() => {}}
@@ -367,6 +368,8 @@ export default function App() {
         onChangeBlack={setBlackColors}
         onChangeBoard={setBoardColors}
         onReset={() => { resetColors(); resetBoardColors(); }}
+        showCoordinates={showCoordinates}
+        onChangeShowCoordinates={(val) => setShowCoordinates(Boolean(val))}
       />
 
       <RulesModal
