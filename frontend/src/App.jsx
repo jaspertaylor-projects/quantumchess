@@ -116,7 +116,7 @@ export default function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'stretch',
-      gap: 'clamp(8px, 1.5vh, 12px)',
+      gap: '8px',
       boxSizing: 'border-box',
     },
     playerBar: (side) => ({
