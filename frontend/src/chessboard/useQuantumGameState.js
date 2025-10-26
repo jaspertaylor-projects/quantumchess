@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess game state, including pieces, movement generation, simple captures, collapse-on-move subset logic, and turn order (white moves first, players alternate turns).
+// Purpose: Manage Quantum Chess game state, including pieces, movement generation, captures, collapse-on-move subset logic, turn order, and global type-capacity collapse.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -9,6 +9,7 @@ import {
   createStartingPieces,
   CAPTURE_COLLAPSE_ORDER,
   PIECE_TYPES,
+  PIECE_LIMITS,
 } from './gameConstants.js';
 
 function keySquare(file, rank) {
@@ -165,6 +166,152 @@ function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, toRank, o
   return subset;
 }
 
+function clonePieces(pieces) {
+  return pieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
+}
+
+function computeConfirmedCountsForSide(pieces, side) {
+  const counts = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
+  for (const p of pieces) {
+    if (p.side !== side) continue;
+    if (p.possibleTypes.length === 1) {
+      const t = p.possibleTypes[0];
+      if (counts[t] !== undefined) counts[t] += 1;
+    }
+  }
+  return counts;
+}
+
+function computeRemainingCapacityForSide(pieces, side) {
+  const confirmed = computeConfirmedCountsForSide(pieces, side);
+  const remaining = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
+  for (const t of PIECE_TYPES) {
+    const cap = PIECE_LIMITS[t] - (confirmed[t] || 0);
+    remaining[t] = Math.max(0, cap);
+  }
+  return remaining;
+}
+
+function sumCapacity(remaining, typeSet) {
+  let s = 0;
+  for (const t of typeSet) s += remaining[t] || 0;
+  return s;
+}
+
+function powersetTypes(allTypes) {
+  const sets = [];
+  const n = allTypes.length;
+  const total = 1 << n;
+  for (let mask = 1; mask < total; mask++) {
+    const subset = [];
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(allTypes[i]);
+    sets.push(subset);
+  }
+  return sets;
+}
+
+function enforceGlobalTypeConstraintsOnce(pieces) {
+  // Process each side independently to avoid cross-pollination.
+  const updated = clonePieces(pieces);
+  const sides = ['white', 'black'];
+
+  for (const side of sides) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+
+      const remaining = computeRemainingCapacityForSide(updated, side);
+
+      // Step 1: Remove types with zero remaining capacity from non-confirmed pieces of this side.
+      for (const p of updated) {
+        if (p.side !== side) continue;
+        if (p.possibleTypes.length <= 1) continue;
+        const before = p.possibleTypes.length;
+        const filtered = p.possibleTypes.filter((t) => (remaining[t] || 0) > 0);
+        if (filtered.length > 0 && filtered.length !== before) {
+          p.possibleTypes = filtered;
+          changed = true;
+        }
+      }
+
+      // Step 2: Subset saturation (Hall-like) pruning.
+      // Consider all subsets S of piece-types; if exactly cap(S) pieces have domains within S,
+      // then all other pieces cannot use any type in S.
+      const candidatePieces = updated.filter(
+        (p) => p.side === side && !p.captured && p.possibleTypes.length >= 1 && p.possibleTypes.length <= PIECE_TYPES.length
+      );
+
+      // Skip if no candidates or nothing left to allocate.
+      const totalRemaining = sumCapacity(remaining, PIECE_TYPES);
+      if (candidatePieces.length === 0 || totalRemaining === 0) continue;
+
+      for (const S of powersetTypes(PIECE_TYPES)) {
+        const capS = sumCapacity(remaining, S);
+        if (capS === 0) continue;
+
+        // Pieces whose entire domain is contained in S
+        const group = [];
+        for (const p of candidatePieces) {
+          // Only consider non-confirmed pieces for the group evaluation
+          if (p.possibleTypes.length === 1) continue;
+          let subset = true;
+          for (const t of p.possibleTypes) {
+            if (!S.includes(t)) {
+              subset = false;
+              break;
+            }
+          }
+          if (subset) group.push(p);
+        }
+
+        if (group.length === 0) continue;
+
+        if (group.length === capS) {
+          // The group will consume all capacity in S; prune S from all other pieces
+          for (const p of candidatePieces) {
+            if (group.includes(p)) continue;
+            if (p.possibleTypes.length <= 1) continue;
+            const before = p.possibleTypes.length;
+            const reduced = p.possibleTypes.filter((t) => !S.includes(t));
+            if (reduced.length > 0 && reduced.length !== before) {
+              p.possibleTypes = reduced;
+              changed = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return updated;
+}
+
+function enforceGlobalTypeConstraintsToFixpoint(pieces) {
+  let current = clonePieces(pieces);
+  // Iterate to a global fixpoint across both sides.
+  while (true) {
+    const next = enforceGlobalTypeConstraintsOnce(current);
+    let diff = false;
+    for (let i = 0; i < current.length; i++) {
+      const a = current[i].possibleTypes;
+      const b = next[i].possibleTypes;
+      if (a.length !== b.length) {
+        diff = true;
+        break;
+      }
+      for (let j = 0; j < a.length; j++) {
+        if (a[j] !== b[j]) {
+          diff = true;
+          break;
+        }
+      }
+      if (diff) break;
+    }
+    if (!diff) return next;
+    current = next;
+  }
+}
+
 export default function useQuantumGameState() {
   const [pieces, setPieces] = useState(() => createStartingPieces());
   const [sideToMove, setSideToMove] = useState('white');
@@ -192,9 +339,8 @@ export default function useQuantumGameState() {
   }, [pieces, occupancy, sideToMove]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
-    // Compute move synchronously to avoid relying on async updater side-effects for turn toggling.
     const prevPieces = pieces;
-    const next = prevPieces.map((p) => ({ ...p }));
+    const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
     const moving = next.find((p) => p.id === pieceId && !p.captured);
     if (!moving) return;
     if (moving.side !== sideToMove) return;
@@ -228,7 +374,9 @@ export default function useQuantumGameState() {
     moving.square = toSquare;
     moving.possibleTypes = subset;
 
-    setPieces(next);
+    const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
+
+    setPieces(constrained);
     setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
   }, [pieces, sideToMove]);
 

@@ -12,6 +12,16 @@ export const SIDES = {
   BLACK: 'black',
 };
 
+// Per-side maximum piece counts used by global wave-function collapse logic.
+export const PIECE_LIMITS = {
+  p: 8,
+  n: 2,
+  b: 2,
+  r: 2,
+  q: 1,
+  k: 1,
+};
+
 export function allSquares() {
   const squares = [];
   for (let r = 0; r < 8; r++) {
