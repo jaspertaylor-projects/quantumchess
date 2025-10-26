@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; adds a right-side tray with modes (Find Match, Move History) and an in-tray settings button. Keeps the side tray height equal to the rendered chessboard surface height.
+// Purpose: Render a full-viewport Quantum Chess UI with a stylized title and an interactive board; places player bars inside the board stage and keeps the side tray height equal to the rendered chessboard surface height.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo } from 'react';
@@ -15,6 +15,8 @@ import { addMove } from './store/gameSlice.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
+  const topBarRef = useRef(null);
+  const bottomBarRef = useRef(null);
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
@@ -42,7 +44,16 @@ export default function App() {
 
     const measure = () => {
       const rect = el.getBoundingClientRect();
-      const size = Math.floor(Math.min(rect.width, rect.height));
+      const rawWidth = rect.width;
+      let rawHeight = rect.height;
+
+      const topH = topBarRef.current ? topBarRef.current.getBoundingClientRect().height : 0;
+      const bottomH = bottomBarRef.current ? bottomBarRef.current.getBoundingClientRect().height : 0;
+      // Two gaps between top-bar/board-row and board-row/bottom-bar; keep in sync with styles.boardStage.gap
+      const verticalGaps = 16;
+      const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
+
+      const size = Math.floor(Math.min(rawWidth, availableHeight));
       setBoardSize(size);
     };
 
@@ -152,8 +163,10 @@ export default function App() {
       width: '100%',
       flex: 1,
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 8,
       boxSizing: 'border-box',
       overflow: 'hidden',
     },
@@ -224,14 +237,19 @@ export default function App() {
 
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
-          <div className="qc-player-bar qc-player-bar--top" style={styles.playerBar('black')} data-side="black">
-            <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
-            <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
-              {/* Captured pieces (black captures) placeholder */}
-            </div>
-          </div>
-
           <div className="qc-board-stage" style={styles.boardStage} ref={boardStageRef}>
+            <div
+              className="qc-player-bar qc-player-bar--top"
+              style={styles.playerBar('black')}
+              data-side="black"
+              ref={topBarRef}
+            >
+              <span className="qc-player-name qc-player-name--black" style={styles.playerName}>{blackPlayer}</span>
+              <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
+                {/* Captured pieces (black captures) placeholder */}
+              </div>
+            </div>
+
             <div className="qc-board-row" style={styles.boardRow}>
               <Board
                 orientation="white"
@@ -256,12 +274,17 @@ export default function App() {
                 onClearHighlights={() => setTrayHighlights([])}
               />
             </div>
-          </div>
 
-          <div className="qc-player-bar qc-player-bar--bottom" style={styles.playerBar('white')} data-side="white">
-            <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
-            <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
-              {/* Captured pieces (white captures) placeholder */}
+            <div
+              className="qc-player-bar qc-player-bar--bottom"
+              style={styles.playerBar('white')}
+              data-side="white"
+              ref={bottomBarRef}
+            >
+              <span className="qc-player-name qc-player-name--white" style={styles.playerName}>{whitePlayer}</span>
+              <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
+                {/* Captured pieces (white captures) placeholder */}
+              </div>
             </div>
           </div>
         </div>
