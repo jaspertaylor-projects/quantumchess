@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars.
+// Purpose: Render the Quantum Chess UI, handle interactions (including capturing on piece click), and show captured pieces aligned from the right in player bars. Ensures board size snaps to an 8px grid for crisp rendering and adjusts player bar sizing.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/QuantumPiece.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -50,16 +50,18 @@ export default function App() {
 
     const measure = () => {
       const rect = el.getBoundingClientRect();
-      const rawWidth = rect.width;
-      let rawHeight = rect.height;
+      const rawWidth = Math.floor(rect.width);
+      let rawHeight = Math.floor(rect.height);
 
-      const topH = topBarRef.current ? topBarRef.current.getBoundingClientRect().height : 0;
-      const bottomH = bottomBarRef.current ? bottomBarRef.current.getBoundingClientRect().height : 0;
-      const verticalGaps = 16;
+      const topH = topBarRef.current ? Math.ceil(topBarRef.current.getBoundingClientRect().height) : 0;
+      const bottomH = bottomBarRef.current ? Math.ceil(bottomBarRef.current.getBoundingClientRect().height) : 0;
+      const verticalGaps = 16; // matches boardStack gap + padding
       const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
 
-      const size = Math.floor(Math.min(rawWidth, availableHeight));
-      setBoardSize(size);
+      const rawSize = Math.min(rawWidth, availableHeight);
+      const cell = Math.max(1, Math.floor(rawSize / 8));
+      const quantizedSize = cell * 8; // snap to 8px grid to avoid subpixel cells
+      setBoardSize(quantizedSize);
     };
 
     measure();
@@ -169,7 +171,7 @@ export default function App() {
     boardStack: {
       width: '100%',
       height: '100%',
-      maxWidth: 'min(95vmin, 1200px)',
+      maxWidth: 'min(96vmin, 1200px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -179,7 +181,7 @@ export default function App() {
     },
     playerBar: (side) => ({
       width: '100%',
-      minHeight: 'clamp(24px, 5vh, 44px)',
+      minHeight: 'clamp(36px, 6.5vh, 64px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -196,7 +198,7 @@ export default function App() {
       fontWeight: 700,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
-      fontSize: 'clamp(0.8rem, 2.2vw, 1rem)',
+      fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
       color: theme.textPrimary,
     },
     capturedArea: {
@@ -204,15 +206,15 @@ export default function App() {
       alignItems: 'center',
       justifyContent: 'flex-end',
       gap: 6,
-      opacity: 0.8,
-      fontSize: '0.85rem',
+      opacity: 0.9,
+      fontSize: '0.9rem',
       flex: '0 1 auto',
     },
     capturedIconWrap: {
-      width: 'clamp(16px, 1.9vw, 22px)',
-      height: 'clamp(16px, 1.9vw, 22px)',
-      minWidth: '16px',
-      minHeight: '16px',
+      width: 'clamp(18px, 2.2vw, 26px)',
+      height: 'clamp(18px, 2.2vw, 26px)',
+      minWidth: '18px',
+      minHeight: '18px',
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
@@ -339,7 +341,7 @@ export default function App() {
           id={`cap-${piece.id}`}
           side={sideForRender}
           possibleTypes={types}
-          size={22}
+          size={26}
           onClick={null}
           ariaLabel={`Captured ${label}`}
           svgStyleBySide={svgStyles}

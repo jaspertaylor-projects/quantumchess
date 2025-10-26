@@ -1,5 +1,5 @@
 // frontend/src/chessboard/QuantumPiece.jsx
-// Purpose: Visual renderer for a quantum chess piece sized to fit within its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing.
+// Purpose: Visual renderer for a quantum chess piece sized to fit within its square, supporting single, pair, and multi-type overlays with inline-SVG, CSS-variable theming, and unique ID prefixing. Maximizes in-square scale and promotes crisp rendering at small sizes.
 // Imports From: ../theme.js
 // Exported To: ./Board.jsx
 
@@ -108,7 +108,7 @@ function prefixSvgIds(svgText, prefix) {
 
   // Replace id attributes first
   for (const [oldId, nu] of map.entries()) {
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\")`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(")`, 'g'), `$1${nu}$2`);
   }
 
   // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
@@ -212,11 +212,11 @@ export default function QuantumPiece({
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
 
-  const isSmall = size <= 48;
+  const isSmall = size <= 56;
   const baseDropShadow = isSmall ? 'none' : `drop-shadow(0 1px 2px ${theme.shadow})`;
 
-  // 95% visual scale relative to the square
-  const visualScalePercent = '90%';
+  // Visual scale relative to the square, padded slightly to avoid clipping
+  const visualScalePercent = '97%';
 
   const baseStyles = {
     container: {
@@ -241,7 +241,7 @@ export default function QuantumPiece({
       display: 'block',
       pointerEvents: 'none',
       filter: baseDropShadow,
-      imageRendering: isSmall ? 'crisp-edges' : 'auto',
+      imageRendering: isSmall ? 'pixelated' : 'auto',
     },
     inlineSvg: {
       position: 'relative',
@@ -250,7 +250,7 @@ export default function QuantumPiece({
       objectFit: 'contain',
       pointerEvents: 'none',
       filter: baseDropShadow,
-      imageRendering: isSmall ? 'crisp-edges' : 'auto',
+      imageRendering: isSmall ? 'pixelated' : 'auto',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
       display: 'block',
@@ -264,13 +264,13 @@ export default function QuantumPiece({
     },
     overlaySvg: (z) => ({
       position: 'absolute',
-      inset: '2.5%',
+      inset: '1%',
       margin: '0',
       pointerEvents: 'none',
       opacity: isSmall ? 1 : 0.95,
       filter: baseDropShadow,
       zIndex: z,
-      imageRendering: isSmall ? 'crisp-edges' : 'auto',
+      imageRendering: isSmall ? 'pixelated' : 'auto',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
     }),
