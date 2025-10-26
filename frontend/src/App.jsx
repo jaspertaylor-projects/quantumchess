@@ -141,7 +141,7 @@ export default function App() {
       overflow: 'hidden',
     },
     appHeader: {
-      backgroundColor: 'transparent',
+      backgroundColor: '#000',
       padding: 'clamp(10px, 2.2vh, 18px) 12px 0 12px',
       borderRadius: 0,
       textAlign: 'center',
