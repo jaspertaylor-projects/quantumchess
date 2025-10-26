@@ -108,20 +108,32 @@ function prefixSvgIds(svgText, prefix) {
 
   // Replace id attributes first
   for (const [oldId, nu] of map.entries()) {
-    const re = new RegExp(`(\\sid=")${escapeRegExp(oldId)}(" )|(\\sid=")${escapeRegExp(oldId)}("\\/>)|(\\sid=")${escapeRegExp(oldId)}("\\>)`, 'g');
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(" )`, 'g'), `$1${nu}$2`);
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}("\\/>)`, 'g'), `$1${nu}$2`);
-    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}("\\>)`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\" )`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\\\/")`, 'g'), `$1${nu}$2`);
+    out = out.replace(new RegExp(`(\\sid=")${escapeRegExp(oldId)}(\">)`, 'g'), `$1${nu}$2`);
   }
 
   // Common reference patterns: url(#id), href="#id", xlink:href="#id", begin="id."
   for (const [oldId, nu] of map.entries()) {
     out = out.replace(new RegExp(`url\\(#${escapeRegExp(oldId)}\\)`, 'g'), `url(#${nu})`);
-    out = out.replace(new RegExp(`([\"\'])#${escapeRegExp(oldId)}([\"\'])`, 'g'), `$1#${nu}$2`);
+    out = out.replace(new RegExp(`([\\"\\'])#${escapeRegExp(oldId)}([\\"\\'])`, 'g'), `$1#${nu}$2`);
     out = out.replace(new RegExp(`#${escapeRegExp(oldId)}\\b`, 'g'), `#${nu}`);
   }
 
   return out;
+}
+
+function injectStyleIntoSvg(svgText, styleString) {
+  if (!svgText || !styleString) return svgText;
+
+  const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
+  if (hasStyle) {
+    return svgText.replace(
+      /<svg([^>]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
+      (m, p1, p2, p3) => `<svg${p1}${p2} ${styleString}${p3}`
+    );
+  }
+  return svgText.replace(/<svg([^>]*)>/i, `<svg$1 style="${styleString}">`);
 }
 
 // InlineSvgFromUrl: fetches an external SVG URL and inlines it into the DOM while injecting CSS variables and unique ID prefixes onto the root <svg>.
@@ -166,19 +178,6 @@ function InlineSvgFromUrl({ src, wrapperStyle, cssVarMap, className, idPrefix })
   );
 }
 
-function injectStyleIntoSvg(svgText, styleString) {
-  if (!svgText || !styleString) return svgText;
-
-  const hasStyle = /<svg[^>]*\sstyle=["'][^"']*["'][^>]*>/i.test(svgText);
-  if (hasStyle) {
-    return svgText.replace(
-      /<svg([^>]*\sstyle=["'])([^"']*)(["'][^>]*>)/i,
-      (m, p1, p2, p3) => `<svg${p1}${p2} ${styleString}${p3}`
-    );
-  }
-  return svgText.replace(/<svg([^>]*)>/i, `<svg$1 style="${styleString}">`);
-}
-
 export default function QuantumPiece({
   id,
   side,
@@ -216,6 +215,14 @@ export default function QuantumPiece({
       pointerEvents: 'none',
       filter: baseDropShadow,
     },
+    inlineSvg: {
+      position: 'relative',
+      width: '88%',
+      height: '88%',
+      objectFit: 'contain',
+      pointerEvents: 'none',
+      filter: baseDropShadow,
+    },
     overlayStack: {
       position: 'relative',
       width: '100%',
@@ -242,7 +249,10 @@ export default function QuantumPiece({
     if (onClick) onClick({ id, side, types });
   };
 
-  // Single-type rendering
+  // Determine side variables once for all render paths
+  const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
+
+  // Single-type rendering (inline SVG so CSS variables apply)
   if (tCount === 1) {
     const t = types[0];
     const src = singleMap[t];
@@ -254,12 +264,18 @@ export default function QuantumPiece({
         role="img"
         aria-label={ariaLabel || `Piece ${t}`}
       >
-        <img src={src} alt={t} style={baseStyles.image} />
+        <InlineSvgFromUrl
+          src={src}
+          wrapperStyle={baseStyles.inlineSvg}
+          cssVarMap={sideVars}
+          className="qc-quantum-inline-single"
+          idPrefix={`${id}-single-${t}`}
+        />
       </div>
     );
   }
 
-  // Two-type composite rendering
+  // Two-type composite rendering (inline SVG so CSS variables apply)
   if (tCount === 2) {
     const [a, b] = types;
     const key = canonicalPairKey(a, b);
@@ -273,16 +289,19 @@ export default function QuantumPiece({
           role="img"
           aria-label={ariaLabel || `Piece ${a}/${b}`}
         >
-          <img src={src} alt={`${a}${b}`} style={baseStyles.image} />
+          <InlineSvgFromUrl
+            src={src}
+            wrapperStyle={baseStyles.inlineSvg}
+            cssVarMap={sideVars}
+            className="qc-quantum-inline-pair"
+            idPrefix={`${id}-pair-${a}-${b}`}
+          />
         </div>
       );
     }
   }
 
   // 3+ types: overlay quantum inline SVGs with per-side CSS variables
-  const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
-
-  // Split layout styles and CSS variable styles for robust fallback handling
   const splitOverlayStyles = (z) => {
     const layout = baseStyles.overlaySvg(z);
     const cssVars = sideVars;
