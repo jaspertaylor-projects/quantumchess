@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, handle interactions including click and drag-and-drop moves, and show captured pieces using colorized, cached PNGs rasterized from SVGs and stored in browser (memory + localStorage).
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./store/gameSlice.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
+// Purpose: Render the Quantum Chess UI, including a styled header with decorative piece icons, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -17,13 +17,22 @@ import { addMove } from './store/gameSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs } from './chessboard/rasterPrewarm.js';
 import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
 
-// Single-type SVG asset URLs used for captured-piece icons
+// Single-type SVG asset URLs used for captured-piece icons and header fallbacks
 import imgP from './assets/p.svg?url';
 import imgN from './assets/n.svg?url';
 import imgB from './assets/b.svg?url';
 import imgR from './assets/r.svg?url';
 import imgQ from './assets/q.svg?url';
 import imgK from './assets/k.svg?url';
+
+const TYPE_TO_SVG = {
+  p: imgP,
+  n: imgN,
+  b: imgB,
+  r: imgR,
+  q: imgQ,
+  k: imgK,
+};
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -90,14 +99,12 @@ export default function App() {
     return Math.max(8, Math.floor(boardSize / 8));
   }, [boardSize]);
 
-  // Prewarm on initial mount and whenever board sizing stabilizes
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     console.log('[App] Prewarm PNGs for current piece size', currentPieceSize);
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [currentPieceSize, svgStyles]);
 
-  // Invalidate and prewarm when piece color settings change
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     console.log('[App] Piece colors changed; invalidating raster cache and regenerating');
@@ -143,13 +150,38 @@ export default function App() {
     appTitleRow: {
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
       gap: 'clamp(8px, 1.6vw, 16px)',
       padding: 'clamp(6px, 0.8vw, 10px) clamp(10px, 1.8vw, 16px)',
       borderRadius: 14,
       background: 'linear-gradient(180deg, rgba(40,44,52,0.55), rgba(32,35,42,0.55))',
       boxShadow: '0 0 0 1px rgba(97,218,251,0.18) inset, 0 8px 24px rgba(0,0,0,0.35), 0 0 64px rgba(180,0,255,0.16)',
       backdropFilter: 'blur(6px)',
+      width: 'min(1024px, 96vw)',
+      margin: '0 auto',
+    },
+    appTitleCenterGroup: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'clamp(8px, 1.2vw, 12px)',
+      flex: '0 1 auto',
+      minWidth: 0,
+    },
+    titleStrip: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'clamp(6px, 1vw, 12px)',
+      flex: '1 1 0',
+      minWidth: 0,
+    },
+    titleIconWrap: {
+      width: 'clamp(22px, 4vw, 36px)',
+      height: 'clamp(22px, 4vw, 36px)',
+      display: 'grid',
+      placeItems: 'center',
+      filter: 'drop-shadow(0 0 6px rgba(0,245,255,0.65)) drop-shadow(0 0 10px rgba(255,59,127,0.4))',
     },
     appTitleIcon: {
       width: 'clamp(24px, 4.5vw, 40px)',
@@ -268,6 +300,64 @@ export default function App() {
     },
   };
 
+  const HeaderPieceIcon = ({ t }) => {
+    const [useFallback, setUseFallback] = useState(false);
+    const [pxSize, setPxSize] = useState(32);
+    const wrapRef = useRef(null);
+
+    useEffect(() => {
+      const el = wrapRef.current;
+      if (!el) return;
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const cr = entry.contentRect;
+          const raw = Math.min(cr.width, cr.height);
+          const snapped = Math.max(16, Math.floor(raw));
+          if (snapped !== pxSize) setPxSize(snapped);
+        }
+      });
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, [pxSize]);
+
+    const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
+    const sideVars = svgStyles.white || {};
+
+    // Try to use a public asset first; fall back to rasterized imported SVG if it fails
+    const publicSrcCandidates = [
+      `/src/public/${t}.svg`,
+      `/public/${t}.svg`,
+      `/${t}.svg`,
+    ];
+
+    return (
+      <div ref={wrapRef} className="qc-title-icon-wrap" style={styles.titleIconWrap} aria-hidden>
+        {!useFallback ? (
+          <img
+            className="qc-title-icon-img"
+            src={publicSrcCandidates[0]}
+            alt=""
+            decoding="async"
+            fetchpriority="high"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onError={() => setUseFallback(true)}
+          />
+        ) : (
+          <RasterizedSvgImg
+            srcSvgUrl={srcSvg}
+            cssVarMap={sideVars}
+            idPrefix={`hdr-${t}`}
+            size={pxSize}
+            renderHint={pxSize <= 32 ? 'crisp' : 'precision'}
+            className="qc-title-icon-fallback"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            alt=""
+          />
+        )}
+      </div>
+    );
+  };
+
   const handleSquareClick = (data) => {
     const { square } = data;
     const piece = getPieceAtSquare(square);
@@ -382,16 +472,7 @@ export default function App() {
     const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
     const t = types.length === 1 ? types[0] : 'p';
 
-    const typeToSvg = {
-      p: imgP,
-      n: imgN,
-      b: imgB,
-      r: imgR,
-      q: imgQ,
-      k: imgK,
-    };
-
-    const srcSvg = typeToSvg[t] || typeToSvg.p;
+    const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
     const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
     return (
@@ -433,7 +514,6 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
-  // Drag-and-drop handlers wired into Board
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
     if (piece.side !== sideToMove) return false;
@@ -472,15 +552,27 @@ export default function App() {
       <header className="qc-app-header" style={styles.appHeader}>
         <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
           <div className="qc-app-title-row" style={styles.appTitleRow}>
-            <img
-              className="qc-app-title-icon"
-              style={styles.appTitleIcon}
-              src="/src/public/favicon.ico"
-              alt="Quantum Chess neon knight icon"
-              decoding="async"
-              fetchpriority="high"
-            />
-            <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
+            <div className="qc-title-strip qc-title-strip--left" style={styles.titleStrip} aria-hidden>
+              <HeaderPieceIcon t="n" />
+              <HeaderPieceIcon t="b" />
+              <HeaderPieceIcon t="q" />
+            </div>
+            <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
+              <img
+                className="qc-app-title-icon"
+                style={styles.appTitleIcon}
+                src="/src/public/favicon.ico"
+                alt="Quantum Chess neon knight icon"
+                decoding="async"
+                fetchpriority="high"
+              />
+              <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
+            </div>
+            <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip} aria-hidden>
+              <HeaderPieceIcon t="k" />
+              <HeaderPieceIcon t="r" />
+              <HeaderPieceIcon t="p" />
+            </div>
           </div>
         </div>
         <div className="qc-app-title-underline" style={styles.appTitleUnderline} />
