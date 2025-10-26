@@ -1,9 +1,9 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, and global type-capacity collapse.
+// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, and global type-capacity collapse; guards against duplicate move application (e.g., React Strict Mode double-invocation scenarios) while keeping Strict Mode enabled.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { fromAlgebraic, toAlgebraic } from './boardUtils.js';
 import {
   createStartingPieces,
@@ -194,7 +194,7 @@ function computeRemainingCapacityForSide(pieces, side) {
 
 function sumCapacity(remaining, typeSet) {
   let s = 0;
-  for (const t of typeSet) s += remaining[t] || 0;
+  for (const t of typeSet) s += (remaining[t] || 0);
   return s;
 }
 
@@ -307,6 +307,9 @@ export default function useQuantumGameState() {
   const [sideToMove, setSideToMove] = useState('white');
   const [captureCounter, setCaptureCounter] = useState(0);
 
+  // Prevent duplicate application of the same move within a render/commit cycle
+  const lastMoveSignatureRef = useRef(null);
+
   const occupancy = useMemo(() => buildOccupancy(pieces), [pieces]);
 
   const getPieceAtSquare = useCallback((square) => {
@@ -333,12 +336,17 @@ export default function useQuantumGameState() {
     const prevPieces = pieces;
     const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
     const moving = next.find((p) => p.id === pieceId && !p.captured);
-    if (!moving) return;
-    if (moving.side !== sideToMove) return;
+    if (!moving) return false;
+    if (moving.side !== sideToMove) return false;
 
     const from = fromAlgebraic(moving.square);
     const to = fromAlgebraic(toSquare);
-    if (!from || !to) return;
+    if (!from || !to) return false;
+
+    // Guard against duplicate invocation of the same move (e.g., Strict Mode/dev double effects)
+    const fromSquareAlg = moving.square;
+    const moveSignature = `${sideToMove}:${pieceId}:${fromSquareAlg}->${toSquare}`;
+    if (lastMoveSignatureRef.current === moveSignature) return false;
 
     const tempOcc = buildOccupancy(next);
 
@@ -352,7 +360,7 @@ export default function useQuantumGameState() {
       moving.side
     );
 
-    if (subset.length === 0) return;
+    if (subset.length === 0) return false;
 
     const targetPiece = tempOcc.get(toSquare);
     if (targetPiece && targetPiece.side !== moving.side) {
@@ -368,11 +376,17 @@ export default function useQuantumGameState() {
 
     const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
 
+    // Commit state updates atomically
     setPieces(constrained);
     setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
     if (targetPiece && targetPiece.captured) {
       setCaptureCounter((c) => c + 1);
     }
+
+    // Mark this signature as applied to prevent duplicate applications in the same cycle
+    lastMoveSignatureRef.current = moveSignature;
+
+    return true;
   }, [pieces, sideToMove, captureCounter]);
 
   return {

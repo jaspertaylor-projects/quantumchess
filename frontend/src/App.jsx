@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, including a styled header with decorative piece icons, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons.
+// Purpose: Render the Quantum Chess UI, including a styled header with decorative piece icons, the interactive board, captured pieces, and settings/rules modals; manages rasterized SVG caching for icons. Adds move application guards to avoid double moves under React Strict Mode by only dispatching to Redux when a move was applied.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/* piece SVG URLs
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -379,8 +379,8 @@ export default function App() {
       const legal = new Set(getLegalMoves(selectedId));
       if (legal.has(square)) {
         const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
-        movePiece(selectedId, square);
-        if (fromSquare) {
+        const applied = movePiece(selectedId, square);
+        if (applied && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
         }
         setSelectedId(null);
@@ -410,8 +410,8 @@ export default function App() {
       const destSquare = clicked.square;
       if (destSquare && legal.has(destSquare)) {
         const fromSquare = movingPiece.square || null;
-        movePiece(selectedId, destSquare);
-        if (fromSquare) {
+        const applied = movePiece(selectedId, destSquare);
+        if (applied && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
         }
         setSelectedId(null);
@@ -538,8 +538,8 @@ export default function App() {
       return;
     }
     const fromSquare = movingPiece.square || from || null;
-    movePiece(id, to);
-    if (fromSquare) {
+    const applied = movePiece(id, to);
+    if (applied && fromSquare) {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
     }
     setSelectedId(null);
