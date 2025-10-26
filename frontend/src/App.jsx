@@ -158,9 +158,9 @@ export default function App() {
       padding: '4px 8px',
     },
     appTitleRow: {
-      display: 'flex',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
       alignItems: 'center',
-      justifyContent: 'space-between',
       gap: 'clamp(8px, 1.6vw, 16px)',
       padding: '0 clamp(10px, 1.8vw, 16px)',
       borderRadius: 14,
@@ -181,15 +181,15 @@ export default function App() {
       padding: '0 14px',
       borderRadius: 12,
     },
-    titleStrip: {
+    titleStrip: (side) => ({
       display: 'flex',
       alignItems: 'stretch',
-      justifyContent: 'center',
+      justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
       gap: 'clamp(6px, 1vw, 12px)',
-      flex: '1 1 0',
+      width: '100%',
       minWidth: 0,
       height: '100%',
-    },
+    }),
     titleIconWrap: {
       height: '100%',
       aspectRatio: '1 / 1',
@@ -339,6 +339,20 @@ export default function App() {
 
     const pngSrc = TYPE_TO_STYLISH_PNG[t] || TYPE_TO_STYLISH_PNG.p;
 
+    const sizeScale = useMemo(() => {
+      if (t === 'q' || t === 'k') return 1.0; // biggest
+      if (t === 'p') return 0.8; // smallest
+      return 0.9; // medium for n, b, r
+    }, [t]);
+
+    const innerStyle = useMemo(() => ({
+      width: `${Math.round(sizeScale * 100)}%`,
+      height: `${Math.round(sizeScale * 100)}%`,
+      objectFit: 'contain',
+    }), [sizeScale]);
+
+    const renderSize = Math.max(16, Math.floor(pxSize * sizeScale));
+
     return (
       <div ref={wrapRef} className="qc-title-icon-wrap" style={styles.titleIconWrap} aria-hidden>
         {!useFallback ? (
@@ -348,7 +362,7 @@ export default function App() {
             alt=""
             decoding="async"
             fetchpriority="high"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            style={innerStyle}
             onError={() => setUseFallback(true)}
           />
         ) : (
@@ -356,10 +370,10 @@ export default function App() {
             srcSvgUrl={srcSvg}
             cssVarMap={sideVars}
             idPrefix={`hdr-${t}`}
-            size={pxSize}
-            renderHint={pxSize <= 32 ? 'crisp' : 'precision'}
+            size={renderSize}
+            renderHint={renderSize <= 32 ? 'crisp' : 'precision'}
             className="qc-title-icon-fallback"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            style={innerStyle}
             alt=""
           />
         )}
@@ -563,18 +577,18 @@ export default function App() {
       <header className="qc-app-header" style={styles.appHeader}>
         <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
           <div className="qc-app-title-row" style={styles.appTitleRow}>
-            <div className="qc-title-strip qc-title-strip--left" style={styles.titleStrip} aria-hidden>
-              <HeaderPieceIcon t="n" />
-              <HeaderPieceIcon t="b" />
+            <div className="qc-title-strip qc-title-strip--left" style={styles.titleStrip('left')} aria-hidden>
               <HeaderPieceIcon t="q" />
+              <HeaderPieceIcon t="b" />
+              <HeaderPieceIcon t="n" />
             </div>
             <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
               <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
             </div>
-            <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip} aria-hidden>
-              <HeaderPieceIcon t="k" />
-              <HeaderPieceIcon t="r" />
+            <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip('right')} aria-hidden>
               <HeaderPieceIcon t="p" />
+              <HeaderPieceIcon t="r" />
+              <HeaderPieceIcon t="k" />
             </div>
           </div>
         </div>
