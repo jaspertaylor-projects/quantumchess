@@ -1,12 +1,19 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
 // Purpose: Displays the move list and provides basic rewatch controls by highlighting from/to squares for each move.
-// Imports From: ../theme.js, ../store/index.js (via useSelector)
+// Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 import { useSelector } from 'react-redux';
-import { Play as PlayIcon, Pause as PauseIcon, SkipBack as SkipBackIcon, SkipForward as SkipForwardIcon, XCircle as XCircleIcon } from 'lucide-react';
+import {
+  Play as PlayIcon,
+  Pause as PauseIcon,
+  SkipBack as SkipBackIcon,
+  SkipForward as SkipForwardIcon,
+  XCircle as XCircleIcon,
+} from 'lucide-react';
+import IconButton from '../components/IconButton.jsx';
 
 export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHighlights = () => {} }) {
   const moves = useSelector((s) => s.game.moves);
@@ -43,75 +50,66 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
     setIndex(moves.length - 1);
   }, [moves.length]);
 
-  const styles = useMemo(() => ({
-    root: {
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      padding: 12,
-      boxSizing: 'border-box',
-      gap: 10,
-      overflow: 'hidden',
-    },
-    toolbar: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      border: `1px solid ${theme.border}`,
-      borderRadius: 10,
-      padding: 8,
-      background: 'rgba(255,255,255,0.03)',
-    },
-    ctrlBtn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 36,
-      height: 36,
-      borderRadius: 8,
-      border: `1px solid ${theme.border}`,
-      background: 'transparent',
-      color: theme.textPrimary,
-      cursor: 'pointer',
-    },
-    indexInfo: {
-      marginLeft: 'auto',
-      fontSize: 12,
-      color: theme.textSecondary,
-    },
-    list: {
-      flex: 1,
-      overflow: 'auto',
-      border: `1px solid ${theme.border}`,
-      borderRadius: 10,
-      background: 'rgba(255,255,255,0.03)',
-    },
-    row: (active) => ({
-      display: 'grid',
-      gridTemplateColumns: '40px 1fr 1fr',
-      alignItems: 'center',
-      padding: '8px 10px',
-      gap: 10,
-      borderBottom: `1px solid ${theme.border}`,
-      background: active ? 'rgba(97,218,251,0.08)' : 'transparent',
-      cursor: 'pointer',
+  const styles = useMemo(
+    () => ({
+      root: {
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        padding: 12,
+        boxSizing: 'border-box',
+        gap: 10,
+        overflow: 'hidden',
+      },
+      toolbar: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        border: `1px solid ${theme.border}`,
+        borderRadius: 10,
+        padding: 8,
+        background: 'rgba(255,255,255,0.03)',
+      },
+      indexInfo: {
+        marginLeft: 'auto',
+        fontSize: 12,
+        color: theme.textSecondary,
+      },
+      list: {
+        flex: 1,
+        overflow: 'auto',
+        border: `1px solid ${theme.border}`,
+        borderRadius: 10,
+        background: 'rgba(255,255,255,0.03)',
+      },
+      row: (active) => ({
+        display: 'grid',
+        gridTemplateColumns: '40px 1fr 1fr',
+        alignItems: 'center',
+        padding: '8px 10px',
+        gap: 10,
+        borderBottom: `1px solid ${theme.border}`,
+        background: active ? 'rgba(97,218,251,0.08)' : 'transparent',
+        cursor: 'pointer',
+      }),
+      cellMuted: {
+        color: theme.textSecondary,
+        fontSize: 12,
+      },
+      cell: {
+        color: theme.textPrimary,
+        fontSize: 14,
+        fontWeight: 600,
+      },
+      empty: {
+        textAlign: 'center',
+        color: theme.textSecondary,
+        padding: '24px 8px',
+        fontSize: 13,
+      },
     }),
-    cellMuted: {
-      color: theme.textSecondary,
-      fontSize: 12,
-    },
-    cell: {
-      color: theme.textPrimary,
-      fontSize: 14,
-      fontWeight: 600,
-    },
-    empty: {
-      textAlign: 'center',
-      color: theme.textSecondary,
-      padding: '24px 8px',
-      fontSize: 13,
-    },
-  }), []);
+    []
+  );
 
   const handlePrev = () => setIndex((i) => Math.max(-1, i - 1));
   const handleNext = () => setIndex((i) => Math.min(moves.length - 1, i + 1));
@@ -125,18 +123,58 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
   return (
     <div className="qc-move-history-root" style={styles.root}>
       <div className="qc-move-history-toolbar" style={styles.toolbar}>
-        <button type="button" aria-label="Previous move" className="qc-move-history-prev" style={styles.ctrlBtn} onClick={handlePrev}>
-          <SkipBackIcon size={16} />
-        </button>
-        <button type="button" aria-label="Play/Pause" className="qc-move-history-play" style={styles.ctrlBtn} onClick={handleTogglePlay}>
-          {playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-        </button>
-        <button type="button" aria-label="Next move" className="qc-move-history-next" style={styles.ctrlBtn} onClick={handleNext}>
-          <SkipForwardIcon size={16} />
-        </button>
-        <button type="button" aria-label="Clear highlights" className="qc-move-history-clear" style={styles.ctrlBtn} onClick={handleClear}>
-          <XCircleIcon size={16} />
-        </button>
+        <IconButton
+          icon={SkipBackIcon}
+          size={16}
+          width={36}
+          height={36}
+          title="Previous move"
+          ariaLabel="Previous move"
+          className="qc-move-history-prev"
+          onClick={handlePrev}
+          bg={theme.secondary}
+          color={theme.primary}
+          hoverInvert={true}
+        />
+        <IconButton
+          icon={playing ? PauseIcon : PlayIcon}
+          size={16}
+          width={36}
+          height={36}
+          title={playing ? 'Pause' : 'Play'}
+          ariaLabel="Play or pause move playback"
+          className="qc-move-history-play"
+          onClick={handleTogglePlay}
+          bg={theme.secondary}
+          color={theme.primary}
+          hoverInvert={true}
+        />
+        <IconButton
+          icon={SkipForwardIcon}
+          size={16}
+          width={36}
+          height={36}
+          title="Next move"
+          ariaLabel="Next move"
+          className="qc-move-history-next"
+          onClick={handleNext}
+          bg={theme.secondary}
+          color={theme.primary}
+          hoverInvert={true}
+        />
+        <IconButton
+          icon={XCircleIcon}
+          size={16}
+          width={36}
+          height={36}
+          title="Clear highlights"
+          ariaLabel="Clear highlights"
+          className="qc-move-history-clear"
+          onClick={handleClear}
+          bg={theme.secondary}
+          color={theme.primary}
+          hoverInvert={true}
+        />
         <div className="qc-move-history-index" style={styles.indexInfo}>
           {moves.length > 0 ? `Move ${index + 1} / ${moves.length}` : 'No moves yet'}
         </div>
