@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive header and interactive board; includes player bars showing name (top half) and rating (bottom half), captured pieces, settings/rules modals, and manages SVG raster cache.
+// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -122,6 +122,9 @@ export default function App() {
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [svgStyles, currentPieceSize]);
 
+  // Header sizing: header height is ~1.5x title font size via CSS variable
+  const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
+
   const styles = {
     appContainer: {
       backgroundColor: theme.background,
@@ -142,7 +145,7 @@ export default function App() {
     },
     appHeader: {
       backgroundColor: '#000',
-      padding: '0 12px',
+      padding: '0 clamp(8px, 1.5vw, 16px)',
       borderRadius: 0,
       textAlign: 'center',
       width: '100%',
@@ -150,57 +153,60 @@ export default function App() {
       userSelect: 'none',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'stretch',
+      alignItems: 'center',
       justifyContent: 'center',
-      height: '15vh',
-      minHeight: '15vh',
-      maxHeight: '15vh',
+      overflow: 'hidden',
+      // CSS variable drives both font-size and header height to keep a stable ratio
+      ['--qc-title-size']: TITLE_SIZE_CSS,
+      height: 'calc(var(--qc-title-size) * 1.5)',
+      minHeight: 'calc(var(--qc-title-size) * 1.5)',
+      maxHeight: 'calc(var(--qc-title-size) * 1.5)',
       flex: '0 0 auto',
     },
     appTitleWrap: {
       display: 'flex',
-      alignItems: 'stretch',
+      alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
+      height: '100%',
       boxSizing: 'border-box',
-      padding: '0',
+      padding: 0,
       flex: '1 1 auto',
+      overflow: 'hidden',
     },
     appTitleRow: {
       display: 'grid',
-      gridTemplateColumns: '1fr auto 1fr',
-      alignItems: 'stretch',
-      gap: 'clamp(8px, 1.6vw, 16px)',
-      padding: '0 clamp(10px, 1.8vw, 16px)',
-      borderRadius: 14,
-      backgroundColor: '#000',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
-      width: '100vw',
-      margin: '0 auto',
+      gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)',
+      alignItems: 'center',
+      gap: 'clamp(8px, 1.2vw, 16px)',
+      padding: 0,
+      borderRadius: 0,
+      backgroundColor: 'transparent',
+      width: '100%',
+      margin: 0,
       height: '100%',
-      marginLeft: 'calc(50% - 50vw)',
-      marginRight: 'calc(50% - 50vw)',
     },
     appTitleCenterGroup: {
       display: 'flex',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       justifyContent: 'center',
-      gap: 'clamp(6px, 1.2vw, 10px)',
+      gap: 'clamp(6px, 1vw, 10px)',
       flex: '0 1 auto',
       minWidth: 0,
       backgroundColor: 'transparent',
-      padding: '0 14px',
-      borderRadius: 12,
+      padding: 0,
+      borderRadius: 0,
       height: '100%',
     },
     titleStrip: (side) => ({
       display: 'flex',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
       gap: 'clamp(6px, 1vw, 12px)',
       width: '100%',
       minWidth: 0,
       height: '100%',
+      overflow: 'hidden',
     }),
     titleIconWrap: {
       height: '100%',
@@ -208,10 +214,12 @@ export default function App() {
       display: 'flex',
       alignItems: 'flex-end',
       justifyContent: 'center',
+      overflow: 'hidden',
+      pointerEvents: 'none',
     },
     appTitleText: {
       margin: 0,
-      fontSize: 'clamp(1.6rem, 5vw, 3.2rem)',
+      fontSize: 'var(--qc-title-size)',
       fontWeight: 1000,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
@@ -226,19 +234,18 @@ export default function App() {
         '0 0 22px rgba(255,59,127,0.35)'
       ].join(', '),
       lineHeight: 1,
-      display: 'block',
-      alignSelf: 'flex-end',
+      display: 'inline-block',
+      alignSelf: 'center',
+      whiteSpace: 'nowrap',
     },
     appTitleUnderline: {
       marginTop: '4px',
       height: '3px',
-      width: '100vw',
+      width: '100%',
       background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
       borderRadius: 3,
       boxShadow: '0 0 18px rgba(180,0,255,0.45), 0 0 28px rgba(0,245,255,0.25)',
       alignSelf: 'center',
-      marginLeft: 'calc(50% - 50vw)',
-      marginRight: 'calc(50% - 50vw)',
       flex: '0 0 auto',
     },
     boardArea: {
