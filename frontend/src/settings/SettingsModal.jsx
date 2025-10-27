@@ -39,7 +39,6 @@ export default function SettingsModal({
       setLocalPlayerBar(playerBarColors);
       setLocalShowCoordinates(showCoordinates);
       setLocalShowCheckOverlay(showCheckOverlay);
-      setIsAccepting(false);
     }
   }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates, showCheckOverlay]);
 
