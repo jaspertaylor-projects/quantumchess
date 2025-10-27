@@ -465,8 +465,8 @@ export default function App() {
             const result = castlePieces(selectedId, piece.id);
             if (result.success) {
               // Record both piece moves for history
-              dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: piece.side }));
-              dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: piece.side }));
+              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
+              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
               setSelectedId(null);
               setTrayHighlights([]);
               setInfoMessage('');
@@ -523,8 +523,8 @@ export default function App() {
         if (canCastle) {
           const result = castlePieces(selectedId, id);
           if (result.success) {
-            dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: clicked.side }));
-            dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: clicked.side }));
+            dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side }));
+            dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side }));
             setSelectedId(null);
             setTrayHighlights([]);
             setInfoMessage('');
@@ -706,8 +706,8 @@ export default function App() {
       if (canCastle) {
         const result = castlePieces(id, targetAtDest.id);
         if (result.success) {
-          dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: movingPiece.side }));
-          dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: movingPiece.side }));
+          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: movingPiece.side }));
+          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side }));
           setInfoMessage('');
         } else {
           setInfoMessage(result.reason || 'Castling failed.');

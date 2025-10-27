@@ -591,12 +591,14 @@ export default function useQuantumGameState() {
     if (!a.square || !b.square) return { canCastle: false, reason: 'Pieces must be on the board.' };
 
     const isEligible = (p) => {
-      if (!p.possibleTypes || p.possibleTypes.length === 0) return false;
-      return p.possibleTypes.every((t) => t === 'r' || t === 'k');
+      if (!p.possibleTypes) return false;
+      // A piece is eligible if its possibilities include BOTH Rook and King.
+      // Other possibilities may exist; they will be pruned upon castling.
+      return p.possibleTypes.includes('r') && p.possibleTypes.includes('k');
     };
 
     if (!isEligible(a) || !isEligible(b)) {
-      return { canCastle: false, reason: 'Both pieces must be a superposition of only Rook and/or King.' };
+      return { canCastle: false, reason: 'Both pieces must be a superposition that includes Rook and King.' };
     }
 
     if ((a.moveCount || 0) > 0 || (b.moveCount || 0) > 0) {
