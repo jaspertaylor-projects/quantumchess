@@ -69,10 +69,11 @@ export default function SideTray({
           ariaLabel="Start a new game"
           className="qc-side-tray-new-game-btn"
           onClick={onOpenNewGame}
-          bg={'#22c55e'}
-          color={'#ffffff'}
+          bg={'transparent'}
+          color={'#22c55e'}
           hoverInvert={true}
-          hoverBg="transparent"
+          hoverBg={'#22c55e'}
+          hoverColor={'#ffffff'}
         />
         <span className="qc-side-tray-title" style={styles.headerTitle}>Game</span>
         <div className="qc-side-tray-spacer" style={styles.spacer} />

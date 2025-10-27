@@ -21,16 +21,20 @@ export default function IconButton({
   color = theme.secondary,
   hoverInvert = true,
   hoverBg,
+  hoverColor,
   shadow = theme.shadow,
 }) {
   const [hovered, setHovered] = useState(false);
 
   const { bgColor, iconColor } = useMemo(() => {
     if (hovered && hoverInvert) {
-      return { bgColor: hoverBg !== undefined ? hoverBg : color, iconColor: bg };
+      return {
+        bgColor: hoverBg !== undefined ? hoverBg : color,
+        iconColor: hoverColor !== undefined ? hoverColor : bg,
+      };
     }
     return { bgColor: bg, iconColor: color };
-  }, [hovered, hoverInvert, bg, color, hoverBg]);
+  }, [hovered, hoverInvert, bg, color, hoverBg, hoverColor]);
 
   const styles = useMemo(
     () => ({
