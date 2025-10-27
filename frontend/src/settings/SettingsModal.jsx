@@ -1,5 +1,5 @@
 // frontend/src/settings/SettingsModal.jsx
-// Purpose: Modal dialog for configuring per-side SVG color variables, board square colors, and toggling coordinate labels; includes icon-only actions for restore defaults and close.
+// Purpose: Modal dialog for configuring per-side SVG color variables, board square colors, player bar colors, and toggling coordinate labels; includes icon-only actions for restore defaults and close.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -14,9 +14,11 @@ export default function SettingsModal({
   whiteColors = { icon: '#ffffff', bandFill: '#1f2937', bandStroke: '#f2f2f2' },
   blackColors = { icon: '#111827', bandFill: '#e5e7eb', bandStroke: '#111827' },
   boardColors = { light: '#f0d9b5', dark: '#b58863' },
+  playerBarColors = { background: '#282c34', text: '#ffffff' },
   onChangeWhite = () => {},
   onChangeBlack = () => {},
   onChangeBoard = () => {},
+  onChangePlayerBar = () => {},
   onReset = () => {},
   showCoordinates = false,
   onChangeShowCoordinates = () => {},
@@ -127,6 +129,7 @@ export default function SettingsModal({
   const handleWhite = (key) => (e) => onChangeWhite({ [key]: e.target.value });
   const handleBlack = (key) => (e) => onChangeBlack({ [key]: e.target.value });
   const handleBoard = (key) => (e) => onChangeBoard({ [key]: e.target.value });
+  const handlePlayerBar = (key) => (e) => onChangePlayerBar({ [key]: e.target.value });
 
   return (
     <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
@@ -244,6 +247,36 @@ export default function SettingsModal({
             </div>
           </div>
 
+          <div className="qc-settings-card qc-settings-card--player-bars" style={{ ...styles.card, ...styles.fullSpan }}>
+            <div className="qc-settings-card-title" style={styles.cardTitle}>Player Bars</div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-playerbar-background" style={styles.label}>Bar Background</label>
+              <input
+                id="qc-playerbar-background"
+                type="color"
+                className="qc-color-input qc-color-input--playerbar-background"
+                style={styles.colorInput}
+                value={playerBarColors.background}
+                onChange={handlePlayerBar('background')}
+                aria-label="Player bar background color"
+              />
+            </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-playerbar-text" style={styles.label}>Bar Text</label>
+              <input
+                id="qc-playerbar-text"
+                type="color"
+                className="qc-color-input qc-color-input--playerbar-text"
+                style={styles.colorInput}
+                value={playerBarColors.text}
+                onChange={handlePlayerBar('text')}
+                aria-label="Player bar text color"
+              />
+            </div>
+          </div>
+
           <div className="qc-settings-card qc-settings-card--board" style={{ ...styles.card, ...styles.fullSpan }}>
             <div className="qc-settings-card-title" style={styles.cardTitle}>Board Squares</div>
 
@@ -290,7 +323,7 @@ export default function SettingsModal({
 
         <div className="qc-settings-footer" style={styles.footer}>
           <p className="qc-settings-hint" style={styles.hint}>
-            Hint: Piece colors apply to quantum piece SVGs via CSS variables. Board colors affect light/dark square backgrounds.
+            Hint: Piece colors apply to quantum piece SVGs via CSS variables. Player bar colors apply to both top and bottom bars. Board colors affect light/dark square backgrounds.
           </p>
           <IconButton
             icon={RotateCcw}

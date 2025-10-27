@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays. Adds threat overlays for opponent checks and enforces post-move king removal in the game logic hook.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -10,6 +10,7 @@ import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors from './settings/usePieceColors.js';
 import useBoardColors from './settings/useBoardColors.js';
+import usePlayerBarColors from './settings/usePlayerBarColors.js';
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch, useSelector } from 'react-redux';
@@ -61,6 +62,7 @@ export default function App() {
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
+  const { playerBarColors, setPlayerBarColors, resetPlayerBarColors } = usePlayerBarColors();
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
@@ -270,9 +272,9 @@ export default function App() {
       gap: '8px',
       boxSizing: 'border-box',
     },
-    playerBar: (side) => {
-      const bg = side === 'white' ? boardColors.light : boardColors.dark;
-      const txt = side === 'white' ? blackColors.bandFill : whiteColors.bandFill;
+    playerBar: () => {
+      const bg = playerBarColors.background;
+      const txt = playerBarColors.text;
       return {
         width: '100%',
         minHeight: 'clamp(36px, 6.5vh, 64px)',
@@ -743,10 +745,12 @@ export default function App() {
         whiteColors={whiteColors}
         blackColors={blackColors}
         boardColors={boardColors}
+        playerBarColors={playerBarColors}
         onChangeWhite={setWhiteColors}
         onChangeBlack={setBlackColors}
         onChangeBoard={setBoardColors}
-        onReset={() => { resetColors(); resetBoardColors(); }}
+        onChangePlayerBar={setPlayerBarColors}
+        onReset={() => { resetColors(); resetBoardColors(); resetPlayerBarColors(); }}
         showCoordinates={showCoordinates}
         onChangeShowCoordinates={(val) => setShowCoordinates(Boolean(val))}
       />
