@@ -360,14 +360,24 @@ export default function App() {
     },
     capturedArea: {
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: 6,
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      gap: 2,
       opacity: 0.9,
       fontSize: '0.9rem',
       flex: '0 1 auto',
       height: '100%',
       maxHeight: '100%',
+      overflow: 'hidden',
+    },
+    capturedRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 4,
+      width: '100%',
+      height: '50%',
     },
     capturedIconWrap: {
       height: '95%',
@@ -664,15 +674,27 @@ export default function App() {
     return combined;
   }, [baseHighlights, checkHighlights, trayHighlights]);
 
-  const whiteCaptured = useMemo(() => {
+  const whiteCapturedPawns = useMemo(() => {
     return pieces
-      .filter((p) => p.captured && p.side === 'white')
+      .filter((p) => p.captured && p.side === 'white' && Array.isArray(p.possibleTypes) && p.possibleTypes[0] === 'p')
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
-  const blackCaptured = useMemo(() => {
+  const whiteCapturedOthers = useMemo(() => {
     return pieces
-      .filter((p) => p.captured && p.side === 'black')
+      .filter((p) => p.captured && p.side === 'white' && Array.isArray(p.possibleTypes) && p.possibleTypes[0] !== 'p')
+      .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
+  }, [pieces]);
+
+  const blackCapturedPawns = useMemo(() => {
+    return pieces
+      .filter((p) => p.captured && p.side === 'black' && Array.isArray(p.possibleTypes) && p.possibleTypes[0] === 'p')
+      .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
+  }, [pieces]);
+
+  const blackCapturedOthers = useMemo(() => {
+    return pieces
+      .filter((p) => p.captured && p.side === 'black' && Array.isArray(p.possibleTypes) && p.possibleTypes[0] !== 'p')
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
@@ -926,9 +948,16 @@ export default function App() {
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
-                {blackCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                ))}
+                <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
+                  {blackCapturedPawns.map((p) => (
+                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  ))}
+                </div>
+                <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
+                  {blackCapturedOthers.map((p) => (
+                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -982,9 +1011,16 @@ export default function App() {
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
-                {whiteCaptured.map((p) => (
-                  <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                ))}
+                <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
+                  {whiteCapturedPawns.map((p) => (
+                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  ))}
+                </div>
+                <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
+                  {whiteCapturedOthers.map((p) => (
+                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
