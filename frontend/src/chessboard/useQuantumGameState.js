@@ -513,7 +513,7 @@ export default function useQuantumGameState() {
     // Guard against duplicate invocation of the same move (e.g., Strict Mode/dev double effects)
     const fromSquareAlg = moving.square;
     const moveSignature = `${sideToMove}:${pieceId}:${fromSquareAlg}->${toSquare}`;
-    if (lastMoveSignatureRef.current === moveSignature) return { success: false, reason: 'Duplicate move detected.' };
+    if (lastMoveSignatureRef.current === moveSignature) return { success: false };
 
     const tempOcc = buildOccupancy(next);
 
@@ -714,7 +714,7 @@ export default function useQuantumGameState() {
     if (!piece1 || !piece2) return { success: false, reason: 'Internal error: castling pieces not found after planning.' };
 
     const signature = `${sideToMove}:castle:${plan.piece1_id},${plan.piece2_id}:${plan.piece1_from}->${plan.piece1_to}`;
-    if (lastMoveSignatureRef.current === signature) return { success: false, reason: 'Duplicate move detected.' };
+    if (lastMoveSignatureRef.current === signature) return { success: false };
 
     // Apply movement and collapse both pieces to R-K combo post-castle
     piece1.square = plan.piece1_to;

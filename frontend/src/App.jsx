@@ -473,7 +473,7 @@ export default function App() {
               setInfoMessage('');
               return;
             } else {
-              setInfoMessage(result.reason || 'Castling failed.');
+              if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
             }
           } else {
             setInfoMessage(reason || 'Cannot castle with these pieces.');
@@ -499,7 +499,7 @@ export default function App() {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
           setInfoMessage('');
         } else if (!result.success) {
-          setInfoMessage(result.reason || 'Illegal move.');
+          if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
         }
         setSelectedId(null);
       } else {
@@ -531,7 +531,7 @@ export default function App() {
             setInfoMessage('');
             return;
           } else {
-            setInfoMessage(result.reason || 'Castling failed.');
+            if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
           }
         }
       }
@@ -555,7 +555,7 @@ export default function App() {
           dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
           setInfoMessage('');
         } else if (!result.success) {
-          setInfoMessage(result.reason || 'Illegal move.');
+          if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
         }
         setSelectedId(null);
       } else {
@@ -712,7 +712,7 @@ export default function App() {
           dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side }));
           setInfoMessage('');
         } else {
-          setInfoMessage(result.reason || 'Castling failed.');
+          if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
         }
       } else {
         setInfoMessage(reason || 'Cannot castle with these pieces.');
@@ -735,7 +735,7 @@ export default function App() {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
       setInfoMessage('');
     } else if (!result.success) {
-      setInfoMessage(result.reason || 'Move failed due to game constraints.');
+      if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');
     }
     setSelectedId(null);
   }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove]);
