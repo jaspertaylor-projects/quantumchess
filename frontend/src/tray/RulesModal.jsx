@@ -64,7 +64,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         content: [
           'A piece begins checking once it has two or fewer remaining possibilities. It threatens all squares that any of its remaining classical types would attack.',
           "Threat overlay: On your turn, all squares threatened by the opponent's checking pieces are tinted faint red on the board.",
-          "End-of-turn king pruning: After a move is made, any of the mover's pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.",
+          'End-of-turn king pruning: After a move is made, any of the mover\'s pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.',
         ],
       },
       {
@@ -284,7 +284,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         <div className="qc-rules-dots" style={styles.dots} aria-label="page dots navigation">
           {pages.map((_, idx) => (
             <div
-              key={`rules-dot-${idx}`]
+              key={`rules-dot-${idx}`}
               className="qc-rules-dot"
               style={styles.dot(idx === page)}
               onClick={() => handleDot(idx)}
