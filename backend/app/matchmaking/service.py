@@ -1,5 +1,5 @@
 # backend/app/matchmaking/service.py
-# Purpose: In-memory matchmaking logic, state, and operations. Provides join, status, leave, heartbeat, and metrics.
+# Purpose: In-memory matchmaking logic, state, and operations. Provides join, status, leave, heartbeat, metrics, and helpers for WebSocket validation and room snapshots.
 # Imports From: .models
 # Exported To: .router
 
@@ -225,3 +225,44 @@ def metrics() -> Dict[str, Any]:
         "playersOnline": len(set(online)),
         "timestamp": datetime.datetime.now().isoformat(),
     }
+
+
+# Helper functions for WebSocket layer -----------------------------------------
+
+def room_exists(room_id: str) -> bool:
+    return bool(room_id and room_id in _MM_ROOMS)
+
+
+def get_room_snapshot(room_id: str) -> Optional[Dict[str, Any]]:
+    room = _MM_ROOMS.get(room_id)
+    if not room:
+        return None
+    return {
+        "id": room.get("id"),
+        "players": list(room.get("players", [])),
+        "sides": dict(room.get("sides", {})),
+        "created_at": room.get("created_at"),
+    }
+
+
+def validate_client_in_room(client_id: str, room_id: str) -> bool:
+    if not client_id or not room_id:
+        return False
+    rid = _MM_CLIENT_ROOM.get(client_id)
+    if not rid or rid != room_id:
+        return False
+    if room_id not in _MM_ROOMS:
+        return False
+    room = _MM_ROOMS[room_id]
+    return client_id in room.get("players", [])
+
+
+def get_side_for_client(room_id: str, client_id: str) -> Optional[str]:
+    room = _MM_ROOMS.get(room_id)
+    if not room:
+        return None
+    sides = room.get("sides", {})
+    side = sides.get(client_id)
+    if side in ("white", "black"):
+        return side
+    return None

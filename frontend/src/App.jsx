@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays, castling support, move-into-check prevention feedback, a checkmate winner popup, and basic online matchmaking via REST endpoints.
+// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking and WebSocket-based real-time play. Handles local/legal moves, castling, checkmate, and syncs moves over the network when online.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./tray/matchmakingClient.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -18,7 +18,7 @@ import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs, prewarmCapturedPiecePngs } from './chessboard/rasterPrewarm.js';
 import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
-import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue } from './tray/matchmakingClient.js';
+import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoomWs, sendMoveWs, sendCastleWs } from './tray/matchmakingClient.js';
 
 // Single-type SVG asset URLs used for captured-piece icons and header fallbacks
 import imgP from './assets/p.svg?url';
@@ -82,10 +82,13 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
 
-  // Matchmaking state
+  // Matchmaking + WebSocket
   const [mmActive, setMmActive] = useState(false);
   const mmAbortRef = useRef(false);
   const mmClientIdRef = useRef(null);
+  const mmRoomIdRef = useRef(null);
+  const wsApiRef = useRef(null);
+  const isOnlineGameRef = useRef(false);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
@@ -97,7 +100,6 @@ export default function App() {
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
     return getLegalMoves(selectedId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, getLegalMoves]);
 
   const whitePlayer = 'White';
@@ -157,11 +159,14 @@ export default function App() {
     }
   }, [gameOver]);
 
-  // Cleanup matchmaking if component unmounts
+  // Cleanup matchmaking and WS if component unmounts
   useEffect(() => {
     return () => {
       mmAbortRef.current = true;
       const id = mmClientIdRef.current;
+      try {
+        if (wsApiRef.current) wsApiRef.current.close();
+      } catch (_) {}
       if (mmActive && id) {
         // best-effort
         leaveQueue(id).catch(() => {});
@@ -565,6 +570,10 @@ export default function App() {
               // Record both piece moves for history
               dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
               dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
+              // Send over WS if online
+              if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+                sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
+              }
               setSelectedId(null);
               setTrayHighlights([]);
               setInfoMessage('');
@@ -594,6 +603,10 @@ export default function App() {
         const result = movePiece(selectedId, square);
         if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
+          // Send over WS if online
+          if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+            sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: square, side: movingPiece.side });
+          }
           setInfoMessage('');
         } else if (!result.success) {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
@@ -623,6 +636,9 @@ export default function App() {
           if (result.success) {
             dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side }));
             dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side }));
+            if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+              sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: clicked.side, plan });
+            }
             setSelectedId(null);
             setTrayHighlights([]);
             setInfoMessage('');
@@ -650,6 +666,9 @@ export default function App() {
         const result = movePiece(selectedId, destSquare);
         if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
+          if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+            sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: destSquare, side: movingPiece.side });
+          }
           setInfoMessage('');
         } else if (!result.success) {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
@@ -793,12 +812,85 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
+  const attachWsHandlers = useCallback(() => {
+    if (!wsApiRef.current) return;
+    const api = wsApiRef.current;
+    api._bound = true;
+  }, []);
+
+  const startWsConnection = useCallback(({ roomId, clientId, side }) => {
+    try {
+      if (wsApiRef.current) wsApiRef.current.close();
+    } catch (_) {}
+
+    wsApiRef.current = connectToRoomWs({
+      roomId,
+      clientId,
+      onOpen: () => {
+        setInfoMessage(`Connected to room ${String(roomId).slice(0, 6)}`);
+      },
+      onClose: () => {
+        setInfoMessage('Disconnected from game server.');
+      },
+      onMessage: (msg) => {
+        if (!msg || typeof msg !== 'object') return;
+        const myId = mmClientIdRef.current;
+        if (msg.type === 'welcome') {
+          // no-op; informational
+          return;
+        }
+        if (msg.type === 'room_state') {
+          // could display presence; skip heavy UI changes
+          return;
+        }
+        if (msg.type === 'move') {
+          if (msg.by && myId && msg.by === myId) return; // ignore echo of our own move
+          const from = msg.from;
+          const to = msg.to;
+          const sideMsg = msg.side;
+          if (typeof from !== 'string' || typeof to !== 'string') return;
+          const piece = getPieceAtSquare(from);
+          if (!piece) return;
+          const result = movePiece(piece.id, to);
+          if (result && result.success) {
+            dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
+            setInfoMessage('Opponent moved.');
+          }
+          return;
+        }
+        if (msg.type === 'castle') {
+          if (msg.by && myId && msg.by === myId) return;
+          const { piece1_from, piece1_to, piece2_from, piece2_to, side: sideMsg } = msg;
+          const p1 = getPieceAtSquare(piece1_from);
+          const p2 = getPieceAtSquare(piece2_from);
+          if (!p1 || !p2) return;
+          const { canCastle, plan } = canCastleBetween(p1.id, p2.id);
+          if (!canCastle) return;
+          const result = castlePieces(p1.id, p2.id);
+          if (result && result.success) {
+            dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg }));
+            dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg }));
+            setInfoMessage('Opponent castled.');
+          }
+          return;
+        }
+      },
+    });
+
+    attachWsHandlers();
+  }, [attachWsHandlers, getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch]);
+
   const handleStartGame = useCallback((settings) => {
     // Cancel any ongoing matchmaking from a previous attempt
     mmAbortRef.current = true;
 
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
+
+    // Reset online flags
+    isOnlineGameRef.current = false;
+    try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
+    wsApiRef.current = null;
 
     if (settings && settings.gameMode === 'online') {
       const clientId = getOrCreateClientId();
@@ -810,9 +902,13 @@ export default function App() {
           const join = await joinQueue({ clientId });
           if (join.status === 'matched') {
             const side = (join.side === 'white' || join.side === 'black') ? join.side : 'white';
+            const roomId = join.roomId;
+            mmRoomIdRef.current = roomId;
+            isOnlineGameRef.current = true;
             dispatch(setUserTeam(side));
             setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(join.roomId || '').slice(0, 6)}`);
             setMmActive(false);
+            startWsConnection({ roomId, clientId, side });
             return;
           }
           if (join.status === 'queued') {
@@ -825,9 +921,13 @@ export default function App() {
             });
             if (found && found.status === 'matched') {
               const side = (found.side === 'white' || found.side === 'black') ? found.side : 'white';
+              const roomId = found.roomId;
+              mmRoomIdRef.current = roomId;
+              isOnlineGameRef.current = true;
               dispatch(setUserTeam(side));
               setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(found.roomId || '').slice(0, 6)}`);
               setMmActive(false);
+              startWsConnection({ roomId, clientId, side });
             } else {
               setInfoMessage('Still searching for an opponent...');
             }
@@ -843,7 +943,7 @@ export default function App() {
 
     // Local or AI
     setInfoMessage('New game started.');
-  }, [dispatch]);
+  }, [dispatch, startWsConnection]);
 
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
@@ -879,6 +979,9 @@ export default function App() {
         if (result.success) {
           dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: movingPiece.side }));
           dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side }));
+          if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+            sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: movingPiece.side, plan });
+          }
           setInfoMessage('');
         } else {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
@@ -902,6 +1005,9 @@ export default function App() {
     const result = movePiece(id, to);
     if (result.success && fromSquare) {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
+      if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+        sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to, side: movingPiece.side });
+      }
       setInfoMessage('');
     } else if (!result.success) {
       if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');

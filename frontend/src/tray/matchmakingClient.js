@@ -1,5 +1,5 @@
 // frontend/src/tray/matchmakingClient.js
-// Purpose: Minimal client for the backend matchmaking service. Persists a stable client ID in localStorage and provides helpers to join, leave, poll status, and fetch metrics.
+// Purpose: Minimal client for the backend matchmaking service and realtime WS play. Persists a stable client ID and provides helpers to join, leave, poll status, metrics, and connect to the game WebSocket.
 // Imports From: None
 // Exported To: ../App.jsx
 
@@ -102,4 +102,57 @@ export async function waitForMatch(clientId, { intervalMs = 1200, timeoutMs = 60
     }
   }
   return null;
+}
+
+export function connectToRoomWs({ roomId, clientId, onMessage = () => {}, onOpen = () => {}, onClose = () => {} }) {
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${proto}://${window.location.host}/api/matchmaking/ws/${encodeURIComponent(roomId)}?clientId=${encodeURIComponent(clientId)}`;
+  const ws = new WebSocket(url);
+
+  const api = {
+    ws,
+    send(obj) {
+      try {
+        ws.send(JSON.stringify(obj));
+      } catch (_) {
+        // ignore
+      }
+    },
+    close() {
+      try { ws.close(); } catch (_) { /* ignore */ }
+    }
+  };
+
+  ws.addEventListener('open', () => onOpen());
+  ws.addEventListener('close', () => onClose());
+  ws.addEventListener('error', () => onClose());
+  ws.addEventListener('message', (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      onMessage(data);
+    } catch (_) {
+      // ignore invalid data
+    }
+  });
+
+  return api;
+}
+
+export function sendMoveWs(api, { roomId, clientId, from, to, side }) {
+  if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
+  api.send({ type: 'move', roomId, clientId, from, to, side });
+}
+
+export function sendCastleWs(api, { roomId, clientId, side, plan }) {
+  if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
+  api.send({
+    type: 'castle',
+    roomId,
+    clientId,
+    side,
+    piece1_from: plan.piece1_from,
+    piece1_to: plan.piece1_to,
+    piece2_from: plan.piece2_from,
+    piece2_to: plan.piece2_to,
+  });
 }
