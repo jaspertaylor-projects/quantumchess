@@ -72,6 +72,7 @@ export default function SideTray({
           bg={'#22c55e'}
           color={'#ffffff'}
           hoverInvert={true}
+          hoverBg="transparent"
         />
         <span className="qc-side-tray-title" style={styles.headerTitle}>Game</span>
         <div className="qc-side-tray-spacer" style={styles.spacer} />

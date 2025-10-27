@@ -79,6 +79,7 @@ export default function NewGameModal({ open, onClose, onStartGame }) {
       borderRadius: 12,
       padding: 24,
       width: 'min(90vw, 420px)',
+      minHeight: 430,
       display: 'flex',
       flexDirection: 'column',
       gap: 20,
@@ -108,6 +109,21 @@ export default function NewGameModal({ open, onClose, onStartGame }) {
       display: 'flex',
       width: '100%',
     },
+    animatedSectionContainer: {
+      position: 'relative',
+      flex: 1,
+    },
+    animatedSection: (visible) => ({
+      position: 'absolute',
+      width: '100%',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(-10px)',
+      transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+      pointerEvents: visible ? 'auto' : 'none',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 20,
+    }),
     footer: {
       display: 'flex',
       justifyContent: 'flex-end',
@@ -142,19 +158,19 @@ export default function NewGameModal({ open, onClose, onStartGame }) {
           </div>
         </div>
 
-        {gameMode === 'ai' && (
-          <div className="qc-modal-section" style={styles.section}>
-            <span className="qc-modal-label" style={styles.label}>AI Difficulty</span>
-            <div className="qc-modal-button-group" style={styles.buttonGroup}>
-              <OptionButton label="Easy" selected={aiDifficulty === 'easy'} onClick={() => setAiDifficulty('easy')} />
-              <OptionButton label="Medium" selected={aiDifficulty === 'medium'} onClick={() => setAiDifficulty('medium')} />
-              <OptionButton label="Hard" selected={aiDifficulty === 'hard'} onClick={() => setAiDifficulty('hard')} />
+        <div className="qc-animated-section-container" style={styles.animatedSectionContainer}>
+          <div className="qc-animated-section-ai" style={styles.animatedSection(gameMode === 'ai')}>
+            <div className="qc-modal-section" style={styles.section}>
+              <span className="qc-modal-label" style={styles.label}>AI Difficulty</span>
+              <div className="qc-modal-button-group" style={styles.buttonGroup}>
+                <OptionButton label="Easy" selected={aiDifficulty === 'easy'} onClick={() => setAiDifficulty('easy')} />
+                <OptionButton label="Medium" selected={aiDifficulty === 'medium'} onClick={() => setAiDifficulty('medium')} />
+                <OptionButton label="Hard" selected={aiDifficulty === 'hard'} onClick={() => setAiDifficulty('hard')} />
+              </div>
             </div>
           </div>
-        )}
 
-        {gameMode === 'online' && (
-          <>
+          <div className="qc-animated-section-online" style={styles.animatedSection(gameMode === 'online')}>
             <div className="qc-modal-section" style={styles.section}>
               <span className="qc-modal-label" style={styles.label}>Match Type</span>
               <div className="qc-modal-button-group" style={styles.buttonGroup}>
@@ -170,8 +186,8 @@ export default function NewGameModal({ open, onClose, onStartGame }) {
                 <OptionButton label="10 + 0" selected={timeControl === '10+0'} onClick={() => setTimeControl('10+0')} />
               </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
 
         <div className="qc-modal-footer" style={styles.footer}>
           <button type="button" style={styles.footerButton(false)} onClick={onClose}>Cancel</button>
