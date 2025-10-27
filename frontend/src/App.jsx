@@ -73,6 +73,7 @@ export default function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
   const [showCoordinates, setShowCoordinates] = useState(false);
+  const [showCheckOverlay, setShowCheckOverlay] = useState(true);
   const [infoMessage, setInfoMessage] = useState('');
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
@@ -579,6 +580,7 @@ export default function App() {
   }, [selectedId, selectedMoves, pieces]);
 
   const checkHighlights = useMemo(() => {
+    if (!showCheckOverlay) return [];
     const list = [];
     const opponent = sideToMove === 'white' ? 'black' : 'white';
     const squares = (checkingSquaresBySide && checkingSquaresBySide[opponent]) ? checkingSquaresBySide[opponent] : [];
@@ -586,7 +588,7 @@ export default function App() {
       list.push({ square: sq, color: 'rgba(255, 0, 0, 0.22)' });
     }
     return list;
-  }, [checkingSquaresBySide, sideToMove]);
+  }, [checkingSquaresBySide, sideToMove, showCheckOverlay]);
 
   const combinedHighlights = useMemo(() => {
     const combined = [];
@@ -759,6 +761,7 @@ export default function App() {
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
     setShowCoordinates(settings.coordinates);
+    setShowCheckOverlay(settings.checkOverlay);
 
     const newSvgStyles = {
       white: {
@@ -779,7 +782,7 @@ export default function App() {
       sizes: [currentPieceSize, 64, 26],
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
-  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, currentPieceSize]);
+  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -893,6 +896,7 @@ export default function App() {
         boardColors={boardColors}
         playerBarColors={playerBarColors}
         showCoordinates={showCoordinates}
+        showCheckOverlay={showCheckOverlay}
         defaultWhiteColors={DEFAULT_WHITE}
         defaultBlackColors={DEFAULT_BLACK}
         defaultBoardColors={DEFAULT_BOARD}

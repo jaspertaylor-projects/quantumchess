@@ -16,6 +16,7 @@ export default function SettingsModal({
   boardColors,
   playerBarColors,
   showCoordinates,
+  showCheckOverlay,
   defaultWhiteColors,
   defaultBlackColors,
   defaultBoardColors,
@@ -27,6 +28,7 @@ export default function SettingsModal({
   const [localBoard, setLocalBoard] = useState(boardColors);
   const [localPlayerBar, setLocalPlayerBar] = useState(playerBarColors);
   const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
+  const [localShowCheckOverlay, setLocalShowCheckOverlay] = useState(showCheckOverlay);
   const [isAccepting, setIsAccepting] = useState(false);
 
   useEffect(() => {
@@ -36,9 +38,10 @@ export default function SettingsModal({
       setLocalBoard(boardColors);
       setLocalPlayerBar(playerBarColors);
       setLocalShowCoordinates(showCoordinates);
+      setLocalShowCheckOverlay(showCheckOverlay);
       setIsAccepting(false);
     }
-  }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates]);
+  }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates, showCheckOverlay]);
 
   if (!open) return null;
 
@@ -51,6 +54,7 @@ export default function SettingsModal({
         board: localBoard,
         playerBar: localPlayerBar,
         coordinates: localShowCoordinates,
+        checkOverlay: localShowCheckOverlay,
       });
       onClose(); // Close only on success
     } catch (error) {
@@ -390,6 +394,19 @@ export default function SettingsModal({
                 checked={!!localShowCoordinates}
                 onChange={(e) => setLocalShowCoordinates(e.target.checked)}
                 aria-label="Toggle board coordinates"
+              />
+            </div>
+
+            <div className="qc-settings-row qc-settings-row--check-overlay" style={styles.row}>
+              <label htmlFor="qc-board-check-overlay-toggle" style={styles.label}>Show Check Overlay</label>
+              <input
+                id="qc-board-check-overlay-toggle"
+                type="checkbox"
+                className="qc-checkbox-input qc-checkbox-input--check-overlay"
+                style={styles.checkboxInput}
+                checked={!!localShowCheckOverlay}
+                onChange={(e) => setLocalShowCheckOverlay(e.target.checked)}
+                aria-label="Toggle check overlay"
               />
             </div>
           </div>
