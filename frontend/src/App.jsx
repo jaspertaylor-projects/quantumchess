@@ -13,7 +13,6 @@ import useBoardColors, { DEFAULT_BOARD } from './settings/useBoardColors.js';
 import usePlayerBarColors, { DEFAULT_PLAYER_BAR_COLORS } from './settings/usePlayerBarColors.js';
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
-import NewGameModal from './tray/NewGameModal.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
@@ -73,7 +72,6 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const [newGameOpen, setNewGameOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [showCheckOverlay, setShowCheckOverlay] = useState(true);
@@ -678,13 +676,11 @@ export default function App() {
 
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
-  const handleOpenNewGame = useCallback(() => setNewGameOpen(true), []);
 
   const handleStartGame = useCallback((settings) => {
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
     // In a real app, this would also reset the useQuantumGameState hook's internal state.
-    setNewGameOpen(false);
     setInfoMessage('New game started.');
   }, [dispatch]);
 
@@ -870,7 +866,7 @@ export default function App() {
                 infoMessage={infoMessage}
                 onOpenSettings={handleOpenSettings}
                 onOpenRules={handleOpenRules}
-                onOpenNewGame={handleOpenNewGame}
+                onStartGame={handleStartGame}
                 onSetHighlights={handleSetHighlights}
                 onClearHighlights={handleClearHighlights}
                 onSeekToIndex={handleSeekToIndex}
@@ -920,12 +916,6 @@ export default function App() {
       <RulesModal
         open={rulesOpen}
         onClose={() => setRulesOpen(false)}
-      />
-
-      <NewGameModal
-        open={newGameOpen}
-        onClose={() => setNewGameOpen(false)}
-        onStartGame={handleStartGame}
       />
     </div>
   );
