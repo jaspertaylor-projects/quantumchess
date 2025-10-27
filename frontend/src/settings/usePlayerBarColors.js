@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 const STORAGE_KEY = 'qc_playerBarColors_v1';
 
 export const DEFAULT_PLAYER_BAR_COLORS = {
-  background: '#282c34',
+  background: '#383838',
   text: '#ffffff',
 };
 
