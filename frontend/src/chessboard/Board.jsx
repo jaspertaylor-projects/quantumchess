@@ -295,6 +295,7 @@ export default function Board({
 
           const piece = pieceBySquare.get(squareAlg);
           const isDraggingThis = draggingPiece && piece && draggingPiece.id === piece.id;
+          const shouldRotate = piece ? (piece.side !== orientation) : false;
 
           return (
             <div
@@ -324,6 +325,7 @@ export default function Board({
                   onPointerDown={(evt) => onPiecePointerDown(piece, evt)}
                   ariaLabel={`Piece at ${squareAlg}`}
                   svgStyleBySide={pieceSvgStyles}
+                  rotate180={shouldRotate}
                 />
               ) : null}
 
@@ -359,6 +361,7 @@ export default function Board({
                 onPointerDown={null}
                 ariaLabel={`Dragging piece from ${dragState.fromSquare}`}
                 svgStyleBySide={pieceSvgStyles}
+                rotate180={draggingPiece.side !== orientation}
               />
             </div>
           </div>

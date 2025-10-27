@@ -1,5 +1,5 @@
 // frontend/src/store/gameSlice.js
-// Purpose: Define the game slice to track game-level state, including a move list with side metadata and current turn tracking.
+// Purpose: Define the game slice to track game-level state, including a move list with side metadata, current turn tracking, and the user's team (board orientation).
 // Imports From: None
 // Exported To: ./index.js, ../App.jsx, ../tray/MoveHistoryPanel.jsx
 
@@ -8,6 +8,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   moves: [],
   turn: 'white',
+  userTeam: 'white',
 };
 
 function nextTurn(side) {
@@ -31,8 +32,14 @@ const gameSlice = createSlice({
       state.moves = [];
       state.turn = 'white';
     },
+    setUserTeam(state, action) {
+      const val = action.payload;
+      if (val === 'white' || val === 'black') {
+        state.userTeam = val;
+      }
+    },
   },
 });
 
-export const { addMove, resetGame } = gameSlice.actions;
+export const { addMove, resetGame, setUserTeam } = gameSlice.actions;
 export default gameSlice.reducer;

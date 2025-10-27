@@ -92,6 +92,7 @@ export default function QuantumPiece({
   onPointerDown,
   ariaLabel,
   svgStyleBySide = { white: {}, black: {} },
+  rotate180 = false,
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
@@ -114,7 +115,6 @@ export default function QuantumPiece({
       userSelect: 'none',
       filter: isSelected ? 'drop-shadow(0 0 8px rgba(97,218,251,0.55))' : 'none',
       transition: 'filter 120ms ease-in-out, transform 80ms ease-in-out',
-      transform: isSelected ? 'translateY(-1px)' : 'translateZ(0)',
       contain: 'layout paint size',
       backfaceVisibility: 'hidden',
       touchAction: 'none',
@@ -166,6 +166,12 @@ export default function QuantumPiece({
   const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
   const renderHint = isSmall ? 'crisp' : 'precision';
 
+  const transformParts = [];
+  if (isSelected) transformParts.push('translateY(-1px)');
+  else transformParts.push('translateZ(0)');
+  if (rotate180) transformParts.push('rotate(180deg)');
+  const containerStyle = { ...baseStyles.container, transform: transformParts.join(' ') };
+
   // Single-type rendering as rasterized PNG
   if (tCount === 1) {
     const t = types[0];
@@ -173,7 +179,7 @@ export default function QuantumPiece({
     return (
       <div
         className="qc-quantum-piece qc-quantum-piece--single"
-        style={baseStyles.container}
+        style={containerStyle}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         role="img"
@@ -202,7 +208,7 @@ export default function QuantumPiece({
       return (
         <div
           className="qc-quantum-piece qc-quantum-piece--pair"
-          style={baseStyles.container}
+          style={containerStyle}
           onClick={handleClick}
           onPointerDown={handlePointerDown}
           role="img"
@@ -245,7 +251,7 @@ export default function QuantumPiece({
   return (
     <div
       className="qc-quantum-piece qc-quantum-piece--overlay"
-      style={baseStyles.container}
+      style={containerStyle}
       onClick={handleClick}
       onPointerDown={handlePointerDown}
       role="img"

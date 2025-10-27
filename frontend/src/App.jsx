@@ -12,7 +12,7 @@ import usePieceColors from './settings/usePieceColors.js';
 import useBoardColors from './settings/useBoardColors.js';
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addMove } from './store/gameSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs } from './chessboard/rasterPrewarm.js';
 import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
@@ -63,6 +63,7 @@ export default function App() {
   const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
 
   const dispatch = useDispatch();
+  const userTeam = useSelector((state) => state.game.userTeam || 'white');
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
@@ -156,7 +157,6 @@ export default function App() {
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
-      // CSS variable drives both font-size and header height to keep a stable ratio
       ['--qc-title-size']: TITLE_SIZE_CSS,
       height: 'calc(var(--qc-title-size) * 1.5)',
       minHeight: 'calc(var(--qc-title-size) * 1.5)',
@@ -670,7 +670,7 @@ export default function App() {
 
             <div className="qc-board-row" style={styles.boardRow}>
               <Board
-                orientation="white"
+                orientation={userTeam}
                 showCoordinates={showCoordinates}
                 highlights={combinedHighlights}
                 onSquareClick={handleSquareClick}
