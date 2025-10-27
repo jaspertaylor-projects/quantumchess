@@ -7,13 +7,14 @@ import React, { useMemo } from 'react';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon } from 'lucide-react';
 
 export default function SideTray({
   height = 0,
   infoMessage = '',
   onOpenSettings = () => {},
   onOpenRules = () => {},
+  onOpenNewGame = () => {},
   onSetHighlights = () => {},
   onClearHighlights = () => {},
   onSeekToIndex = () => {},
@@ -59,6 +60,19 @@ export default function SideTray({
   return (
     <aside className="qc-side-tray-root" style={styles.root} aria-label="Move history and controls">
       <div className="qc-side-tray-header" style={styles.header}>
+        <IconButton
+          icon={PlusIcon}
+          size={18}
+          width={32}
+          height={32}
+          title="New Game"
+          ariaLabel="Start a new game"
+          className="qc-side-tray-new-game-btn"
+          onClick={onOpenNewGame}
+          bg={'#22c55e'}
+          color={'#ffffff'}
+          hoverInvert={true}
+        />
         <span className="qc-side-tray-title" style={styles.headerTitle}>Game</span>
         <div className="qc-side-tray-spacer" style={styles.spacer} />
         <IconButton

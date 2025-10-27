@@ -1,15 +1,15 @@
 // frontend/src/store/index.js
-// Purpose: Configure and export the Redux store for the frontend application, registering domain reducers.
-// Imports From: ./gameSlice.js
+// Purpose: Configure and export the Redux store.
+// Imports From: ./gameSlice.js, ./settingsSlice.js
 // Exported To: ../main.jsx
 
 import { configureStore } from '@reduxjs/toolkit';
 import gameReducer from './gameSlice.js';
+import settingsReducer from './settingsSlice.js';
 
-const store = configureStore({
+export default configureStore({
   reducer: {
     game: gameReducer,
+    settings: settingsReducer,
   },
 });
-
-export default store;
