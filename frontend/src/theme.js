@@ -12,7 +12,7 @@ const theme = {
   textSecondary: '#a8b2d1',
   textMuted: '#999999', // For less important text like timestamps
   textSuccess: '#a6e22e', // For success messages
-  success: '#22c55e', // For success actions like starting a game
+  success: '#15803d', // A darker green for success actions
   buttonBackground: '#61dafb',
   buttonText: '#20232a',
   error: '#ff6b6b',

@@ -82,9 +82,9 @@ export default function SideTray({
           className="qc-side-tray-new-game-btn"
           onClick={() => setView('new-game')}
           bg={'transparent'}
-          color={'#22c55e'}
+          color={theme.success}
           hoverInvert={true}
-          hoverBg={'#22c55e'}
+          hoverBg={theme.success}
           hoverColor={'#ffffff'}
         />
         <span className="qc-side-tray-title" style={styles.headerTitle}>New Game</span>
