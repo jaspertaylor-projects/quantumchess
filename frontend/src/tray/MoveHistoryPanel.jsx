@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
 
-export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {} }) {
+export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {} }) {
   const moves = useSelector((s) => s.game.moves);
 
   const [index, setIndex] = useState(-1);
@@ -183,6 +183,17 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
         padding: '24px 8px',
         fontSize: 13,
       },
+      infoBox: {
+        padding: '10px 12px',
+        border: `1px solid ${theme.border}`,
+        borderRadius: 8,
+        background: 'rgba(255, 206, 84, 0.1)',
+        color: 'rgba(255, 206, 84, 0.9)',
+        fontSize: 13,
+        fontWeight: 500,
+        textAlign: 'center',
+        flexShrink: 0,
+      },
     }),
     []
   );
@@ -319,6 +330,11 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
           </>
         )}
       </div>
+      {infoMessage && (
+        <div className="qc-move-history-infobox" style={styles.infoBox}>
+          {infoMessage}
+        </div>
+      )}
     </div>
   );
 }

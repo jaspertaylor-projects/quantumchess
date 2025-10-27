@@ -498,22 +498,22 @@ export default function useQuantumGameState() {
   }, [pieces]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
-    if (!canMakeMove) return false;
+    if (!canMakeMove) return { success: false, reason: 'Cannot make moves while viewing history.' };
 
     const prevPieces = pieces;
     const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
     const moving = next.find((p) => p.id === pieceId && !p.captured);
-    if (!moving) return false;
-    if (moving.side !== sideToMove) return false;
+    if (!moving) return { success: false, reason: 'Piece not found.' };
+    if (moving.side !== sideToMove) return { success: false, reason: 'It is not your turn.' };
 
     const from = fromAlgebraic(moving.square);
     const to = fromAlgebraic(toSquare);
-    if (!from || !to) return false;
+    if (!from || !to) return { success: false, reason: 'Invalid square.' };
 
     // Guard against duplicate invocation of the same move (e.g., Strict Mode/dev double effects)
     const fromSquareAlg = moving.square;
     const moveSignature = `${sideToMove}:${pieceId}:${fromSquareAlg}->${toSquare}`;
-    if (lastMoveSignatureRef.current === moveSignature) return false;
+    if (lastMoveSignatureRef.current === moveSignature) return { success: false, reason: 'Duplicate move detected.' };
 
     const tempOcc = buildOccupancy(next);
 
@@ -530,7 +530,7 @@ export default function useQuantumGameState() {
       isFirstMove
     );
 
-    if (subset.length === 0) return false;
+    if (subset.length === 0) return { success: false, reason: 'This piece cannot make that move.' };
 
     let didCapture = false;
     const targetPiece = tempOcc.get(toSquare);
@@ -578,18 +578,18 @@ export default function useQuantumGameState() {
     // Mark this signature as applied to prevent duplicate applications in the same cycle
     lastMoveSignatureRef.current = moveSignature;
 
-    return true;
+    return { success: true };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot]);
 
   // Determine whether two same-side pieces can castle and return the move plan if so.
   const canCastleBetween = useCallback((idA, idB) => {
-    if (!idA || !idB || idA === idB) return null;
+    if (!idA || !idB || idA === idB) return { canCastle: false, reason: 'Select two different pieces.' };
     const a = pieces.find((p) => p.id === idA && !p.captured);
     const b = pieces.find((p) => p.id === idB && !p.captured);
-    if (!a || !b) return null;
-    if (a.side !== b.side) return null;
-    if (a.side !== sideToMove) return null;
-    if (!a.square || !b.square) return null;
+    if (!a || !b) return { canCastle: false, reason: 'One or both pieces not found.' };
+    if (a.side !== b.side) return { canCastle: false, reason: 'Pieces must be on the same side.' };
+    if (a.side !== sideToMove) return { canCastle: false, reason: 'It is not your turn to move.' };
+    if (!a.square || !b.square) return { canCastle: false, reason: 'Pieces must be on the board.' };
 
     const aCanK = a.possibleTypes.includes('k');
     const aCanR = a.possibleTypes.includes('r');
@@ -604,17 +604,17 @@ export default function useQuantumGameState() {
     } else if (aCanR && bCanK) {
       king = b; rook = a;
     } else {
-      return null;
+      return { canCastle: false, reason: 'One piece must be a potential King, the other a potential Rook.' };
     }
 
     const kingFirst = (king.moveCount || 0) === 0;
     const rookFirst = (rook.moveCount || 0) === 0;
-    if (!kingFirst || !rookFirst) return null;
+    if (!kingFirst || !rookFirst) return { canCastle: false, reason: 'Both pieces must not have moved to castle.' };
 
     const posK = fromAlgebraic(king.square);
     const posR = fromAlgebraic(rook.square);
-    if (!posK || !posR) return null;
-    if (posK.rankIndex !== posR.rankIndex) return null;
+    if (!posK || !posR) return { canCastle: false, reason: 'Invalid piece position.' };
+    if (posK.rankIndex !== posR.rankIndex) return { canCastle: false, reason: 'Pieces must be on the same rank to castle.' };
 
     const fK = posK.fileIndex;
     const fR = posR.fileIndex;
@@ -623,13 +623,13 @@ export default function useQuantumGameState() {
     const distance = Math.abs(fR - fK);
 
     // Require at least two squares of king travel; if adjacent or too close, deny.
-    if (distance < 3) return null;
+    if (distance < 3) return { canCastle: false, reason: 'Pieces are too close to castle.' };
 
     // Path between them must be empty
     const occ = occupancy; // current memoized occupancy
     for (let f = Math.min(fK, fR) + 1; f <= Math.max(fK, fR) - 1; f++) {
       const sq = toAlgebraic(f, r);
-      if (occ.get(sq)) return null;
+      if (occ.get(sq)) return { canCastle: false, reason: 'The path between pieces must be clear.' };
     }
 
     // King destination is two squares toward rook; rook lands adjacent on the other side of the king
@@ -642,36 +642,39 @@ export default function useQuantumGameState() {
     const rookTo = toAlgebraic(rookDestFile, r);
 
     // Ensure destination squares are available (kingTo and rookTo must be empty except their own start squares)
-    if (!kingTo || !rookTo || !kingThrough) return null;
-    if (occ.get(kingTo)) return null;
-    if (occ.get(rookTo)) return null;
+    if (!kingTo || !rookTo || !kingThrough) return { canCastle: false, reason: 'Castling move is out of bounds.' };
+    if (occ.get(kingTo)) return { canCastle: false, reason: 'King destination for castling is occupied.' };
+    if (occ.get(rookTo)) return { canCastle: false, reason: 'Rook destination for castling is occupied.' };
 
     return {
-      kingId: king.id,
-      rookId: rook.id,
-      kingFrom: king.square,
-      rookFrom: rook.square,
-      kingTo,
-      rookTo,
+      canCastle: true,
+      plan: {
+        kingId: king.id,
+        rookId: rook.id,
+        kingFrom: king.square,
+        rookFrom: rook.square,
+        kingTo,
+        rookTo,
+      }
     };
   }, [pieces, sideToMove, occupancy]);
 
   // Execute a castle move between two pieces if legal per canCastleBetween
   const castlePieces = useCallback((idA, idB) => {
-    if (!canMakeMove) return false;
+    if (!canMakeMove) return { success: false, reason: 'Cannot make moves while viewing history.' };
 
-    const plan = canCastleBetween(idA, idB);
-    if (!plan) return false;
+    const { canCastle, reason, plan } = canCastleBetween(idA, idB);
+    if (!canCastle) return { success: false, reason: reason || 'Castling is not possible.' };
 
     const prevPieces = pieces;
     const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
 
     const king = next.find((p) => p.id === plan.kingId && !p.captured);
     const rook = next.find((p) => p.id === plan.rookId && !p.captured);
-    if (!king || !rook) return false;
+    if (!king || !rook) return { success: false, reason: 'Internal error: castling pieces not found after planning.' };
 
     const signature = `${sideToMove}:castle:${plan.kingId},${plan.rookId}:${plan.kingFrom}->${plan.kingTo}`;
-    if (lastMoveSignatureRef.current === signature) return false;
+    if (lastMoveSignatureRef.current === signature) return { success: false, reason: 'Duplicate move detected.' };
 
     // Apply movement and collapse both pieces to R-K combo post-castle
     king.square = plan.kingTo;
@@ -706,7 +709,7 @@ export default function useQuantumGameState() {
 
     lastMoveSignatureRef.current = signature;
 
-    return true;
+    return { success: true };
   }, [pieces, sideToMove, captureCounter, canMakeMove, canCastleBetween, pushSnapshot]);
 
   return {

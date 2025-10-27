@@ -73,6 +73,7 @@ export default function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
   const [showCoordinates, setShowCoordinates] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
@@ -448,7 +449,10 @@ export default function App() {
   };
 
   const handleSquareClick = (data) => {
-    if (!canMakeMove) return;
+    if (!canMakeMove) {
+      setInfoMessage('Cannot make moves while viewing history.');
+      return;
+    }
     const { square } = data;
     const piece = getPieceAtSquare(square);
 
@@ -456,17 +460,22 @@ export default function App() {
       if (piece.side === sideToMove) {
         // If a piece is already selected and we clicked another same-side piece, try castling
         if (selectedId && selectedId !== piece.id) {
-          const plan = canCastleBetween(selectedId, piece.id);
-          if (plan) {
-            const applied = castlePieces(selectedId, piece.id);
-            if (applied) {
+          const { canCastle, reason, plan } = canCastleBetween(selectedId, piece.id);
+          if (canCastle) {
+            const result = castlePieces(selectedId, piece.id);
+            if (result.success) {
               // Record both piece moves for history
               dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: piece.side }));
               dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: piece.side }));
               setSelectedId(null);
               setTrayHighlights([]);
+              setInfoMessage('');
               return;
+            } else {
+              setInfoMessage(result.reason || 'Castling failed.');
             }
+          } else {
+            setInfoMessage(reason || 'Cannot castle with these pieces.');
           }
         }
         setSelectedId(piece.id);
@@ -484,34 +493,44 @@ export default function App() {
       const legal = new Set(getLegalMoves(selectedId));
       if (legal.has(square)) {
         const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
-        const applied = movePiece(selectedId, square);
-        if (applied && fromSquare) {
+        const result = movePiece(selectedId, square);
+        if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
+          setInfoMessage('');
+        } else if (!result.success) {
+          setInfoMessage(result.reason || 'Illegal move.');
         }
         setSelectedId(null);
       } else {
+        setInfoMessage('Illegal move.');
         setSelectedId(null);
       }
     }
   };
 
   const handlePieceClick = ({ id }) => {
-    if (!canMakeMove) return;
+    if (!canMakeMove) {
+      setInfoMessage('Cannot make moves while viewing history.');
+      return;
+    }
     const clicked = pieces.find((x) => x.id === id);
     if (!clicked) return;
 
     if (clicked.side === sideToMove) {
       if (selectedId && selectedId !== id) {
         // Attempt castling when clicking a different same-side piece while one is already selected
-        const plan = canCastleBetween(selectedId, id);
-        if (plan) {
-          const applied = castlePieces(selectedId, id);
-          if (applied) {
+        const { canCastle, reason, plan } = canCastleBetween(selectedId, id);
+        if (canCastle) {
+          const result = castlePieces(selectedId, id);
+          if (result.success) {
             dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: clicked.side }));
             dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: clicked.side }));
             setSelectedId(null);
             setTrayHighlights([]);
+            setInfoMessage('');
             return;
+          } else {
+            setInfoMessage(result.reason || 'Castling failed.');
           }
         }
       }
@@ -530,10 +549,16 @@ export default function App() {
       const destSquare = clicked.square;
       if (destSquare && legal.has(destSquare)) {
         const fromSquare = movingPiece.square || null;
-        const applied = movePiece(selectedId, destSquare);
-        if (applied && fromSquare) {
+        const result = movePiece(selectedId, destSquare);
+        if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
+          setInfoMessage('');
+        } else if (!result.success) {
+          setInfoMessage(result.reason || 'Illegal move.');
         }
+        setSelectedId(null);
+      } else {
+        setInfoMessage('Illegal move.');
         setSelectedId(null);
       }
     }
@@ -659,7 +684,11 @@ export default function App() {
   }, [sideToMove, canMakeMove]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
-    if (!canMakeMove) { setSelectedId(null); return; }
+    if (!canMakeMove) { 
+      setInfoMessage('Cannot make moves while viewing history.');
+      setSelectedId(null); 
+      return; 
+    }
     const movingPiece = pieces.find((p) => p.id === id);
     if (!movingPiece) {
       setSelectedId(null);
@@ -673,16 +702,18 @@ export default function App() {
     // If dropped on a same-side piece, attempt castling before standard legality checks
     const targetAtDest = getPieceAtSquare(to);
     if (targetAtDest && targetAtDest.side === movingPiece.side) {
-      const plan = canCastleBetween(id, targetAtDest.id);
-      if (plan) {
-        const applied = castlePieces(id, targetAtDest.id);
-        if (applied) {
+      const { canCastle, reason, plan } = canCastleBetween(id, targetAtDest.id);
+      if (canCastle) {
+        const result = castlePieces(id, targetAtDest.id);
+        if (result.success) {
           dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: movingPiece.side }));
           dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: movingPiece.side }));
-          setSelectedId(null);
-          setTrayHighlights([]);
-          return;
+          setInfoMessage('');
+        } else {
+          setInfoMessage(result.reason || 'Castling failed.');
         }
+      } else {
+        setInfoMessage(reason || 'Cannot castle with these pieces.');
       }
       // Same-side drop but not eligible for castling; cancel the drag
       setSelectedId(null);
@@ -692,13 +723,17 @@ export default function App() {
     // Standard move path
     const legal = new Set(getLegalMoves(id));
     if (!legal.has(to)) {
+      setInfoMessage('Illegal move.');
       setSelectedId(null);
       return;
     }
     const fromSquare = movingPiece.square || from || null;
-    const applied = movePiece(id, to);
-    if (applied && fromSquare) {
+    const result = movePiece(id, to);
+    if (result.success && fromSquare) {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
+      setInfoMessage('');
+    } else if (!result.success) {
+      setInfoMessage(result.reason || 'Move failed due to game constraints.');
     }
     setSelectedId(null);
   }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove]);
@@ -789,6 +824,7 @@ export default function App() {
 
               <SideTray
                 height={trayHeight}
+                infoMessage={infoMessage}
                 onOpenSettings={handleOpenSettings}
                 onOpenRules={handleOpenRules}
                 onSetHighlights={handleSetHighlights}

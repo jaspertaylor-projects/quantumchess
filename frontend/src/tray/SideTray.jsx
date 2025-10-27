@@ -11,6 +11,7 @@ import { Settings as SettingsIcon, BookOpen as BookOpenIcon } from 'lucide-react
 
 export default function SideTray({
   height = 0,
+  infoMessage = '',
   onOpenSettings = () => {},
   onOpenRules = () => {},
   onSetHighlights = () => {},
@@ -90,6 +91,7 @@ export default function SideTray({
 
       <div className="qc-side-tray-content" style={styles.content}>
         <MoveHistoryPanel
+          infoMessage={infoMessage}
           onHighlightMove={onSetHighlights}
           onClearHighlights={onClearHighlights}
           onSeekToIndex={onSeekToIndex}
