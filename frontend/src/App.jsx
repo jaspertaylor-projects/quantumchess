@@ -551,38 +551,58 @@ export default function App() {
     );
   };
 
+  // Helpers to enforce online-side ownership constraints on the client
+  const isOnline = useCallback(() => Boolean(isOnlineGameRef.current), []);
+  const isUsersTurn = useCallback(() => !isOnline() || sideToMove === userTeam, [isOnline, sideToMove, userTeam]);
+  const ownsPiece = useCallback((piece) => !isOnline() || (piece && piece.side === userTeam), [isOnline, userTeam]);
+
   const handleSquareClick = (data) => {
     if (!canMakeMove) {
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
     }
+
+    if (isOnline() && !isUsersTurn()) {
+      setInfoMessage('Not your turn.');
+      return;
+    }
+
     const { square } = data;
     const piece = getPieceAtSquare(square);
 
     if (piece) {
+      if (!ownsPiece(piece)) {
+        setInfoMessage('You can only select your own pieces in online games.');
+        return;
+      }
       if (piece.side === sideToMove) {
         // If a piece is already selected and we clicked another same-side piece, try castling
         if (selectedId && selectedId !== piece.id) {
-          const { canCastle, reason, plan } = canCastleBetween(selectedId, piece.id);
-          if (canCastle) {
-            const result = castlePieces(selectedId, piece.id);
-            if (result.success) {
-              // Record both piece moves for history
-              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
-              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
-              // Send over WS if online
-              if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
-                sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
+          const left = pieces.find((p) => p.id === selectedId);
+          if (left && ownsPiece(left)) {
+            const { canCastle, reason, plan } = canCastleBetween(selectedId, piece.id);
+            if (canCastle) {
+              const result = castlePieces(selectedId, piece.id);
+              if (result.success) {
+                // Record both piece moves for history
+                dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
+                dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
+                // Send over WS if online
+                if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+                  sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
+                }
+                setSelectedId(null);
+                setTrayHighlights([]);
+                setInfoMessage('');
+                return;
+              } else {
+                if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
               }
-              setSelectedId(null);
-              setTrayHighlights([]);
-              setInfoMessage('');
-              return;
             } else {
-              if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
+              setInfoMessage(reason || 'Cannot castle with these pieces.');
             }
           } else {
-            setInfoMessage(reason || 'Cannot castle with these pieces.');
+            setInfoMessage('You can only castle with your own pieces in online games.');
           }
         }
         setSelectedId(piece.id);
@@ -597,6 +617,11 @@ export default function App() {
         setSelectedId(null);
         return;
       }
+      if (!ownsPiece(movingPiece)) {
+        setInfoMessage('You can only move your own pieces in online games.');
+        setSelectedId(null);
+        return;
+      }
       const legal = new Set(getLegalMoves(selectedId));
       if (legal.has(square)) {
         const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
@@ -604,7 +629,7 @@ export default function App() {
         if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
           // Send over WS if online
-          if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+          if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
             sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: square, side: movingPiece.side });
           }
           setInfoMessage('');
@@ -624,28 +649,46 @@ export default function App() {
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
     }
+
+    if (isOnline() && !isUsersTurn()) {
+      setInfoMessage('Not your turn.');
+      return;
+    }
+
     const clicked = pieces.find((x) => x.id === id);
     if (!clicked) return;
+
+    if (!ownsPiece(clicked)) {
+      setInfoMessage('You can only select your own pieces in online games.');
+      return;
+    }
 
     if (clicked.side === sideToMove) {
       if (selectedId && selectedId !== id) {
         // Attempt castling when clicking a different same-side piece while one is already selected
-        const { canCastle, reason, plan } = canCastleBetween(selectedId, id);
-        if (canCastle) {
-          const result = castlePieces(selectedId, id);
-          if (result.success) {
-            dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side }));
-            dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side }));
-            if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
-              sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: clicked.side, plan });
+        const left = pieces.find((p) => p.id === selectedId);
+        if (left && ownsPiece(left)) {
+          const { canCastle, reason, plan } = canCastleBetween(selectedId, id);
+          if (canCastle) {
+            const result = castlePieces(selectedId, id);
+            if (result.success) {
+              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side }));
+              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side }));
+              if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+                sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: clicked.side, plan });
+              }
+              setSelectedId(null);
+              setTrayHighlights([]);
+              setInfoMessage('');
+              return;
+            } else {
+              if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
             }
-            setSelectedId(null);
-            setTrayHighlights([]);
-            setInfoMessage('');
-            return;
           } else {
-            if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
+            setInfoMessage(reason || 'Cannot castle with these pieces.');
           }
+        } else {
+          setInfoMessage('You can only castle with your own pieces in online games.');
         }
       }
       setSelectedId(id);
@@ -659,6 +702,11 @@ export default function App() {
         setSelectedId(null);
         return;
       }
+      if (!ownsPiece(movingPiece)) {
+        setInfoMessage('You can only move your own pieces in online games.');
+        setSelectedId(null);
+        return;
+      }
       const legal = new Set(getLegalMoves(selectedId));
       const destSquare = clicked.square;
       if (destSquare && legal.has(destSquare)) {
@@ -666,7 +714,7 @@ export default function App() {
         const result = movePiece(selectedId, destSquare);
         if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
-          if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+          if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
             sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: destSquare, side: movingPiece.side });
           }
           setInfoMessage('');
@@ -843,6 +891,11 @@ export default function App() {
           // could display presence; skip heavy UI changes
           return;
         }
+        if (msg.type === 'error') {
+          const detail = typeof msg.detail === 'string' ? msg.detail : 'Server rejected the last action.';
+          setInfoMessage(detail);
+          return;
+        }
         if (msg.type === 'move') {
           if (msg.by && myId && msg.by === myId) return; // ignore echo of our own move
           const from = msg.from;
@@ -948,11 +1001,16 @@ export default function App() {
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
     if (!canMakeMove) return false;
-    if (piece.side !== sideToMove) return false;
+    if (isOnlineGameRef.current) {
+      if (piece.side !== userTeam) return false;
+      if (sideToMove !== userTeam) return false;
+    } else {
+      if (piece.side !== sideToMove) return false;
+    }
     setSelectedId(piece.id);
     setTrayHighlights([]);
     return true;
-  }, [sideToMove, canMakeMove]);
+  }, [sideToMove, canMakeMove, userTeam]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
     if (!canMakeMove) { 
@@ -960,11 +1018,25 @@ export default function App() {
       setSelectedId(null); 
       return; 
     }
+
+    if (isOnlineGameRef.current && sideToMove !== userTeam) {
+      setInfoMessage('Not your turn.');
+      setSelectedId(null);
+      return;
+    }
+
     const movingPiece = pieces.find((p) => p.id === id);
     if (!movingPiece) {
       setSelectedId(null);
       return;
     }
+
+    if (isOnlineGameRef.current && movingPiece.side !== userTeam) {
+      setInfoMessage('You can only move your own pieces in online games.');
+      setSelectedId(null);
+      return;
+    }
+
     if (!to) {
       setSelectedId(null);
       return;
@@ -1013,7 +1085,7 @@ export default function App() {
       if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');
     }
     setSelectedId(null);
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam]);
 
   const handleDragHover = useCallback(() => {}, []);
 
