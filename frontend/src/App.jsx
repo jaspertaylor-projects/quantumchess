@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays and castling support.
+// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays, castling support, move-into-check prevention feedback, and a checkmate winner popup.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -67,6 +67,9 @@ export default function App() {
     historyLength,
     setViewIndex,
     canMakeMove,
+    // game state
+    gameOver,
+    winner,
   } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
@@ -76,6 +79,7 @@ export default function App() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [showCheckOverlay, setShowCheckOverlay] = useState(true);
   const [infoMessage, setInfoMessage] = useState('');
+  const [showWinPopup, setShowWinPopup] = useState(false);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
@@ -136,6 +140,13 @@ export default function App() {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [currentPieceSize, svgStyles]);
+
+  // Show winner popup when game ends
+  useEffect(() => {
+    if (gameOver) {
+      setShowWinPopup(true);
+    }
+  }, [gameOver]);
 
   // Header sizing: header height is ~1.5x title font size via CSS variable
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
@@ -373,6 +384,54 @@ export default function App() {
       justifyContent: 'center',
       gap: 12,
     },
+    winnerOverlay: {
+      position: 'fixed',
+      inset: 0,
+      display: showWinPopup ? 'flex' : 'none',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      zIndex: 9999,
+    },
+    winnerModal: {
+      backgroundColor: '#111',
+      color: '#fff',
+      borderRadius: 12,
+      border: `1px solid ${theme.border}`,
+      boxShadow: `0 12px 32px ${theme.shadow}`,
+      padding: '20px 24px',
+      width: 'min(90vw, 420px)',
+      display: 'grid',
+      gap: 12,
+      textAlign: 'center',
+    },
+    winnerTitle: {
+      fontSize: '1.2rem',
+      fontWeight: 800,
+      letterSpacing: '0.02em',
+      margin: 0,
+    },
+    winnerSub: {
+      fontSize: '0.95rem',
+      opacity: 0.9,
+      margin: 0,
+    },
+    winnerButtonRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      marginTop: 8,
+    },
+    primaryBtn: {
+      padding: '10px 16px',
+      borderRadius: 8,
+      border: '1px solid rgba(255,255,255,0.15)',
+      backgroundColor: '#1f51ff',
+      color: '#fff',
+      fontWeight: 700,
+      cursor: 'pointer',
+    },
   };
 
   const HeaderPieceIcon = ({ t }) => {
@@ -447,7 +506,7 @@ export default function App() {
 
   const handleSquareClick = (data) => {
     if (!canMakeMove) {
-      setInfoMessage('Cannot make moves while viewing history.');
+      setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
     }
     const { square } = data;
@@ -507,7 +566,7 @@ export default function App() {
 
   const handlePieceClick = ({ id }) => {
     if (!canMakeMove) {
-      setInfoMessage('Cannot make moves while viewing history.');
+      setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
     }
     const clicked = pieces.find((x) => x.id === id);
@@ -690,7 +749,7 @@ export default function App() {
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
     if (!canMakeMove) { 
-      setInfoMessage('Cannot make moves while viewing history.');
+      setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       setSelectedId(null); 
       return; 
     }
@@ -741,7 +800,7 @@ export default function App() {
       if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');
     }
     setSelectedId(null);
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner]);
 
   const handleDragHover = useCallback(() => {}, []);
 
@@ -806,6 +865,13 @@ export default function App() {
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
   }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
+
+  const winnerText = useMemo(() => {
+    if (!gameOver) return '';
+    if (!winner) return 'Game over.';
+    const w = winner[0].toUpperCase() + winner.slice(1);
+    return `${w} wins by checkmate!`;
+  }, [gameOver, winner]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -908,6 +974,24 @@ export default function App() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Winner Popup */}
+      <div className="qc-winner-overlay" style={styles.winnerOverlay} role="dialog" aria-modal={showWinPopup} aria-hidden={!showWinPopup}>
+        <div className="qc-winner-modal" style={styles.winnerModal}>
+          <h2 className="qc-winner-title" style={styles.winnerTitle}>Checkmate</h2>
+          <p className="qc-winner-sub" style={styles.winnerSub}>{winnerText}</p>
+          <div className="qc-winner-button-row" style={styles.winnerButtonRow}>
+            <button
+              className="qc-winner-button"
+              style={styles.primaryBtn}
+              onClick={() => setShowWinPopup(false)}
+              autoFocus
+            >
+              OK
+            </button>
           </div>
         </div>
       </div>
