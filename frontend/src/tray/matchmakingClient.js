@@ -79,8 +79,12 @@ export async function getMetrics() {
   return await res.json();
 }
 
-export async function waitForMatch(clientId, { intervalMs = 1200, timeoutMs = 60000, shouldStop = null } = {}) {
+export async function waitForMatch(
+  clientId,
+  { intervalMs = 1200, timeoutMs = 60000, shouldStop = null } = {}
+) {
   const start = Date.now();
+
   // Immediate status check
   try {
     const first = await getStatus(clientId);
@@ -91,15 +95,40 @@ export async function waitForMatch(clientId, { intervalMs = 1200, timeoutMs = 60
 
   while (Date.now() - start < timeoutMs) {
     if (typeof shouldStop === 'function' && shouldStop()) return null;
-    await new Promise((r) => setTimeout(r, intervalMs));
-    if (typeof shouldStop === 'function' && shouldStop()) return null;
+
+    // Prefer heartbeat hint if available to avoid missing fast matches
     try {
-      await sendHeartbeat(clientId);
+      const hb = await sendHeartbeat(clientId);
+      if (hb && hb.roomId) {
+        try {
+          const now = await getStatus(clientId);
+          if (now && now.status === 'matched') return now;
+        } catch (_) {
+          // If status fetch fails but server hinted the match via heartbeat, synthesize a minimal response
+          if (hb.side === 'white' || hb.side === 'black') {
+            return {
+              status: 'matched',
+              roomId: hb.roomId,
+              side: hb.side,
+              opponentPresent: Boolean(hb.opponentPresent),
+            };
+          }
+        }
+      }
+    } catch (_) {
+      // ignore heartbeat errors
+    }
+
+    if (typeof shouldStop === 'function' && shouldStop()) return null;
+
+    try {
       const s = await getStatus(clientId);
       if (s && s.status === 'matched') return s;
     } catch (_) {
       // ignore and continue polling
     }
+
+    await new Promise((r) => setTimeout(r, intervalMs));
   }
   return null;
 }

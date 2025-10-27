@@ -207,7 +207,17 @@ def heartbeat(client_id_raw: str) -> Dict[str, Any]:
         hb = room.get("last_heartbeat", {})
         hb[client_id] = _now()
         room["last_heartbeat"] = hb
-        return {"status": "ok", "roomId": rid}
+        players = room.get("players", [])
+        sides = room.get("sides", {})
+        side = sides.get(client_id)
+        opponent_present = len(players) == 2
+        # Include room context so polling clients can fast-path detect a match
+        return {
+            "status": "ok",
+            "roomId": rid,
+            "side": side,
+            "opponentPresent": opponent_present,
+        }
 
     return {"status": "ok"}
 
