@@ -257,6 +257,7 @@ export default function App() {
       boxSizing: 'border-box',
       padding: 'clamp(8px, 2vh, 16px)',
       overflow: 'hidden',
+      backgroundColor: theme.boardAreaBackground,
     },
     boardStack: {
       width: '100%',

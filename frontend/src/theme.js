@@ -19,6 +19,8 @@ const theme = {
   shadow: 'rgba(0, 0, 0, 0.2)',
   globalBackground: '#242424',
   globalText: 'rgba(255, 255, 255, 0.87)',
+  // Board area background surrounding the chessboard
+  boardAreaBackground: 'rgb(0, 0, 22)',
   // Generic button styles for global CSS
   buttonGenericBackground: '#1a1a1a',
   buttonGenericBorder: 'transparent',
