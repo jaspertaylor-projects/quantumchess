@@ -7,7 +7,7 @@ import { useCallback, useState } from 'react';
 
 const STORAGE_KEY = 'qcBoardSquareColors';
 
-const DEFAULT_BOARD = {
+export const DEFAULT_BOARD = {
   light: '#f0d9b5',
   dark: '#b58863',
 };

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'qc_playerBarColors_v1';
 
-const DEFAULTS = {
+export const DEFAULT_PLAYER_BAR_COLORS = {
   background: '#282c34',
   text: '#ffffff',
 };
@@ -16,14 +16,14 @@ export default function usePlayerBarColors() {
   const [playerBarColors, setPlayerBarColorsState] = useState(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { ...DEFAULTS };
+      if (!raw) return { ...DEFAULT_PLAYER_BAR_COLORS };
       const parsed = JSON.parse(raw);
       return {
-        background: typeof parsed?.background === 'string' ? parsed.background : DEFAULTS.background,
-        text: typeof parsed?.text === 'string' ? parsed.text : DEFAULTS.text,
+        background: typeof parsed?.background === 'string' ? parsed.background : DEFAULT_PLAYER_BAR_COLORS.background,
+        text: typeof parsed?.text === 'string' ? parsed.text : DEFAULT_PLAYER_BAR_COLORS.text,
       };
     } catch {
-      return { ...DEFAULTS };
+      return { ...DEFAULT_PLAYER_BAR_COLORS };
     }
   });
 
@@ -44,7 +44,7 @@ export default function usePlayerBarColors() {
   }, []);
 
   const resetPlayerBarColors = useCallback(() => {
-    setPlayerBarColorsState({ ...DEFAULTS });
+    setPlayerBarColorsState({ ...DEFAULT_PLAYER_BAR_COLORS });
   }, []);
 
   return useMemo(

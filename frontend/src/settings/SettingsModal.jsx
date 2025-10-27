@@ -3,7 +3,7 @@
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import theme from '../theme.js';
 import { X, RotateCcw } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
@@ -11,19 +11,52 @@ import IconButton from '../components/IconButton.jsx';
 export default function SettingsModal({
   open = false,
   onClose = () => {},
-  whiteColors = { icon: '#ffffff', bandFill: '#1f2937', bandStroke: '#f2f2f2' },
-  blackColors = { icon: '#111827', bandFill: '#e5e7eb', bandStroke: '#111827' },
-  boardColors = { light: '#f0d9b5', dark: '#b58863' },
-  playerBarColors = { background: '#282c34', text: '#ffffff' },
-  onChangeWhite = () => {},
-  onChangeBlack = () => {},
-  onChangeBoard = () => {},
-  onChangePlayerBar = () => {},
-  onReset = () => {},
-  showCoordinates = false,
-  onChangeShowCoordinates = () => {},
+  whiteColors,
+  blackColors,
+  boardColors,
+  playerBarColors,
+  showCoordinates,
+  defaultWhiteColors,
+  defaultBlackColors,
+  defaultBoardColors,
+  defaultPlayerBarColors,
+  onAccept = () => {},
 }) {
+  const [localWhite, setLocalWhite] = useState(whiteColors);
+  const [localBlack, setLocalBlack] = useState(blackColors);
+  const [localBoard, setLocalBoard] = useState(boardColors);
+  const [localPlayerBar, setLocalPlayerBar] = useState(playerBarColors);
+  const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
+
+  useEffect(() => {
+    if (open) {
+      setLocalWhite(whiteColors);
+      setLocalBlack(blackColors);
+      setLocalBoard(boardColors);
+      setLocalPlayerBar(playerBarColors);
+      setLocalShowCoordinates(showCoordinates);
+    }
+  }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates]);
+
   if (!open) return null;
+
+  const handleAccept = () => {
+    onAccept({
+      white: localWhite,
+      black: localBlack,
+      board: localBoard,
+      playerBar: localPlayerBar,
+      coordinates: localShowCoordinates,
+    });
+    onClose();
+  };
+
+  const handleReset = () => {
+    if (defaultWhiteColors) setLocalWhite(defaultWhiteColors);
+    if (defaultBlackColors) setLocalBlack(defaultBlackColors);
+    if (defaultBoardColors) setLocalBoard(defaultBoardColors);
+    if (defaultPlayerBarColors) setLocalPlayerBar(defaultPlayerBarColors);
+  };
 
   const styles = {
     backdrop: {
@@ -121,15 +154,26 @@ export default function SettingsModal({
       gap: 12,
       marginTop: 16,
     },
+    acceptButton: {
+      padding: '8px 16px',
+      borderRadius: 8,
+      border: 'none',
+      backgroundColor: theme.primary,
+      color: theme.secondary,
+      fontWeight: 700,
+      fontSize: 14,
+      cursor: 'pointer',
+      transition: 'background-color 0.2s ease',
+    },
     fullSpan: {
       gridColumn: '1 / -1',
     },
   };
 
-  const handleWhite = (key) => (e) => onChangeWhite({ [key]: e.target.value });
-  const handleBlack = (key) => (e) => onChangeBlack({ [key]: e.target.value });
-  const handleBoard = (key) => (e) => onChangeBoard({ [key]: e.target.value });
-  const handlePlayerBar = (key) => (e) => onChangePlayerBar({ [key]: e.target.value });
+  const handleWhite = (key) => (e) => setLocalWhite((p) => ({ ...p, [key]: e.target.value }));
+  const handleBlack = (key) => (e) => setLocalBlack((p) => ({ ...p, [key]: e.target.value }));
+  const handleBoard = (key) => (e) => setLocalBoard((p) => ({ ...p, [key]: e.target.value }));
+  const handlePlayerBar = (key) => (e) => setLocalPlayerBar((p) => ({ ...p, [key]: e.target.value }));
 
   return (
     <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
@@ -171,7 +215,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--white-icon"
                 style={styles.colorInput}
-                value={whiteColors.icon}
+                value={localWhite.icon}
                 onChange={handleWhite('icon')}
                 aria-label="White icon color"
               />
@@ -184,7 +228,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--white-band-fill"
                 style={styles.colorInput}
-                value={whiteColors.bandFill}
+                value={localWhite.bandFill}
                 onChange={handleWhite('bandFill')}
                 aria-label="White band fill color"
               />
@@ -197,7 +241,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--white-band-stroke"
                 style={styles.colorInput}
-                value={whiteColors.bandStroke}
+                value={localWhite.bandStroke}
                 onChange={handleWhite('bandStroke')}
                 aria-label="White band stroke color"
               />
@@ -214,7 +258,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--black-icon"
                 style={styles.colorInput}
-                value={blackColors.icon}
+                value={localBlack.icon}
                 onChange={handleBlack('icon')}
                 aria-label="Black icon color"
               />
@@ -227,7 +271,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--black-band-fill"
                 style={styles.colorInput}
-                value={blackColors.bandFill}
+                value={localBlack.bandFill}
                 onChange={handleBlack('bandFill')}
                 aria-label="Black band fill color"
               />
@@ -240,7 +284,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--black-band-stroke"
                 style={styles.colorInput}
-                value={blackColors.bandStroke}
+                value={localBlack.bandStroke}
                 onChange={handleBlack('bandStroke')}
                 aria-label="Black band stroke color"
               />
@@ -257,7 +301,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--playerbar-background"
                 style={styles.colorInput}
-                value={playerBarColors.background}
+                value={localPlayerBar.background}
                 onChange={handlePlayerBar('background')}
                 aria-label="Player bar background color"
               />
@@ -270,7 +314,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--playerbar-text"
                 style={styles.colorInput}
-                value={playerBarColors.text}
+                value={localPlayerBar.text}
                 onChange={handlePlayerBar('text')}
                 aria-label="Player bar text color"
               />
@@ -287,7 +331,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--board-light"
                 style={styles.colorInput}
-                value={boardColors.light}
+                value={localBoard.light}
                 onChange={handleBoard('light')}
                 aria-label="Light square color"
               />
@@ -300,7 +344,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--board-dark"
                 style={styles.colorInput}
-                value={boardColors.dark}
+                value={localBoard.dark}
                 onChange={handleBoard('dark')}
                 aria-label="Dark square color"
               />
@@ -313,25 +357,26 @@ export default function SettingsModal({
                 type="checkbox"
                 className="qc-checkbox-input qc-checkbox-input--coordinates"
                 style={styles.checkboxInput}
-                checked={!!showCoordinates}
-                onChange={(e) => onChangeShowCoordinates(e.target.checked)}
+                checked={!!localShowCoordinates}
+                onChange={(e) => setLocalShowCoordinates(e.target.checked)}
                 aria-label="Toggle board coordinates"
               />
             </div>
           </div>
         </div>
 
+        <p className="qc-settings-hint" style={styles.hint}>
+          Hint: Piece colors apply to quantum piece SVGs via CSS variables. Player bar colors apply to both top and bottom bars. Board colors affect light/dark square backgrounds.
+        </p>
+
         <div className="qc-settings-footer" style={styles.footer}>
-          <p className="qc-settings-hint" style={styles.hint}>
-            Hint: Piece colors apply to quantum piece SVGs via CSS variables. Player bar colors apply to both top and bottom bars. Board colors affect light/dark square backgrounds.
-          </p>
           <IconButton
             icon={RotateCcw}
             size={18}
             title="Restore default colors"
             ariaLabel="Restore default colors"
             className="qc-settings-reset"
-            onClick={onReset}
+            onClick={handleReset}
             width={36}
             height={36}
             radius={8}
@@ -339,6 +384,13 @@ export default function SettingsModal({
             color={theme.primary}
             hoverInvert={true}
           />
+          <button
+            className="qc-settings-accept-button"
+            style={styles.acceptButton}
+            onClick={handleAccept}
+          >
+            Accept
+          </button>
         </div>
       </div>
     </div>

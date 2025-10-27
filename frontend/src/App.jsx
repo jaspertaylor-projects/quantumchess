@@ -8,9 +8,9 @@ import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
 import SettingsModal from './settings/SettingsModal.jsx';
-import usePieceColors from './settings/usePieceColors.js';
-import useBoardColors from './settings/useBoardColors.js';
-import usePlayerBarColors from './settings/usePlayerBarColors.js';
+import usePieceColors, { DEFAULT_WHITE, DEFAULT_BLACK } from './settings/usePieceColors.js';
+import useBoardColors, { DEFAULT_BOARD } from './settings/useBoardColors.js';
+import usePlayerBarColors, { DEFAULT_PLAYER_BAR_COLORS } from './settings/usePlayerBarColors.js';
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch, useSelector } from 'react-redux';
@@ -75,9 +75,9 @@ export default function App() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
 
-  const { whiteColors, blackColors, setWhiteColors, setBlackColors, resetColors, svgStyles } = usePieceColors();
-  const { boardColors, setBoardColors, resetBoardColors } = useBoardColors();
-  const { playerBarColors, setPlayerBarColors, resetPlayerBarColors } = usePlayerBarColors();
+  const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
+  const { boardColors, setBoardColors } = useBoardColors();
+  const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
@@ -753,6 +753,14 @@ export default function App() {
     }
   }, [historyLength, setViewIndex]);
 
+  const handleAcceptSettings = useCallback((settings) => {
+    setWhiteColors(settings.white);
+    setBlackColors(settings.black);
+    setBoardColors(settings.board);
+    setPlayerBarColors(settings.playerBar);
+    setShowCoordinates(settings.coordinates);
+  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors]);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <header className="qc-app-header" style={styles.appHeader}>
@@ -864,13 +872,12 @@ export default function App() {
         blackColors={blackColors}
         boardColors={boardColors}
         playerBarColors={playerBarColors}
-        onChangeWhite={setWhiteColors}
-        onChangeBlack={setBlackColors}
-        onChangeBoard={setBoardColors}
-        onChangePlayerBar={setPlayerBarColors}
-        onReset={() => { resetColors(); resetBoardColors(); resetPlayerBarColors(); }}
         showCoordinates={showCoordinates}
-        onChangeShowCoordinates={(val) => setShowCoordinates(Boolean(val))}
+        defaultWhiteColors={DEFAULT_WHITE}
+        defaultBlackColors={DEFAULT_BLACK}
+        defaultBoardColors={DEFAULT_BOARD}
+        defaultPlayerBarColors={DEFAULT_PLAYER_BAR_COLORS}
+        onAccept={handleAcceptSettings}
       />
 
       <RulesModal

@@ -10,13 +10,13 @@ const STORAGE_KEYS = {
   black: 'qcBlackSvgColors',
 };
 
-const DEFAULT_WHITE = {
+export const DEFAULT_WHITE = {
   icon: '#ffffff',
   bandFill: '#1f2937',
   bandStroke: '#f2f2f2',
 };
 
-const DEFAULT_BLACK = {
+export const DEFAULT_BLACK = {
   icon: '#111827',
   bandFill: '#e5e7eb',
   bandStroke: '#111827',
