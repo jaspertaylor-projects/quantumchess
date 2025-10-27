@@ -11,15 +11,15 @@ const STORAGE_KEYS = {
 };
 
 export const DEFAULT_WHITE = {
-  icon: '#ffffff',
-  bandFill: '#1f2937',
-  bandStroke: '#f2f2f2',
-};
-
-export const DEFAULT_BLACK = {
   icon: '#111827',
   bandFill: '#e5e7eb',
   bandStroke: '#111827',
+};
+
+export const DEFAULT_BLACK = {
+  icon: '#ffffff',
+  bandFill: '#1f2937',
+  bandStroke: '#f2f2f2',
 };
 
 function readStorage(key, fallback) {
