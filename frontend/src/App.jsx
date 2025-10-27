@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays, castling support, move-into-check prevention feedback, and a checkmate winner popup.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
+// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays, castling support, move-into-check prevention feedback, a checkmate winner popup, and basic online matchmaking via REST endpoints.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./tray/matchmakingClient.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -14,10 +14,11 @@ import usePlayerBarColors, { DEFAULT_PLAYER_BAR_COLORS } from './settings/usePla
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch, useSelector } from 'react-redux';
-import { addMove, resetGame } from './store/gameSlice.js';
+import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs, prewarmCapturedPiecePngs } from './chessboard/rasterPrewarm.js';
 import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
+import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue } from './tray/matchmakingClient.js';
 
 // Single-type SVG asset URLs used for captured-piece icons and header fallbacks
 import imgP from './assets/p.svg?url';
@@ -81,6 +82,11 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
 
+  // Matchmaking state
+  const [mmActive, setMmActive] = useState(false);
+  const mmAbortRef = useRef(false);
+  const mmClientIdRef = useRef(null);
+
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
@@ -91,6 +97,7 @@ export default function App() {
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
     return getLegalMoves(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, getLegalMoves]);
 
   const whitePlayer = 'White';
@@ -149,6 +156,18 @@ export default function App() {
       setShowWinPopup(true);
     }
   }, [gameOver]);
+
+  // Cleanup matchmaking if component unmounts
+  useEffect(() => {
+    return () => {
+      mmAbortRef.current = true;
+      const id = mmClientIdRef.current;
+      if (mmActive && id) {
+        // best-effort
+        leaveQueue(id).catch(() => {});
+      }
+    };
+  }, [mmActive]);
 
   // Header sizing: header height is ~1.5x title font size via CSS variable
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
@@ -775,9 +794,54 @@ export default function App() {
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
   const handleStartGame = useCallback((settings) => {
+    // Cancel any ongoing matchmaking from a previous attempt
+    mmAbortRef.current = true;
+
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
-    // In a real app, this would also reset the useQuantumGameState hook's internal state.
+
+    if (settings && settings.gameMode === 'online') {
+      const clientId = getOrCreateClientId();
+      mmClientIdRef.current = clientId;
+      mmAbortRef.current = false;
+
+      (async () => {
+        try {
+          const join = await joinQueue({ clientId });
+          if (join.status === 'matched') {
+            const side = (join.side === 'white' || join.side === 'black') ? join.side : 'white';
+            dispatch(setUserTeam(side));
+            setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(join.roomId || '').slice(0, 6)}`);
+            setMmActive(false);
+            return;
+          }
+          if (join.status === 'queued') {
+            setInfoMessage('Searching for an opponent...');
+            setMmActive(true);
+            const found = await waitForMatch(clientId, {
+              intervalMs: 1200,
+              timeoutMs: 60000,
+              shouldStop: () => mmAbortRef.current,
+            });
+            if (found && found.status === 'matched') {
+              const side = (found.side === 'white' || found.side === 'black') ? found.side : 'white';
+              dispatch(setUserTeam(side));
+              setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(found.roomId || '').slice(0, 6)}`);
+              setMmActive(false);
+            } else {
+              setInfoMessage('Still searching for an opponent...');
+            }
+            return;
+          }
+          setInfoMessage('Matchmaking error. Please try again.');
+        } catch (e) {
+          setInfoMessage('Failed to contact matchmaking service.');
+        }
+      })();
+      return;
+    }
+
+    // Local or AI
     setInfoMessage('New game started.');
   }, [dispatch]);
 
