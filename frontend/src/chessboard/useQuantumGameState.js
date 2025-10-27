@@ -634,11 +634,11 @@ export default function useQuantumGameState() {
     const signature = `${sideToMove}:castle:${plan.kingId},${plan.rookId}:${plan.kingFrom}->${plan.kingTo}`;
     if (lastMoveSignatureRef.current === signature) return false;
 
-    // Apply movement and collapse
+    // Apply movement and collapse both pieces to R-K combo post-castle
     king.square = plan.kingTo;
     rook.square = plan.rookTo;
-    king.possibleTypes = ['k'];
-    rook.possibleTypes = ['r'];
+    king.possibleTypes = ['r', 'k'];
+    rook.possibleTypes = ['r', 'k'];
     king.moveCount = (king.moveCount || 0) + 1;
     rook.moveCount = (rook.moveCount || 0) + 1;
 
