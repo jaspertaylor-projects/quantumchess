@@ -56,6 +56,7 @@ export function createStartingPieces() {
       square: sq,
       possibleTypes: allTypes,
       captured: false,
+      moveCount: 0,
     });
   });
 
@@ -66,6 +67,7 @@ export function createStartingPieces() {
       square: sq,
       possibleTypes: allTypes,
       captured: false,
+      moveCount: 0,
     });
   });
 

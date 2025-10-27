@@ -88,9 +88,8 @@ function knightMoves(file, rank, occ, side) {
   return out;
 }
 
-function pawnMoves(file, rank, occ, side) {
+function pawnMoves(file, rank, occ, side, isFirstMove = false) {
   const dir = side === 'white' ? 1 : -1;
-  const startRank = side === 'white' ? 1 : 6;
   const out = [];
 
   const one = [file, rank + dir];
@@ -99,8 +98,9 @@ function pawnMoves(file, rank, occ, side) {
     if (!occ.get(oneSq)) out.push(oneSq);
   }
 
+  // Two-square advance is allowed on this piece's first move regardless of starting rank
   const two = [file, rank + 2 * dir];
-  if (rank === startRank && inBounds(two[0], two[1])) {
+  if (isFirstMove && inBounds(two[0], two[1])) {
     const midSq = keySquare(file, rank + dir);
     const twoSq = keySquare(two[0], two[1]);
     if (!occ.get(midSq) && !occ.get(twoSq)) out.push(twoSq);
@@ -137,10 +137,11 @@ function queenMoves(file, rank, occ, side) {
   ];
 }
 
-function movesForType(t, file, rank, occ, side) {
+function movesForType(t, file, rank, occ, side, options = {}) {
+  const { isFirstMove = false } = options;
   switch (t) {
     case 'p':
-      return pawnMoves(file, rank, occ, side);
+      return pawnMoves(file, rank, occ, side, isFirstMove);
     case 'n':
       return knightMoves(file, rank, occ, side);
     case 'b':
@@ -156,11 +157,11 @@ function movesForType(t, file, rank, occ, side) {
   }
 }
 
-function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, toRank, occ, side) {
+function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, toRank, occ, side, isFirstMove = false) {
   const toSq = keySquare(toFile, toRank);
   const subset = [];
   for (const t of types) {
-    const candidateMoves = movesForType(t, fromFile, fromRank, occ, side);
+    const candidateMoves = movesForType(t, fromFile, fromRank, occ, side, { isFirstMove });
     if (candidateMoves.includes(toSq)) subset.push(t);
   }
   return subset;
@@ -324,9 +325,11 @@ export default function useQuantumGameState() {
     if (!pos) return [];
     const { fileIndex: f, rankIndex: r } = pos;
 
+    const isFirstMove = (piece.moveCount || 0) === 0;
+
     const merged = new Set();
     for (const t of piece.possibleTypes) {
-      const list = movesForType(t, f, r, occupancy, piece.side);
+      const list = movesForType(t, f, r, occupancy, piece.side, { isFirstMove });
       for (const sq of list) merged.add(sq);
     }
     return Array.from(merged);
@@ -350,6 +353,8 @@ export default function useQuantumGameState() {
 
     const tempOcc = buildOccupancy(next);
 
+    const isFirstMove = (moving.moveCount || 0) === 0;
+
     const subset = subsetTypesThatCanMakeMove(
       moving.possibleTypes,
       from.fileIndex,
@@ -357,7 +362,8 @@ export default function useQuantumGameState() {
       to.fileIndex,
       to.rankIndex,
       tempOcc,
-      moving.side
+      moving.side,
+      isFirstMove
     );
 
     if (subset.length === 0) return false;
@@ -373,6 +379,7 @@ export default function useQuantumGameState() {
 
     moving.square = toSquare;
     moving.possibleTypes = subset;
+    moving.moveCount = (moving.moveCount || 0) + 1;
 
     const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
 
