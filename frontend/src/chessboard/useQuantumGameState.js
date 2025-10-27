@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state with a full immutable timeline. Keeps a snapshot after every move, supports seeking through history, blocks new moves unless viewing the latest snapshot, and enforces all quantum rules (collapse, global capacity, check pruning, and castling).
+// Purpose: Manage Quantum Chess state with a full immutable timeline. Keeps a snapshot after every move, supports seeking through history, and enforces all quantum rules (collapse, promotion, global capacity, check pruning, and castling) with correct order-of-operations.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -543,15 +543,23 @@ export default function useQuantumGameState() {
       didCapture = true;
     }
 
+    // Apply the move and collapse mover to the subset that can make this move
     moving.square = toSquare;
     moving.possibleTypes = subset;
     moving.moveCount = (moving.moveCount || 0) + 1;
 
-    // Enforce global type constraints to a fixpoint after the move and capture collapse
+    // Quantum Promotion: if mover still includes Pawn and reached farthest rank, remove Pawn and add N/B/R/Q
+    const promotionRank = moving.side === 'white' ? 7 : 0;
+    if (moving.possibleTypes.includes('p') && to.rankIndex === promotionRank) {
+      const merged = new Set(moving.possibleTypes.filter((t) => t !== 'p'));
+      ['n', 'b', 'r', 'q'].forEach((t) => merged.add(t));
+      moving.possibleTypes = Array.from(merged);
+    }
+
+    // Enforce global type constraints to a fixpoint after move, capture-collapse, and promotion
     const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
 
-    // After a move, you cannot leave your king in check.
-    // Remove 'k' from mover-side pieces that sit on squares threatened by the opponent's checking pieces.
+    // End-of-turn king pruning: remove 'k' from mover-side pieces on squares threatened by opposing checking pieces
     const moverSide = moving.side;
     const opponentSide = moverSide === 'white' ? 'black' : 'white';
     const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
@@ -561,7 +569,6 @@ export default function useQuantumGameState() {
       if (p.possibleTypes.length <= 0) return p;
       if (!p.possibleTypes.includes('k')) return p;
       if (!oppThreats.has(p.square)) return p;
-      // Avoid emptying the set; if 'k' is the only possibility, leave as-is to prevent invalid state.
       if (p.possibleTypes.length === 1) return p;
       const filtered = p.possibleTypes.filter((t) => t !== 'k');
       return { ...p, possibleTypes: filtered };
