@@ -753,13 +753,33 @@ export default function App() {
     }
   }, [historyLength, setViewIndex]);
 
-  const handleAcceptSettings = useCallback((settings) => {
+  const handleAcceptSettings = useCallback(async (settings) => {
     setWhiteColors(settings.white);
     setBlackColors(settings.black);
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
     setShowCoordinates(settings.coordinates);
-  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors]);
+
+    const newSvgStyles = {
+      white: {
+        ['--band-fill']: settings.white.bandFill,
+        ['--band-stroke']: settings.white.bandStroke,
+        ['--icon-color']: settings.white.icon,
+      },
+      black: {
+        ['--band-fill']: settings.black.bandFill,
+        ['--band-stroke']: settings.black.bandStroke,
+        ['--icon-color']: settings.black.icon,
+      },
+    };
+
+    invalidateRasterPngs('piece-colors-changed');
+    await prewarmAllPiecePngs({
+      cssVarsBySide: newSvgStyles,
+      sizes: [currentPieceSize, 64, 26],
+      renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
+    });
+  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, currentPieceSize]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>

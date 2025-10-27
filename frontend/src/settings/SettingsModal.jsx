@@ -20,13 +20,14 @@ export default function SettingsModal({
   defaultBlackColors,
   defaultBoardColors,
   defaultPlayerBarColors,
-  onAccept = () => {},
+  onAccept = async () => {},
 }) {
   const [localWhite, setLocalWhite] = useState(whiteColors);
   const [localBlack, setLocalBlack] = useState(blackColors);
   const [localBoard, setLocalBoard] = useState(boardColors);
   const [localPlayerBar, setLocalPlayerBar] = useState(playerBarColors);
   const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
+  const [isAccepting, setIsAccepting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -35,20 +36,28 @@ export default function SettingsModal({
       setLocalBoard(boardColors);
       setLocalPlayerBar(playerBarColors);
       setLocalShowCoordinates(showCoordinates);
+      setIsAccepting(false);
     }
   }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates]);
 
   if (!open) return null;
 
-  const handleAccept = () => {
-    onAccept({
-      white: localWhite,
-      black: localBlack,
-      board: localBoard,
-      playerBar: localPlayerBar,
-      coordinates: localShowCoordinates,
-    });
-    onClose();
+  const handleAccept = async () => {
+    setIsAccepting(true);
+    try {
+      await onAccept({
+        white: localWhite,
+        black: localBlack,
+        board: localBoard,
+        playerBar: localPlayerBar,
+        coordinates: localShowCoordinates,
+      });
+      onClose(); // Close only on success
+    } catch (error) {
+      console.error('Failed to apply settings:', error);
+    } finally {
+      setIsAccepting(false);
+    }
   };
 
   const handleReset = () => {
@@ -164,6 +173,19 @@ export default function SettingsModal({
       fontSize: 14,
       cursor: 'pointer',
       transition: 'background-color 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      minWidth: 120,
+    },
+    spinner: {
+      border: '2px solid rgba(255,255,255,0.3)',
+      borderTop: '2px solid #fff',
+      borderRadius: '50%',
+      width: 16,
+      height: 16,
+      animation: 'spin 1s linear infinite',
     },
     fullSpan: {
       gridColumn: '1 / -1',
@@ -177,6 +199,14 @@ export default function SettingsModal({
 
   return (
     <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div
         className="qc-settings-panel"
         style={styles.panel}
@@ -388,8 +418,16 @@ export default function SettingsModal({
             className="qc-settings-accept-button"
             style={styles.acceptButton}
             onClick={handleAccept}
+            disabled={isAccepting}
           >
-            Accept
+            {isAccepting ? (
+              <>
+                <div style={styles.spinner} />
+                <span>Applying...</span>
+              </>
+            ) : (
+              'Accept'
+            )}
           </button>
         </div>
       </div>
