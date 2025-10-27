@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay, king removal after each move, quantum castling rules, and quantum promotion.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay, king removal after each move, quantum castling rules, quantum promotion, and checkmate.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -79,6 +79,15 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
           'Castling never captures; all destination squares must be empty. The move consumes your entire turn.',
           'Conservation applies: If Rook or King capacity is already exhausted by prior collapses/superpositions, castling that would violate conservation is disallowed.',
           'Destination squares may be threatened; if so, end-of-turn king pruning may remove King from one or both castling pieces per the Checks and Threats rules.',
+        ],
+      },
+      {
+        title: 'Checkmate',
+        content: [
+          'Definition: You deliver checkmate when, after your move is fully resolved, every legal reply by your opponent results in one of the following: (a) no piece on their side still includes King in its possibilities, or (b) exactly one piece on their side still includes King and you have at least one legal capture on that unique King on your next move.',
+          'No check requirement: The capture test in (b) ignores the “checking” status of your pieces. Any of your pieces that could legally capture the unique King square using any of its remaining classical move types qualifies—even if it currently has more than two possibilities and would not show as checking.',
+          'Timing: Checkmate is evaluated after the following sequence on your move: apply the move and any capture-collapse, apply promotion, run global conservation to a fixpoint, then prune Kings from any of your pieces ending the turn on threatened squares. Only then is the opponent’s reply space analyzed for checkmate.',
+          'Practical effect: If every opponent reply would leave them kingless or with a single capturable King, the game ends immediately—you win.',
         ],
       },
     ],
@@ -284,7 +293,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         <div className="qc-rules-dots" style={styles.dots} aria-label="page dots navigation">
           {pages.map((_, idx) => (
             <div
-              key={`rules-dot-${idx}`}
+              key={`rules-dot-${idx}`]
               className="qc-rules-dot"
               style={styles.dot(idx === page)}
               onClick={() => handleDot(idx)}
