@@ -116,8 +116,8 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
       fontWeight: 700,
       borderRadius: 8,
       border: primary ? 'none' : `1px solid ${theme.border}`,
-      background: primary ? theme.primary : 'transparent',
-      color: primary ? theme.buttonText : theme.textSecondary,
+      background: primary ? theme.success : 'transparent',
+      color: primary ? theme.textPrimary : theme.textSecondary,
       cursor: 'pointer',
     }),
   }), []);

@@ -1,7 +1,7 @@
 // frontend/src/theme.js
 // Purpose: Defines the application's color theme as a simple JS object.
 // Imports From: None
-// Exported To: frontend/src/App.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx, frontend/src/tray/NewGameModal.jsx
+// Exported To: frontend/src/App.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx, frontend/src/tray/NewGamePanel.jsx, frontend/src/tray/SideTray.jsx
 
 const theme = {
   primary: '#61dafb', // React Blue
@@ -12,6 +12,7 @@ const theme = {
   textSecondary: '#a8b2d1',
   textMuted: '#999999', // For less important text like timestamps
   textSuccess: '#a6e22e', // For success messages
+  success: '#22c55e', // For success actions like starting a game
   buttonBackground: '#61dafb',
   buttonText: '#20232a',
   error: '#ff6b6b',
