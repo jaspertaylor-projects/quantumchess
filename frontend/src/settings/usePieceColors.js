@@ -18,7 +18,7 @@ export const DEFAULT_WHITE = {
 
 export const DEFAULT_BLACK = {
   icon: '#ffffff',
-  bandFill: '#1f2937',
+  bandFill: '#254065',
   bandStroke: '#f2f2f2',
 };
 

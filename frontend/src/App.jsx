@@ -77,7 +77,7 @@ export default function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [trayHighlights, setTrayHighlights] = useState([]);
   const [showCoordinates, setShowCoordinates] = useState(false);
-  const [showCheckOverlay, setShowCheckOverlay] = useState(true);
+  const [showCheckOverlay, setShowCheckOverlay] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
 
@@ -328,6 +328,7 @@ export default function App() {
     playerNameRow: {
       display: 'flex',
       alignItems: 'flex-end',
+      gap: '8px',
       height: '100%',
       fontWeight: 800,
       letterSpacing: '0.04em',
@@ -335,6 +336,16 @@ export default function App() {
       fontSize: 'clamp(0.9rem, 2.2vw, 1.1rem)',
       color: 'currentColor',
       lineHeight: 1,
+    },
+    playerRatingText: {
+      fontWeight: 600,
+      letterSpacing: '0.03em',
+      fontSize: 'clamp(0.72rem, 1.8vw, 0.95rem)',
+      color: 'currentColor',
+      opacity: 0.82,
+      lineHeight: 1,
+      paddingBottom: '1px',
+      textTransform: 'none',
     },
     playerRatingRow: {
       display: 'flex',
@@ -908,9 +919,10 @@ export default function App() {
               <div className="qc-player-info qc-player-info--black" style={styles.playerInfo}>
                 <div className="qc-player-name-row qc-player-name-row--black" style={styles.playerNameRow}>
                   <span className="qc-player-name-text qc-player-name-text--black">{blackPlayer}</span>
+                  <span className="qc-player-rating-text qc-player-rating-text--black" style={styles.playerRatingText}>({blackRating})</span>
                 </div>
                 <div className="qc-player-rating-row qc-player-rating-row--black" style={styles.playerRatingRow}>
-                  <span className="qc-player-rating-text qc-player-rating-text--black">Rating: {blackRating}</span>
+                  {/* Timer will go here */}
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
@@ -963,9 +975,10 @@ export default function App() {
               <div className="qc-player-info qc-player-info--white" style={styles.playerInfo}>
                 <div className="qc-player-name-row qc-player-name-row--white" style={styles.playerNameRow}>
                   <span className="qc-player-name-text qc-player-name-text--white">{whitePlayer}</span>
+                  <span className="qc-player-rating-text qc-player-rating-text--white" style={styles.playerRatingText}>({whiteRating})</span>
                 </div>
                 <div className="qc-player-rating-row qc-player-rating-row--white" style={styles.playerRatingRow}>
-                  <span className="qc-player-rating-text qc-player-rating-text--white">Rating: {whiteRating}</span>
+                  {/* Timer will go here */}
                 </div>
               </div>
               <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
