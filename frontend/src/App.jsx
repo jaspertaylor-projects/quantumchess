@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays.
+// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays. Adds threat overlays for opponent checks and enforces post-move king removal in the game logic hook.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -51,7 +51,7 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
-  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece } = useQuantumGameState();
+  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, checkingSquaresBySide } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -506,20 +506,33 @@ export default function App() {
     return list;
   }, [selectedId, selectedMoves, pieces]);
 
+  const checkHighlights = useMemo(() => {
+    const list = [];
+    const opponent = sideToMove === 'white' ? 'black' : 'white';
+    const squares = (checkingSquaresBySide && checkingSquaresBySide[opponent]) ? checkingSquaresBySide[opponent] : [];
+    for (const sq of squares) {
+      list.push({ square: sq, color: 'rgba(255, 0, 0, 0.22)' });
+    }
+    return list;
+  }, [checkingSquaresBySide, sideToMove]);
+
   const combinedHighlights = useMemo(() => {
-    if (!trayHighlights || trayHighlights.length === 0) return baseHighlights;
-    return [...baseHighlights, ...trayHighlights];
-  }, [baseHighlights, trayHighlights]);
+    const combined = [];
+    if (baseHighlights && baseHighlights.length) combined.push(...baseHighlights);
+    if (checkHighlights && checkHighlights.length) combined.push(...checkHighlights);
+    if (trayHighlights && trayHighlights.length) combined.push(...trayHighlights);
+    return combined;
+  }, [baseHighlights, checkHighlights, trayHighlights]);
 
   const whiteCaptured = useMemo(() => {
     return pieces
-      .filter((p) => p.captured && p.side === 'black')
+      .filter((p) => p.captured && p.side === 'white')
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
   const blackCaptured = useMemo(() => {
     return pieces
-      .filter((p) => p.captured && p.side === 'white')
+      .filter((p) => p.captured && p.side === 'black')
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 

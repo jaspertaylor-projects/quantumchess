@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay and king removal after each move.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -45,11 +45,11 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         ],
       },
       {
-        title: 'Check Constraint (Preview)',
+        title: 'Checks and Threats',
         content: [
-          'Pieces with two or fewer remaining possibilities begin to exert check like classical pieces matching those possibilities.',
-          'You cannot end your turn with your King in check. Any pieces left in check cannot be Kings and must remove King from their superposition.',
-          'Note: Engine enforcement for this section is planned for a future update.',
+          'A piece begins checking once it has two or fewer remaining possibilities. It threatens all squares that any of its remaining classical types would attack.',
+          'Threat overlay: On your turn, all squares threatened by the opponent\'s checking pieces are tinted faint red on the board.',
+          'End-of-turn king pruning: After a move is made, any of the mover\'s pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.',
         ],
       },
     ],

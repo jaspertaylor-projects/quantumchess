@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, and global type-capacity collapse; guards against duplicate move application (e.g., React Strict Mode double-invocation scenarios) while keeping Strict Mode enabled.
+// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, global type-capacity collapse, and check threat logic with overlays and post-move king removal on threatened squares.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -53,6 +53,24 @@ function rayMoves(file, rank, deltas, occ, side) {
   return results;
 }
 
+// Attack-map version of ray traversal: includes the first blocker square regardless of side, and does not skip own-occupied squares.
+function rayAttacks(file, rank, deltas, occ) {
+  const results = [];
+  for (const [df, dr] of deltas) {
+    let f = file + df;
+    let r = rank + dr;
+    while (inBounds(f, r)) {
+      const sq = keySquare(f, r);
+      const blocker = occ.get(sq);
+      results.push(sq);
+      if (blocker) break;
+      f += df;
+      r += dr;
+    }
+  }
+  return results;
+}
+
 function kingMoves(file, rank, occ, side) {
   const steps = [
     [-1, -1], [0, -1], [1, -1],
@@ -71,6 +89,22 @@ function kingMoves(file, rank, occ, side) {
   return out;
 }
 
+function kingAttacks(file, rank) {
+  const steps = [
+    [-1, -1], [0, -1], [1, -1],
+    [-1, 0], /*self*/ [1, 0],
+    [-1, 1], [0, 1], [1, 1],
+  ];
+  const out = [];
+  for (const [df, dr] of steps) {
+    const f = file + df;
+    const r = rank + dr;
+    if (!inBounds(f, r)) continue;
+    out.push(keySquare(f, r));
+  }
+  return out;
+}
+
 function knightMoves(file, rank, occ, side) {
   const deltas = [
     [-1, -2], [1, -2], [-2, -1], [2, -1],
@@ -84,6 +118,21 @@ function knightMoves(file, rank, occ, side) {
     const sq = keySquare(f, r);
     const blocker = occ.get(sq);
     if (!blocker || blocker.side !== side) out.push(sq);
+  }
+  return out;
+}
+
+function knightAttacks(file, rank) {
+  const deltas = [
+    [-1, -2], [1, -2], [-2, -1], [2, -1],
+    [-2, 1], [2, 1], [-1, 2], [1, 2],
+  ];
+  const out = [];
+  for (const [df, dr] of deltas) {
+    const f = file + df;
+    const r = rank + dr;
+    if (!inBounds(f, r)) continue;
+    out.push(keySquare(f, r));
   }
   return out;
 }
@@ -120,9 +169,28 @@ function pawnMoves(file, rank, occ, side, isFirstMove = false) {
   return out;
 }
 
+function pawnAttacks(file, rank, side) {
+  const dir = side === 'white' ? 1 : -1;
+  const out = [];
+  const captures = [
+    [file - 1, rank + dir],
+    [file + 1, rank + dir],
+  ];
+  for (const [f, r] of captures) {
+    if (!inBounds(f, r)) continue;
+    out.push(keySquare(f, r));
+  }
+  return out;
+}
+
 function rookMoves(file, rank, occ, side) {
   const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   return rayMoves(file, rank, deltas, occ, side);
+}
+
+function rookAttacks(file, rank, occ) {
+  const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  return rayAttacks(file, rank, deltas, occ);
 }
 
 function bishopMoves(file, rank, occ, side) {
@@ -130,10 +198,22 @@ function bishopMoves(file, rank, occ, side) {
   return rayMoves(file, rank, deltas, occ, side);
 }
 
+function bishopAttacks(file, rank, occ) {
+  const deltas = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
+  return rayAttacks(file, rank, deltas, occ);
+}
+
 function queenMoves(file, rank, occ, side) {
   return [
     ...rookMoves(file, rank, occ, side),
     ...bishopMoves(file, rank, occ, side),
+  ];
+}
+
+function queenAttacks(file, rank, occ) {
+  return [
+    ...rookAttacks(file, rank, occ),
+    ...bishopAttacks(file, rank, occ),
   ];
 }
 
@@ -152,6 +232,25 @@ function movesForType(t, file, rank, occ, side, options = {}) {
       return queenMoves(file, rank, occ, side);
     case 'k':
       return kingMoves(file, rank, occ, side);
+    default:
+      return [];
+  }
+}
+
+function attacksForType(t, file, rank, occ, side) {
+  switch (t) {
+    case 'p':
+      return pawnAttacks(file, rank, side);
+    case 'n':
+      return knightAttacks(file, rank);
+    case 'b':
+      return bishopAttacks(file, rank, occ);
+    case 'r':
+      return rookAttacks(file, rank, occ);
+    case 'q':
+      return queenAttacks(file, rank, occ);
+    case 'k':
+      return kingAttacks(file, rank);
     default:
       return [];
   }
@@ -303,6 +402,26 @@ function enforceGlobalTypeConstraintsToFixpoint(pieces) {
   }
 }
 
+function computeThreatenedSquaresForSide(pieces, side) {
+  const occ = buildOccupancy(pieces);
+  const threatened = new Set();
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    const types = p.possibleTypes || [];
+    if (types.length === 0) continue;
+    // Only pieces with two or fewer possibilities exert check
+    if (types.length > 2) continue;
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    const { fileIndex: f, rankIndex: r } = pos;
+    for (const t of types) {
+      const atk = attacksForType(t, f, r, occ, p.side);
+      for (const sq of atk) threatened.add(sq);
+    }
+  }
+  return threatened;
+}
+
 export default function useQuantumGameState() {
   const [pieces, setPieces] = useState(() => createStartingPieces());
   const [sideToMove, setSideToMove] = useState('white');
@@ -334,6 +453,15 @@ export default function useQuantumGameState() {
     }
     return Array.from(merged);
   }, [pieces, occupancy, sideToMove]);
+
+  const checkingSquaresBySide = useMemo(() => {
+    const whiteThreats = computeThreatenedSquaresForSide(pieces, 'white');
+    const blackThreats = computeThreatenedSquaresForSide(pieces, 'black');
+    return {
+      white: Array.from(whiteThreats),
+      black: Array.from(blackThreats),
+    };
+  }, [pieces]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
     const prevPieces = pieces;
@@ -381,10 +509,30 @@ export default function useQuantumGameState() {
     moving.possibleTypes = subset;
     moving.moveCount = (moving.moveCount || 0) + 1;
 
+    // Enforce global type constraints to a fixpoint after the move and capture collapse
     const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
 
+    // After a move, you cannot leave your king in check.
+    // Remove 'k' from mover-side pieces that sit on squares threatened by the opponent's checking pieces.
+    const moverSide = moving.side;
+    const opponentSide = moverSide === 'white' ? 'black' : 'white';
+    const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
+
+    const afterCheck = constrained.map((p) => {
+      if (p.captured || p.side !== moverSide || !p.square) return p;
+      if (p.possibleTypes.length <= 0) return p;
+      if (!p.possibleTypes.includes('k')) return p;
+      if (!oppThreats.has(p.square)) return p;
+      // Avoid emptying the set; if 'k' is the only possibility, leave as-is to prevent invalid state.
+      if (p.possibleTypes.length === 1) return p;
+      const filtered = p.possibleTypes.filter((t) => t !== 'k');
+      return { ...p, possibleTypes: filtered };
+    });
+
+    const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
+
     // Commit state updates atomically
-    setPieces(constrained);
+    setPieces(finalPieces);
     setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
     if (targetPiece && targetPiece.captured) {
       setCaptureCounter((c) => c + 1);
@@ -402,5 +550,6 @@ export default function useQuantumGameState() {
     getPieceAtSquare,
     getLegalMoves,
     movePiece,
+    checkingSquaresBySide,
   };
 }
