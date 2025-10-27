@@ -1,7 +1,7 @@
 // frontend/src/theme.js
 // Purpose: Defines the application's color theme as a simple JS object.
 // Imports From: None
-// Exported To: frontend/src/App.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx
+// Exported To: frontend/src/App.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx, frontend/src/tray/NewGameModal.jsx
 
 const theme = {
   primary: '#61dafb', // React Blue
@@ -26,6 +26,9 @@ const theme = {
   buttonGenericBorder: 'transparent',
   buttonGenericBackgroundHover: '#313131',
   buttonGenericBorderHover: '#646cff',
+  tray: {
+    background: '#282c34',
+  },
 };
 
 export default theme;
