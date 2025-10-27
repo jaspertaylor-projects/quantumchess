@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state with a full immutable timeline. Keeps a snapshot after every move, supports seeking through history, and enforces all quantum rules (collapse, promotion, global capacity, check pruning, and castling) with correct order-of-operations.
+// Purpose: Manage Quantum Chess state with an immutable timeline. Enforces collapse, dynamic promotion-aware global capacities, check pruning, and flexible castling.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -10,6 +10,7 @@ import {
   CAPTURE_COLLAPSE_ORDER,
   PIECE_TYPES,
   PIECE_LIMITS,
+  HEAVY_TYPES,
 } from './gameConstants.js';
 
 function keySquare(file, rank) {
@@ -282,32 +283,48 @@ function computeConfirmedCountsForSide(pieces, side) {
   return counts;
 }
 
-function computeRemainingCapacityForSide(pieces, side) {
+function computePromotionCreditsForSide(pieces, side) {
+  let credits = 0;
+  for (const p of pieces) {
+    if (p.side !== side) continue;
+    if (p.captured) continue;
+    if (p.wasPromoted) credits += 1;
+  }
+  return credits;
+}
+
+function capacityInfoForSide(pieces, side) {
   const confirmed = computeConfirmedCountsForSide(pieces, side);
-  const remaining = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
+  const baseRemaining = { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
   for (const t of PIECE_TYPES) {
-    const cap = PIECE_LIMITS[t] - (confirmed[t] || 0);
-    remaining[t] = Math.max(0, cap);
+    baseRemaining[t] = Math.max(0, (PIECE_LIMITS[t] || 0) - (confirmed[t] || 0));
   }
-  return remaining;
+  const promoTotal = computePromotionCreditsForSide(pieces, side);
+  let creditsUsed = 0;
+  for (const t of HEAVY_TYPES) {
+    const over = Math.max(0, (confirmed[t] || 0) - (PIECE_LIMITS[t] || 0));
+    creditsUsed += over;
+  }
+  const promoCreditsAvailable = Math.max(0, promoTotal - creditsUsed);
+  return { baseRemaining, promoCreditsAvailable };
 }
 
-function sumCapacity(remaining, typeSet) {
-  let s = 0;
-  for (const t of typeSet) s += (remaining[t] || 0);
-  return s;
+function totalCapacityLeft(capInfo) {
+  let sum = 0;
+  for (const t of PIECE_TYPES) sum += capInfo.baseRemaining[t] || 0;
+  sum += capInfo.promoCreditsAvailable;
+  return sum;
 }
 
-function powersetTypes(allTypes) {
-  const sets = [];
-  const n = allTypes.length;
-  const total = 1 << n;
-  for (let mask = 1; mask < total; mask++) {
-    const subset = [];
-    for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(allTypes[i]);
-    sets.push(subset);
+function capacityForSubset(capInfo, subset) {
+  let sum = 0;
+  let heavy = false;
+  for (const t of subset) {
+    sum += capInfo.baseRemaining[t] || 0;
+    if (HEAVY_TYPES.includes(t)) heavy = true;
   }
-  return sets;
+  if (heavy) sum += capInfo.promoCreditsAvailable;
+  return sum;
 }
 
 function enforceGlobalTypeConstraintsOnce(pieces) {
@@ -319,13 +336,19 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
     while (changed) {
       changed = false;
 
-      const remaining = computeRemainingCapacityForSide(updated, side);
+      const capInfo = capacityInfoForSide(updated, side);
 
       for (const p of updated) {
         if (p.side !== side) continue;
         if (p.possibleTypes.length <= 1) continue;
         const before = p.possibleTypes.length;
-        const filtered = p.possibleTypes.filter((t) => (remaining[t] || 0) > 0);
+        const filtered = p.possibleTypes.filter((t) => {
+          const base = capInfo.baseRemaining[t] || 0;
+          if (HEAVY_TYPES.includes(t)) {
+            return base > 0 || capInfo.promoCreditsAvailable > 0;
+          }
+          return base > 0;
+        });
         if (filtered.length > 0 && filtered.length !== before) {
           p.possibleTypes = filtered;
           changed = true;
@@ -336,11 +359,13 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
         (p) => p.side === side && !p.captured && p.possibleTypes.length >= 1 && p.possibleTypes.length <= PIECE_TYPES.length
       );
 
-      const totalRemaining = sumCapacity(remaining, PIECE_TYPES);
-      if (candidatePieces.length === 0 || totalRemaining === 0) continue;
+      const totalRem = totalCapacityLeft(capInfo);
+      if (candidatePieces.length === 0 || totalRem === 0) continue;
 
-      for (const S of powersetTypes(PIECE_TYPES)) {
-        const capS = sumCapacity(remaining, S);
+      // Evaluate Hall-like constraints with promotion-aware capacities
+      const allTypeSets = powersetTypes(PIECE_TYPES);
+      for (const S of allTypeSets) {
+        const capS = capacityForSubset(capInfo, S);
         if (capS === 0) continue;
 
         const group = [];
@@ -348,10 +373,7 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
           if (p.possibleTypes.length === 1) continue;
           let subset = true;
           for (const t of p.possibleTypes) {
-            if (!S.includes(t)) {
-              subset = false;
-              break;
-            }
+            if (!S.includes(t)) { subset = false; break; }
           }
           if (subset) group.push(p);
         }
@@ -385,16 +407,8 @@ function enforceGlobalTypeConstraintsToFixpoint(pieces) {
     for (let i = 0; i < current.length; i++) {
       const a = current[i].possibleTypes;
       const b = next[i].possibleTypes;
-      if (a.length !== b.length) {
-        diff = true;
-        break;
-      }
-      for (let j = 0; j < a.length; j++) {
-        if (a[j] !== b[j]) {
-          diff = true;
-          break;
-        }
-      }
+      if (a.length !== b.length) { diff = true; break; }
+      for (let j = 0; j < a.length; j++) { if (a[j] !== b[j]) { diff = true; break; } }
       if (diff) break;
     }
     if (!diff) return next;
@@ -420,6 +434,18 @@ function computeThreatenedSquaresForSide(pieces, side) {
     }
   }
   return threatened;
+}
+
+function powersetTypes(allTypes) {
+  const sets = [];
+  const n = allTypes.length;
+  const total = 1 << n;
+  for (let mask = 1; mask < total; mask++) {
+    const subset = [];
+    for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(allTypes[i]);
+    sets.push(subset);
+  }
+  return sets;
 }
 
 export default function useQuantumGameState() {
@@ -458,7 +484,6 @@ export default function useQuantumGameState() {
         captureCounter: nextCaptureCounter,
       };
       const nextHistory = [...prev, snap];
-      // Always move the view to the most recent snapshot after a committed move
       setViewIndexState(nextHistory.length - 1);
       return nextHistory;
     });
@@ -550,10 +575,14 @@ export default function useQuantumGameState() {
 
     // Quantum Promotion: if mover still includes Pawn and reached farthest rank, remove Pawn and add N/B/R/Q
     const promotionRank = moving.side === 'white' ? 7 : 0;
-    if (moving.possibleTypes.includes('p') && to.rankIndex === promotionRank) {
-      const merged = new Set(moving.possibleTypes.filter((t) => t !== 'p'));
-      ['n', 'b', 'r', 'q'].forEach((t) => merged.add(t));
-      moving.possibleTypes = Array.from(merged);
+    if (moving.possibleTypes.includes('p')) {
+      const toPos = to;
+      if (toPos && toPos.rankIndex === promotionRank) {
+        const merged = new Set(moving.possibleTypes.filter((t) => t !== 'p'));
+        ['n', 'b', 'r', 'q'].forEach((t) => merged.add(t));
+        moving.possibleTypes = Array.from(merged);
+        moving.wasPromoted = true;
+      }
     }
 
     // Enforce global type constraints to a fixpoint after move, capture-collapse, and promotion
@@ -599,8 +628,6 @@ export default function useQuantumGameState() {
 
     const isEligible = (p) => {
       if (!p.possibleTypes) return false;
-      // A piece is eligible if its possibilities include BOTH Rook and King.
-      // Other possibilities may exist; they will be pruned upon castling.
       return p.possibleTypes.includes('r') && p.possibleTypes.includes('k');
     };
 

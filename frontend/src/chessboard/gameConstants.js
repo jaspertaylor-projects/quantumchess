@@ -1,18 +1,20 @@
 // frontend/src/chessboard/gameConstants.js
-// Purpose: Define core constants, helpers, and starting setup for Quantum Chess pieces and board squares; includes capture-collapse priority using lowest non-king value first.
+// Purpose: Define core constants, helpers, and starting setup for Quantum Chess pieces and board squares; includes capture-collapse priority and heavy piece taxonomy for promotion-aware capacity logic.
 // Imports From: ./boardUtils.js
 // Exported To: ./useQuantumGameState.js, ../App.jsx
 
 import { FILES, RANKS, toAlgebraic } from './boardUtils.js';
 
 export const PIECE_TYPES = ['p', 'n', 'b', 'r', 'q', 'k'];
+export const HEAVY_TYPES = ['n', 'b', 'r', 'q'];
 
 export const SIDES = {
   WHITE: 'white',
   BLACK: 'black',
 };
 
-// Per-side maximum piece counts used by global wave-function collapse logic.
+// Per-side baseline maximum piece counts used by global wave-function collapse logic.
+// Promotion credits may temporarily extend N/B/R/Q above these baselines.
 export const PIECE_LIMITS = {
   p: 8,
   n: 2,
@@ -57,6 +59,7 @@ export function createStartingPieces() {
       possibleTypes: allTypes,
       captured: false,
       moveCount: 0,
+      wasPromoted: false,
     });
   });
 
@@ -68,6 +71,7 @@ export function createStartingPieces() {
       possibleTypes: allTypes,
       captured: false,
       moveCount: 0,
+      wasPromoted: false,
     });
   });
 
