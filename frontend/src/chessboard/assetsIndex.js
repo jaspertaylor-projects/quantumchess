@@ -1,5 +1,5 @@
 // frontend/src/chessboard/assetsIndex.js
-// Purpose: Centralize imports of all piece/overlay SVG URLs used by the board to enable batch raster prewarming and cache management.
+// Purpose: Centralize imports of all piece/overlay SVG URLs used by the board to enable batch raster prewarming and cache management. Also export single-piece URL set for captured-area variants.
 // Imports From: None
 // Exported To: ./rasterPrewarm.js
 
@@ -36,6 +36,8 @@ import qUrlR from '../assets/quantum_r.svg?url';
 import qUrlQ from '../assets/quantum_q.svg?url';
 import qUrlK from '../assets/quantum_k.svg?url';
 
+const SINGLE_ASSET_URLS = [imgP, imgN, imgB, imgR, imgQ, imgK].filter(Boolean);
+
 const RAW_URLS = [
   // Singles
   imgP, imgN, imgB, imgR, imgQ, imgK,
@@ -47,4 +49,4 @@ const RAW_URLS = [
 
 const ALL_ASSET_URLS = Array.from(new Set(RAW_URLS.filter(Boolean)));
 
-export { ALL_ASSET_URLS };
+export { ALL_ASSET_URLS, SINGLE_ASSET_URLS };

@@ -16,7 +16,7 @@ import RulesModal from './tray/RulesModal.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
-import { prewarmAllPiecePngs, invalidateRasterPngs } from './chessboard/rasterPrewarm.js';
+import { prewarmAllPiecePngs, invalidateRasterPngs, prewarmCapturedPiecePngs } from './chessboard/rasterPrewarm.js';
 import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
 
 // Single-type SVG asset URLs used for captured-piece icons and header fallbacks
@@ -139,6 +139,8 @@ export default function App() {
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
+    // Also prewarm special captured-piece variants with transparent icon color at small sizes only
+    prewarmCapturedPiecePngs({ cssVarsBySide: svgStyles, sizes: [26], renderHint: 'crisp' });
   }, [currentPieceSize, svgStyles]);
 
   // Show winner popup when game ends
@@ -725,6 +727,14 @@ export default function App() {
     const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
     const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
+    // Make the icon outline fully transparent for compact captured display
+    const capturedSideVars = useMemo(() => ({
+      ...sideVars,
+      ['--icon-color']: 'rgba(0,0,0,0)',
+    }), [sideVars]);
+
+    const smallRenderHint = pxSize <= 32 ? 'crisp' : 'precision';
+
     return (
       <div
         ref={wrapRef}
@@ -735,10 +745,10 @@ export default function App() {
       >
         <RasterizedSvgImg
           srcSvgUrl={srcSvg}
-          cssVarMap={sideVars}
+          cssVarMap={capturedSideVars}
           idPrefix={`cap-${piece.id}-${t}`}
           size={pxSize}
-          renderHint="precision"
+          renderHint={smallRenderHint}
           className="qc-captured-icon-img"
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           alt={`Captured ${t}`}
@@ -897,6 +907,8 @@ export default function App() {
       sizes: [currentPieceSize, 64, 26],
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
+    // Prewarm captured variants for new colors as well
+    await prewarmCapturedPiecePngs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
   }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
   const winnerText = useMemo(() => {

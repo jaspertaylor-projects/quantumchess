@@ -1,9 +1,9 @@
 // frontend/src/chessboard/rasterPrewarm.js
-// Purpose: Batch-rasterize all chess piece SVGs into PNG data URLs for given colors/sizes and persist them to localStorage; exposes cache invalidation helpers with console confirmations.
+// Purpose: Batch-rasterize all chess piece SVGs into PNG data URLs for given colors/sizes and persist them to localStorage; exposes cache invalidation helpers with console confirmations. Also supports a captured-piece variant with transparent icon color for compact displays.
 // Imports From: ./assetsIndex.js, ./svgRasterizer.js
 // Exported To: ../App.jsx
 
-import { ALL_ASSET_URLS } from './assetsIndex.js';
+import { ALL_ASSET_URLS, SINGLE_ASSET_URLS } from './assetsIndex.js';
 import { getRasterizedPng, clearRasterCaches } from './svgRasterizer.js';
 
 function uniqueSizes(sizes) {
@@ -53,9 +53,31 @@ export async function prewarmAllPiecePngs({ cssVarsBySide = { white: {}, black: 
   }
 }
 
+async function prewarmCapturedSide(urls, sideName, baseCssVars, sizes, renderHint = 'crisp') {
+  const capturedCss = {
+    ...(baseCssVars || {}),
+    ['--icon-color']: 'rgba(0,0,0,0)',
+  };
+  await prewarmSide(urls, `${sideName}-captured`, capturedCss, sizes, renderHint);
+}
+
+export async function prewarmCapturedPiecePngs({ cssVarsBySide = { white: {}, black: {} }, sizes = [26], renderHint = 'crisp' } = {}) {
+  try {
+    const urls = SINGLE_ASSET_URLS;
+    console.log(`[Raster Prewarm] Preparing captured-variant assets (${urls.length}) for sizes [${uniqueSizes(sizes).join(', ')}]...`);
+    await Promise.all([
+      prewarmCapturedSide(urls, 'white', cssVarsBySide.white || {}, sizes, renderHint),
+      prewarmCapturedSide(urls, 'black', cssVarsBySide.black || {}, sizes, renderHint),
+    ]);
+    console.log('[Raster Prewarm] Completed captured-variant prewarm');
+  } catch (err) {
+    console.error('[Raster Prewarm] Failed captured-variant prewarm', err);
+  }
+}
+
 export function invalidateRasterPngs(reason = 'manual') {
   console.log(`[Raster Prewarm] Invalidate caches reason:${reason}`);
   clearRasterCaches();
 }
 
-export default { prewarmAllPiecePngs, invalidateRasterPngs };
+export default { prewarmAllPiecePngs, prewarmCapturedPiecePngs, invalidateRasterPngs }; 
