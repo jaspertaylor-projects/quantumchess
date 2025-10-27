@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays. Adds threat overlays for opponent checks and enforces post-move king removal in the game logic hook.
+// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays. Adds threat overlays for opponent checks and enforces post-move king removal in the game logic hook. Supports castling by clicking two eligible same-side pieces.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -52,7 +52,7 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
-  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, checkingSquaresBySide } = useQuantumGameState();
+  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, checkingSquaresBySide, canCastleBetween, castlePieces } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -439,6 +439,21 @@ export default function App() {
 
     if (piece) {
       if (piece.side === sideToMove) {
+        // If a piece is already selected and we clicked another same-side piece, try castling
+        if (selectedId && selectedId !== piece.id) {
+          const plan = canCastleBetween(selectedId, piece.id);
+          if (plan) {
+            const applied = castlePieces(selectedId, piece.id);
+            if (applied) {
+              // Record both piece moves for history
+              dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: piece.side }));
+              dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: piece.side }));
+              setSelectedId(null);
+              setTrayHighlights([]);
+              return;
+            }
+          }
+        }
         setSelectedId(piece.id);
         setTrayHighlights([]);
       }
@@ -470,6 +485,20 @@ export default function App() {
     if (!clicked) return;
 
     if (clicked.side === sideToMove) {
+      if (selectedId && selectedId !== id) {
+        // Attempt castling when clicking a different same-side piece while one is already selected
+        const plan = canCastleBetween(selectedId, id);
+        if (plan) {
+          const applied = castlePieces(selectedId, id);
+          if (applied) {
+            dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: clicked.side }));
+            dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: clicked.side }));
+            setSelectedId(null);
+            setTrayHighlights([]);
+            return;
+          }
+        }
+      }
       setSelectedId(id);
       setTrayHighlights([]);
       return;

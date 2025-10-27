@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, global type-capacity collapse, and check threat logic with overlays and post-move king removal on threatened squares.
+// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, global type-capacity collapse, check threat logic, and special compound moves like castling.
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -544,6 +544,131 @@ export default function useQuantumGameState() {
     return true;
   }, [pieces, sideToMove, captureCounter]);
 
+  // Determine whether two same-side pieces can castle and return the move plan if so.
+  const canCastleBetween = useCallback((idA, idB) => {
+    if (!idA || !idB || idA === idB) return null;
+    const a = pieces.find((p) => p.id === idA && !p.captured);
+    const b = pieces.find((p) => p.id === idB && !p.captured);
+    if (!a || !b) return null;
+    if (a.side !== b.side) return null;
+    if (a.side !== sideToMove) return null;
+    if (!a.square || !b.square) return null;
+
+    const aCanK = a.possibleTypes.includes('k');
+    const aCanR = a.possibleTypes.includes('r');
+    const bCanK = b.possibleTypes.includes('k');
+    const bCanR = b.possibleTypes.includes('r');
+
+    let king = null;
+    let rook = null;
+
+    if (aCanK && bCanR) {
+      king = a; rook = b;
+    } else if (aCanR && bCanK) {
+      king = b; rook = a;
+    } else {
+      return null;
+    }
+
+    const kingFirst = (king.moveCount || 0) === 0;
+    const rookFirst = (rook.moveCount || 0) === 0;
+    if (!kingFirst || !rookFirst) return null;
+
+    const posK = fromAlgebraic(king.square);
+    const posR = fromAlgebraic(rook.square);
+    if (!posK || !posR) return null;
+    if (posK.rankIndex !== posR.rankIndex) return null;
+
+    const fK = posK.fileIndex;
+    const fR = posR.fileIndex;
+    const r = posK.rankIndex;
+    const step = fR > fK ? 1 : -1;
+    const distance = Math.abs(fR - fK);
+
+    // Require at least two squares of king travel; if adjacent or too close, deny.
+    if (distance < 3) return null;
+
+    // Path between them must be empty
+    const occ = occupancy; // current memoized occupancy
+    for (let f = Math.min(fK, fR) + 1; f <= Math.max(fK, fR) - 1; f++) {
+      const sq = toAlgebraic(f, r);
+      if (occ.get(sq)) return null;
+    }
+
+    // King destination is two squares toward rook; rook lands adjacent on the other side of the king
+    const kingDestFile = fK + 2 * step;
+    const kingThroughFile = fK + 1 * step;
+    const rookDestFile = kingDestFile - step;
+
+    const kingTo = toAlgebraic(kingDestFile, r);
+    const kingThrough = toAlgebraic(kingThroughFile, r);
+    const rookTo = toAlgebraic(rookDestFile, r);
+
+    // Ensure destination squares are available (kingTo and rookTo must be empty except their own start squares)
+    if (!kingTo || !rookTo || !kingThrough) return null;
+    if (occ.get(kingTo)) return null;
+    if (occ.get(rookTo)) return null;
+
+    return {
+      kingId: king.id,
+      rookId: rook.id,
+      kingFrom: king.square,
+      rookFrom: rook.square,
+      kingTo,
+      rookTo,
+    };
+  }, [pieces, sideToMove, occupancy]);
+
+  // Execute a castle move between two pieces if legal per canCastleBetween
+  const castlePieces = useCallback((idA, idB) => {
+    const plan = canCastleBetween(idA, idB);
+    if (!plan) return false;
+
+    const prevPieces = pieces;
+    const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
+
+    const king = next.find((p) => p.id === plan.kingId && !p.captured);
+    const rook = next.find((p) => p.id === plan.rookId && !p.captured);
+    if (!king || !rook) return false;
+
+    const signature = `${sideToMove}:castle:${plan.kingId},${plan.rookId}:${plan.kingFrom}->${plan.kingTo}`;
+    if (lastMoveSignatureRef.current === signature) return false;
+
+    // Apply movement and collapse
+    king.square = plan.kingTo;
+    rook.square = plan.rookTo;
+    king.possibleTypes = ['k'];
+    rook.possibleTypes = ['r'];
+    king.moveCount = (king.moveCount || 0) + 1;
+    rook.moveCount = (rook.moveCount || 0) + 1;
+
+    // Enforce type constraints after the simultaneous move
+    const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
+
+    // Post-move check pruning of 'k' from mover side threatened squares
+    const moverSide = king.side; // both same side
+    const opponentSide = moverSide === 'white' ? 'black' : 'white';
+    const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
+
+    const afterCheck = constrained.map((p) => {
+      if (p.captured || p.side !== moverSide || !p.square) return p;
+      if (!p.possibleTypes.includes('k')) return p;
+      if (!oppThreats.has(p.square)) return p;
+      if (p.possibleTypes.length === 1) return p;
+      const filtered = p.possibleTypes.filter((t) => t !== 'k');
+      return { ...p, possibleTypes: filtered };
+    });
+
+    const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
+
+    setPieces(finalPieces);
+    setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
+
+    lastMoveSignatureRef.current = signature;
+
+    return true;
+  }, [pieces, sideToMove, canCastleBetween]);
+
   return {
     pieces,
     sideToMove,
@@ -551,5 +676,7 @@ export default function useQuantumGameState() {
     getLegalMoves,
     movePiece,
     checkingSquaresBySide,
+    canCastleBetween,
+    castlePieces,
   };
 }
