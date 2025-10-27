@@ -293,7 +293,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         <div className="qc-rules-dots" style={styles.dots} aria-label="page dots navigation">
           {pages.map((_, idx) => (
             <div
-              key={`rules-dot-${idx}`]
+              key={`rules-dot-${idx}`}
               className="qc-rules-dot"
               style={styles.dot(idx === page)}
               onClick={() => handleDot(idx)}
