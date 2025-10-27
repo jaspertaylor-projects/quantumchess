@@ -128,7 +128,7 @@ export default function App() {
 
   const styles = {
     appContainer: {
-      backgroundColor: theme.background,
+      backgroundColor: theme.boardAreaBackground,
       color: theme.textPrimary,
       height: '100vh',
       minHeight: '100vh',
