@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays and castling support.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -131,16 +131,11 @@ export default function App() {
     return Math.max(8, Math.floor(boardSize / 8));
   }, [boardSize]);
 
+  // Prewarm for current size to avoid jank during play; does not invalidate caches.
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
   }, [currentPieceSize, svgStyles]);
-
-  useEffect(() => {
-    if (!currentPieceSize || currentPieceSize <= 0) return;
-    invalidateRasterPngs('piece-colors-changed');
-    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
-  }, [svgStyles, currentPieceSize]);
 
   // Header sizing: header height is ~1.5x title font size via CSS variable
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
@@ -763,24 +758,44 @@ export default function App() {
     }
   }, [historyLength, setViewIndex]);
 
+  function colorsEqual(a, b) {
+    if (!a || !b) return false;
+    return a.icon === b.icon && a.bandFill === b.bandFill && a.bandStroke === b.bandStroke;
+  }
+
   const handleAcceptSettings = useCallback(async (settings) => {
-    setWhiteColors(settings.white);
-    setBlackColors(settings.black);
+    const whiteChanged = !colorsEqual(whiteColors, settings.white);
+    const blackChanged = !colorsEqual(blackColors, settings.black);
+    const anyPieceColorChanged = whiteChanged || blackChanged;
+
+    // Apply only changed piece colors to avoid triggering unnecessary re-renders and re-rasterization
+    if (whiteChanged) setWhiteColors(settings.white);
+    if (blackChanged) setBlackColors(settings.black);
+
+    // Always apply non-piece settings
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
     setShowCoordinates(settings.coordinates);
     setShowCheckOverlay(settings.checkOverlay);
 
+    if (!anyPieceColorChanged) {
+      // Nothing to do for raster caches if piece colors did not change
+      return;
+    }
+
+    const effectiveWhite = whiteChanged ? settings.white : whiteColors;
+    const effectiveBlack = blackChanged ? settings.black : blackColors;
+
     const newSvgStyles = {
       white: {
-        ['--band-fill']: settings.white.bandFill,
-        ['--band-stroke']: settings.white.bandStroke,
-        ['--icon-color']: settings.white.icon,
+        ['--band-fill']: effectiveWhite.bandFill,
+        ['--band-stroke']: effectiveWhite.bandStroke,
+        ['--icon-color']: effectiveWhite.icon,
       },
       black: {
-        ['--band-fill']: settings.black.bandFill,
-        ['--band-stroke']: settings.black.bandStroke,
-        ['--icon-color']: settings.black.icon,
+        ['--band-fill']: effectiveBlack.bandFill,
+        ['--band-stroke']: effectiveBlack.bandStroke,
+        ['--icon-color']: effectiveBlack.icon,
       },
     };
 
@@ -790,7 +805,7 @@ export default function App() {
       sizes: [currentPieceSize, 64, 26],
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
-  }, [setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
+  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
