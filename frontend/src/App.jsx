@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI with a responsive, single-line header where icons fit within the header height and do not affect its size; provides interactive board, modals, and captured-piece displays. Adds threat overlays for opponent checks and enforces post-move king removal in the game logic hook. Supports castling by clicking two eligible same-side pieces.
+// Purpose: Render the Quantum Chess UI with a responsive layout, integrate the full board timeline, allow seeking through move history, and block moves unless viewing the latest snapshot. Adds threat overlays and castling support.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./assets/*.svg
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -52,7 +52,21 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
-  const { pieces, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, checkingSquaresBySide, canCastleBetween, castlePieces } = useQuantumGameState();
+  const {
+    pieces,
+    sideToMove,
+    getPieceAtSquare,
+    getLegalMoves,
+    movePiece,
+    checkingSquaresBySide,
+    canCastleBetween,
+    castlePieces,
+    // timeline
+    viewIndex,
+    historyLength,
+    setViewIndex,
+    canMakeMove,
+  } = useQuantumGameState();
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -434,6 +448,7 @@ export default function App() {
   };
 
   const handleSquareClick = (data) => {
+    if (!canMakeMove) return;
     const { square } = data;
     const piece = getPieceAtSquare(square);
 
@@ -481,6 +496,7 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
+    if (!canMakeMove) return;
     const clicked = pieces.find((x) => x.id === id);
     if (!clicked) return;
 
@@ -635,13 +651,15 @@ export default function App() {
 
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
+    if (!canMakeMove) return false;
     if (piece.side !== sideToMove) return false;
     setSelectedId(piece.id);
     setTrayHighlights([]);
     return true;
-  }, [sideToMove]);
+  }, [sideToMove, canMakeMove]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
+    if (!canMakeMove) { setSelectedId(null); return; }
     const movingPiece = pieces.find((p) => p.id === id);
     if (!movingPiece) {
       setSelectedId(null);
@@ -683,9 +701,22 @@ export default function App() {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
     }
     setSelectedId(null);
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove]);
 
   const handleDragHover = useCallback(() => {}, []);
+
+  // Seek handler from the move history tray. Move index -1 means end of history, otherwise show board after that move.
+  const handleSeekToIndex = useCallback((moveIndex) => {
+    setSelectedId(null);
+    if (typeof moveIndex !== 'number') return;
+    if (moveIndex < 0) {
+      setViewIndex(Math.max(0, historyLength - 1));
+    } else {
+      // snapshots are offset by 1: snapshot 0 is initial position
+      const snapIndex = Math.max(0, Math.min(historyLength - 1, moveIndex + 1));
+      setViewIndex(snapIndex);
+    }
+  }, [historyLength, setViewIndex]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -762,6 +793,7 @@ export default function App() {
                 onOpenRules={handleOpenRules}
                 onSetHighlights={handleSetHighlights}
                 onClearHighlights={handleClearHighlights}
+                onSeekToIndex={handleSeekToIndex}
               />
             </div>
 

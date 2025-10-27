@@ -1,5 +1,5 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state: pieces, legal moves, captures (least-value collapse), move-driven collapse, turn order, global type-capacity collapse, check threat logic, and special compound moves like castling.
+// Purpose: Manage Quantum Chess state with a full immutable timeline. Keeps a snapshot after every move, supports seeking through history, blocks new moves unless viewing the latest snapshot, and enforces all quantum rules (collapse, global capacity, check pruning, and castling).
 // Imports From: ./boardUtils.js, ./gameConstants.js
 // Exported To: ../App.jsx
 
@@ -267,7 +267,7 @@ function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, toRank, o
 }
 
 function clonePieces(pieces) {
-  return pieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
+  return pieces.map((p) => ({ ...p, possibleTypes: Array.isArray(p.possibleTypes) ? [...p.possibleTypes] : [] }));
 }
 
 function computeConfirmedCountsForSide(pieces, side) {
@@ -423,12 +423,46 @@ function computeThreatenedSquaresForSide(pieces, side) {
 }
 
 export default function useQuantumGameState() {
-  const [pieces, setPieces] = useState(() => createStartingPieces());
-  const [sideToMove, setSideToMove] = useState('white');
-  const [captureCounter, setCaptureCounter] = useState(0);
+  // Immutable timeline of snapshots. Index 0 is the starting position (no moves made).
+  const [history, setHistory] = useState(() => [{
+    pieces: createStartingPieces(),
+    sideToMove: 'white',
+    captureCounter: 0,
+  }]);
+  const [viewIndex, setViewIndexState] = useState(0);
 
   // Prevent duplicate application of the same move within a render/commit cycle
   const lastMoveSignatureRef = useRef(null);
+
+  // Derived state for the current view
+  const current = history[Math.min(Math.max(0, viewIndex), history.length - 1)];
+  const pieces = current.pieces;
+  const sideToMove = current.sideToMove;
+  const captureCounter = current.captureCounter;
+
+  const canMakeMove = viewIndex === history.length - 1;
+
+  const setViewIndex = useCallback((idx) => {
+    setViewIndexState((prev) => {
+      const bounded = Math.max(0, Math.min(idx, history.length - 1));
+      if (bounded === prev) return prev;
+      return bounded;
+    });
+  }, [history.length]);
+
+  const pushSnapshot = useCallback((nextPieces, nextSideToMove, nextCaptureCounter) => {
+    setHistory((prev) => {
+      const snap = {
+        pieces: clonePieces(nextPieces),
+        sideToMove: nextSideToMove,
+        captureCounter: nextCaptureCounter,
+      };
+      const nextHistory = [...prev, snap];
+      // Always move the view to the most recent snapshot after a committed move
+      setViewIndexState(nextHistory.length - 1);
+      return nextHistory;
+    });
+  }, []);
 
   const occupancy = useMemo(() => buildOccupancy(pieces), [pieces]);
 
@@ -464,6 +498,8 @@ export default function useQuantumGameState() {
   }, [pieces]);
 
   const movePiece = useCallback((pieceId, toSquare) => {
+    if (!canMakeMove) return false;
+
     const prevPieces = pieces;
     const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
     const moving = next.find((p) => p.id === pieceId && !p.captured);
@@ -496,6 +532,7 @@ export default function useQuantumGameState() {
 
     if (subset.length === 0) return false;
 
+    let didCapture = false;
     const targetPiece = tempOcc.get(toSquare);
     if (targetPiece && targetPiece.side !== moving.side) {
       const least = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
@@ -503,6 +540,7 @@ export default function useQuantumGameState() {
       targetPiece.square = null;
       targetPiece.possibleTypes = least ? [least] : ['p'];
       targetPiece.captureIndex = captureCounter;
+      didCapture = true;
     }
 
     moving.square = toSquare;
@@ -531,18 +569,17 @@ export default function useQuantumGameState() {
 
     const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
 
-    // Commit state updates atomically
-    setPieces(finalPieces);
-    setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
-    if (targetPiece && targetPiece.captured) {
-      setCaptureCounter((c) => c + 1);
-    }
+    const nextSide = sideToMove === 'white' ? 'black' : 'white';
+    const nextCaptureCounter = didCapture ? captureCounter + 1 : captureCounter;
+
+    // Commit as a new snapshot
+    pushSnapshot(finalPieces, nextSide, nextCaptureCounter);
 
     // Mark this signature as applied to prevent duplicate applications in the same cycle
     lastMoveSignatureRef.current = moveSignature;
 
     return true;
-  }, [pieces, sideToMove, captureCounter]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot]);
 
   // Determine whether two same-side pieces can castle and return the move plan if so.
   const canCastleBetween = useCallback((idA, idB) => {
@@ -621,6 +658,8 @@ export default function useQuantumGameState() {
 
   // Execute a castle move between two pieces if legal per canCastleBetween
   const castlePieces = useCallback((idA, idB) => {
+    if (!canMakeMove) return false;
+
     const plan = canCastleBetween(idA, idB);
     if (!plan) return false;
 
@@ -661,21 +700,31 @@ export default function useQuantumGameState() {
 
     const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
 
-    setPieces(finalPieces);
-    setSideToMove((s) => (s === 'white' ? 'black' : 'white'));
+    const nextSide = sideToMove === 'white' ? 'black' : 'white';
+
+    pushSnapshot(finalPieces, nextSide, captureCounter);
 
     lastMoveSignatureRef.current = signature;
 
     return true;
-  }, [pieces, sideToMove, canCastleBetween]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, canCastleBetween, pushSnapshot]);
 
   return {
+    // view
     pieces,
     sideToMove,
+    checkingSquaresBySide,
+
+    // timeline
+    viewIndex,
+    historyLength: history.length,
+    setViewIndex,
+    canMakeMove,
+
+    // queries and commands
     getPieceAtSquare,
     getLegalMoves,
     movePiece,
-    checkingSquaresBySide,
     canCastleBetween,
     castlePieces,
   };

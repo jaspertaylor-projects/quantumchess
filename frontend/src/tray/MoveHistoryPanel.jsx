@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting and simple playback; stores and uses side metadata from Redux for accurate pairing.
+// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
 
-export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHighlights = () => {} }) {
+export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {} }) {
   const moves = useSelector((s) => s.game.moves);
 
   const [index, setIndex] = useState(-1);
@@ -24,8 +24,10 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
   // Keep stable refs for callbacks to avoid re-running effects due to identity changes
   const highlightRef = useRef(onHighlightMove);
   const clearRef = useRef(onClearHighlights);
+  const seekRef = useRef(onSeekToIndex);
   useEffect(() => { highlightRef.current = onHighlightMove; }, [onHighlightMove]);
   useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
+  useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
 
   useEffect(() => {
     if (index >= 0 && index < moves.length) {
@@ -38,6 +40,11 @@ export default function MoveHistoryPanel({ onHighlightMove = () => {}, onClearHi
       clearRef.current();
     }
   }, [index, moves]);
+
+  // Emit seek to the board so it can jump to the state after the selected move
+  useEffect(() => {
+    seekRef.current(index);
+  }, [index]);
 
   useEffect(() => {
     if (!playing) return;
