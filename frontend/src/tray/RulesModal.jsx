@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay and king removal after each move.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay, king removal after each move, and quantum castling rules.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -38,9 +38,9 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
       {
         title: 'Captures & Collapse',
         content: [
-          'On capture, the captured piece collapses immediately to its least valuable non-King possibility: P < N < B < R < Q.',
-          'The captured piece is displayed in the capturing player\'s bar; newly captured icons appear at the far right and fill from right to left.',
-          'Captured pieces count toward the opponent\'s conserved totals. Example: If White captures a Black piece and it collapses to a Knight, and Black already has one Knight confirmed on the board, that becomes two total Knights for Black and Knight must be removed from the remaining possibilities of all other Black pieces as capacity is exhausted.',
+          "On capture, the captured piece collapses immediately to its least valuable non-King possibility: P < N < B < R < Q.",
+          "The captured piece is displayed in the capturing player's bar; newly captured icons appear at the far right and fill from right to left.",
+          "Captured pieces count toward the opponent's conserved totals. Example: If White captures a Black piece and it collapses to a Knight, and Black already has one Knight confirmed on the board, that becomes two total Knights for Black and Knight must be removed from the remaining possibilities of all other Black pieces as capacity is exhausted.",
           'Kings never appear as the capture collapse result.',
         ],
       },
@@ -48,8 +48,22 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         title: 'Checks and Threats',
         content: [
           'A piece begins checking once it has two or fewer remaining possibilities. It threatens all squares that any of its remaining classical types would attack.',
-          'Threat overlay: On your turn, all squares threatened by the opponent\'s checking pieces are tinted faint red on the board.',
+          "Threat overlay: On your turn, all squares threatened by the opponent's checking pieces are tinted faint red on the board.",
           'End-of-turn king pruning: After a move is made, any of the mover\'s pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.',
+        ],
+      },
+      {
+        title: 'Castling (Rook–King Pairing)',
+        content: [
+          'First-move ethos: Castling applies to any two of your pieces whose current possibilities are a subset of {Rook, King}. They do not need to be the original rook/king or on starting squares.',
+          'How to castle: Click one eligible piece, then click a second eligible piece on the same rank to initiate the castle preview and confirm.',
+          'Requirement 1 — Clear path: The two selected pieces must share the same rank with only empty squares strictly between them.',
+          'Requirement 2 — No checks through: None of the squares strictly between the two pieces may be under attack by an opposing checking piece at the moment of castling.',
+          'Requirement 3 — Meet in the middle: Both pieces move simultaneously toward each other and finish on the two most central empty squares between them. If the number of empty squares between is even, each moves exactly half the gap; if odd, they occupy the two center-biased squares closer to the board center.',
+          'Requirement 4 — Collapse set: After castling, both pieces reduce to Rook–King only; all other types are removed from their superposition.',
+          'Castling never captures; all destination squares must be empty. The move consumes your entire turn.',
+          'Conservation applies: If Rook or King capacity is already exhausted by prior collapses/superpositions, castling that would violate conservation is disallowed.',
+          'Destination squares may be threatened; if so, end-of-turn king pruning may remove King from one or both castling pieces per the Checks and Threats rules.',
         ],
       },
     ],
@@ -255,7 +269,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         <div className="qc-rules-dots" style={styles.dots} aria-label="page dots navigation">
           {pages.map((_, idx) => (
             <div
-              key={`rules-dot-${idx}`}
+              key={`rules-dot-${idx}`]
               className="qc-rules-dot"
               style={styles.dot(idx === page)}
               onClick={() => handleDot(idx)}
