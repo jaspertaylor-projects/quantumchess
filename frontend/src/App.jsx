@@ -847,12 +847,12 @@ export default function App() {
 
   const handleDragHover = useCallback(() => {}, []);
 
-  // Seek handler from the move history tray. Move index -1 means end of history, otherwise show board after that move.
+  // Seek handler from the move history tray. Move index -1 means starting position; otherwise show board after that move.
   const handleSeekToIndex = useCallback((moveIndex) => {
     setSelectedId(null);
     if (typeof moveIndex !== 'number') return;
     if (moveIndex < 0) {
-      setViewIndex(Math.max(0, historyLength - 1));
+      setViewIndex(0);
     } else {
       // snapshots are offset by 1: snapshot 0 is initial position
       const snapIndex = Math.max(0, Math.min(historyLength - 1, moveIndex + 1));
