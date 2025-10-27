@@ -651,6 +651,27 @@ export default function App() {
       setSelectedId(null);
       return;
     }
+
+    // If dropped on a same-side piece, attempt castling before standard legality checks
+    const targetAtDest = getPieceAtSquare(to);
+    if (targetAtDest && targetAtDest.side === movingPiece.side) {
+      const plan = canCastleBetween(id, targetAtDest.id);
+      if (plan) {
+        const applied = castlePieces(id, targetAtDest.id);
+        if (applied) {
+          dispatch(addMove({ from: plan.kingFrom, to: plan.kingTo, side: movingPiece.side }));
+          dispatch(addMove({ from: plan.rookFrom, to: plan.rookTo, side: movingPiece.side }));
+          setSelectedId(null);
+          setTrayHighlights([]);
+          return;
+        }
+      }
+      // Same-side drop but not eligible for castling; cancel the drag
+      setSelectedId(null);
+      return;
+    }
+
+    // Standard move path
     const legal = new Set(getLegalMoves(id));
     if (!legal.has(to)) {
       setSelectedId(null);
@@ -662,7 +683,7 @@ export default function App() {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
     }
     setSelectedId(null);
-  }, [pieces, getLegalMoves, movePiece, dispatch]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch]);
 
   const handleDragHover = useCallback(() => {}, []);
 
