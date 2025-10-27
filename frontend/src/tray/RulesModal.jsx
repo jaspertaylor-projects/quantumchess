@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay, king removal after each move, and quantum castling rules.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Updated to describe check threats overlay, king removal after each move, quantum castling rules, and quantum promotion.
 // Imports From: ../theme.js, ../components/IconButton.jsx
 // Exported To: ../App.jsx
 
@@ -38,10 +38,25 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
       {
         title: 'Captures & Collapse',
         content: [
-          "On capture, the captured piece collapses immediately to its least valuable non-King possibility: P < N < B < R < Q.",
+          'On capture, the captured piece collapses immediately to its least valuable non-King possibility: P < N < B < R < Q.',
           "The captured piece is displayed in the capturing player's bar; newly captured icons appear at the far right and fill from right to left.",
           "Captured pieces count toward the opponent's conserved totals. Example: If White captures a Black piece and it collapses to a Knight, and Black already has one Knight confirmed on the board, that becomes two total Knights for Black and Knight must be removed from the remaining possibilities of all other Black pieces as capacity is exhausted.",
           'Kings never appear as the capture collapse result.',
+        ],
+      },
+      {
+        title: 'Quantum Promotion',
+        content: [
+          'Trigger: When a piece that still includes Pawn in its possibilities reaches the farthest rank (rank 8 for White, rank 1 for Black), it immediately promotes.',
+          'Promotion is automatic and non-choosy: Pawn is removed from that piece’s possibilities and Knight, Bishop, Rook, Queen are added to its superposition (duplicates are ignored). Existing types like King remain unchanged.',
+          'You do not select a single piece type. Instead, promotion broadens the piece into a heavy-piece superposition {N, B, R, Q} while deleting Pawn from it.',
+          'Team-wide impact: Because totals for N, B, R, Q are globally conserved, the newly promoted superposition competes for those limited capacities across your entire side. The global solver then prunes possibilities on all of your pieces to satisfy the per-type limits.',
+          'Example A: If your side already has two Bishops confirmed, any promoted piece that acquires Bishop will immediately lose Bishop during global pruning, but may keep Knight, Rook, and/or Queen if those are still available.',
+          'Example B: If your Queen capacity is already exhausted, promotion cannot create a new definite Queen. Queen will be removed from some pieces’ possibilities to satisfy the single-Queen limit.',
+          'Multiple promotions stack: Each promoted piece removes Pawn from itself and attempts to add N/B/R/Q; the constraint solver resolves overloads by stripping types until global limits are respected.',
+          'Order of operations on a promoting move: apply move and any capture-collapse, then apply promotion (remove P, add N/B/R/Q), then run global conservation to fixpoint, then apply end-of-turn King pruning for threatened squares.',
+          'Capturing a promoted piece still collapses it on capture to its least valuable non-King possibility at that time; this may further change global capacities and trigger additional pruning.',
+          'Practical effect: Promotion does not mint extra Queens beyond conservation. It increases the pool of candidates for heavy pieces, forcing the entire team state to re-balance under the same fixed per-type totals.',
         ],
       },
       {
@@ -49,7 +64,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         content: [
           'A piece begins checking once it has two or fewer remaining possibilities. It threatens all squares that any of its remaining classical types would attack.',
           "Threat overlay: On your turn, all squares threatened by the opponent's checking pieces are tinted faint red on the board.",
-          'End-of-turn king pruning: After a move is made, any of the mover\'s pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.',
+          "End-of-turn king pruning: After a move is made, any of the mover's pieces that remain on threatened squares can no longer be Kings; King is removed from their superposition. This enforces the classic rule: you cannot end your turn with your King in check.",
         ],
       },
       {
@@ -269,7 +284,7 @@ export default function RulesModal({ open = false, onClose = () => {} }) {
         <div className="qc-rules-dots" style={styles.dots} aria-label="page dots navigation">
           {pages.map((_, idx) => (
             <div
-              key={`rules-dot-${idx}`}
+              key={`rules-dot-${idx}`]
               className="qc-rules-dot"
               style={styles.dot(idx === page)}
               onClick={() => handleDot(idx)}
