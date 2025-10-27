@@ -581,7 +581,6 @@ export default function useQuantumGameState() {
     return { success: true };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot]);
 
-  // Determine whether two same-side pieces can castle and return the move plan if so.
   const canCastleBetween = useCallback((idA, idB) => {
     if (!idA || !idB || idA === idB) return { canCastle: false, reason: 'Select two different pieces.' };
     const a = pieces.find((p) => p.id === idA && !p.captured);
@@ -591,75 +590,114 @@ export default function useQuantumGameState() {
     if (a.side !== sideToMove) return { canCastle: false, reason: 'It is not your turn to move.' };
     if (!a.square || !b.square) return { canCastle: false, reason: 'Pieces must be on the board.' };
 
-    const aCanK = a.possibleTypes.includes('k');
-    const aCanR = a.possibleTypes.includes('r');
-    const bCanK = b.possibleTypes.includes('k');
-    const bCanR = b.possibleTypes.includes('r');
-
-    let king = null;
-    let rook = null;
-
-    if (aCanK && bCanR) {
-      king = a; rook = b;
-    } else if (aCanR && bCanK) {
-      king = b; rook = a;
-    } else {
-      return { canCastle: false, reason: 'One piece must be a potential King, the other a potential Rook.' };
-    }
-
-    const kingFirst = (king.moveCount || 0) === 0;
-    const rookFirst = (rook.moveCount || 0) === 0;
-    if (!kingFirst || !rookFirst) return { canCastle: false, reason: 'Both pieces must not have moved to castle.' };
-
-    const posK = fromAlgebraic(king.square);
-    const posR = fromAlgebraic(rook.square);
-    if (!posK || !posR) return { canCastle: false, reason: 'Invalid piece position.' };
-    if (posK.rankIndex !== posR.rankIndex) return { canCastle: false, reason: 'Pieces must be on the same rank to castle.' };
-
-    const fK = posK.fileIndex;
-    const fR = posR.fileIndex;
-    const r = posK.rankIndex;
-    const step = fR > fK ? 1 : -1;
-    const distance = Math.abs(fR - fK);
-
-    // Require at least two squares of king travel; if adjacent or too close, deny.
-    if (distance < 3) return { canCastle: false, reason: 'Pieces are too close to castle.' };
-
-    // Path between them must be empty
-    const occ = occupancy; // current memoized occupancy
-    for (let f = Math.min(fK, fR) + 1; f <= Math.max(fK, fR) - 1; f++) {
-      const sq = toAlgebraic(f, r);
-      if (occ.get(sq)) return { canCastle: false, reason: 'The path between pieces must be clear.' };
-    }
-
-    // King destination is two squares toward rook; rook lands adjacent on the other side of the king
-    const kingDestFile = fK + 2 * step;
-    const kingThroughFile = fK + 1 * step;
-    const rookDestFile = kingDestFile - step;
-
-    const kingTo = toAlgebraic(kingDestFile, r);
-    const kingThrough = toAlgebraic(kingThroughFile, r);
-    const rookTo = toAlgebraic(rookDestFile, r);
-
-    // Ensure destination squares are available (kingTo and rookTo must be empty except their own start squares)
-    if (!kingTo || !rookTo || !kingThrough) return { canCastle: false, reason: 'Castling move is out of bounds.' };
-    if (occ.get(kingTo)) return { canCastle: false, reason: 'King destination for castling is occupied.' };
-    if (occ.get(rookTo)) return { canCastle: false, reason: 'Rook destination for castling is occupied.' };
-
-    return {
-      canCastle: true,
-      plan: {
-        kingId: king.id,
-        rookId: rook.id,
-        kingFrom: king.square,
-        rookFrom: rook.square,
-        kingTo,
-        rookTo,
-      }
+    const isEligible = (p) => {
+      if (!p.possibleTypes || p.possibleTypes.length === 0) return false;
+      return p.possibleTypes.every((t) => t === 'r' || t === 'k');
     };
+
+    if (!isEligible(a) || !isEligible(b)) {
+      return { canCastle: false, reason: 'Both pieces must be a superposition of only Rook and/or King.' };
+    }
+
+    if ((a.moveCount || 0) > 0 || (b.moveCount || 0) > 0) {
+      return { canCastle: false, reason: 'Both pieces must not have moved to castle.' };
+    }
+
+    const posA = fromAlgebraic(a.square);
+    const posB = fromAlgebraic(b.square);
+    if (!posA || !posB) return { canCastle: false, reason: 'Invalid piece position.' };
+    if (posA.rankIndex !== posB.rankIndex) return { canCastle: false, reason: 'Pieces must be on the same rank to castle.' };
+
+    const rank = posA.rankIndex;
+    const f1 = Math.min(posA.fileIndex, posB.fileIndex);
+    const f2 = Math.max(posA.fileIndex, posB.fileIndex);
+    const gap = f2 - f1 - 1;
+
+    if (gap < 1) {
+      return { canCastle: false, reason: 'Pieces must have at least one empty square between them.' };
+    }
+
+    // Requirement 1 — Clear path
+    for (let f = f1 + 1; f < f2; f++) {
+      const sq = toAlgebraic(f, rank);
+      if (occupancy.get(sq)) return { canCastle: false, reason: 'The path between pieces must be clear.' };
+    }
+
+    // Requirement 2 — No checks through
+    const opponentSide = a.side === 'white' ? 'black' : 'white';
+    const oppThreats = computeThreatenedSquaresForSide(pieces, opponentSide);
+    for (let f = f1 + 1; f < f2; f++) {
+      const sq = toAlgebraic(f, rank);
+      if (oppThreats.has(sq)) return { canCastle: false, reason: 'Cannot castle through a threatened square.' };
+    }
+
+    // Requirement 3 — Meet in the middle
+    let plan;
+    const piece1 = (posA.fileIndex === f1) ? a : b; // piece on the left
+    const piece2 = (posA.fileIndex === f2) ? a : b; // piece on the right
+    const dist = (file) => 3 - Math.min(file, 7 - file);
+
+    let piece1_to_sq, piece2_to_sq;
+
+    if (gap === 1) {
+      const midFile = f1 + 1;
+      const totalDist1 = dist(f1) + dist(midFile);
+      const totalDist2 = dist(midFile) + dist(f2);
+
+      let final_f_pair;
+      if (totalDist1 < totalDist2) {
+        final_f_pair = [f1, midFile];
+      } else if (totalDist2 < totalDist1) {
+        final_f_pair = [midFile, f2];
+      } else {
+        const center_dist1 = Math.abs(f1 - 3.5) + Math.abs(midFile - 3.5);
+        const center_dist2 = Math.abs(midFile - 3.5) + Math.abs(f2 - 3.5);
+        final_f_pair = (center_dist1 <= center_dist2) ? [f1, midFile] : [midFile, f2];
+      }
+
+      if (final_f_pair[0] === f1) { // final state is (f1, midFile)
+        piece1_to_sq = toAlgebraic(midFile, rank); // piece1 moves to middle
+        piece2_to_sq = toAlgebraic(f1, rank);     // piece2 moves to piece1's old spot
+      } else { // final state is (midFile, f2)
+        piece1_to_sq = toAlgebraic(f2, rank);     // piece1 moves to piece2's old spot
+        piece2_to_sq = toAlgebraic(midFile, rank); // piece2 moves to middle
+      }
+    } else { // gap >= 2
+      const emptyFiles = [];
+      for (let f = f1 + 1; f < f2; f++) emptyFiles.push(f);
+      let dest1_f, dest2_f;
+
+      if (gap % 2 === 0) { // Even gap
+        dest1_f = emptyFiles[gap / 2 - 1];
+        dest2_f = emptyFiles[gap / 2];
+      } else { // Odd gap
+        const mid = emptyFiles[(gap - 1) / 2];
+        const pair1 = [emptyFiles[(gap - 1) / 2 - 1], mid];
+        const pair2 = [mid, emptyFiles[(gap - 1) / 2 + 1]];
+        const totalDist1 = dist(pair1[0]) + dist(pair1[1]);
+        const totalDist2 = dist(pair2[0]) + dist(pair2[1]);
+        if (totalDist1 <= totalDist2) {
+          [dest1_f, dest2_f] = pair1;
+        } else {
+          [dest1_f, dest2_f] = pair2;
+        }
+      }
+      piece1_to_sq = toAlgebraic(dest1_f, rank);
+      piece2_to_sq = toAlgebraic(dest2_f, rank);
+    }
+
+    plan = {
+      piece1_id: piece1.id,
+      piece2_id: piece2.id,
+      piece1_from: piece1.square,
+      piece2_from: piece2.square,
+      piece1_to: piece1_to_sq,
+      piece2_to: piece2_to_sq,
+    };
+
+    return { canCastle: true, plan };
   }, [pieces, sideToMove, occupancy]);
 
-  // Execute a castle move between two pieces if legal per canCastleBetween
   const castlePieces = useCallback((idA, idB) => {
     if (!canMakeMove) return { success: false, reason: 'Cannot make moves while viewing history.' };
 
@@ -669,26 +707,26 @@ export default function useQuantumGameState() {
     const prevPieces = pieces;
     const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
 
-    const king = next.find((p) => p.id === plan.kingId && !p.captured);
-    const rook = next.find((p) => p.id === plan.rookId && !p.captured);
-    if (!king || !rook) return { success: false, reason: 'Internal error: castling pieces not found after planning.' };
+    const piece1 = next.find((p) => p.id === plan.piece1_id && !p.captured);
+    const piece2 = next.find((p) => p.id === plan.piece2_id && !p.captured);
+    if (!piece1 || !piece2) return { success: false, reason: 'Internal error: castling pieces not found after planning.' };
 
-    const signature = `${sideToMove}:castle:${plan.kingId},${plan.rookId}:${plan.kingFrom}->${plan.kingTo}`;
+    const signature = `${sideToMove}:castle:${plan.piece1_id},${plan.piece2_id}:${plan.piece1_from}->${plan.piece1_to}`;
     if (lastMoveSignatureRef.current === signature) return { success: false, reason: 'Duplicate move detected.' };
 
     // Apply movement and collapse both pieces to R-K combo post-castle
-    king.square = plan.kingTo;
-    rook.square = plan.rookTo;
-    king.possibleTypes = ['r', 'k'];
-    rook.possibleTypes = ['r', 'k'];
-    king.moveCount = (king.moveCount || 0) + 1;
-    rook.moveCount = (rook.moveCount || 0) + 1;
+    piece1.square = plan.piece1_to;
+    piece2.square = plan.piece2_to;
+    piece1.possibleTypes = ['r', 'k'];
+    piece2.possibleTypes = ['r', 'k'];
+    piece1.moveCount = (piece1.moveCount || 0) + 1;
+    piece2.moveCount = (piece2.moveCount || 0) + 1;
 
     // Enforce type constraints after the simultaneous move
     const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
 
     // Post-move check pruning of 'k' from mover side threatened squares
-    const moverSide = king.side; // both same side
+    const moverSide = piece1.side; // both same side
     const opponentSide = moverSide === 'white' ? 'black' : 'white';
     const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
 
