@@ -87,13 +87,13 @@ function injectClientReporter() {
 }
 
 export default defineConfig({
-  // Ensure SVGR runs before React so .svg modules are transformed into components
   plugins: [errorFileLogger(), svgr(), react(), fullReloadOnBackendPy(), injectClientReporter()],
   server: {
     host: true,
     port: 5173,
     proxy: {
-      '/api': { target: 'http://backend:8000', changeOrigin: true },
+      // Ensure HTTP and WebSocket upgrade both proxy to the backend container
+      '/api': { target: 'http://backend:8000', changeOrigin: true, ws: true },
     },
     watch: {
       usePolling: true,

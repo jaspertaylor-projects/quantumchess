@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking and WebSocket-based real-time play. Handles local/legal moves, castling, checkmate, and syncs moves over the network when online.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./chessboard/RasterizedSvgImg.jsx, ./tray/matchmakingClient.js
+// Imports From: ./App.css, ./theme.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -17,35 +17,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
 import { prewarmAllPiecePngs, invalidateRasterPngs, prewarmCapturedPiecePngs } from './chessboard/rasterPrewarm.js';
-import RasterizedSvgImg from './chessboard/RasterizedSvgImg.jsx';
 import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoomWs, sendMoveWs, sendCastleWs } from './tray/matchmakingClient.js';
-
-// Single-type SVG asset URLs used for captured-piece icons and header fallbacks
-import imgP from './assets/p.svg?url';
-import imgN from './assets/n.svg?url';
-import imgB from './assets/b.svg?url';
-import imgR from './assets/r.svg?url';
-import imgQ from './assets/q.svg?url';
-import imgK from './assets/k.svg?url';
-
-const TYPE_TO_SVG = {
-  p: imgP,
-  n: imgN,
-  b: imgB,
-  r: imgR,
-  q: imgQ,
-  k: imgK,
-};
-
-// Public stylish PNGs served by Vite from /src/public
-const TYPE_TO_STYLISH_PNG = {
-  p: '/src/public/stylish_pawn.png',
-  n: '/src/public/stylish_knight.png',
-  b: '/src/public/stylish_bishop.png',
-  r: '/src/public/stylish_rook.png',
-  q: '/src/public/stylish_queen.png',
-  k: '/src/public/stylish_king.png',
-};
+import AppHeader from './components/AppHeader.jsx';
+import PlayerBar from './components/PlayerBar.jsx';
+import WinnerModal from './components/WinnerModal.jsx';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -156,7 +131,7 @@ export default function App() {
     }
   }, [gameOver]);
 
-  // Cleanup matchmaking and WS on unmount only (do NOT tie to mmActive; that aborts in-flight matchmaking).
+  // Cleanup matchmaking and WS on unmount only
   useEffect(() => {
     return () => {
       mmAbortRef.current = true;
@@ -169,8 +144,6 @@ export default function App() {
       }
     };
   }, []);
-
-  const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
 
   const styles = {
     appContainer: {
@@ -189,110 +162,6 @@ export default function App() {
       boxSizing: 'border-box',
       gap: '0.5rem',
       overflow: 'hidden',
-    },
-    appHeader: {
-      backgroundColor: '#000',
-      padding: '0 clamp(8px, 1.5vw, 16px)',
-      borderRadius: 0,
-      textAlign: 'center',
-      width: '100%',
-      boxSizing: 'border-box',
-      userSelect: 'none',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      ['--qc-title-size']: TITLE_SIZE_CSS,
-      height: 'calc(var(--qc-title-size) * 1.5)',
-      minHeight: 'calc(var(--qc-title-size) * 1.5)',
-      maxHeight: 'calc(var(--qc-title-size) * 1.5)',
-      flex: '0 0 auto',
-    },
-    appTitleWrap: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '100%',
-      height: '100%',
-      boxSizing: 'border-box',
-      padding: 0,
-      flex: '1 1 auto',
-      overflow: 'hidden',
-    },
-    appTitleRow: {
-      display: 'grid',
-      gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)',
-      alignItems: 'center',
-      gap: 'clamp(8px, 1.2vw, 16px)',
-      padding: 0,
-      borderRadius: 0,
-      backgroundColor: 'transparent',
-      width: '100%',
-      margin: 0,
-      height: '100%',
-    },
-    appTitleCenterGroup: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 'clamp(6px, 1vw, 10px)',
-      flex: '0 1 auto',
-      minWidth: 0,
-      backgroundColor: 'transparent',
-      padding: 0,
-      borderRadius: 0,
-      height: '100%',
-    },
-    titleStrip: (side) => ({
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
-      gap: 'clamp(6px, 1vw, 12px)',
-      width: '100%',
-      minWidth: 0,
-      height: '100%',
-      overflow: 'hidden',
-    }),
-    titleIconWrap: {
-      height: '100%',
-      aspectRatio: '1 / 1',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      pointerEvents: 'none',
-    },
-    appTitleText: {
-      margin: 0,
-      fontSize: 'var(--qc-title-size)',
-      fontWeight: 1000,
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      backgroundImage: 'linear-gradient(90deg, #00f5ff 0%, #b400ff 38%, #ff3b7f 64%, #00f5ff 100%)',
-      WebkitBackgroundClip: 'text',
-      backgroundClip: 'text',
-      color: 'transparent',
-      WebkitTextFillColor: 'transparent',
-      textShadow: [
-        '0 0 6px rgba(0,245,255,0.45)',
-        '0 0 12px rgba(180,0,255,0.35)',
-        '0 0 22px rgba(255,59,127,0.35)'
-      ].join(', '),
-      lineHeight: 1,
-      display: 'inline-block',
-      alignSelf: 'center',
-      whiteSpace: 'nowrap',
-    },
-    appTitleUnderline: {
-      marginTop: '4px',
-      height: '3px',
-      width: '100%',
-      background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
-      borderRadius: 3,
-      boxShadow: '0 0 18px rgba(180,0,255,0.45), 0 0 28px rgba(0,245,255,0.25)',
-      alignSelf: 'center',
-      flex: '0 0 auto',
     },
     boardArea: {
       flex: 1,
@@ -316,98 +185,6 @@ export default function App() {
       gap: '8px',
       boxSizing: 'border-box',
     },
-    playerBar: () => {
-      const bg = playerBarColors.background;
-      const txt = playerBarColors.text;
-      return {
-        width: '100%',
-        minHeight: 'clamp(36px, 6.5vh, 64px)',
-        display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'space-between',
-        padding: '0 12px',
-        boxSizing: 'border-box',
-        border: `1px solid ${theme.border}`,
-        borderRadius: 10,
-        backgroundColor: bg,
-        boxShadow: `0 4px 12px ${theme.shadow}`,
-        color: txt,
-        userSelect: 'none',
-      };
-    },
-    playerInfo: {
-      display: 'grid',
-      gridTemplateRows: '1fr 1fr',
-      alignItems: 'stretch',
-      justifyItems: 'start',
-      height: '100%',
-      flex: '1 1 auto',
-      padding: '4px 6px',
-      boxSizing: 'border-box',
-      minWidth: 0,
-    },
-    playerNameRow: {
-      display: 'flex',
-      alignItems: 'flex-end',
-      gap: '8px',
-      height: '100%',
-      fontWeight: 800,
-      letterSpacing: '0.04em',
-      textTransform: 'uppercase',
-      fontSize: 'clamp(0.9rem, 2.2vw, 1.1rem)',
-      color: 'currentColor',
-      lineHeight: 1,
-    },
-    playerRatingText: {
-      fontWeight: 600,
-      letterSpacing: '0.03em',
-      fontSize: 'clamp(0.72rem, 1.8vw, 0.95rem)',
-      color: 'currentColor',
-      opacity: 0.82,
-      lineHeight: 1,
-      paddingBottom: '1px',
-      textTransform: 'none',
-    },
-    playerRatingRow: {
-      display: 'flex',
-      alignItems: 'flex-start',
-      height: '100%',
-      fontWeight: 600,
-      letterSpacing: '0.03em',
-      fontSize: 'clamp(0.72rem, 1.8vw, 0.95rem)',
-      color: 'currentColor',
-      opacity: 0.82,
-      lineHeight: 1,
-    },
-    capturedArea: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      gap: 2,
-      opacity: 0.9,
-      fontSize: '0.9rem',
-      flex: '0 1 auto',
-      height: '100%',
-      maxHeight: '100%',
-      overflow: 'hidden',
-    },
-    capturedRow: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      gap: 4,
-      width: '100%',
-      height: '50%',
-    },
-    capturedIconWrap: {
-      height: '95%',
-      aspectRatio: '1 / 1',
-      width: 'auto',
-      display: 'grid',
-      placeItems: 'center',
-      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
-    },
     boardStage: {
       width: '100%',
       flex: 1,
@@ -426,124 +203,6 @@ export default function App() {
       justifyContent: 'center',
       gap: 12,
     },
-    winnerOverlay: {
-      position: 'fixed',
-      inset: 0,
-      display: showWinPopup ? 'flex' : 'none',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      zIndex: 9999,
-    },
-    winnerModal: {
-      backgroundColor: '#111',
-      color: '#fff',
-      borderRadius: 12,
-      border: `1px solid ${theme.border}`,
-      boxShadow: `0 12px 32px ${theme.shadow}`,
-      padding: '20px 24px',
-      width: 'min(90vw, 420px)',
-      display: 'grid',
-      gap: 12,
-      textAlign: 'center',
-    },
-    winnerTitle: {
-      fontSize: '1.2rem',
-      fontWeight: 800,
-      letterSpacing: '0.02em',
-      margin: 0,
-    },
-    winnerSub: {
-      fontSize: '0.95rem',
-      opacity: 0.9,
-      margin: 0,
-    },
-    winnerButtonRow: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-      marginTop: 8,
-    },
-    primaryBtn: {
-      padding: '10px 16px',
-      borderRadius: 8,
-      border: '1px solid rgba(255,255,255,0.15)',
-      backgroundColor: '#1f51ff',
-      color: '#fff',
-      fontWeight: 700,
-      cursor: 'pointer',
-    },
-  };
-
-  const HeaderPieceIcon = ({ t }) => {
-    const [useFallback, setUseFallback] = useState(false);
-    const [pxSize, setPxSize] = useState(32);
-    const wrapRef = useRef(null);
-
-    useEffect(() => {
-      const el = wrapRef.current;
-      if (!el) return;
-      const ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const cr = entry.contentRect;
-          const raw = Math.min(cr.width, cr.height);
-          const snapped = Math.max(16, Math.floor(raw));
-          if (snapped !== pxSize) setPxSize(snapped);
-        }
-      });
-      ro.observe(el);
-      return () => ro.disconnect();
-    }, [pxSize]);
-
-    const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
-    const sideVars = svgStyles.white || {};
-
-    const pngSrc = TYPE_TO_STYLISH_PNG[t] || TYPE_TO_STYLISH_PNG.p;
-
-    const sizeScale = useMemo(() => {
-      if (t === 'q' || t === 'k') return 1.0;
-      if (t === 'p') return 0.8;
-      return 0.9;
-    }, [t]);
-
-    const innerStyle = useMemo(() => ({
-      width: `${Math.round(sizeScale * 100)}%`,
-      height: `${Math.round(sizeScale * 100)}%`,
-      objectFit: 'contain',
-      objectPosition: 'bottom center',
-      display: 'block',
-      alignSelf: 'flex-end',
-    }), [sizeScale]);
-
-    const renderSize = Math.max(16, Math.floor(pxSize * sizeScale));
-
-    return (
-      <div ref={wrapRef} className="qc-title-icon-wrap" style={styles.titleIconWrap} aria-hidden>
-        {!useFallback ? (
-          <img
-            className="qc-title-icon-img"
-            src={pngSrc}
-            alt=""
-            decoding="async"
-            fetchpriority="high"
-            style={innerStyle}
-            onError={() => setUseFallback(true)}
-          />
-        ) : (
-          <RasterizedSvgImg
-            srcSvgUrl={srcSvg}
-            cssVarMap={sideVars}
-            idPrefix={`hdr-${t}`}
-            size={renderSize}
-            renderHint={renderSize <= 32 ? 'crisp' : 'precision'}
-            className="qc-title-icon-fallback"
-            style={innerStyle}
-            alt=""
-          />
-        )}
-      </div>
-    );
   };
 
   const isOnline = useCallback(() => Boolean(isOnlineGameRef.current), []);
@@ -774,62 +433,6 @@ export default function App() {
       .filter((p) => p.captured && p.side === 'black' && Array.isArray(p.possibleTypes) && p.possibleTypes[0] !== 'p')
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
-
-  const CapturedIcon = ({ piece }) => {
-    const wrapRef = useRef(null);
-    const [pxSize, setPxSize] = useState(26);
-
-    useEffect(() => {
-      const el = wrapRef.current;
-      if (!el) return;
-      const ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const cr = entry.contentRect;
-          const raw = Math.min(cr.width, cr.height);
-          const snapped = Math.max(12, Math.floor(raw));
-          if (snapped !== pxSize) setPxSize(snapped);
-        }
-      });
-      ro.observe(el);
-      return () => ro.disconnect();
-    }, [pxSize]);
-
-    const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
-    const order = ['p', 'n', 'b', 'r', 'q'];
-    const pickType = order.find((x) => types.includes(x));
-    const t = pickType || (types.includes('k') ? 'p' : 'p');
-
-    const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
-    const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
-
-    const capturedSideVars = useMemo(() => ({
-      ...sideVars,
-      ['--icon-color']: 'rgba(0,0,0,0)',
-    }), [sideVars]);
-
-    const smallRenderHint = pxSize <= 32 ? 'crisp' : 'precision';
-
-    return (
-      <div
-        ref={wrapRef}
-        className="qc-captured-icon-wrap"
-        style={styles.capturedIconWrap}
-        title={`Captured ${t}`}
-        aria-label={`Captured ${t}`}
-      >
-        <RasterizedSvgImg
-          srcSvgUrl={srcSvg}
-          cssVarMap={capturedSideVars}
-          idPrefix={`cap-${piece.id}-${t}`}
-          size={pxSize}
-          renderHint={smallRenderHint}
-          className="qc-captured-icon-img"
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-          alt={`Captured ${t}`}
-        />
-      </div>
-    );
-  };
 
   const handleBoardResize = useCallback((px) => {
     setTrayHeight(px);
@@ -1136,58 +739,21 @@ export default function App() {
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
-      <header className="qc-app-header" style={styles.appHeader}>
-        <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
-          <div className="qc-app-title-row" style={styles.appTitleRow}>
-            <div className="qc-title-strip qc-title-strip--left" style={styles.titleStrip('left')} aria-hidden>
-              <HeaderPieceIcon t="q" />
-              <HeaderPieceIcon t="b" />
-              <HeaderPieceIcon t="n" />
-            </div>
-            <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
-              <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
-            </div>
-            <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip('right')} aria-hidden>
-              <HeaderPieceIcon t="p" />
-              <HeaderPieceIcon t="r" />
-              <HeaderPieceIcon t="k" />
-            </div>
-          </div>
-        </div>
-        <div className="qc-app-title-underline" style={styles.appTitleUnderline} />
-      </header>
+      <AppHeader svgStyles={svgStyles} />
 
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
           <div className="qc-board-stage" style={styles.boardStage} ref={boardStageRef}>
-            <div
-              className="qc-player-bar qc-player-bar--top"
-              style={styles.playerBar('black')}
-              data-side="black"
-              ref={topBarRef}
-            >
-              <div className="qc-player-info qc-player-info--black" style={styles.playerInfo}>
-                <div className="qc-player-name-row qc-player-name-row--black" style={styles.playerNameRow}>
-                  <span className="qc-player-name-text qc-player-name-text--black">{blackPlayer}</span>
-                  <span className="qc-player-rating-text qc-player-rating-text--black" style={styles.playerRatingText}>({blackRating})</span>
-                </div>
-                <div className="qc-player-rating-row qc-player-rating-row--black" style={styles.playerRatingRow}>
-                  {/* Timer will go here */}
-                </div>
-              </div>
-              <div className="qc-captured-area qc-captured-area--black" style={styles.capturedArea} aria-label="Black captured pieces area">
-                <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
-                  {blackCapturedPawns.map((p) => (
-                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                  ))}
-                </div>
-                <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
-                  {blackCapturedOthers.map((p) => (
-                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                  ))}
-                </div>
-              </div>
-            </div>
+            <PlayerBar
+              side="black"
+              playerName={blackPlayer}
+              rating={blackRating}
+              playerBarColors={playerBarColors}
+              capturedPawns={blackCapturedPawns}
+              capturedOthers={blackCapturedOthers}
+              svgStyles={svgStyles}
+              barRef={topBarRef}
+            />
 
             <div className="qc-board-row" style={styles.boardRow}>
               <Board
@@ -1223,54 +789,21 @@ export default function App() {
               />
             </div>
 
-            <div
-              className="qc-player-bar qc-player-bar--bottom"
-              style={styles.playerBar('white')}
-              data-side="white"
-              ref={bottomBarRef}
-            >
-              <div className="qc-player-info qc-player-info--white" style={styles.playerInfo}>
-                <div className="qc-player-name-row qc-player-name-row--white" style={styles.playerNameRow}>
-                  <span className="qc-player-name-text qc-player-name-text--white">{whitePlayer}</span>
-                  <span className="qc-player-rating-text qc-player-rating-text--white" style={styles.playerRatingText}>({whiteRating})</span>
-                </div>
-                <div className="qc-player-rating-row qc-player-rating-row--white" style={styles.playerRatingRow}>
-                  {/* Timer will go here */}
-                </div>
-              </div>
-              <div className="qc-captured-area qc-captured-area--white" style={styles.capturedArea} aria-label="White captured pieces area">
-                <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
-                  {whiteCapturedPawns.map((p) => (
-                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                  ))}
-                </div>
-                <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
-                  {whiteCapturedOthers.map((p) => (
-                    <CapturedIcon key={`capicon-${p.id}`} piece={p} />
-                  ))}
-                </div>
-              </div>
-            </div>
+            <PlayerBar
+              side="white"
+              playerName={whitePlayer}
+              rating={whiteRating}
+              playerBarColors={playerBarColors}
+              capturedPawns={whiteCapturedPawns}
+              capturedOthers={whiteCapturedOthers}
+              svgStyles={svgStyles}
+              barRef={bottomBarRef}
+            />
           </div>
         </div>
       </div>
 
-      <div className="qc-winner-overlay" style={styles.winnerOverlay} role="dialog" aria-modal={showWinPopup} aria-hidden={!showWinPopup}>
-        <div className="qc-winner-modal" style={styles.winnerModal}>
-          <h2 className="qc-winner-title" style={styles.winnerTitle}>Checkmate</h2>
-          <p className="qc-winner-sub" style={styles.winnerSub}>{winnerText}</p>
-          <div className="qc-winner-button-row" style={styles.winnerButtonRow}>
-            <button
-              className="qc-winner-button"
-              style={styles.primaryBtn}
-              onClick={() => setShowWinPopup(false)}
-              autoFocus
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
+      <WinnerModal open={showWinPopup} winnerText={winnerText} onClose={() => setShowWinPopup(false)} />
 
       <SettingsModal
         open={settingsOpen}
@@ -1288,10 +821,7 @@ export default function App() {
         onAccept={handleAcceptSettings}
       />
 
-      <RulesModal
-        open={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-      />
+      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
     </div>
   );
 }
