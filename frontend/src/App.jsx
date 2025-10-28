@@ -118,12 +118,12 @@ export default function App() {
 
       const topH = topBarRef.current ? Math.ceil(topBarRef.current.getBoundingClientRect().height) : 0;
       const bottomH = bottomBarRef.current ? Math.ceil(bottomBarRef.current.getBoundingClientRect().height) : 0;
-      const verticalGaps = 16; // matches boardStack gap + padding
+      const verticalGaps = 16;
       const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
 
       const rawSize = Math.min(rawWidth, availableHeight);
       const cell = Math.max(1, Math.floor(rawSize / 8));
-      const quantizedSize = cell * 8; // snap to 8px grid to avoid subpixel cells
+      const quantizedSize = cell * 8;
       setBoardSize(quantizedSize);
     };
 
@@ -144,22 +144,19 @@ export default function App() {
     return Math.max(8, Math.floor(boardSize / 8));
   }, [boardSize]);
 
-  // Prewarm for current size to avoid jank during play; does not invalidate caches.
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
     prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
-    // Also prewarm special captured-piece variants with transparent icon color at small sizes only
     prewarmCapturedPiecePngs({ cssVarsBySide: svgStyles, sizes: [26], renderHint: 'crisp' });
   }, [currentPieceSize, svgStyles]);
 
-  // Show winner popup when game ends
   useEffect(() => {
     if (gameOver) {
       setShowWinPopup(true);
     }
   }, [gameOver]);
 
-  // Cleanup matchmaking and WS if component unmounts
+  // Cleanup matchmaking and WS on unmount only (do NOT tie to mmActive; that aborts in-flight matchmaking).
   useEffect(() => {
     return () => {
       mmAbortRef.current = true;
@@ -167,14 +164,12 @@ export default function App() {
       try {
         if (wsApiRef.current) wsApiRef.current.close();
       } catch (_) {}
-      if (mmActive && id) {
-        // best-effort
+      if (id) {
         leaveQueue(id).catch(() => {});
       }
     };
-  }, [mmActive]);
+  }, []);
 
-  // Header sizing: header height is ~1.5x title font size via CSS variable
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
 
   const styles = {
@@ -551,7 +546,6 @@ export default function App() {
     );
   };
 
-  // Helpers to enforce online-side ownership constraints on the client
   const isOnline = useCallback(() => Boolean(isOnlineGameRef.current), []);
   const isUsersTurn = useCallback(() => !isOnline() || sideToMove === userTeam, [isOnline, sideToMove, userTeam]);
   const ownsPiece = useCallback((piece) => !isOnline() || (piece && piece.side === userTeam), [isOnline, userTeam]);
@@ -576,7 +570,6 @@ export default function App() {
         return;
       }
       if (piece.side === sideToMove) {
-        // If a piece is already selected and we clicked another same-side piece, try castling
         if (selectedId && selectedId !== piece.id) {
           const left = pieces.find((p) => p.id === selectedId);
           if (left && ownsPiece(left)) {
@@ -584,10 +577,8 @@ export default function App() {
             if (canCastle) {
               const result = castlePieces(selectedId, piece.id);
               if (result.success) {
-                // Record both piece moves for history
                 dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
                 dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
-                // Send over WS if online
                 if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
                   sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
                 }
@@ -628,7 +619,6 @@ export default function App() {
         const result = movePiece(selectedId, square);
         if (result.success && fromSquare) {
           dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
-          // Send over WS if online
           if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
             sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: square, side: movingPiece.side });
           }
@@ -665,7 +655,6 @@ export default function App() {
 
     if (clicked.side === sideToMove) {
       if (selectedId && selectedId !== id) {
-        // Attempt castling when clicking a different same-side piece while one is already selected
         const left = pieces.find((p) => p.id === selectedId);
         if (left && ownsPiece(left)) {
           const { canCastle, reason, plan } = canCastleBetween(selectedId, id);
@@ -813,7 +802,6 @@ export default function App() {
     const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
     const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
-    // Make the icon outline fully transparent for compact captured display
     const capturedSideVars = useMemo(() => ({
       ...sideVars,
       ['--icon-color']: 'rgba(0,0,0,0)',
@@ -884,11 +872,9 @@ export default function App() {
         if (!msg || typeof msg !== 'object') return;
         const myId = mmClientIdRef.current;
         if (msg.type === 'welcome') {
-          // no-op; informational
           return;
         }
         if (msg.type === 'room_state') {
-          // could display presence; skip heavy UI changes
           return;
         }
         if (msg.type === 'error') {
@@ -897,7 +883,7 @@ export default function App() {
           return;
         }
         if (msg.type === 'move') {
-          if (msg.by && myId && msg.by === myId) return; // ignore echo of our own move
+          if (msg.by && myId && msg.by === myId) return;
           const from = msg.from;
           const to = msg.to;
           const sideMsg = msg.side;
@@ -934,13 +920,11 @@ export default function App() {
   }, [attachWsHandlers, getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch]);
 
   const handleStartGame = useCallback((settings) => {
-    // Cancel any ongoing matchmaking from a previous attempt
     mmAbortRef.current = true;
 
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
 
-    // Reset online flags
     isOnlineGameRef.current = false;
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
@@ -994,7 +978,6 @@ export default function App() {
       return;
     }
 
-    // Local or AI
     setInfoMessage('New game started.');
   }, [dispatch, startWsConnection]);
 
@@ -1042,7 +1025,6 @@ export default function App() {
       return;
     }
 
-    // If dropped on a same-side piece, attempt castling before standard legality checks
     const targetAtDest = getPieceAtSquare(to);
     if (targetAtDest && targetAtDest.side === movingPiece.side) {
       const { canCastle, reason, plan } = canCastleBetween(id, targetAtDest.id);
@@ -1061,12 +1043,10 @@ export default function App() {
       } else {
         setInfoMessage(reason || 'Cannot castle with these pieces.');
       }
-      // Same-side drop but not eligible for castling; cancel the drag
       setSelectedId(null);
       return;
     }
 
-    // Standard move path
     const legal = new Set(getLegalMoves(id));
     if (!legal.has(to)) {
       setInfoMessage('Illegal move.');
@@ -1089,14 +1069,12 @@ export default function App() {
 
   const handleDragHover = useCallback(() => {}, []);
 
-  // Seek handler from the move history tray. Move index -1 means starting position; otherwise show board after that move.
   const handleSeekToIndex = useCallback((moveIndex) => {
     setSelectedId(null);
     if (typeof moveIndex !== 'number') return;
     if (moveIndex < 0) {
       setViewIndex(0);
     } else {
-      // snapshots are offset by 1: snapshot 0 is initial position
       const snapIndex = Math.max(0, Math.min(historyLength - 1, moveIndex + 1));
       setViewIndex(snapIndex);
     }
@@ -1112,18 +1090,15 @@ export default function App() {
     const blackChanged = !colorsEqual(blackColors, settings.black);
     const anyPieceColorChanged = whiteChanged || blackChanged;
 
-    // Apply only changed piece colors to avoid triggering unnecessary re-renders and re-rasterization
     if (whiteChanged) setWhiteColors(settings.white);
     if (blackChanged) setBlackColors(settings.black);
 
-    // Always apply non-piece settings
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
     setShowCoordinates(settings.coordinates);
     setShowCheckOverlay(settings.checkOverlay);
 
     if (!anyPieceColorChanged) {
-      // Nothing to do for raster caches if piece colors did not change
       return;
     }
 
@@ -1149,7 +1124,6 @@ export default function App() {
       sizes: [currentPieceSize, 64, 26],
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
-    // Prewarm captured variants for new colors as well
     await prewarmCapturedPiecePngs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
   }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
@@ -1281,7 +1255,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Winner Popup */}
       <div className="qc-winner-overlay" style={styles.winnerOverlay} role="dialog" aria-modal={showWinPopup} aria-hidden={!showWinPopup}>
         <div className="qc-winner-modal" style={styles.winnerModal}>
           <h2 className="qc-winner-title" style={styles.winnerTitle}>Checkmate</h2>
