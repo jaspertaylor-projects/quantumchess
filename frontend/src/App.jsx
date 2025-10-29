@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking and WebSocket-based real-time play. Handles local/legal moves, castling, checkmate, and syncs moves over the network when online.
-// Imports From: ./App.css, ./theme.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -64,6 +64,8 @@ export default function App() {
   const mmRoomIdRef = useRef(null);
   const wsApiRef = useRef(null);
   const isOnlineGameRef = useRef(false);
+  // Always-fresh WS message handler to avoid stale-closure bugs
+  const wsMessageHandlerRef = useRef(null);
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
@@ -451,6 +453,79 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
+  // Install an always-fresh WS message handler to avoid stale-turn or stale-state issues
+  useEffect(() => {
+    wsMessageHandlerRef.current = (msg) => {
+      if (!msg || typeof msg !== 'object') return;
+      const myId = mmClientIdRef.current;
+
+      if (msg.type === 'welcome') {
+        console.debug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
+        return;
+      }
+      if (msg.type === 'room_state') {
+        console.debug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
+        return;
+      }
+      if (msg.type === 'error') {
+        const detail = typeof msg.detail === 'string' ? msg.detail : 'Server rejected the last action.';
+        console.warn('[WS][client] error', { detail });
+        setInfoMessage(detail);
+        return;
+      }
+
+      if (msg.type === 'move') {
+        if (msg.by && myId && msg.by === myId) return; // ignore echo of our own move
+        const from = msg.from;
+        const to = msg.to;
+        const sideMsg = msg.side;
+        if (typeof from !== 'string' || typeof to !== 'string') return;
+        const piece = getPieceAtSquare(from);
+        if (!piece) {
+          console.warn('[WS][client] move: piece not found at from square', { from, to, sideMsg });
+          return;
+        }
+        const result = movePiece(piece.id, to);
+        if (result && result.success) {
+          dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
+          setInfoMessage('Opponent moved.');
+          console.debug('[WS][client] applied opponent move', { from, to, side: sideMsg });
+        } else {
+          console.warn('[WS][client] failed to apply opponent move', { from, to, sideMsg });
+        }
+        return;
+      }
+
+      if (msg.type === 'castle') {
+        if (msg.by && myId && msg.by === myId) return; // ignore echo
+        const { piece1_from, piece1_to, piece2_from, piece2_to, side: sideMsg } = msg;
+        const p1 = getPieceAtSquare(piece1_from);
+        const p2 = getPieceAtSquare(piece2_from);
+        if (!p1 || !p2) {
+          console.warn('[WS][client] castle: pieces not found at from squares', { p1: piece1_from, p2: piece2_from });
+          return;
+        }
+        const { canCastle, plan } = canCastleBetween(p1.id, p2.id);
+        if (!canCastle || !plan) {
+          console.warn('[WS][client] castle: cannot castle between received pieces', { piece1_from, piece2_from });
+          return;
+        }
+        const result = castlePieces(p1.id, p2.id);
+        if (result && result.success) {
+          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg }));
+          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg }));
+          setInfoMessage('Opponent castled.');
+          console.debug('[WS][client] applied opponent castle', { plan, side: sideMsg });
+        } else {
+          console.warn('[WS][client] failed to apply opponent castle', { plan, side: sideMsg });
+        }
+        return;
+      }
+
+      console.debug('[WS][client] unhandled message', msg);
+    };
+  }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch]);
+
   const attachWsHandlers = useCallback(() => {
     if (!wsApiRef.current) return;
     const api = wsApiRef.current;
@@ -467,60 +542,23 @@ export default function App() {
       clientId,
       onOpen: () => {
         setInfoMessage(`Connected to room ${String(roomId).slice(0, 6)}`);
+        console.debug('[WS][client] open', { roomId, clientId, side });
       },
       onClose: () => {
         setInfoMessage('Disconnected from game server.');
+        console.debug('[WS][client] close', { roomId, clientId });
       },
       onMessage: (msg) => {
-        if (!msg || typeof msg !== 'object') return;
-        const myId = mmClientIdRef.current;
-        if (msg.type === 'welcome') {
-          return;
-        }
-        if (msg.type === 'room_state') {
-          return;
-        }
-        if (msg.type === 'error') {
-          const detail = typeof msg.detail === 'string' ? msg.detail : 'Server rejected the last action.';
-          setInfoMessage(detail);
-          return;
-        }
-        if (msg.type === 'move') {
-          if (msg.by && myId && msg.by === myId) return;
-          const from = msg.from;
-          const to = msg.to;
-          const sideMsg = msg.side;
-          if (typeof from !== 'string' || typeof to !== 'string') return;
-          const piece = getPieceAtSquare(from);
-          if (!piece) return;
-          const result = movePiece(piece.id, to);
-          if (result && result.success) {
-            dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
-            setInfoMessage('Opponent moved.');
-          }
-          return;
-        }
-        if (msg.type === 'castle') {
-          if (msg.by && myId && msg.by === myId) return;
-          const { piece1_from, piece1_to, piece2_from, piece2_to, side: sideMsg } = msg;
-          const p1 = getPieceAtSquare(piece1_from);
-          const p2 = getPieceAtSquare(piece2_from);
-          if (!p1 || !p2) return;
-          const { canCastle, plan } = canCastleBetween(p1.id, p2.id);
-          if (!canCastle) return;
-          const result = castlePieces(p1.id, p2.id);
-          if (result && result.success) {
-            dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg }));
-            dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg }));
-            setInfoMessage('Opponent castled.');
-          }
-          return;
-        }
+        const fn = wsMessageHandlerRef.current;
+        if (typeof fn === 'function') fn(msg);
+      },
+      onError: () => {
+        console.error('[WS][client] error');
       },
     });
 
     attachWsHandlers();
-  }, [attachWsHandlers, getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch]);
+  }, [attachWsHandlers]);
 
   const handleStartGame = useCallback((settings) => {
     mmAbortRef.current = true;
