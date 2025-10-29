@@ -1,5 +1,5 @@
 // frontend/vite.config.js
-// Purpose: Vite config for the scaffolded app. Logs dev-server errors, injects a browser error reporter, reloads on backend changes, and enables importing SVGs as React components.
+// Purpose: Vite config for the scaffolded app. Logs dev-server errors, injects a browser error reporter, reloads on backend changes, and enables importing SVGs as React components. Proxies HTTP and WebSocket paths to the backend during development.
 // Imports From: None
 // Exported To: 'pnpm run dev' and production builds.
 
@@ -92,8 +92,24 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: {
-      // Ensure HTTP and WebSocket upgrade both proxy to the backend container
-      '/api': { target: 'http://backend:8000', changeOrigin: true, ws: true },
+      // HTTP + WS under /api (current setup used by matchmakingClient.js)
+      '/api': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+
+      // Optional: forward common bare websocket prefixes if you add non-/api WS routes later.
+      '/ws': {
+        target: 'ws://backend:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/socket': {
+        target: 'ws://backend:8000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
     watch: {
       usePolling: true,

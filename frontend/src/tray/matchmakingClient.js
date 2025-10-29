@@ -1,7 +1,9 @@
 // frontend/src/tray/matchmakingClient.js
-// Purpose: Minimal client for the backend matchmaking service and realtime WS play. Persists a stable client ID and provides helpers to join, leave, poll status, metrics, and connect to the game WebSocket.
+// Purpose: Robust client for the backend matchmaking service and realtime WS play. Uses relative API routes for proxying, stable client ID, keepalive pings, and clean teardown.
 // Imports From: None
 // Exported To: ../App.jsx
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 export function getOrCreateClientId() {
   const KEY = 'qc_client_id';
@@ -20,9 +22,7 @@ export function getOrCreateClientId() {
     } else {
       for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256);
     }
-    return Array.from(arr)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    return Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('');
   };
   const newId = `qc_${Date.now().toString(36)}_${rand()}`;
   try {
@@ -36,7 +36,7 @@ export function getOrCreateClientId() {
 export async function joinQueue({ clientId }) {
   const res = await fetch('/api/matchmaking/join', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: JSON_HEADERS,
     body: JSON.stringify({ clientId }),
   });
   if (!res.ok) throw new Error(`joinQueue failed: ${res.status}`);
@@ -46,7 +46,7 @@ export async function joinQueue({ clientId }) {
 export async function leaveQueue(clientId) {
   const res = await fetch('/api/matchmaking/leave', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: JSON_HEADERS,
     body: JSON.stringify({ clientId }),
   });
   if (!res.ok) throw new Error(`leaveQueue failed: ${res.status}`);
@@ -62,10 +62,9 @@ export async function getStatus(clientId) {
 export async function sendHeartbeat(clientId) {
   const res = await fetch('/api/matchmaking/heartbeat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: JSON_HEADERS,
     body: JSON.stringify({ clientId }),
   });
-  // Heartbeat is best-effort; ignore non-2xx silently
   try {
     return await res.json();
   } catch (_) {
@@ -85,7 +84,6 @@ export async function waitForMatch(
 ) {
   const start = Date.now();
 
-  // Immediate status check
   try {
     const first = await getStatus(clientId);
     if (first && first.status === 'matched') return first;
@@ -96,7 +94,6 @@ export async function waitForMatch(
   while (Date.now() - start < timeoutMs) {
     if (typeof shouldStop === 'function' && shouldStop()) return null;
 
-    // Prefer heartbeat hint if available to avoid missing fast matches
     try {
       const hb = await sendHeartbeat(clientId);
       if (hb && hb.roomId) {
@@ -104,7 +101,6 @@ export async function waitForMatch(
           const now = await getStatus(clientId);
           if (now && now.status === 'matched') return now;
         } catch (_) {
-          // If status fetch fails but server hinted the match via heartbeat, synthesize a minimal response
           if (hb.side === 'white' || hb.side === 'black') {
             return {
               status: 'matched',
@@ -133,36 +129,98 @@ export async function waitForMatch(
   return null;
 }
 
-export function connectToRoomWs({ roomId, clientId, onMessage = () => {}, onOpen = () => {}, onClose = () => {} }) {
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  const url = `${proto}://${window.location.host}/api/matchmaking/ws/${encodeURIComponent(roomId)}?clientId=${encodeURIComponent(clientId)}`;
+// Internal helper to build a proxy-friendly WS URL under the /api prefix
+function buildWsUrl(pathWithLeadingSlash) {
+  const isHttps = window.location.protocol === 'https:';
+  const proto = isHttps ? 'wss' : 'ws';
+  const host = window.location.host;
+  return `${proto}://${host}${pathWithLeadingSlash}`;
+}
+
+export function connectToRoomWs({
+  roomId,
+  clientId,
+  onMessage = () => {},
+  onOpen = () => {},
+  onClose = () => {},
+  onError = () => {},
+  keepAliveMs = 25000,
+}) {
+  const url = buildWsUrl(`/api/matchmaking/ws/${encodeURIComponent(roomId)}?clientId=${encodeURIComponent(clientId)}`);
   const ws = new WebSocket(url);
+
+  let pingTimer = null;
+
+  const startKeepAlive = () => {
+    if (keepAliveMs > 0 && !pingTimer) {
+      pingTimer = setInterval(() => {
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping', ts: Date.now() }));
+          }
+        } catch (_) {
+          // ignore send failures
+        }
+      }, keepAliveMs);
+    }
+  };
+
+  const stopKeepAlive = () => {
+    if (pingTimer) {
+      clearInterval(pingTimer);
+      pingTimer = null;
+    }
+  };
 
   const api = {
     ws,
     send(obj) {
       try {
-        ws.send(JSON.stringify(obj));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(obj));
+        }
       } catch (_) {
         // ignore
       }
     },
     close() {
-      try { ws.close(); } catch (_) { /* ignore */ }
-    }
+      try { stopKeepAlive(); ws.close(); } catch (_) { /* ignore */ }
+    },
   };
 
-  ws.addEventListener('open', () => onOpen());
-  ws.addEventListener('close', () => onClose());
-  ws.addEventListener('error', () => onClose());
+  ws.addEventListener('open', () => {
+    startKeepAlive();
+    onOpen();
+  });
+
+  ws.addEventListener('close', () => {
+    stopKeepAlive();
+    onClose();
+  });
+
+  ws.addEventListener('error', () => {
+    stopKeepAlive();
+    onError();
+    onClose();
+  });
+
   ws.addEventListener('message', (ev) => {
     try {
       const data = JSON.parse(ev.data);
+      if (data && data.type === 'pong') return;
       onMessage(data);
     } catch (_) {
       // ignore invalid data
     }
   });
+
+  // Cleanly close on page unload to avoid server-side ghost sockets
+  try {
+    const onUnload = () => { try { api.close(); } catch (_) {} };
+    window.addEventListener('beforeunload', onUnload, { once: true });
+  } catch (_) {
+    // ignore
+  }
 
   return api;
 }
