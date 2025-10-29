@@ -1,5 +1,5 @@
 # backend/app/matchmaking/router.py
-# Purpose: FastAPI router exposing RESTful matchmaking endpoints, delegating to the service layer, and a WebSocket endpoint to relay real-time game events between matched players.
+# Purpose: FastAPI router exposing RESTful matchmaking endpoints, delegating to the service layer, and a WebSocket endpoint to relay real-time game events between matched players. Adds robust per-room locking and debug prints to trace turn state and broadcasts.
 # Imports From: .models, .service
 # Exported To: app.main
 
@@ -14,7 +14,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from .models import HeartbeatPayload, JoinPayload, LeavePayload, MatchResponse
 from . import service
 
-router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])\
+router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])  # noqa: E231
 
 
 @router.post("/join", response_model=MatchResponse)
@@ -45,7 +45,7 @@ def matchmaking_metrics() -> Dict[str, Any]:
 # ------------------------------ WebSocket Game Relay ---------------------------
 
 # In-memory ephemeral WS connections per room
-# { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int } }
+# { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int, "lock": asyncio.Lock } }
 _WS_ROOMS: Dict[str, Dict[str, Any]] = {}
 
 
@@ -54,13 +54,15 @@ def _other_side(side: str) -> str:
 
 
 def _get_room_state(room_id: str) -> Dict[str, Any]:
-    s = _WS_ROOMS.setdefault(room_id, {"conns": {}, "turn": "white", "seq": 0})
+    s = _WS_ROOMS.setdefault(room_id, {"conns": {}, "turn": "white", "seq": 0, "lock": asyncio.Lock()})
     if "conns" not in s:
         s["conns"] = {}
     if "turn" not in s:
         s["turn"] = "white"
     if "seq" not in s:
         s["seq"] = 0
+    if "lock" not in s or not isinstance(s.get("lock"), asyncio.Lock):
+        s["lock"] = asyncio.Lock()
     return s
 
 
@@ -76,13 +78,17 @@ async def _broadcast(room_id: str, payload: Dict[str, Any]) -> None:
     state = _get_room_state(room_id)
     conns = list(state["conns"].values())
     if not conns:
+        print(f"[WS][broadcast] room={room_id} no_connections payload.type={payload.get('type')}")
         return
     text = json.dumps(payload)
+    keys = list(state["conns"].keys())
+    print(
+        f"[WS][broadcast] room={room_id} type={payload.get('type')} seq={payload.get('seq')} turn={payload.get('turn')} to={keys}"
+    )
     for ws in conns:
         try:
             await ws.send_text(text)
         except Exception:
-            # Ignore per-socket failures
             continue
 
 
@@ -93,6 +99,12 @@ async def matchmaking_ws(
     # Reject if no clientId or invalid room
     cid = (clientId or "").strip()
     if not cid or not service.room_exists(room_id) or not service.validate_client_in_room(cid, room_id):
+        try:
+            print(
+                f"[WS][reject] room={room_id} cid={cid or '<none>'} exists={service.room_exists(room_id)} valid={service.validate_client_in_room(cid, room_id)}"
+            )
+        except Exception:
+            pass
         await websocket.close(code=4401)
         return
 
@@ -100,6 +112,7 @@ async def matchmaking_ws(
 
     # Register connection
     state = _get_room_state(room_id)
+
     # Close existing connection for this client if any
     old = state["conns"].get(cid)
     if old is not None:
@@ -107,11 +120,16 @@ async def matchmaking_ws(
             await old.close()
         except Exception:
             pass
+
     state["conns"][cid] = websocket
 
     side = service.get_side_for_client(room_id, cid) or "white"
     room_snapshot = service.get_room_snapshot(room_id) or {"players": [], "sides": {}}
     opponent_present = len(room_snapshot.get("players", [])) == 2
+
+    print(
+        f"[WS][connect] room={room_id} cid={cid} side={side} conns={list(state['conns'].keys())} turn={state['turn']} seq={state['seq']}"
+    )
 
     # Welcome just this client
     await _send(
@@ -162,35 +180,48 @@ async def matchmaking_ws(
                 m_to = str(msg.get("to") or "")
 
                 if m_room != room_id or m_cid != cid:
+                    print(
+                        f"[WS][move][reject] room_or_client_mismatch room={room_id}/{m_room} cid={cid}/{m_cid}"
+                    )
                     await _send(websocket, {"type": "error", "detail": "room_or_client_mismatch"})
                     continue
 
                 true_side = service.get_side_for_client(room_id, cid)
                 if true_side not in ("white", "black"):
+                    print(f"[WS][move][reject] unknown_side room={room_id} cid={cid}")
                     await _send(websocket, {"type": "error", "detail": "unknown_side"})
                     continue
 
-                if state["turn"] != true_side:
-                    await _send(websocket, {"type": "error", "detail": "not_your_turn"})
-                    continue
+                # Serialize turn/seq updates per room
+                async with state["lock"]:
+                    if state["turn"] != true_side:
+                        print(
+                            f"[WS][move][reject] not_your_turn room={room_id} cid={cid} side={true_side} turn={state['turn']}"
+                        )
+                        await _send(websocket, {"type": "error", "detail": "not_your_turn"})
+                        continue
 
-                if not m_from or not m_to:
-                    await _send(websocket, {"type": "error", "detail": "invalid_move"})
-                    continue
+                    if not m_from or not m_to:
+                        print(f"[WS][move][reject] invalid_move room={room_id} cid={cid} from={m_from} to={m_to}")
+                        await _send(websocket, {"type": "error", "detail": "invalid_move"})
+                        continue
 
-                # Accept and broadcast using authoritative side
-                state["seq"] += 1
-                state["turn"] = _other_side(true_side)
-                payload = {
-                    "type": "move",
-                    "roomId": room_id,
-                    "by": cid,
-                    "from": m_from,
-                    "to": m_to,
-                    "side": true_side,
-                    "seq": state["seq"],
-                    "turn": state["turn"],
-                }
+                    # Accept and broadcast using authoritative side
+                    state["seq"] += 1
+                    state["turn"] = _other_side(true_side)
+                    payload = {
+                        "type": "move",
+                        "roomId": room_id,
+                        "by": cid,
+                        "from": m_from,
+                        "to": m_to,
+                        "side": true_side,
+                        "seq": state["seq"],
+                        "turn": state["turn"],
+                    }
+                    print(
+                        f"[WS][move] room={room_id} by={cid} side={true_side} from={m_from} to={m_to} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
+                    )
                 await _broadcast(room_id, payload)
                 continue
 
@@ -204,46 +235,64 @@ async def matchmaking_ws(
                 p2t = str(msg.get("piece2_to") or "")
 
                 if m_room != room_id or m_cid != cid:
+                    print(
+                        f"[WS][castle][reject] room_or_client_mismatch room={room_id}/{m_room} cid={cid}/{m_cid}"
+                    )
                     await _send(websocket, {"type": "error", "detail": "room_or_client_mismatch"})
                     continue
 
                 true_side = service.get_side_for_client(room_id, cid)
                 if true_side not in ("white", "black"):
+                    print(f"[WS][castle][reject] unknown_side room={room_id} cid={cid}")
                     await _send(websocket, {"type": "error", "detail": "unknown_side"})
                     continue
 
-                if state["turn"] != true_side:
-                    await _send(websocket, {"type": "error", "detail": "not_your_turn"})
-                    continue
+                async with state["lock"]:
+                    if state["turn"] != true_side:
+                        print(
+                            f"[WS][castle][reject] not_your_turn room={room_id} cid={cid} side={true_side} turn={state['turn']}"
+                        )
+                        await _send(websocket, {"type": "error", "detail": "not_your_turn"})
+                        continue
 
-                if not (p1f and p1t and p2f and p2t):
-                    await _send(websocket, {"type": "error", "detail": "invalid_castle"})
-                    continue
+                    if not (p1f and p1t and p2f and p2t):
+                        print(
+                            f"[WS][castle][reject] invalid_castle room={room_id} cid={cid} p1={p1f}->{p1t} p2={p2f}->{p2t}"
+                        )
+                        await _send(websocket, {"type": "error", "detail": "invalid_castle"})
+                        continue
 
-                state["seq"] += 1
-                state["turn"] = _other_side(true_side)
-                payload = {
-                    "type": "castle",
-                    "roomId": room_id,
-                    "by": cid,
-                    "side": true_side,
-                    "piece1_from": p1f,
-                    "piece1_to": p1t,
-                    "piece2_from": p2f,
-                    "piece2_to": p2t,
-                    "seq": state["seq"],
-                    "turn": state["turn"],
-                }
+                    state["seq"] += 1
+                    state["turn"] = _other_side(true_side)
+                    payload = {
+                        "type": "castle",
+                        "roomId": room_id,
+                        "by": cid,
+                        "side": true_side,
+                        "piece1_from": p1f,
+                        "piece1_to": p1t,
+                        "piece2_from": p2f,
+                        "piece2_to": p2t,
+                        "seq": state["seq"],
+                        "turn": state["turn"],
+                    }
+                    print(
+                        f"[WS][castle] room={room_id} by={cid} side={true_side} p1={p1f}->{p1t} p2={p2f}->{p2t} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
+                    )
                 await _broadcast(room_id, payload)
                 continue
 
             # Unknown message type
+            print(f"[WS][unknown] room={room_id} cid={cid} type={mtype}")
             await _send(websocket, {"type": "error", "detail": "unknown_type"})
 
     except WebSocketDisconnect:
-        pass
-    except Exception:
-        # Any other error ends the connection
+        print(f"[WS][disconnect] room={room_id} cid={cid}")
+    except Exception as ex:  # pragma: no cover
+        try:
+            print(f"[WS][error] room={room_id} cid={cid} ex={ex}")
+        except Exception:
+            pass
         try:
             await websocket.close()
         except Exception:
@@ -257,6 +306,9 @@ async def matchmaking_ws(
             except Exception:
                 pass
             room_snapshot = service.get_room_snapshot(room_id) or {"players": [], "sides": {}}
+            print(
+                f"[WS][cleanup] room={room_id} removed={cid} remaining={list(room_state.get('conns', {}).keys())} turn={room_state.get('turn')} seq={room_state.get('seq')}"
+            )
             await _broadcast(
                 room_id,
                 {
