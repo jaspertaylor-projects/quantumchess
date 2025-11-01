@@ -1,5 +1,5 @@
 # backend/app/matchmaking/router.py
-# Purpose: FastAPI router exposing RESTful matchmaking endpoints, delegating to the service layer, and a WebSocket endpoint to relay real-time game events between matched players. Adds robust per-room locking and debug prints to trace turn state and broadcasts.
+# Purpose: FastAPI router exposing RESTful matchmaking endpoints and a WebSocket endpoint to relay real-time game events and authoritative server-side chess clock state per room.
 # Imports From: .models, .service
 # Exported To: app.main
 
@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from .models import HeartbeatPayload, JoinPayload, LeavePayload, MatchResponse
 from . import service
+from .models import HeartbeatPayload, JoinPayload, LeavePayload, MatchResponse
 
 router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])  # noqa: E231
 
@@ -45,7 +46,9 @@ def matchmaking_metrics() -> Dict[str, Any]:
 # ------------------------------ WebSocket Game Relay ---------------------------
 
 # In-memory ephemeral WS connections per room
-# { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int, "lock": asyncio.Lock } }
+# { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int, "lock": asyncio.Lock,
+#              "clock": { "baseMs": int, "incMs": int, "whiteMs": int, "blackMs": int, "active": str,
+#                         "lastMono": float, "started": bool }, "clock_task": asyncio.Task|None } }
 _WS_ROOMS: Dict[str, Dict[str, Any]] = {}
 
 
@@ -53,8 +56,20 @@ def _other_side(side: str) -> str:
     return "black" if side == "white" else "white"
 
 
+def _now_mono() -> float:
+    return time.monotonic()
+
+
 def _get_room_state(room_id: str) -> Dict[str, Any]:
-    s = _WS_ROOMS.setdefault(room_id, {"conns": {}, "turn": "white", "seq": 0, "lock": asyncio.Lock()})
+    s = _WS_ROOMS.setdefault(
+        room_id,
+        {
+            "conns": {},
+            "turn": "white",
+            "seq": 0,
+            "lock": asyncio.Lock(),
+        },
+    )
     if "conns" not in s:
         s["conns"] = {}
     if "turn" not in s:
@@ -63,7 +78,24 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
         s["seq"] = 0
     if "lock" not in s or not isinstance(s.get("lock"), asyncio.Lock):
         s["lock"] = asyncio.Lock()
+    _ensure_clock(s)
     return s
+
+
+def _ensure_clock(state: Dict[str, Any]) -> None:
+    if "clock" not in state or not isinstance(state.get("clock"), dict):
+        # Default to 5+0 control. Single source of truth on the server.
+        state["clock"] = {
+            "baseMs": 5 * 60 * 1000,
+            "incMs": 0,
+            "whiteMs": 5 * 60 * 1000,
+            "blackMs": 5 * 60 * 1000,
+            "active": "none",  # "white" | "black" | "none"
+            "lastMono": _now_mono(),
+            "started": False,
+        }
+    if "clock_task" not in state:
+        state["clock_task"] = None
 
 
 async def _send(ws: WebSocket, payload: Dict[str, Any]) -> None:
@@ -78,7 +110,9 @@ async def _broadcast(room_id: str, payload: Dict[str, Any]) -> None:
     state = _get_room_state(room_id)
     conns = list(state["conns"].values())
     if not conns:
-        print(f"[WS][broadcast] room={room_id} no_connections payload.type={payload.get('type')}")
+        print(
+            f"[WS][broadcast] room={room_id} no_connections payload.type={payload.get('type')}"
+        )
         return
     text = json.dumps(payload)
     keys = list(state["conns"].keys())
@@ -90,6 +124,87 @@ async def _broadcast(room_id: str, payload: Dict[str, Any]) -> None:
             await ws.send_text(text)
         except Exception:
             continue
+
+
+def _settle_clock_locked(state: Dict[str, Any]) -> None:
+    # Mutates stored whiteMs/blackMs by subtracting elapsed from active side.
+    clk = state.get("clock", {})
+    nowm = _now_mono()
+    active = clk.get("active", "none")
+    last = float(clk.get("lastMono", nowm))
+    if active in ("white", "black"):
+        elapsed_ms = int(max(0.0, (nowm - last) * 1000.0))
+        if elapsed_ms > 0:
+            if active == "white":
+                clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) - elapsed_ms)
+            else:
+                clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) - elapsed_ms)
+            clk["lastMono"] = nowm
+            # Stop the clock if time hit zero
+            if clk.get("whiteMs", 0) <= 0 or clk.get("blackMs", 0) <= 0:
+                clk["active"] = "none"
+    else:
+        clk["lastMono"] = nowm
+    state["clock"] = clk
+
+
+def _clock_view(state: Dict[str, Any]) -> Dict[str, Any]:
+    # Returns a snapshot suitable for clients. Includes dynamic elapsed without mutating stored values.
+    clk = state.get("clock", {})
+    nowm = _now_mono()
+    active = clk.get("active", "none")
+    last = float(clk.get("lastMono", nowm))
+    w = int(clk.get("whiteMs", 0))
+    b = int(clk.get("blackMs", 0))
+    if active in ("white", "black"):
+        elapsed_ms = int(max(0.0, (nowm - last) * 1000.0))
+        if elapsed_ms > 0:
+            if active == "white":
+                w = max(0, w - elapsed_ms)
+            else:
+                b = max(0, b - elapsed_ms)
+    base_ms = int(clk.get("baseMs", 0))
+    inc_ms = int(clk.get("incMs", 0))
+    return {
+        "baseMs": base_ms,
+        "incMs": inc_ms,
+        "whiteMs": int(w),
+        "blackMs": int(b),
+        "active": active,
+        "serverNow": time.time(),
+    }
+
+
+async def _ensure_clock_task(room_id: str) -> None:
+    state = _get_room_state(room_id)
+    if state.get("clock_task") and not state["clock_task"].done():
+        return
+
+    async def _clock_loop() -> None:
+        try:
+            while True:
+                await asyncio.sleep(0.5)
+                s = _get_room_state(room_id)
+                # End loop if no connections remain
+                if not s["conns"]:
+                    break
+                # Broadcast periodic clock update
+                view = _clock_view(s)
+                payload = {
+                    "type": "clock_update",
+                    "roomId": room_id,
+                    "clock": view,
+                    "turn": s.get("turn", "white"),
+                    "seq": s.get("seq", 0),
+                }
+                await _broadcast(room_id, payload)
+        except Exception as ex:
+            try:
+                print(f"[WS][clock][task_error] room={room_id} ex={ex}")
+            except Exception:
+                pass
+
+    state["clock_task"] = asyncio.create_task(_clock_loop())
 
 
 @router.websocket("/ws/{room_id}")
@@ -131,6 +246,9 @@ async def matchmaking_ws(
         f"[WS][connect] room={room_id} cid={cid} side={side} conns={list(state['conns'].keys())} turn={state['turn']} seq={state['seq']}"
     )
 
+    # Kick off periodic clock updates for the room
+    await _ensure_clock_task(room_id)
+
     # Welcome just this client
     await _send(
         websocket,
@@ -141,6 +259,7 @@ async def matchmaking_ws(
             "opponentPresent": opponent_present,
             "turn": state["turn"],
             "seq": state["seq"],
+            "clock": _clock_view(state),
         },
     )
 
@@ -155,6 +274,7 @@ async def matchmaking_ws(
             "connected": list(state["conns"].keys()),
             "turn": state["turn"],
             "seq": state["seq"],
+            "clock": _clock_view(state),
         },
     )
 
@@ -169,7 +289,8 @@ async def matchmaking_ws(
 
             mtype = msg.get("type")
             if mtype == "ping":
-                await _send(websocket, {"type": "pong"})
+                # Also return a clock snapshot with pong to help clients sync
+                await _send(websocket, {"type": "pong", "clock": _clock_view(state)})
                 continue
 
             if mtype == "move":
@@ -192,7 +313,7 @@ async def matchmaking_ws(
                     await _send(websocket, {"type": "error", "detail": "unknown_side"})
                     continue
 
-                # Serialize turn/seq updates per room
+                # Serialize turn/seq/clock updates per room
                 async with state["lock"]:
                     if state["turn"] != true_side:
                         print(
@@ -202,13 +323,39 @@ async def matchmaking_ws(
                         continue
 
                     if not m_from or not m_to:
-                        print(f"[WS][move][reject] invalid_move room={room_id} cid={cid} from={m_from} to={m_to}")
+                        print(
+                            f"[WS][move][reject] invalid_move room={room_id} cid={cid} from={m_from} to={m_to}"
+                        )
                         await _send(websocket, {"type": "error", "detail": "invalid_move"})
                         continue
 
-                    # Accept and broadcast using authoritative side
+                    # Settle running clock up to now
+                    _settle_clock_locked(state)
+
+                    # Apply increment to the mover
+                    clk = state.get("clock", {})
+                    inc_ms = int(clk.get("incMs", 0))
+                    if true_side == "white":
+                        clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                    else:
+                        clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
+
+                    # Update sequence and turn
                     state["seq"] += 1
                     state["turn"] = _other_side(true_side)
+
+                    # Start white's clock after the first move only, otherwise run normal (active = side to move)
+                    if not bool(clk.get("started")):
+                        clk["started"] = True
+                        clk["active"] = "white"
+                        clk["lastMono"] = _now_mono()
+                    else:
+                        # Active clock follows the side to move for subsequent moves
+                        clk["active"] = state["turn"]
+                        clk["lastMono"] = _now_mono()
+
+                    state["clock"] = clk
+
                     payload = {
                         "type": "move",
                         "roomId": room_id,
@@ -218,6 +365,7 @@ async def matchmaking_ws(
                         "side": true_side,
                         "seq": state["seq"],
                         "turn": state["turn"],
+                        "clock": _clock_view(state),
                     }
                     print(
                         f"[WS][move] room={room_id} by={cid} side={true_side} from={m_from} to={m_to} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
@@ -262,8 +410,28 @@ async def matchmaking_ws(
                         await _send(websocket, {"type": "error", "detail": "invalid_castle"})
                         continue
 
+                    # Settle clock then apply increment and turn switch
+                    _settle_clock_locked(state)
+                    clk = state.get("clock", {})
+                    inc_ms = int(clk.get("incMs", 0))
+                    if true_side == "white":
+                        clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                    else:
+                        clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
+
                     state["seq"] += 1
                     state["turn"] = _other_side(true_side)
+
+                    if not bool(clk.get("started")):
+                        clk["started"] = True
+                        clk["active"] = "white"
+                        clk["lastMono"] = _now_mono()
+                    else:
+                        clk["active"] = state["turn"]
+                        clk["lastMono"] = _now_mono()
+
+                    state["clock"] = clk
+
                     payload = {
                         "type": "castle",
                         "roomId": room_id,
@@ -275,6 +443,7 @@ async def matchmaking_ws(
                         "piece2_to": p2t,
                         "seq": state["seq"],
                         "turn": state["turn"],
+                        "clock": _clock_view(state),
                     }
                     print(
                         f"[WS][castle] room={room_id} by={cid} side={true_side} p1={p1f}->{p1t} p2={p2f}->{p2t} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
@@ -319,5 +488,17 @@ async def matchmaking_ws(
                     "connected": list(room_state.get("conns", {}).keys()),
                     "turn": room_state.get("turn", "white"),
                     "seq": room_state.get("seq", 0),
+                    "clock": _clock_view(room_state),
                 },
             )
+
+        # If no connections remain, stop the clock task if running
+        final_state = _WS_ROOMS.get(room_id)
+        if final_state and not final_state.get("conns"):
+            task = final_state.get("clock_task")
+            if task and not task.done():
+                try:
+                    task.cancel()
+                except Exception:
+                    pass
+            final_state["clock_task"] = None

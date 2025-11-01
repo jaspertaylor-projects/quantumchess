@@ -1,52 +1,10 @@
 // frontend/src/hooks/useChessClock.js
-// Purpose: Provide a reusable chess clock hook that parses time control, tracks remaining time per side, applies increments after moves, and exposes formatted clock strings and active flags.
-// Imports From: None
+// Purpose: Provide a reusable offline chess clock hook that parses time control, tracks remaining time per side, applies increments after moves, and exposes formatted clock strings and active flags. Not used for online games.
+// Imports From: ./clockUtils.js
 // Exported To: ../App.jsx
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-function parseTimeControlString(tc) {
-  if (typeof tc !== 'string') return { baseMinutes: 5, incrementSeconds: 0 };
-  const cleaned = tc.replace(/\s+/g, '');
-  const m = cleaned.match(/^(\d+)([+:|](\d+))?$/);
-  if (!m) return { baseMinutes: 5, incrementSeconds: 0 };
-  const base = parseInt(m[1], 10);
-  const inc = m[3] ? parseInt(m[3], 10) : 0;
-  const baseMinutes = Number.isFinite(base) ? Math.max(0, base) : 5;
-  const incrementSeconds = Number.isFinite(inc) ? Math.max(0, inc) : 0;
-  return { baseMinutes, incrementSeconds };
-}
-
-function clampMs(x) {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.floor(x));
-}
-
-function formatClock(ms) {
-  const clamped = clampMs(ms);
-  const totalSeconds = Math.floor(clamped / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  const under20s = clamped < 20000;
-  if (under20s) {
-    const tenths = Math.floor((clamped % 1000) / 100);
-    const mm = hours > 0 ? String(minutes).padStart(2, '0') : String(minutes);
-    const ss = String(seconds).padStart(2, '0');
-    if (hours > 0) {
-      return `${hours}:${mm}:${ss}.${tenths}`;
-    }
-    return `${mm}:${ss}.${tenths}`;
-  }
-
-  const mm = hours > 0 ? String(minutes).padStart(2, '0') : String(minutes);
-  const ss = String(seconds).padStart(2, '0');
-  if (hours > 0) {
-    return `${hours}:${mm}:${ss}`;
-    }
-  return `${mm}:${ss}`;
-}
+import { parseTimeControlString, clampMs, formatClock } from './clockUtils.js';
 
 export default function useChessClock({ timeControl = '5+0', sideToMove = 'white', isLive = true, moves = [], gameInstanceId = 0 }) {
   const { baseMinutes, incrementSeconds } = useMemo(() => parseTimeControlString(timeControl), [timeControl]);

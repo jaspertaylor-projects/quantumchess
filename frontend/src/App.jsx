@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking and WebSocket-based real-time play. Handles local/legal moves, castling, checkmate, and syncs moves over the network when online.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js
+// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking with a server-authoritative chess clock. Handles legal moves, castling, checkmate, and syncs moves and clock over WebSocket.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js, ./hooks/clockUtils.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -22,6 +22,7 @@ import AppHeader from './components/AppHeader.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import useChessClock from './hooks/useChessClock.js';
+import { formatClock, clampMs } from './hooks/clockUtils.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -71,6 +72,9 @@ export default function App() {
   // Always-fresh WS message handler to avoid stale-closure bugs
   const wsMessageHandlerRef = useRef(null);
 
+  // Server-authoritative clock state for online games
+  const [serverClock, setServerClock] = useState({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
+
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
@@ -83,6 +87,7 @@ export default function App() {
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
     return getLegalMoves(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, getLegalMoves]);
 
   const whitePlayer = 'White';
@@ -465,12 +470,26 @@ export default function App() {
       if (!msg || typeof msg !== 'object') return;
       const myId = mmClientIdRef.current;
 
+      const maybeApplyClock = (clock) => {
+        if (!clock) return;
+        const w = clampMs(Number(clock.whiteMs || 0));
+        const b = clampMs(Number(clock.blackMs || 0));
+        const active = clock.active === 'white' || clock.active === 'black' ? clock.active : 'none';
+        setServerClock({ whiteMs: w, blackMs: b, active });
+      };
+
       if (msg.type === 'welcome') {
         console.debug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
+        maybeApplyClock(msg.clock);
         return;
       }
       if (msg.type === 'room_state') {
         console.debug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
+        maybeApplyClock(msg.clock);
+        return;
+      }
+      if (msg.type === 'clock_update') {
+        maybeApplyClock(msg.clock);
         return;
       }
       if (msg.type === 'error') {
@@ -481,7 +500,11 @@ export default function App() {
       }
 
       if (msg.type === 'move') {
-        if (msg.by && myId && msg.by === myId) return; // ignore echo of our own move
+        if (msg.by && myId && msg.by === myId) {
+          // Sync clock even if echo is ignored
+          maybeApplyClock(msg.clock);
+          return;
+        }
         const from = msg.from;
         const to = msg.to;
         const sideMsg = msg.side;
@@ -489,6 +512,7 @@ export default function App() {
         const piece = getPieceAtSquare(from);
         if (!piece) {
           console.warn('[WS][client] move: piece not found at from square', { from, to, sideMsg });
+          maybeApplyClock(msg.clock);
           return;
         }
         const result = movePiece(piece.id, to);
@@ -499,21 +523,27 @@ export default function App() {
         } else {
           console.warn('[WS][client] failed to apply opponent move', { from, to, sideMsg });
         }
+        maybeApplyClock(msg.clock);
         return;
       }
 
       if (msg.type === 'castle') {
-        if (msg.by && myId && msg.by === myId) return; // ignore echo
+        if (msg.by && myId && msg.by === myId) {
+          maybeApplyClock(msg.clock);
+          return; // ignore echo
+        }
         const { piece1_from, piece1_to, piece2_from, piece2_to, side: sideMsg } = msg;
         const p1 = getPieceAtSquare(piece1_from);
         const p2 = getPieceAtSquare(piece2_from);
         if (!p1 || !p2) {
           console.warn('[WS][client] castle: pieces not found at from squares', { p1: piece1_from, p2: piece2_from });
+          maybeApplyClock(msg.clock);
           return;
         }
         const { canCastle, plan } = canCastleBetween(p1.id, p2.id);
         if (!canCastle || !plan) {
           console.warn('[WS][client] castle: cannot castle between received pieces', { piece1_from, piece2_from });
+          maybeApplyClock(msg.clock);
           return;
         }
         const result = castlePieces(p1.id, p2.id);
@@ -525,6 +555,7 @@ export default function App() {
         } else {
           console.warn('[WS][client] failed to apply opponent castle', { plan, side: sideMsg });
         }
+        maybeApplyClock(msg.clock);
         return;
       }
 
@@ -553,6 +584,7 @@ export default function App() {
       onClose: () => {
         setInfoMessage('Disconnected from game server.');
         console.debug('[WS][client] close', { roomId, clientId });
+        setServerClock({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
       },
       onMessage: (msg) => {
         const fn = wsMessageHandlerRef.current;
@@ -578,6 +610,9 @@ export default function App() {
     isOnlineGameRef.current = false;
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
+
+    // Reset server clock snapshot for offline game
+    setServerClock({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
 
     if (settings && settings.gameMode === 'online') {
       const clientId = getOrCreateClientId();
@@ -784,14 +819,38 @@ export default function App() {
     return `${w} wins by checkmate!`;
   }, [gameOver, winner]);
 
-  // Chess clock integration
-  const clock = useChessClock({
+  // Offline chess clock (fallback for local games only)
+  const localClock = useChessClock({
     timeControl,
     sideToMove,
-    isLive: canMakeMove && !gameOver,
+    isLive: canMakeMove && !gameOver && !isOnlineGameRef.current,
     moves,
     gameInstanceId,
   });
+
+  // Derive the effective clock data to display depending on online/offline
+  const effectiveClock = useMemo(() => {
+    if (isOnlineGameRef.current) {
+      const w = clampMs(serverClock.whiteMs || 0);
+      const b = clampMs(serverClock.blackMs || 0);
+      const active = serverClock.active === 'white' || serverClock.active === 'black' ? serverClock.active : 'none';
+      const whiteText = formatClock(w);
+      const blackText = formatClock(b);
+      const whiteLow = w <= 10000;
+      const blackLow = b <= 10000;
+      return {
+        whiteMs: w,
+        blackMs: b,
+        whiteText,
+        blackText,
+        whiteActive: active === 'white' && w > 0 && b > 0,
+        blackActive: active === 'black' && w > 0 && b > 0,
+        whiteLow,
+        blackLow,
+      };
+    }
+    return localClock;
+  }, [serverClock, localClock]);
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -805,9 +864,9 @@ export default function App() {
               playerName={blackPlayer}
               rating={blackRating}
               playerBarColors={playerBarColors}
-              clockText={clock.blackText}
-              clockActive={clock.blackActive}
-              clockLow={clock.blackLow}
+              clockText={effectiveClock.blackText}
+              clockActive={effectiveClock.blackActive}
+              clockLow={effectiveClock.blackLow}
               capturedPawns={blackCapturedPawns}
               capturedOthers={blackCapturedOthers}
               svgStyles={svgStyles}
@@ -853,9 +912,9 @@ export default function App() {
               playerName={whitePlayer}
               rating={whiteRating}
               playerBarColors={playerBarColors}
-              clockText={clock.whiteText}
-              clockActive={clock.whiteActive}
-              clockLow={clock.whiteLow}
+              clockText={effectiveClock.whiteText}
+              clockActive={effectiveClock.whiteActive}
+              clockLow={effectiveClock.whiteLow}
               capturedPawns={whiteCapturedPawns}
               capturedOthers={whiteCapturedOthers}
               svgStyles={svgStyles}
