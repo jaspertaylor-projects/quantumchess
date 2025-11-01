@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 // Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking and WebSocket-based real-time play. Handles local/legal moves, castling, checkmate, and syncs moves over the network when online.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -21,6 +21,7 @@ import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoom
 import AppHeader from './components/AppHeader.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
+import useChessClock from './hooks/useChessClock.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -57,6 +58,9 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
 
+  // Game instance ID for clock resets
+  const [gameInstanceId, setGameInstanceId] = useState(0);
+
   // Matchmaking + WebSocket
   const [mmActive, setMmActive] = useState(false);
   const mmAbortRef = useRef(false);
@@ -73,6 +77,8 @@ export default function App() {
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
+  const timeControl = useSelector((state) => state.settings.timeControl || '5+0');
+  const moves = useSelector((state) => state.game.moves || []);
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
@@ -566,6 +572,9 @@ export default function App() {
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
 
+    // New game instance for the clock system
+    setGameInstanceId((n) => n + 1);
+
     isOnlineGameRef.current = false;
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
@@ -775,6 +784,15 @@ export default function App() {
     return `${w} wins by checkmate!`;
   }, [gameOver, winner]);
 
+  // Chess clock integration
+  const clock = useChessClock({
+    timeControl,
+    sideToMove,
+    isLive: canMakeMove && !gameOver,
+    moves,
+    gameInstanceId,
+  });
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <AppHeader svgStyles={svgStyles} />
@@ -787,6 +805,9 @@ export default function App() {
               playerName={blackPlayer}
               rating={blackRating}
               playerBarColors={playerBarColors}
+              clockText={clock.blackText}
+              clockActive={clock.blackActive}
+              clockLow={clock.blackLow}
               capturedPawns={blackCapturedPawns}
               capturedOthers={blackCapturedOthers}
               svgStyles={svgStyles}
@@ -832,6 +853,9 @@ export default function App() {
               playerName={whitePlayer}
               rating={whiteRating}
               playerBarColors={playerBarColors}
+              clockText={clock.whiteText}
+              clockActive={clock.whiteActive}
+              clockLow={clock.whiteLow}
               capturedPawns={whiteCapturedPawns}
               capturedOthers={whiteCapturedOthers}
               svgStyles={svgStyles}

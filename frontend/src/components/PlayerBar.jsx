@@ -1,5 +1,5 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating and a compact captured pieces area; color-themable via playerBarColors prop.
+// Purpose: Display a player's info bar with name/rating, a chess clock, and a compact captured pieces area; color-themable via playerBarColors prop.
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
@@ -95,6 +95,9 @@ export default function PlayerBar({
   playerName = 'Player',
   rating = '????',
   playerBarColors = { background: '#000', text: '#fff' },
+  clockText = '—:—',
+  clockActive = false,
+  clockLow = false,
   capturedPawns = [],
   capturedOthers = [],
   svgStyles = { white: {}, black: {} },
@@ -155,10 +158,23 @@ export default function PlayerBar({
       height: '100%',
       fontWeight: 600,
       letterSpacing: '0.03em',
-      fontSize: 'clamp(0.72rem, 1.8vw, 0.95rem)',
+      fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
       color: 'currentColor',
-      opacity: 0.82,
+      opacity: 0.92,
       lineHeight: 1,
+      gap: 8,
+    },
+    clockPill: {
+      padding: '2px 8px',
+      borderRadius: 8,
+      background: clockActive ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)',
+      border: clockActive ? `1px solid ${theme.border}` : `1px dashed ${theme.border}`,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontWeight: 800,
+      letterSpacing: '0.04em',
+      color: clockLow ? '#ff6b6b' : 'currentColor',
+      boxShadow: clockActive ? '0 1px 6px rgba(0,0,0,0.25) inset' : 'none',
+      transition: 'background 0.15s ease, color 0.15s ease, border 0.15s ease',
     },
     capturedArea: {
       display: 'flex',
@@ -196,7 +212,9 @@ export default function PlayerBar({
           <span className={`qc-player-rating-text qc-player-rating-text--${side}`} style={styles.playerRatingText}>({rating})</span>
         </div>
         <div className={`qc-player-rating-row qc-player-rating-row--${side}`} style={styles.playerRatingRow}>
-          {/* Timer placeholder */}
+          <span className={`qc-player-clock-text qc-player-clock-text--${side}`} style={styles.clockPill} aria-label={`${side} remaining time`}>
+            {clockText}
+          </span>
         </div>
       </div>
       <div className={`qc-captured-area qc-captured-area--${side}`} style={styles.capturedArea} aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}>
