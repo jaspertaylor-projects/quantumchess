@@ -17,6 +17,9 @@ import {
   isCheckmateAfterPositionResolved,
   simulateCastle,
   simulateStandardMove,
+  movesForType,
+  canSideCaptureSquare,
+  computeCastlePlanInPosition,
 } from './quantumEngine.js';
 
 export default function useQuantumGameState() {
@@ -81,10 +84,7 @@ export default function useQuantumGameState() {
 
     const merged = new Set();
     for (const t of piece.possibleTypes) {
-      const list = (function movesForTypeLocal(tLocal, file, rank, occ, side, options = {}) {
-        const { movesForType } = require('./quantumEngine.js');
-        return movesForType(tLocal, file, rank, occ, side, options);
-      }) (t, f, r, occupancy, piece.side, { isFirstMove });
+      const list = movesForType(t, f, r, occupancy, piece.side, { isFirstMove });
       for (const sq of list) merged.add(sq);
     }
 
@@ -96,7 +96,6 @@ export default function useQuantumGameState() {
       const kings = sim.pieces.filter((p) => !p.captured && p.side === movingSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
       let collapsedCapturable = false;
       if (kings.length > 0) {
-        const { canSideCaptureSquare } = require('./quantumEngine.js');
         const opponent = movingSide === 'white' ? 'black' : 'white';
         for (const k of kings) {
           if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) { collapsedCapturable = true; break; }
@@ -136,7 +135,6 @@ export default function useQuantumGameState() {
     const movingSide = moving.side;
     const kings = sim.pieces.filter((p) => !p.captured && p.side === movingSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
     if (kings.length > 0) {
-      const { canSideCaptureSquare } = require('./quantumEngine.js');
       const opponent = movingSide === 'white' ? 'black' : 'white';
       for (const k of kings) {
         if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) {
@@ -160,11 +158,10 @@ export default function useQuantumGameState() {
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot, gameOver]);
 
   const canCastleBetween = useCallback((idA, idB) => {
-    const { computeCastlePlanInPosition, simulateCastle: simCastle, canSideCaptureSquare } = require('./quantumEngine.js');
     const result = computeCastlePlanInPosition(pieces, sideToMove, idA, idB);
     if (!result.canCastle) return result;
 
-    const sim = simCastle(pieces, result.plan);
+    const sim = simulateCastle(pieces, result.plan);
     if (!sim.ok) return { canCastle: false, reason: sim.reason || 'Castling simulation failed.' };
     const moverSide = pieces.find((p) => p.id === result.plan.piece1_id)?.side || sideToMove;
     const kings = sim.pieces.filter((p) => !p.captured && p.side === moverSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
@@ -183,15 +180,13 @@ export default function useQuantumGameState() {
   const castlePieces = useCallback((idA, idB) => {
     if (!canMakeMove) return { success: false, reason: gameOver ? 'Game over.' : 'Cannot make moves while viewing history.' };
 
-    const { computeCastlePlanInPosition, simulateCastle: simCastle, canSideCaptureSquare } = require('./quantumEngine.js');
-
     const { canCastle, reason, plan } = computeCastlePlanInPosition(pieces, sideToMove, idA, idB);
     if (!canCastle) return { success: false, reason: reason || 'Castling is not possible.' };
 
     const signature = `${sideToMove}:castle:${plan.piece1_id},${plan.piece2_id}:${plan.piece1_from}->${plan.piece1_to}`;
     if (lastMoveSignatureRef.current === signature) return { success: false };
 
-    const sim = simCastle(pieces, plan);
+    const sim = simulateCastle(pieces, plan);
     if (!sim.ok) return { success: false, reason: sim.reason || 'Castling failed.' };
 
     const moverSide = pieces.find((p) => p.id === plan.piece1_id)?.side || sideToMove;
