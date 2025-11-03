@@ -1,7 +1,10 @@
 // frontend/src/chessboard/svgRasterizer.js
-// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize to PNG via Canvas (DPR-aware), and cache results in-memory and in localStorage keyed by colors, size, DPR, and render hints. Also exposes cache invalidation helpers.
+// Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, rasterize once at a fixed 512x512 PNG via Canvas, and cache results in-memory and in localStorage keyed by colors and render hints. Display scaling is handled by consumers.
 // Imports From: None
 // Exported To: ./RasterizedSvgImg.jsx, ./QuantumPiece.jsx, ./rasterPrewarm.js
+
+// Fixed rasterization base size for all PNGs
+const RASTER_BASE_SIZE = 512;
 
 // In-memory caches to avoid duplicate work during a session
 const dataUrlCache = new Map(); // key -> dataURL
@@ -132,18 +135,6 @@ function storageSet(key, value) {
   }
 }
 
-function getNormalizedPixelRatio() {
-  let pr = 1;
-  try {
-    pr = typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1;
-  } catch {
-    pr = 1;
-  }
-  // Clamp and quantize to avoid cache explosion from fractional PRs
-  const clamped = Math.max(1, Math.min(3, pr));
-  return Math.round(clamped * 4) / 4; // quarter-step increments
-}
-
 export function clearRasterCaches() {
   console.log('[Rasterizer] Clearing in-memory and persisted PNG caches');
   dataUrlCache.clear();
@@ -152,7 +143,8 @@ export function clearRasterCaches() {
     const keys = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('qcPngCacheV1:')) keys.push(k);
+      if (!k) continue;
+      if (k.startsWith('qcPngCacheV1:') || k.startsWith('qcPngCacheV2:')) keys.push(k);
     }
     for (const k of keys) localStorage.removeItem(k);
   } catch {
@@ -160,7 +152,7 @@ export function clearRasterCaches() {
   }
 }
 
-async function rasterizeSvgToDataUrl(svgText, size, renderHint, pixelRatio) {
+async function rasterizeSvgToDataUrl(svgText, renderHint) {
   const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(svgBlob);
   try {
@@ -175,17 +167,14 @@ async function rasterizeSvgToDataUrl(svgText, size, renderHint, pixelRatio) {
     await p;
 
     const canvas = document.createElement('canvas');
-    const pr = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
-    canvas.width = Math.max(1, Math.round(size * pr));
-    canvas.height = Math.max(1, Math.round(size * pr));
+    canvas.width = RASTER_BASE_SIZE;
+    canvas.height = RASTER_BASE_SIZE;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (ctx) {
       ctx.imageSmoothingEnabled = renderHint !== 'crisp';
-      // Draw in CSS pixel coordinates with a DPR-scaled backing store
-      if (pr !== 1) ctx.setTransform(pr, 0, 0, pr, 0, 0);
-      ctx.clearRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
+      ctx.clearRect(0, 0, RASTER_BASE_SIZE, RASTER_BASE_SIZE);
+      ctx.drawImage(img, 0, 0, RASTER_BASE_SIZE, RASTER_BASE_SIZE);
       const dataUrl = canvas.toDataURL('image/png');
       return dataUrl;
     }
@@ -196,11 +185,11 @@ async function rasterizeSvgToDataUrl(svgText, size, renderHint, pixelRatio) {
 }
 
 export async function getRasterizedPng({ srcUrl, cssVarMap, idPrefix, size, renderHint = 'precision' }) {
-  if (!srcUrl || !size) return '';
+  if (!srcUrl) return '';
+  // single raster for all display sizes at a fixed 512x512; key ignores display size
   const sig = colorSignature(cssVarMap);
-  const pr = getNormalizedPixelRatio();
-  const key = `v1|${srcUrl}|${size}|${renderHint}|pr:${pr}|${sig}`;
-  const storageKey = `qcPngCacheV1:${hashString(key)}`;
+  const key = `v2|${srcUrl}|base:${RASTER_BASE_SIZE}|${renderHint}|${sig}`;
+  const storageKey = `qcPngCacheV2:${hashString(key)}`;
 
   if (dataUrlCache.has(key)) return dataUrlCache.get(key);
   if (promiseCache.has(key)) return promiseCache.get(key);
@@ -219,13 +208,13 @@ export async function getRasterizedPng({ srcUrl, cssVarMap, idPrefix, size, rend
       const styled = injectStyleIntoSvg(prefixed, buildRootStyle(cssVarMap, renderHint));
       const internalCss = buildInternalCss(renderHint);
       const withCss = internalCss ? injectInternalCss(styled, internalCss) : styled;
-      const sized = setExplicitDimensions(withCss, `${size}px`, `${size}px`);
+      const sized = setExplicitDimensions(withCss, `${RASTER_BASE_SIZE}px`, `${RASTER_BASE_SIZE}px`);
 
-      const dataUrl = await rasterizeSvgToDataUrl(sized, size, renderHint, pr);
+      const dataUrl = await rasterizeSvgToDataUrl(sized, renderHint);
       if (dataUrl) {
         dataUrlCache.set(key, dataUrl);
         storageSet(storageKey, dataUrl);
-        console.log(`[Rasterizer] Cached PNG -> key:${storageKey} size:${size} hint:${renderHint} pr:${pr}`);
+        console.log(`[Rasterizer] Cached PNG -> key:${storageKey} base:${RASTER_BASE_SIZE} hint:${renderHint}`);
       } else {
         console.warn('[Rasterizer] Empty data URL generated for', { srcUrl });
       }

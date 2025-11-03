@@ -1,17 +1,16 @@
 // frontend/src/chessboard/rasterPrewarm.js
-// Purpose: Batch-rasterize all chess piece SVGs into PNG data URLs for given colors/sizes and persist them to localStorage; exposes cache invalidation helpers with console confirmations. Also supports a captured-piece variant with transparent icon color for compact displays.
+// Purpose: Batch-rasterize chess piece SVGs into PNG data URLs at a fixed 512x512 base and persist them to localStorage; exposes cache invalidation helpers with console confirmations.
 // Imports From: ./assetsIndex.js, ./svgRasterizer.js
 // Exported To: ../App.jsx
 
 import { ALL_ASSET_URLS, SINGLE_ASSET_URLS } from './assetsIndex.js';
 import { getRasterizedPng, clearRasterCaches } from './svgRasterizer.js';
 
-function uniqueSizes(sizes) {
-  const arr = (Array.isArray(sizes) ? sizes : []).filter((n) => Number.isFinite(n) && n > 0);
-  const set = new Set(arr.map((n) => Math.round(n)));
-  // Always include a sensible default
-  set.add(64);
-  return Array.from(set).sort((a, b) => a - b);
+const RASTER_BASE_SIZE = 512;
+
+function uniqueSizes() {
+  // Always prewarm the single raster base size regardless of requested sizes
+  return [RASTER_BASE_SIZE];
 }
 
 async function prewarmSide(urls, sideName, cssVars, sizes, renderHint = 'precision') {
@@ -30,7 +29,6 @@ async function prewarmSide(urls, sideName, cssVars, sizes, renderHint = 'precisi
       }
       done += 1;
       if (done % 10 === 0) {
-        // yield to UI occasionally
         await new Promise((r) => setTimeout(r, 0));
       }
     }
@@ -39,10 +37,10 @@ async function prewarmSide(urls, sideName, cssVars, sizes, renderHint = 'precisi
   console.log(`[Raster Prewarm] Done side:${sideName} completed:${done}/${total}`);
 }
 
-export async function prewarmAllPiecePngs({ cssVarsBySide = { white: {}, black: {} }, sizes = [64], renderHint = 'precision' } = {}) {
+export async function prewarmAllPiecePngs({ cssVarsBySide = { white: {}, black: {} }, sizes = [RASTER_BASE_SIZE], renderHint = 'precision' } = {}) {
   try {
     const urls = ALL_ASSET_URLS;
-    console.log(`[Raster Prewarm] Preparing ${urls.length} assets for colors + sizes...`);
+    console.log(`[Raster Prewarm] Preparing ${urls.length} assets for colors at base size ${RASTER_BASE_SIZE}...`);
     await Promise.all([
       prewarmSide(urls, 'white', cssVarsBySide.white || {}, sizes, renderHint),
       prewarmSide(urls, 'black', cssVarsBySide.black || {}, sizes, renderHint),
@@ -61,10 +59,10 @@ async function prewarmCapturedSide(urls, sideName, baseCssVars, sizes, renderHin
   await prewarmSide(urls, `${sideName}-captured`, capturedCss, sizes, renderHint);
 }
 
-export async function prewarmCapturedPiecePngs({ cssVarsBySide = { white: {}, black: {} }, sizes = [26], renderHint = 'crisp' } = {}) {
+export async function prewarmCapturedPiecePngs({ cssVarsBySide = { white: {}, black: {} }, sizes = [RASTER_BASE_SIZE], renderHint = 'crisp' } = {}) {
   try {
     const urls = SINGLE_ASSET_URLS;
-    console.log(`[Raster Prewarm] Preparing captured-variant assets (${urls.length}) for sizes [${uniqueSizes(sizes).join(', ')}]...`);
+    console.log(`[Raster Prewarm] Preparing captured-variant assets (${urls.length}) at base size ${RASTER_BASE_SIZE}...`);
     await Promise.all([
       prewarmCapturedSide(urls, 'white', cssVarsBySide.white || {}, sizes, renderHint),
       prewarmCapturedSide(urls, 'black', cssVarsBySide.black || {}, sizes, renderHint),
@@ -80,4 +78,4 @@ export function invalidateRasterPngs(reason = 'manual') {
   clearRasterCaches();
 }
 
-export default { prewarmAllPiecePngs, prewarmCapturedPiecePngs, invalidateRasterPngs }; 
+export default { prewarmAllPiecePngs, prewarmCapturedPiecePngs, invalidateRasterPngs };
