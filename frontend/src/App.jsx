@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking with a server-authoritative chess clock. Handles legal moves, castling, checkmate, and syncs moves and clock over WebSocket.
-// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js, ./hooks/clockUtils.js
+// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking with a server-authoritative chess clock. Handles legal moves, castling, checkmate, and syncs moves and clock over WebSocket. Includes optional local AI opponent via alpha-beta search.
+// Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js, ./hooks/clockUtils.js, ./ai/useLocalAi.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import './App.css';
@@ -23,6 +23,7 @@ import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import useChessClock from './hooks/useChessClock.js';
 import { formatClock, clampMs } from './hooks/clockUtils.js';
+import useLocalAi from './ai/useLocalAi.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -59,20 +60,16 @@ export default function App() {
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
 
-  // Game instance ID for clock resets
   const [gameInstanceId, setGameInstanceId] = useState(0);
 
-  // Matchmaking + WebSocket
   const [mmActive, setMmActive] = useState(false);
   const mmAbortRef = useRef(false);
   const mmClientIdRef = useRef(null);
   const mmRoomIdRef = useRef(null);
   const wsApiRef = useRef(null);
   const isOnlineGameRef = useRef(false);
-  // Always-fresh WS message handler to avoid stale-closure bugs
   const wsMessageHandlerRef = useRef(null);
 
-  // Server-authoritative clock state for online games
   const [serverClock, setServerClock] = useState({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
 
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
@@ -84,10 +81,12 @@ export default function App() {
   const timeControl = useSelector((state) => state.settings.timeControl || '5+0');
   const moves = useSelector((state) => state.game.moves || []);
 
+  const aiEnabledRef = useRef(false);
+  const aiDifficultyRef = useRef('medium');
+
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
     return getLegalMoves(selectedId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, getLegalMoves]);
 
   const whitePlayer = 'White';
@@ -144,7 +143,6 @@ export default function App() {
     }
   }, [gameOver]);
 
-  // Cleanup matchmaking and WS on unmount only
   useEffect(() => {
     return () => {
       mmAbortRef.current = true;
@@ -464,7 +462,6 @@ export default function App() {
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleOpenRules = useCallback(() => setRulesOpen(true), []);
 
-  // Install an always-fresh WS message handler to avoid stale-turn or stale-state issues
   useEffect(() => {
     wsMessageHandlerRef.current = (msg) => {
       if (!msg || typeof msg !== 'object') return;
@@ -501,7 +498,6 @@ export default function App() {
 
       if (msg.type === 'move') {
         if (msg.by && myId && msg.by === myId) {
-          // Sync clock even if echo is ignored
           maybeApplyClock(msg.clock);
           return;
         }
@@ -530,7 +526,7 @@ export default function App() {
       if (msg.type === 'castle') {
         if (msg.by && myId && msg.by === myId) {
           maybeApplyClock(msg.clock);
-          return; // ignore echo
+          return;
         }
         const { piece1_from, piece1_to, piece2_from, piece2_to, side: sideMsg } = msg;
         const p1 = getPieceAtSquare(piece1_from);
@@ -604,14 +600,15 @@ export default function App() {
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
 
-    // New game instance for the clock system
     setGameInstanceId((n) => n + 1);
 
     isOnlineGameRef.current = false;
+    aiEnabledRef.current = false;
+    aiDifficultyRef.current = settings && typeof settings.aiDifficulty === 'string' ? settings.aiDifficulty : 'medium';
+
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
 
-    // Reset server clock snapshot for offline game
     setServerClock({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
 
     if (settings && settings.gameMode === 'online') {
@@ -663,7 +660,14 @@ export default function App() {
       return;
     }
 
-    setInfoMessage('New game started.');
+    if (settings && settings.gameMode === 'ai') {
+      aiEnabledRef.current = true;
+      dispatch(setUserTeam('white'));
+      setInfoMessage('New game vs AI started.');
+      return;
+    }
+
+    setInfoMessage('New local game started.');
   }, [dispatch, startWsConnection]);
 
   const handlePieceDragStart = useCallback((piece) => {
@@ -673,7 +677,12 @@ export default function App() {
       if (piece.side !== userTeam) return false;
       if (sideToMove !== userTeam) return false;
     } else {
-      if (piece.side !== sideToMove) return false;
+      if (aiEnabledRef.current) {
+        if (piece.side !== 'white') return false;
+        if (sideToMove !== 'white') return false;
+      } else {
+        if (piece.side !== sideToMove) return false;
+      }
     }
     setSelectedId(piece.id);
     setTrayHighlights([]);
@@ -692,6 +701,11 @@ export default function App() {
       setSelectedId(null);
       return;
     }
+    if (!isOnlineGameRef.current && aiEnabledRef.current && sideToMove !== 'white') {
+      setInfoMessage('Not your turn.');
+      setSelectedId(null);
+      return;
+    }
 
     const movingPiece = pieces.find((p) => p.id === id);
     if (!movingPiece) {
@@ -701,6 +715,11 @@ export default function App() {
 
     if (isOnlineGameRef.current && movingPiece.side !== userTeam) {
       setInfoMessage('You can only move your own pieces in online games.');
+      setSelectedId(null);
+      return;
+    }
+    if (!isOnlineGameRef.current && aiEnabledRef.current && movingPiece.side !== 'white') {
+      setInfoMessage('You are playing White vs AI.');
       setSelectedId(null);
       return;
     }
@@ -819,7 +838,6 @@ export default function App() {
     return `${w} wins by checkmate!`;
   }, [gameOver, winner]);
 
-  // Offline chess clock (fallback for local games only)
   const localClock = useChessClock({
     timeControl,
     sideToMove,
@@ -828,7 +846,6 @@ export default function App() {
     gameInstanceId,
   });
 
-  // Derive the effective clock data to display depending on online/offline
   const effectiveClock = useMemo(() => {
     if (isOnlineGameRef.current) {
       const w = clampMs(serverClock.whiteMs || 0);
@@ -851,6 +868,52 @@ export default function App() {
     }
     return localClock;
   }, [serverClock, localClock]);
+
+  const aiSide = useMemo(() => (userTeam === 'white' ? 'black' : 'white'), [userTeam]);
+
+  const applyEngineMove = useCallback((mv, side) => {
+    if (!mv) return;
+    if (isOnlineGameRef.current) return;
+    if (!aiEnabledRef.current) return;
+    if (sideToMove !== side) return;
+
+    if (mv.type === 'move') {
+      const piece = getPieceAtSquare(mv.from);
+      if (!piece) return;
+      const res = movePiece(piece.id, mv.to);
+      if (res && res.success) {
+        dispatch(addMove({ from: mv.from, to: mv.to, side }));
+        setInfoMessage('AI moved.');
+      }
+      return;
+    }
+    if (mv.type === 'castle') {
+      const plan = mv.plan;
+      const p1 = getPieceAtSquare(plan.piece1_from);
+      const p2 = getPieceAtSquare(plan.piece2_from);
+      if (!p1 || !p2) return;
+      const { canCastle } = canCastleBetween(p1.id, p2.id);
+      if (!canCastle) return;
+      const res = castlePieces(p1.id, p2.id);
+      if (res && res.success) {
+        dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side }));
+        dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side }));
+        setInfoMessage('AI castled.');
+      }
+      return;
+    }
+  }, [dispatch, sideToMove, getPieceAtSquare, movePiece, canCastleBetween, castlePieces]);
+
+  useLocalAi({
+    enabled: !isOnlineGameRef.current && aiEnabledRef.current,
+    aiSide,
+    difficulty: aiDifficultyRef.current,
+    pieces,
+    sideToMove,
+    canMakeMove,
+    gameOver,
+    onApplyMove: applyEngineMove,
+  });
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
