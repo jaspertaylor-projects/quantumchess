@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move.
+// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move. Ensures the header row is opaque so scrolling content is not visible behind it.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
@@ -123,6 +123,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
       list: {
         flex: 1,
         overflow: 'auto',
+        position: 'relative',
         border: `1px solid ${theme.border}`,
         borderRadius: 10,
         background: 'rgba(255,255,255,0.03)',
@@ -132,13 +133,16 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
       headerRow: {
         position: 'sticky',
         top: 0,
-        zIndex: 1,
+        zIndex: 3,
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gap: 10,
         padding: '8px 10px',
-        background: 'rgba(255,255,255,0.06)',
+        // Use an opaque background to prevent scrolled content from showing through
+        background: theme.boardAreaBackground ? theme.boardAreaBackground : 'var(--color-globalBackground)',
         borderBottom: `1px solid ${theme.border}`,
+        // Ensure the header forms its own stacking and painting context
+        boxShadow: `0 1px 0 0 ${theme.border}`,
       },
       headerCell: {
         color: theme.textSecondary,
