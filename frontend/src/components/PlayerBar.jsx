@@ -1,9 +1,9 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating, a chess clock, and a compact captured pieces area; color-themable via playerBarColors prop.
+// Purpose: Display a player's info bar with name/rating, a chess clock, and a compact captured pieces area; captured pieces render at a fixed pixel size to prevent bar growth.
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import theme from '../theme.js';
 import RasterizedSvgImg from '../chessboard/RasterizedSvgImg.jsx';
 
@@ -23,25 +23,10 @@ const TYPE_TO_SVG = {
   k: imgK,
 };
 
+// Fixed pixel size for captured icons to avoid layout shifts
+const CAP_ICON_PX = 16;
+
 function CapturedIcon({ piece, svgStyles }) {
-  const wrapRef = useRef(null);
-  const [pxSize, setPxSize] = useState(26);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cr = entry.contentRect;
-        const raw = Math.min(cr.width, cr.height);
-        const snapped = Math.max(12, Math.floor(raw));
-        if (snapped !== pxSize) setPxSize(snapped);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [pxSize]);
-
   const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
   const order = ['p', 'n', 'b', 'r', 'q'];
   const pickType = order.find((x) => types.includes(x));
@@ -50,27 +35,28 @@ function CapturedIcon({ piece, svgStyles }) {
   const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
   const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
-  const capturedSideVars = useMemo(() => ({
-    ...sideVars,
-    ['--icon-color']: 'rgba(0,0,0,0)',
-  }), [sideVars]);
-
-  const smallRenderHint = pxSize <= 32 ? 'crisp' : 'precision';
+  const capturedSideVars = useMemo(
+    () => ({
+      ...sideVars,
+      ['--icon-color']: 'rgba(0,0,0,0)',
+    }),
+    [sideVars]
+  );
 
   const styles = {
     capturedIconWrap: {
-      height: '95%',
-      aspectRatio: '1 / 1',
-      width: 'auto',
+      width: `${CAP_ICON_PX}px`,
+      height: `${CAP_ICON_PX}px`,
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
+      boxSizing: 'border-box',
+      flex: '0 0 auto',
     },
   };
 
   return (
     <div
-      ref={wrapRef}
       className="qc-captured-icon-wrap"
       style={styles.capturedIconWrap}
       title={`Captured ${t}`}
@@ -80,8 +66,8 @@ function CapturedIcon({ piece, svgStyles }) {
         srcSvgUrl={srcSvg}
         cssVarMap={capturedSideVars}
         idPrefix={`cap-${piece.id}-${t}`}
-        size={pxSize}
-        renderHint={smallRenderHint}
+        size={CAP_ICON_PX}
+        renderHint={'crisp'}
         className="qc-captured-icon-img"
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         alt={`Captured ${t}`}
@@ -169,7 +155,8 @@ export default function PlayerBar({
       borderRadius: 8,
       background: clockActive ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.06)',
       border: clockActive ? `1px solid ${theme.border}` : `1px dashed ${theme.border}`,
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontFamily:
+        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       fontWeight: 800,
       letterSpacing: '0.04em',
       color: clockLow ? '#ff6b6b' : 'currentColor',
@@ -195,7 +182,12 @@ export default function PlayerBar({
       justifyContent: 'flex-end',
       gap: 4,
       width: '100%',
-      height: '50%',
+      height: `${CAP_ICON_PX}px`,
+      minHeight: `${CAP_ICON_PX}px`,
+      maxHeight: `${CAP_ICON_PX}px`,
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      flex: '0 0 auto',
     },
   };
 
@@ -209,15 +201,28 @@ export default function PlayerBar({
       <div className={`qc-player-info qc-player-info--${side}`} style={styles.playerInfo}>
         <div className={`qc-player-name-row qc-player-name-row--${side}`} style={styles.playerNameRow}>
           <span className={`qc-player-name-text qc-player-name-text--${side}`}>{playerName}</span>
-          <span className={`qc-player-rating-text qc-player-rating-text--${side}`} style={styles.playerRatingText}>({rating})</span>
+          <span
+            className={`qc-player-rating-text qc-player-rating-text--${side}`}
+            style={styles.playerRatingText}
+          >
+            ({rating})
+          </span>
         </div>
         <div className={`qc-player-rating-row qc-player-rating-row--${side}`} style={styles.playerRatingRow}>
-          <span className={`qc-player-clock-text qc-player-clock-text--${side}`} style={styles.clockPill} aria-label={`${side} remaining time`}>
+          <span
+            className={`qc-player-clock-text qc-player-clock-text--${side}`}
+            style={styles.clockPill}
+            aria-label={`${side} remaining time`}
+          >
             {clockText}
           </span>
         </div>
       </div>
-      <div className={`qc-captured-area qc-captured-area--${side}`} style={styles.capturedArea} aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}>
+      <div
+        className={`qc-captured-area qc-captured-area--${side}`}
+        style={styles.capturedArea}
+        aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
+      >
         <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
           {capturedPawns.map((p) => (
             <CapturedIcon key={`capicon-${p.id}`} piece={p} svgStyles={svgStyles} />
