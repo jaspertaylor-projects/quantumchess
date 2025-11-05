@@ -1,9 +1,10 @@
 // frontend/src/ai/alphaBetaEngine.js
 // Purpose: Alpha-beta search engine with a heuristic evaluator for Quantum Chess positions, producing a best move for a given side and difficulty.
-// Imports From: ../chessboard/quantumEngine.js
+// Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js
 // Exported To: ./useLocalAi.js
 
-import { clonePieces, generateLegalReplies } from '../chessboard/quantumEngine.js';
+import { clonePieces, generateLegalReplies, buildOccupancy, movesForType } from '../chessboard/quantumEngine.js';
+import { fromAlgebraic } from '../chessboard/boardUtils.js';
 
 // Standard chess piece values on a small scale for capture accounting
 // These are only used to value captured material relative to the 40-point baseline per side
@@ -13,10 +14,6 @@ const MOBILITY_WEIGHT = 0.1; // +0.1 per legal move advantage
 const SUPERPOSITION_UNIT_WEIGHT = 1.0; // scaled so fully uncertain piece contributes 5 (types 6 -> 5 units)
 const COLLAPSED_KING_PENALTY = -10; // per fully collapsed king on a side
 const SIDE_BASELINE_TOTAL = 40; // starting material total per side
-
-function sideOf(piece) {
-  return piece.side === 'white' ? 1 : -1;
-}
 
 function capturedMaterialSumForSide(pieces, side) {
   let sum = 0;
@@ -30,13 +27,24 @@ function capturedMaterialSumForSide(pieces, side) {
   return sum;
 }
 
-function legalMoveCountForSide(pieces, side) {
-  try {
-    const replies = generateLegalReplies(pieces, side, 0);
-    return replies.length;
-  } catch (e) {
-    return 0;
+function pseudoLegalMoveCountForSide(pieces, side, occ) {
+  let total = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    const { fileIndex: f, rankIndex: r } = pos;
+    const isFirstMove = (p.moveCount || 0) === 0;
+
+    const merged = new Set();
+    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
+    for (const t of types) {
+      const list = movesForType(t, f, r, occ, side, { isFirstMove });
+      for (const sq of list) merged.add(sq);
+    }
+    total += merged.size;
   }
+  return total;
 }
 
 function superpositionScoreForSide(pieces, side) {
@@ -69,9 +77,10 @@ function evaluatePosition(pieces) {
   const bCaptured = capturedMaterialSumForSide(pieces, 'black');
   const material = bCaptured - wCaptured;
 
-  // Mobility: number of legal moves advantage
-  const wMoves = legalMoveCountForSide(pieces, 'white');
-  const bMoves = legalMoveCountForSide(pieces, 'black');
+  // Mobility: number of pseudo-legal moves advantage (fast, no simulation)
+  const occ = buildOccupancy(pieces);
+  const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
+  const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
   const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
 
   // Superposition breadth: scaled to 0..5 per piece
