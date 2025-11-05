@@ -24,7 +24,7 @@ const TYPE_TO_SVG = {
 };
 
 // Fixed pixel size for captured icons to avoid layout shifts
-const CAP_ICON_PX = 16;
+const CAP_ICON_PX = 22;
 
 function CapturedIcon({ piece, svgStyles }) {
   const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
@@ -92,7 +92,7 @@ export default function PlayerBar({
   const styles = {
     playerBar: {
       width: '100%',
-      minHeight: 'clamp(36px, 6.5vh, 64px)',
+      minHeight: 'clamp(48px, 7.5vh, 72px)',
       display: 'flex',
       alignItems: 'stretch',
       justifyContent: 'space-between',
