@@ -1,28 +1,37 @@
 // frontend/src/ai/alphaBetaEngine.js
 // Purpose: Alpha-beta search engine with a heuristic evaluator for Quantum Chess positions, producing a best move for a given side and difficulty.
-// Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js
+// Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js
 
 import { clonePieces, generateLegalReplies, buildOccupancy, movesForType } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic } from '../chessboard/boardUtils.js';
+import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 
-// Standard chess piece values on a small scale for capture accounting
-// These are only used to value captured material relative to the 40-point baseline per side
+// Standard chess piece values used for material evaluation.
 const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
 const MOBILITY_WEIGHT = 0.1; // +0.1 per legal move advantage
 const SUPERPOSITION_UNIT_WEIGHT = 1.0; // scaled so fully uncertain piece contributes 5 (types 6 -> 5 units)
 const COLLAPSED_KING_PENALTY = -10; // per fully collapsed king on a side
-const SIDE_BASELINE_TOTAL = 40; // starting material total per side
 
-function capturedMaterialSumForSide(pieces, side) {
+function onBoardMaterialSumForSide(pieces, side) {
   let sum = 0;
   for (const p of pieces) {
     if (p.side !== side) continue;
-    if (!p.captured) continue;
-    const t = Array.isArray(p.possibleTypes) && p.possibleTypes.length > 0 ? p.possibleTypes[0] : null;
-    if (!t) continue;
-    sum += CAPTURE_VALUES[t] || 0;
+    if (p.captured || !p.square) continue;
+
+    const types = p.possibleTypes || [];
+    if (types.length === 0) continue;
+
+    // Find the lowest valuable non-king piece type in the superposition.
+    const leastValuableType = CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t));
+
+    // If only a king is possible, its value is 0. Otherwise, use the lowest type.
+    const typeToValue = leastValuableType || (types.includes('k') ? 'k' : null);
+
+    if (typeToValue) {
+      sum += CAPTURE_VALUES[typeToValue];
+    }
   }
   return sum;
 }
@@ -72,10 +81,10 @@ function collapsedKingPenaltyForSide(pieces, side) {
 }
 
 function evaluatePosition(pieces) {
-  // Material: Bcapt - Wcapt (equivalent to -(RemWhite - RemBlack) with baseline 40)
-  const wCaptured = capturedMaterialSumForSide(pieces, 'white');
-  const bCaptured = capturedMaterialSumForSide(pieces, 'black');
-  const material = bCaptured - wCaptured;
+  // Material: Sum of the pessimistic (lowest) value of all pieces on the board.
+  const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
+  const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
+  const material = wMaterial - bMaterial;
 
   // Mobility: number of pseudo-legal moves advantage (fast, no simulation)
   const occ = buildOccupancy(pieces);
