@@ -5,41 +5,86 @@
 
 import { clonePieces, generateLegalReplies } from '../chessboard/quantumEngine.js';
 
-const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+// Standard chess piece values on a small scale for capture accounting
+// These are only used to value captured material relative to the 40-point baseline per side
+const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+const MOBILITY_WEIGHT = 0.1; // +0.1 per legal move advantage
+const SUPERPOSITION_UNIT_WEIGHT = 1.0; // scaled so fully uncertain piece contributes 5 (types 6 -> 5 units)
+const COLLAPSED_KING_PENALTY = -10; // per fully collapsed king on a side
+const SIDE_BASELINE_TOTAL = 40; // starting material total per side
 
 function sideOf(piece) {
   return piece.side === 'white' ? 1 : -1;
 }
 
-function materialScore(pieces) {
-  let score = 0;
+function capturedMaterialSumForSide(pieces, side) {
+  let sum = 0;
   for (const p of pieces) {
-    if (p.captured || !p.square) continue;
-    if (!Array.isArray(p.possibleTypes) || p.possibleTypes.length === 0) continue;
-    const avg = p.possibleTypes.reduce((s, t) => s + (PIECE_VALUES[t] || 0), 0) / p.possibleTypes.length;
-    score += (p.side === 'white' ? 1 : -1) * avg;
+    if (p.side !== side) continue;
+    if (!p.captured) continue;
+    const t = Array.isArray(p.possibleTypes) && p.possibleTypes.length > 0 ? p.possibleTypes[0] : null;
+    if (!t) continue;
+    sum += CAPTURE_VALUES[t] || 0;
   }
-  return score;
+  return sum;
 }
 
-function kingPresenceBonus(pieces) {
-  let whiteHolders = 0;
-  let blackHolders = 0;
-  for (const p of pieces) {
-    if (p.captured || !p.square) continue;
-    if (p.possibleTypes && p.possibleTypes.includes('k')) {
-      if (p.side === 'white') whiteHolders += 1;
-      else blackHolders += 1;
-    }
+function legalMoveCountForSide(pieces, side) {
+  try {
+    const replies = generateLegalReplies(pieces, side, 0);
+    return replies.length;
+  } catch (e) {
+    return 0;
   }
-  const bonusPerMissing = 300;
-  return (blackHolders === 0 ? bonusPerMissing : 0) - (whiteHolders === 0 ? bonusPerMissing : 0);
+}
+
+function superpositionScoreForSide(pieces, side) {
+  let total = 0;
+  for (const p of pieces) {
+    if (p.side !== side) continue;
+    if (p.captured || !p.square) continue;
+    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
+    if (types.length <= 1) continue;
+    // Scale so: 1 type -> 0, 6 types -> 5
+    total += (types.length - 1) * SUPERPOSITION_UNIT_WEIGHT;
+  }
+  return total;
+}
+
+function collapsedKingPenaltyForSide(pieces, side) {
+  let count = 0;
+  for (const p of pieces) {
+    if (p.side !== side) continue;
+    if (p.captured || !p.square) continue;
+    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
+    if (types.length === 1 && types[0] === 'k') count += 1;
+  }
+  return count * COLLAPSED_KING_PENALTY;
 }
 
 function evaluatePosition(pieces) {
-  const mat = materialScore(pieces);
-  const kingBon = kingPresenceBonus(pieces);
-  return mat + kingBon;
+  // Material: Bcapt - Wcapt (equivalent to -(RemWhite - RemBlack) with baseline 40)
+  const wCaptured = capturedMaterialSumForSide(pieces, 'white');
+  const bCaptured = capturedMaterialSumForSide(pieces, 'black');
+  const material = bCaptured - wCaptured;
+
+  // Mobility: number of legal moves advantage
+  const wMoves = legalMoveCountForSide(pieces, 'white');
+  const bMoves = legalMoveCountForSide(pieces, 'black');
+  const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
+
+  // Superposition breadth: scaled to 0..5 per piece
+  const wSup = superpositionScoreForSide(pieces, 'white');
+  const bSup = superpositionScoreForSide(pieces, 'black');
+  const superpos = wSup - bSup;
+
+  // Collapsed king penalty
+  const wKingPen = collapsedKingPenaltyForSide(pieces, 'white');
+  const bKingPen = collapsedKingPenaltyForSide(pieces, 'black');
+  const kingCollapse = wKingPen - bKingPen;
+
+  return material + mobility + superpos + kingCollapse;
 }
 
 function orderMoves(moves, currentEval, side) {
