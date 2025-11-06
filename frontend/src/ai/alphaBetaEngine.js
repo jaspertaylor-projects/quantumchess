@@ -3,16 +3,31 @@
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js
 
-import { clonePieces, generateLegalReplies, buildOccupancy, movesForType } from '../chessboard/quantumEngine.js';
+import { clonePieces, generateLegalReplies, buildOccupancy, movesForType, canSideCaptureSquare } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 
 // Standard chess piece values used for material evaluation.
 const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
-const MOBILITY_WEIGHT = 0.1; // +0.1 per legal move advantage
-const SUPERPOSITION_UNIT_WEIGHT = 1.0; // scaled so fully uncertain piece contributes 5 (types 6 -> 5 units)
+// Evaluation weights tuned to reduce reckless captures and value capture targets correctly.
+const MOBILITY_WEIGHT = 0.05; // small value to avoid dominating decisions
+const SUPERPOSITION_UNIT_WEIGHT = 0.2; // uncertainty is mildly valuable, but not decisive
 const COLLAPSED_KING_PENALTY = -10; // per fully collapsed king on a side
+const HANGING_WEIGHT = 1.0; // strong penalty for pieces that can be captured immediately
+
+function leastNonKingType(types) {
+  if (!Array.isArray(types) || types.length === 0) return null;
+  return CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t)) || null;
+}
+
+function captureCollapseValueForPiece(p) {
+  if (!p || p.captured || !p.square) return 0;
+  const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
+  const least = leastNonKingType(types);
+  const t = least || 'p'; // mirror simulation fallback for captures
+  return CAPTURE_VALUES[t];
+}
 
 function onBoardMaterialSumForSide(pieces, side) {
   let sum = 0;
@@ -23,10 +38,7 @@ function onBoardMaterialSumForSide(pieces, side) {
     const types = p.possibleTypes || [];
     if (types.length === 0) continue;
 
-    // Find the lowest valuable non-king piece type in the superposition.
-    const leastValuableType = CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t));
-
-    // If only a king is possible, its value is 0. Otherwise, use the lowest type.
+    const leastValuableType = leastNonKingType(types);
     const typeToValue = leastValuableType || (types.includes('k') ? 'k' : null);
 
     if (typeToValue) {
@@ -63,7 +75,6 @@ function superpositionScoreForSide(pieces, side) {
     if (p.captured || !p.square) continue;
     const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
     if (types.length <= 1) continue;
-    // Scale so: 1 type -> 0, 6 types -> 5
     total += (types.length - 1) * SUPERPOSITION_UNIT_WEIGHT;
   }
   return total;
@@ -80,8 +91,21 @@ function collapsedKingPenaltyForSide(pieces, side) {
   return count * COLLAPSED_KING_PENALTY;
 }
 
+function hangingExposureValueForSide(pieces, side) {
+  // Sum the capture-collapse values of all of this side's pieces that can be captured immediately by the opponent.
+  const opponent = side === 'white' ? 'black' : 'white';
+  let sum = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (canSideCaptureSquare(pieces, opponent, p.square)) {
+      sum += captureCollapseValueForPiece(p);
+    }
+  }
+  return sum;
+}
+
 function evaluatePosition(pieces) {
-  // Material: Sum of the pessimistic (lowest) value of all pieces on the board.
+  // Material: sum of the pessimistic (lowest) value of all pieces remaining on board.
   const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
   const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
   const material = wMaterial - bMaterial;
@@ -92,7 +116,7 @@ function evaluatePosition(pieces) {
   const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
   const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
 
-  // Superposition breadth: scaled to 0..5 per piece
+  // Superposition breadth: small incentive to retain options; scaled to 0..5 per piece before weighting
   const wSup = superpositionScoreForSide(pieces, 'white');
   const bSup = superpositionScoreForSide(pieces, 'black');
   const superpos = wSup - bSup;
@@ -102,7 +126,12 @@ function evaluatePosition(pieces) {
   const bKingPen = collapsedKingPenaltyForSide(pieces, 'black');
   const kingCollapse = wKingPen - bKingPen;
 
-  return material + mobility + superpos + kingCollapse;
+  // Immediate capture exposure: strongly penalize having capturable pieces, using capture-collapse values
+  const wHanging = hangingExposureValueForSide(pieces, 'white');
+  const bHanging = hangingExposureValueForSide(pieces, 'black');
+  const exposure = -(wHanging - bHanging) * HANGING_WEIGHT;
+
+  return material + mobility + superpos + kingCollapse + exposure;
 }
 
 function orderMoves(moves, currentEval, side) {
