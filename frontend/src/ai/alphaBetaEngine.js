@@ -1,7 +1,7 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Encourages broader development, values retaining Pawn/King in superpositions, uses SEE and quiescence, aligns king-safety with checking rules, and adds controlled randomness. Includes enhanced capture prioritization and anti-repeat-mover bias with debug logging.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Safer capture logic using SEE with hard demotion of losing captures, promotion bonus, stronger pawn-advance incentives, and improved move ordering to avoid reflexive captures.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
-// Exported To: ./useLocalAi.js
+// Exported To: ./useLocalAi.js, ./aiWorker.js
 
 import {
   clonePieces,
@@ -37,19 +37,22 @@ const CENTER_CONTROL_EXT_WEIGHT = 0.04; // extended 3x3 ring
 const DEVELOPMENT_MINOR_WEIGHT = 0.1; // reward for minor piece activation
 const DEVELOPMENT_ROOK_WEIGHT = 0.06; // rooks activation
 const DEVELOPMENT_GENERIC_WEIGHT = 0.06; // any piece moved from starting state
-const PAWN_ADVANCE_WEIGHT = 0.02; // encourage steady pawn progress
+const PAWN_ADVANCE_WEIGHT = 0.06; // encourage steady pawn progress (increased)
 const DEV_BREADTH_UNIT_WEIGHT = 0.08; // reward breadth: number of distinct movers (increased)
 
 // New: value retaining Pawn/King in superposition across your team
 const PAWN_PRESENCE_WEIGHT = 0.06; // per friendly piece containing 'p'
 const KING_PRESENCE_WEIGHT = 0.04; // per friendly piece containing 'k'
 
+// New: promotion value bonus
+const PROMOTION_BONUS_WEIGHT = 3.5; // big bonus for having a promoted piece on board
+
 // Quiescence search limits to resolve hanging/tactical capture sequences
 const QUIESCENCE_MAX_PLIES = 5;
 
 // SEE and move-ordering weights
-const SEE_RISK_WEIGHT = 0.5; // down-weight moves that lose material on the landing square (softened)
-const SEE_GOOD_WEIGHT = 0.6; // bonus if landing square yields favorable exchanges (increased)
+const SEE_RISK_WEIGHT = 1.2; // strong down-weight for losing captures
+const SEE_GOOD_WEIGHT = 0.9; // bonus if landing square yields favorable exchanges
 
 // Collapse penalties: avoid over-narrowing too early or into single-type Knights
 const COLLAPSE_OVER_NARROW_PENALTY = 0.25; // base penalty for narrowing superposition (slightly softer)
@@ -64,13 +67,18 @@ const FRESH_DEVELOPMENT_BONUS = 0.3; // prefer moving new pieces more strongly
 const REPEAT_MOVER_PENALTY = 0.35; // discourage repeating the same mover when many are unmoved
 
 // Randomization to avoid deterministic play
-const RANDOM_MOVE_JITTER = 0.2; // small non-determinism in move ordering
+const RANDOM_MOVE_JITTER = 0.1; // smaller non-determinism in move ordering
 
 // Move-ordering specific bonuses
-const CAPTURE_ORDER_BONUS = 0.9; // give captures a stronger ordering bump
-const CAPTURE_VALUE_ORDER_BONUS = 0.12; // scale with value of captured piece
+const CAPTURE_ORDER_BONUS = 0.35; // softer capture preference
+const CAPTURE_VALUE_ORDER_BONUS = 0.08; // scale with value of captured piece
 const P_RETENTION_ORDER_BONUS = 0.08; // prefer moves that retain Pawn in mover's superposition
 const CHECK_ORDER_BONUS = 0.12; // prefer moves that result in a check (per checking rules)
+
+// Losing capture gating
+const LOSING_CAPTURE_DROP_THRESHOLD = -0.75; // if SEE net below this, heavily demote in ordering
+const LOSING_CAPTURE_HARD_PENALTY = 4.0; // large demotion so AI avoids reflexive losing captures
+const EXTREME_GAIN_THRESHOLD = 2.0; // if eval jump exceeds this, allow even losing capture
 
 // Piece-square tables (white perspective)
 const PST = {
@@ -438,6 +446,15 @@ function pawnAdvanceScoreForSide(pieces, side) {
   return s;
 }
 
+function promotionScoreForSide(pieces, side) {
+  let s = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (p.wasPromoted) s += PROMOTION_BONUS_WEIGHT;
+  }
+  return s;
+}
+
 function pieceSafetySoftPenaltyForSide(pieces, side, occ) {
   // Soft penalty for being attacked even if defended, scaled by piece capture value.
   const opponent = side === 'white' ? 'black' : 'white';
@@ -532,7 +549,10 @@ function evaluatePosition(pieces) {
   // Soft safety penalty for attacked pieces even if defended
   const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
 
-  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + breadth + softSafety;
+  // Promotion presence bonus
+  const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
+
+  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + breadth + softSafety + promo;
 }
 
 function countCapturedPieces(pieces) {
@@ -562,7 +582,7 @@ function getPieceAtSquare(pieces, sq) {
   return null;
 }
 
-function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
+export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
   const occ = buildOccupancy(piecesAfterMove);
   const occupant = occ.get(toSq);
   if (!occupant || occupant.side !== movedSide) return 0; // not a standard single move or castle
@@ -687,8 +707,9 @@ function orderMoves(moves, currentEval, side, prevPieces) {
 
       // SEE-based landing risk assessment
       let seeScore = 0;
+      let riskNet = 0;
       if (m.type === 'move') {
-        const riskNet = seeNetForLandingSquare(m.resultPieces, side, m.to);
+        riskNet = seeNetForLandingSquare(m.resultPieces, side, m.to);
         if (riskNet < 0) seeScore -= SEE_RISK_WEIGHT * (-riskNet);
         else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
       }
@@ -728,11 +749,19 @@ function orderMoves(moves, currentEval, side, prevPieces) {
       // Penalty for collapsing a broad superposition into a narrow one without compensation
       const collapsePenalty = collapseNarrowingPenalty(prevPieces, m, side);
 
+      // Demote clearly losing captures unless the move scores extremely well otherwise
+      let losingCapturePenalty = 0;
+      if (isCap && m.type === 'move' && riskNet < LOSING_CAPTURE_DROP_THRESHOLD) {
+        const evalGain = sign * (nextEval - currentEval);
+        const allowExtreme = checkBonus > 0 || evalGain >= EXTREME_GAIN_THRESHOLD;
+        if (!allowExtreme) losingCapturePenalty = LOSING_CAPTURE_HARD_PENALTY;
+      }
+
       // Small random jitter to avoid deterministic openings
       const jitter = (Math.random() - 0.5) * RANDOM_MOVE_JITTER;
 
-      const score = sign * (nextEval - currentEval) + capBonus + capValueBonus + castleBonus + seeScore + devScore + pawnRetention + checkBonus - collapsePenalty + jitter;
-      return { m, score, meta: { isCap, capValue: capValueBonus / (CAPTURE_VALUE_ORDER_BONUS || 1), seeScore, devScore, collapsePenalty } };
+      const score = sign * (nextEval - currentEval) + capBonus + capValueBonus + castleBonus + seeScore + devScore + pawnRetention + checkBonus - collapsePenalty - losingCapturePenalty + jitter;
+      return { m, score, meta: { isCap, capValue: capValueBonus / (CAPTURE_VALUE_ORDER_BONUS || 1), seeScore, devScore, collapsePenalty, losingCapturePenalty } };
     })
     .sort((a, b) => b.score - a.score);
 
@@ -754,6 +783,7 @@ function orderMoves(moves, currentEval, side, prevPieces) {
           see: Number(x.meta.seeScore.toFixed(3)),
           dev: Number(x.meta.devScore.toFixed(3)),
           collapse: Number(x.meta.collapsePenalty.toFixed(3)),
+          loseCap: Number((x.meta.losingCapturePenalty || 0).toFixed(3)),
         }))
       });
     } catch (_) {}

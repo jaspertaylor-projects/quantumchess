@@ -1,9 +1,9 @@
 // frontend/src/ai/aiWorker.js
-// Purpose: Web Worker that performs AI computations off the main thread. Quickly emits a smarter unbiased baseline (prefer captures if any), then computes the alpha-beta best move and returns it. Adds logging for debugging.
+// Purpose: Web Worker that performs AI computations off the main thread. Emits a safer baseline that avoids losing captures via SEE, then computes the alpha-beta best move and returns it.
 // Imports From: ./alphaBetaEngine.js, ../chessboard/quantumEngine.js
 // Exported To: ./useLocalAi.js
 
-import pickBestMove from './alphaBetaEngine.js';
+import pickBestMove, { seeNetForLandingSquare } from './alphaBetaEngine.js';
 import { clonePieces, generateLegalReplies } from '../chessboard/quantumEngine.js';
 
 const DEBUG_WORKER = true;
@@ -31,6 +31,12 @@ function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function isSeeSafeCapture(rootPieces, sideToMove, mv) {
+  if (!mv || mv.type !== 'move') return false;
+  const net = seeNetForLandingSquare(mv.resultPieces, sideToMove, mv.to);
+  return net >= 0; // safe if SEE net is non-negative
+}
+
 self.addEventListener('message', (e) => {
   const data = e.data || {};
   if (data.type !== 'think') return;
@@ -46,13 +52,27 @@ self.addEventListener('message', (e) => {
   try {
     const root = clonePieces(pieces || []);
 
-    // Emit an unbiased baseline move quickly. Prefer any capture; else random among all legal.
+    // Emit a safer baseline move quickly. Prefer SEE-safe captures; else prefer non-captures; else fallback.
     try {
       const legal = generateLegalReplies(root, sideToMove, 0);
       if (Array.isArray(legal) && legal.length > 0) {
-        const captures = legal.filter((mv) => isCapture(root, mv));
-        const pool = captures.length > 0 ? captures : legal;
-        const baselineMove = randomChoice(pool);
+        const capturing = legal.filter((mv) => isCapture(root, mv));
+        const nonCaptures = legal.filter((mv) => !isCapture(root, mv));
+
+        const safeCaptures = capturing.filter((mv) => isSeeSafeCapture(root, sideToMove, mv));
+
+        let baselineMove = null;
+        if (safeCaptures.length > 0) {
+          // Prefer among safe captures; small randomization
+          baselineMove = randomChoice(safeCaptures);
+        } else if (nonCaptures.length > 0) {
+          // No safe capture: choose a quiet move baseline
+          baselineMove = randomChoice(nonCaptures);
+        } else {
+          // Last resort: choose any capture (likely losing), but still randomize
+          baselineMove = randomChoice(capturing);
+        }
+
         const baseline = minifyMove(baselineMove);
         if (DEBUG_WORKER) {
           try {
@@ -61,7 +81,9 @@ self.addEventListener('message', (e) => {
               id,
               side: sideToMove,
               legalCount: legal.length,
-              captures: captures.length,
+              captures: capturing.length,
+              safeCaptures: safeCaptures.length,
+              nonCaptures: nonCaptures.length,
               chosen: baseline,
             });
           } catch (_) {}
