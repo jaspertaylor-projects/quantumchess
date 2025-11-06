@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Stronger alpha-beta engine with quiescence, king/center/safety heuristics, and PST-driven evaluation tailored for Quantum Chess superpositions.
+// Purpose: Stronger alpha-beta engine with SEE-based risk, quiescence, center/king safety, PSTs, and small randomness to avoid deterministic play. Heuristics respect quantum superpositions and capture-collapse values.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js
 
@@ -23,8 +23,8 @@ const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const MOBILITY_WEIGHT = 0.02;
 const SUPERPOSITION_UNIT_WEIGHT = 0.1;
 const COLLAPSED_KING_PENALTY = -12; // per fully collapsed king on a side
-const HANGING_WEIGHT = 3.2; // penalize undefended capturable pieces
-const TRADE_RISK_WEIGHT = 1.2; // penalize defended but losing exchanges
+const HANGING_WEIGHT = 5.0; // stronger penalty for undefended, capturable pieces
+const TRADE_RISK_WEIGHT = 1.75; // stronger penalty for defended but losing exchanges
 const PST_WEIGHT = 0.18; // piece-square table contribution
 const KING_THREAT_WEIGHT = 0.8; // king on threatened square penalty
 const KING_SHELL_WEIGHT = 0.12; // penalty per adjacent king square under control by opponent
@@ -38,8 +38,13 @@ const PAWN_ADVANCE_WEIGHT = 0.015; // encourage steady, not reckless pawn progre
 // Quiescence search limits to resolve hanging/tactical capture sequences
 const QUIESCENCE_MAX_PLIES = 5;
 
-// Piece-square tables (white perspective), coarse but effective. Values are in pawn units; scaled with PST_WEIGHT.
-// Source inspiration: common simplified PSTs; tuned for relative trends rather than exact play.
+// SEE and move-ordering weights
+const SEE_RISK_WEIGHT = 0.9; // down-weight moves that lose material on the landing square
+const SEE_GOOD_WEIGHT = 0.25; // mild bonus if landing square yields favorable exchanges
+const COLLAPSE_OVER_NARROW_PENALTY = 0.2; // penalize collapsing a broad superposition to 1-2 types without compensation
+const RANDOM_MOVE_JITTER = 0.06; // small non-determinism in move ordering
+
+// Piece-square tables (white perspective)
 const PST = {
   p: [
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -77,7 +82,7 @@ const PST = {
     [-0.02, 0, 0.02, 0.04, 0.04, 0.02, 0, -0.02],
     [-0.03, -0.01, 0.01, 0.03, 0.03, 0.01, -0.01, -0.03],
     [-0.03, -0.01, 0.01, 0.03, 0.03, 0.01, -0.01, -0.03],
-    [-0.02, 0, 0.02, 0.04, 0.04, 0.02, 0, -0.02],
+    [-0.02, 0, 0.02, 0.4, 0.4, 0.02, 0, -0.02],
     [0.02, 0.05, 0.06, 0.08, 0.08, 0.06, 0.05, 0.02],
     [0, 0, 0.02, 0.04, 0.04, 0.02, 0, 0],
   ],
@@ -404,7 +409,7 @@ function pieceSafetySoftPenaltyForSide(pieces, side, occ) {
     const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
     if (attackers.length === 0) continue;
     const val = captureCollapseValueForPiece(p);
-    sum += 0.06 * val; // gentle nudge to keep pieces safe
+    sum += 0.1 * val; // stronger nudge to keep pieces safe
   }
   return -sum;
 }
@@ -469,20 +474,6 @@ function evaluatePosition(pieces) {
   return material + mobility + superpos + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + softSafety;
 }
 
-function orderMoves(moves, currentEval, side) {
-  const sign = side === 'white' ? 1 : -1;
-  return moves
-    .map((m) => {
-      const nextEval = evaluatePosition(m.resultPieces);
-      // Bonus for captures and castling to improve move ordering
-      const capBonus = isCaptureMoveEval(currentEval, nextEval, sign) ? 0.3 : 0;
-      const castleBonus = m.type === 'castle' ? 0.25 : 0;
-      return { m, score: sign * (nextEval - currentEval) + capBonus + castleBonus };
-    })
-    .sort((a, b) => b.score - a.score)
-    .map((x) => x.m);
-}
-
 function isCaptureMoveEval(prevEval, nextEval, sign) {
   // Heuristic: if evaluation jumps favorably after a move, likely tactical; weak signal but useful for ordering.
   return sign * (nextEval - prevEval) > 0.2;
@@ -507,6 +498,102 @@ function generateCapturingReplies(pieces, side) {
   return caps;
 }
 
+// --- Static Exchange Evaluation (approximate) for landing square risk ---
+function getPieceAtSquare(pieces, sq) {
+  for (const p of pieces) {
+    if (!p.captured && p.square === sq) return p;
+  }
+  return null;
+}
+
+function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
+  const occ = buildOccupancy(piecesAfterMove);
+  const occupant = occ.get(toSq);
+  if (!occupant || occupant.side !== movedSide) return 0; // not a standard single move or castle
+
+  const initialVal = captureCollapseValueForPiece(occupant);
+  const opponent = movedSide === 'white' ? 'black' : 'white';
+
+  const oppAttackers = attackersToSquareWithValues(piecesAfterMove, opponent, toSq, occ)
+    .map((a) => a.value)
+    .sort((a, b) => a - b);
+
+  const myDefenders = defendersAfterCaptureWithValues(piecesAfterMove, movedSide, toSq, occ, occupant.id)
+    .map((a) => a.value)
+    .sort((a, b) => a - b);
+
+  let net = 0;
+  let targetVal = initialVal;
+  let oi = 0;
+  let mi = 0;
+  let turn = 'opp';
+
+  while (true) {
+    if (turn === 'opp') {
+      if (oi >= oppAttackers.length) break;
+      net -= targetVal; // opponent captures our target piece of value targetVal
+      targetVal = oppAttackers[oi++]; // the capturing piece becomes the new target
+      turn = 'mine';
+    } else {
+      if (mi >= myDefenders.length) break;
+      net += targetVal; // we recapture that capturing piece
+      targetVal = myDefenders[mi++];
+      turn = 'opp';
+    }
+  }
+  return net; // positive is good for mover, negative bad
+}
+
+function collapseNarrowingPenalty(prevPieces, mv, side) {
+  if (mv.type !== 'move') return 0;
+  const fromSq = mv.from;
+  const toSq = mv.to;
+  const before = getPieceAtSquare(prevPieces, fromSq);
+  if (!before || before.side !== side) return 0;
+  const after = getPieceAtSquare(mv.resultPieces, toSq);
+  if (!after || after.side !== side) return 0;
+  const beforeCount = (before.possibleTypes || []).length;
+  const afterCount = (after.possibleTypes || []).length;
+  if (afterCount >= beforeCount) return 0;
+  // penalize if collapsing to at most two types without capture compensation on the move.
+  const narrowed = beforeCount - afterCount;
+  const isCapture = isCaptureMove(prevPieces, mv.resultPieces);
+  if (afterCount <= 2 && !isCapture) {
+    return narrowed * COLLAPSE_OVER_NARROW_PENALTY;
+  }
+  return 0;
+}
+
+function orderMoves(moves, currentEval, side, prevPieces) {
+  const sign = side === 'white' ? 1 : -1;
+  return moves
+    .map((m) => {
+      const nextEval = evaluatePosition(m.resultPieces);
+      const capBonus = isCaptureMoveEval(currentEval, nextEval, sign) ? 0.3 : 0;
+      const castleBonus = m.type === 'castle' ? 0.25 : 0;
+
+      // SEE-based landing risk assessment
+      let seeScore = 0;
+      if (m.type === 'move') {
+        const riskNet = seeNetForLandingSquare(m.resultPieces, side, m.to);
+        if (riskNet < 0) seeScore -= SEE_RISK_WEIGHT * (-riskNet);
+        else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
+      } else if (m.type === 'castle') {
+        // castles often improve safety; tiny bonus already applied; skip SEE
+      }
+
+      // Penalty for collapsing a broad superposition into a narrow one without compensation
+      const collapsePenalty = collapseNarrowingPenalty(prevPieces, m, side);
+
+      // Small random jitter to avoid deterministic openings
+      const jitter = (Math.random() - 0.5) * RANDOM_MOVE_JITTER;
+
+      return { m, score: sign * (nextEval - currentEval) + capBonus + castleBonus + seeScore - collapsePenalty + jitter };
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.m);
+}
+
 function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
   const standPatVal = evaluatePosition(pieces);
   const standPat = (rootSide === 'white' ? 1 : -1) * standPatVal;
@@ -518,8 +605,8 @@ function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
   const caps = generateCapturingReplies(pieces, side);
   if (caps.length === 0) return { score: standPat, move: null };
 
-  // Order capture moves greedily using evaluation delta
-  const ordered = orderMoves(caps, standPatVal, side);
+  // Order capture moves greedily using evaluation delta and SEE
+  const ordered = orderMoves(caps, standPatVal, side, pieces);
 
   let bestMove = null;
   if (side === rootSide) {
@@ -558,7 +645,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
   }
 
   const currentEval = evaluatePosition(pieces);
-  const ordered = orderMoves(replies, currentEval, side);
+  const ordered = orderMoves(replies, currentEval, side, pieces);
 
   let bestMove = null;
   if (side === rootSide) {
@@ -591,6 +678,8 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
   const depth = difficulty === 'hard' ? 4 : difficulty === 'easy' ? 1 : 3;
   const rootPieces = clonePieces(pieces);
   const rootSide = sideToMove;
+
+  // Slight random chance to explore a different principal variation at root by randomizing difficulty-based depth by +/- 0 on medium/hard
   const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide);
 
   // Easy mode occasional blunder/randomization
