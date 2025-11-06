@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with improved development diversity, early-collapse aversion, SEE-based risk, quiescence, center/king safety, PSTs, and controlled randomness to avoid deterministic play. Heuristics respect quantum superpositions and capture-collapse values.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Encourages broader development, values retaining Pawn/King in superpositions, uses SEE and quiescence, aligns king-safety with checking rules, and adds controlled randomness.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js
 
@@ -23,28 +23,32 @@ const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const MOBILITY_WEIGHT = 0.02;
 const SUPERPOSITION_UNIT_WEIGHT = 0.1;
 const COLLAPSED_KING_PENALTY = -12; // per fully collapsed king on a side
-const HANGING_WEIGHT = 5.0; // penalty for undefended, capturable pieces
-const TRADE_RISK_WEIGHT = 1.75; // penalty for defended but losing exchanges
+const HANGING_WEIGHT = 3.0; // penalty for undefended, capturable pieces (down-weighted to not avoid captures excessively)
+const TRADE_RISK_WEIGHT = 1.2; // penalty for defended but losing exchanges (softer to enable more trades when good)
 const PST_WEIGHT = 0.18; // piece-square table contribution
 const KING_THREAT_WEIGHT = 0.8; // king on threatened square penalty
 const KING_SHELL_WEIGHT = 0.12; // penalty per adjacent king square under control by opponent
 const CENTER_CONTROL_MAIN_WEIGHT = 0.08; // e4, d4, e5, d5
 const CENTER_CONTROL_EXT_WEIGHT = 0.04; // extended 3x3 ring
-const DEVELOPMENT_MINOR_WEIGHT = 0.08; // reward for minor piece activation
-const DEVELOPMENT_ROOK_WEIGHT = 0.05; // rooks activation
-const DEVELOPMENT_GENERIC_WEIGHT = 0.05; // any piece moved from starting state
+const DEVELOPMENT_MINOR_WEIGHT = 0.1; // reward for minor piece activation
+const DEVELOPMENT_ROOK_WEIGHT = 0.06; // rooks activation
+const DEVELOPMENT_GENERIC_WEIGHT = 0.06; // any piece moved from starting state
 const PAWN_ADVANCE_WEIGHT = 0.02; // encourage steady pawn progress
-const DEV_BREADTH_UNIT_WEIGHT = 0.03; // reward breadth: number of distinct movers
+const DEV_BREADTH_UNIT_WEIGHT = 0.06; // reward breadth: number of distinct movers (higher to move more pieces)
+
+// New: value retaining Pawn/King in superposition across your team
+const PAWN_PRESENCE_WEIGHT = 0.06; // per friendly piece containing 'p'
+const KING_PRESENCE_WEIGHT = 0.04; // per friendly piece containing 'k'
 
 // Quiescence search limits to resolve hanging/tactical capture sequences
 const QUIESCENCE_MAX_PLIES = 5;
 
 // SEE and move-ordering weights
-const SEE_RISK_WEIGHT = 0.9; // down-weight moves that lose material on the landing square
-const SEE_GOOD_WEIGHT = 0.25; // mild bonus if landing square yields favorable exchanges
+const SEE_RISK_WEIGHT = 0.6; // down-weight moves that lose material on the landing square
+const SEE_GOOD_WEIGHT = 0.4; // bonus if landing square yields favorable exchanges
 
 // Collapse penalties: avoid over-narrowing too early or into single-type Knights
-const COLLAPSE_OVER_NARROW_PENALTY = 0.3; // base penalty for narrowing superposition
+const COLLAPSE_OVER_NARROW_PENALTY = 0.25; // base penalty for narrowing superposition (slightly softer)
 const SINGLE_TYPE_COLLAPSE_MULTIPLIER = 2.2; // stronger penalty for collapsing to a single type
 const DOUBLE_TYPE_COLLAPSE_MULTIPLIER = 0.5; // milder penalty for collapsing to two types
 const BQ_DOUBLE_TYPE_DISCOUNT = 0.7; // discount if the two types are exactly bishop-queen
@@ -52,11 +56,16 @@ const KNIGHT_SINGLE_COLLAPSE_EXTRA = 0.8; // extra penalty when collapsing to a 
 const EARLY_GAME_PLY_THRESHOLD = 12; // until this ply, avoid narrow collapses
 
 // Development diversity ordering weights
-const FRESH_DEVELOPMENT_BONUS = 0.18; // bonus to moves from unmoved pieces
-const REPEAT_MOVER_PENALTY = 0.16; // penalty scales with how many friendly pieces remain unmoved
+const FRESH_DEVELOPMENT_BONUS = 0.24; // prefer moving new pieces more strongly
+const REPEAT_MOVER_PENALTY = 0.24; // discourage repeating the same mover when many are unmoved
 
 // Randomization to avoid deterministic play
-const RANDOM_MOVE_JITTER = 0.12; // small non-determinism in move ordering
+const RANDOM_MOVE_JITTER = 0.16; // small non-determinism in move ordering
+
+// Move-ordering specific bonuses
+const CAPTURE_ORDER_BONUS = 0.5; // give captures a stronger ordering bump
+const P_RETENTION_ORDER_BONUS = 0.08; // prefer moves that retain Pawn in mover's superposition
+const CHECK_ORDER_BONUS = 0.12; // prefer moves that result in a check (per checking rules)
 
 // Piece-square tables (white perspective)
 const PST = {
@@ -334,8 +343,9 @@ function approxThreatenedSquares(pieces, side) {
 }
 
 function kingSafetyPenaltyForSide(pieces, side) {
+  // Align with checking rules: only pieces with <= 2 possibilities contribute to threat map
   const opp = side === 'white' ? 'black' : 'white';
-  const oppThreats = approxThreatenedSquares(pieces, opp);
+  const oppThreats = computeThreatenedSquaresForSide(pieces, opp);
   let penalty = 0;
   for (const p of pieces) {
     if (p.captured || p.side !== side || !p.square) continue;
@@ -437,6 +447,21 @@ function pieceSafetySoftPenaltyForSide(pieces, side, occ) {
   return -sum;
 }
 
+function presenceCountForSide(pieces, side, typeChar) {
+  let c = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (Array.isArray(p.possibleTypes) && p.possibleTypes.includes(typeChar)) c += 1;
+  }
+  return c;
+}
+
+function presenceScoreForSide(pieces, side) {
+  const pawnPresence = presenceCountForSide(pieces, side, 'p') * PAWN_PRESENCE_WEIGHT;
+  const kingPresence = presenceCountForSide(pieces, side, 'k') * KING_PRESENCE_WEIGHT;
+  return pawnPresence + kingPresence;
+}
+
 function isCheckOnSide(pieces, side) {
   const opp = side === 'white' ? 'black' : 'white';
   const oppThreats = computeThreatenedSquaresForSide(pieces, opp);
@@ -466,6 +491,11 @@ function evaluatePosition(pieces) {
   const wSup = superpositionScoreForSide(pieces, 'white');
   const bSup = superpositionScoreForSide(pieces, 'black');
   const superpos = wSup - bSup;
+
+  // Presence of Pawn/King in superpositions across the team
+  const wPresence = presenceScoreForSide(pieces, 'white');
+  const bPresence = presenceScoreForSide(pieces, 'black');
+  const presence = wPresence - bPresence;
 
   // Collapsed king penalty
   const wKingPen = collapsedKingPenaltyForSide(pieces, 'white');
@@ -497,7 +527,7 @@ function evaluatePosition(pieces) {
   // Soft safety penalty for attacked pieces even if defended
   const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
 
-  return material + mobility + superpos + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + breadth + softSafety;
+  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + breadth + softSafety;
 }
 
 function isCaptureMoveEval(prevEval, nextEval, sign) {
@@ -624,7 +654,7 @@ function orderMoves(moves, currentEval, side, prevPieces) {
   return moves
     .map((m) => {
       const nextEval = evaluatePosition(m.resultPieces);
-      const capBonus = isCaptureMoveEval(currentEval, nextEval, sign) ? 0.3 : 0;
+      const capBonus = isCaptureMoveEval(currentEval, nextEval, sign) ? CAPTURE_ORDER_BONUS : 0;
       const castleBonus = m.type === 'castle' ? 0.25 : 0;
 
       // SEE-based landing risk assessment
@@ -635,7 +665,7 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
       }
 
-      // Development diversity: prefer moving new pieces in early game; avoid spamming same piece
+      // Development diversity: prefer moving new pieces; avoid spamming same piece
       let devScore = 0;
       if (m.type === 'move') {
         const moverBefore = getPieceAtSquare(prevPieces, m.from);
@@ -648,13 +678,29 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         }
       }
 
+      // Encourage leaving Pawn in superposition after the move
+      let pawnRetention = 0;
+      if (m.type === 'move') {
+        const afterMover = getPieceAtSquare(m.resultPieces, m.to);
+        if (afterMover && afterMover.side === side && Array.isArray(afterMover.possibleTypes) && afterMover.possibleTypes.includes('p')) {
+          pawnRetention += P_RETENTION_ORDER_BONUS;
+        }
+      }
+
+      // Check bonus aligned with checking rules
+      let checkBonus = 0;
+      if (m.type === 'move' || m.type === 'castle') {
+        const nextSide = side === 'white' ? 'black' : 'white';
+        if (isCheckOnSide(m.resultPieces, nextSide)) checkBonus += CHECK_ORDER_BONUS;
+      }
+
       // Penalty for collapsing a broad superposition into a narrow one without compensation
       const collapsePenalty = collapseNarrowingPenalty(prevPieces, m, side);
 
       // Small random jitter to avoid deterministic openings
       const jitter = (Math.random() - 0.5) * RANDOM_MOVE_JITTER;
 
-      return { m, score: sign * (nextEval - currentEval) + capBonus + castleBonus + seeScore + devScore - collapsePenalty + jitter };
+      return { m, score: sign * (nextEval - currentEval) + capBonus + castleBonus + seeScore + devScore + pawnRetention + checkBonus - collapsePenalty + jitter };
     })
     .sort((a, b) => b.score - a.score)
     .map((x) => x.m);
