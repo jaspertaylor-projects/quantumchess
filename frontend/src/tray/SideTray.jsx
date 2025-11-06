@@ -19,6 +19,7 @@ export default function SideTray({
   onSetHighlights = () => {},
   onClearHighlights = () => {},
   onSeekToIndex = () => {},
+  externalIndex = undefined,
 }) {
   const [view, setView] = useState('history'); // 'history' or 'new-game'
 
@@ -124,6 +125,7 @@ export default function SideTray({
             onHighlightMove={onSetHighlights}
             onClearHighlights={onClearHighlights}
             onSeekToIndex={onSeekToIndex}
+            externalIndex={externalIndex}
           />
         ) : (
           <NewGamePanel

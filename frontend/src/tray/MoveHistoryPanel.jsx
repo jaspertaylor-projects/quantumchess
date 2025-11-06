@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
 
-export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {} }) {
+export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {}, externalIndex = undefined }) {
   const moves = useSelector((s) => s.game.moves);
 
   const [index, setIndex] = useState(-1);
@@ -28,6 +28,16 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   useEffect(() => { highlightRef.current = onHighlightMove; }, [onHighlightMove]);
   useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
   useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
+
+  // Sync internal index with an external controller when provided (e.g., keyboard arrows from App)
+  useEffect(() => {
+    if (typeof externalIndex !== 'number') return;
+    const clamped = Math.max(-1, Math.min(moves.length - 1, externalIndex));
+    if (clamped !== index) {
+      setPlaying(false);
+      setIndex(clamped);
+    }
+  }, [externalIndex, moves.length, index]);
 
   useEffect(() => {
     if (index >= 0 && index < moves.length) {
