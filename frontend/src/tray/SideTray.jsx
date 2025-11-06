@@ -1,14 +1,14 @@
 // frontend/src/tray/SideTray.jsx
-// Purpose: Right-side tray that contains move history and new game options. Proxies highlight and seek events up to the App, and adapts to the board's height.
+// Purpose: Right-side tray that contains move history and contextual controls. Shows New Game options when idle and in-game actions (Resign/Offer Draw) when a game is active. Proxies highlight and seek events up to the App, and adapts to the board's height.
 // Imports From: ./MoveHistoryPanel.jsx, ./NewGamePanel.jsx, ../components/IconButton.jsx, ../theme.js
 // Exported To: ../App.jsx
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon } from 'lucide-react';
 
 export default function SideTray({
   height = 0,
@@ -20,8 +20,15 @@ export default function SideTray({
   onClearHighlights = () => {},
   onSeekToIndex = () => {},
   externalIndex = undefined,
+  isPlaying = false,
+  onResign = () => {},
+  onOfferDraw = () => {},
 }) {
   const [view, setView] = useState('history'); // 'history' or 'new-game'
+
+  useEffect(() => {
+    if (isPlaying && view !== 'history') setView('history');
+  }, [isPlaying, view]);
 
   const handleStartGame = (settings) => {
     onStartGame(settings);
@@ -73,22 +80,56 @@ export default function SideTray({
   return (
     <aside className="qc-side-tray-root" style={styles.root} aria-label="Move history and controls">
       <div className="qc-side-tray-header" style={styles.header}>
-        <IconButton
-          icon={PlusIcon}
-          size={18}
-          width={32}
-          height={32}
-          title="New Game"
-          ariaLabel="Start a new game"
-          className="qc-side-tray-new-game-btn"
-          onClick={() => setView('new-game')}
-          bg={'transparent'}
-          color={theme.success}
-          hoverInvert={true}
-          hoverBg={theme.success}
-          hoverColor={'#ffffff'}
-        />
-        <span className="qc-side-tray-title" style={styles.headerTitle}>New Game</span>
+        {!isPlaying ? (
+          <>
+            <IconButton
+              icon={PlusIcon}
+              size={18}
+              width={32}
+              height={32}
+              title="New Game"
+              ariaLabel="Start a new game"
+              className="qc-side-tray-new-game-btn"
+              onClick={() => setView('new-game')}
+              bg={'transparent'}
+              color={theme.success}
+              hoverInvert={true}
+              hoverBg={theme.success}
+              hoverColor={'#ffffff'}
+            />
+            <span className="qc-side-tray-title" style={styles.headerTitle}>New Game</span>
+          </>
+        ) : (
+          <>
+            <IconButton
+              icon={FlagIcon}
+              size={18}
+              width={32}
+              height={32}
+              title="Resign"
+              ariaLabel="Resign the current game"
+              className="qc-side-tray-resign-btn"
+              onClick={onResign}
+              bg={theme.secondary}
+              color={theme.danger || '#ff3b30'}
+              hoverInvert={true}
+            />
+            <IconButton
+              icon={HandshakeIcon}
+              size={18}
+              width={32}
+              height={32}
+              title="Offer Draw"
+              ariaLabel="Offer a draw"
+              className="qc-side-tray-offer-draw-btn"
+              onClick={onOfferDraw}
+              bg={theme.secondary}
+              color={theme.warning || '#f5a524'}
+              hoverInvert={true}
+            />
+            <span className="qc-side-tray-title" style={styles.headerTitle}>Game Actions</span>
+          </>
+        )}
         <div className="qc-side-tray-spacer" style={styles.spacer} />
         <IconButton
           icon={BookOpenIcon}
@@ -119,7 +160,7 @@ export default function SideTray({
       </div>
 
       <div className="qc-side-tray-content" style={styles.content}>
-        {view === 'history' ? (
+        {view === 'history' || isPlaying ? (
           <MoveHistoryPanel
             infoMessage={infoMessage}
             onHighlightMove={onSetHighlights}

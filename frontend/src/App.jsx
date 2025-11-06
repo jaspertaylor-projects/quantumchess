@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking with a server-authoritative chess clock. Handles legal moves, castling, checkmate, and syncs moves and clock over WebSocket. Includes optional local AI opponent via alpha-beta search.
+// Purpose: Render the Quantum Chess UI, manage game state, and integrate online matchmaking with a server-authoritative chess clock. Handles legal moves, castling, checkmate, and syncs moves and clock over WebSocket. Includes optional local AI opponent via alpha-beta search. Adds in-game actions (resign/draw) and defers game start until New Game or first white move.
 // Imports From: ./App.css, ./theme.js, ./chessboard/Board.jsx, ./chessboard/useQuantumGameState.js, ./settings/SettingsModal.jsx, ./settings/usePieceColors.js, ./settings/useBoardColors.js, ./settings/usePlayerBarColors.js, ./tray/SideTray.jsx, ./tray/RulesModal.jsx, ./store/gameSlice.js, ./store/settingsSlice.js, ./chessboard/rasterPrewarm.js, ./tray/matchmakingClient.js, ./components/AppHeader.jsx, ./components/PlayerBar.jsx, ./components/WinnerModal.jsx, ./hooks/useChessClock.js, ./hooks/clockUtils.js, ./ai/useLocalAi.js
 // Exported To: None
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -59,6 +59,11 @@ export default function App() {
   const [showCheckOverlay, setShowCheckOverlay] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [showWinPopup, setShowWinPopup] = useState(false);
+
+  // Tracks whether a game is considered "started". Initially false until a New Game starts or White makes the first move.
+  const [gameStarted, setGameStarted] = useState(false);
+  // Allows ending the game by actions outside the core engine (resign/draw), disabling further interaction and showing a result.
+  const [externalGameOver, setExternalGameOver] = useState({ over: false, text: '' });
 
   const [gameInstanceId, setGameInstanceId] = useState(0);
 
@@ -144,6 +149,12 @@ export default function App() {
   }, [gameOver]);
 
   useEffect(() => {
+    if (externalGameOver.over) {
+      setShowWinPopup(true);
+    }
+  }, [externalGameOver]);
+
+  useEffect(() => {
     return () => {
       mmAbortRef.current = true;
       const id = mmClientIdRef.current;
@@ -155,6 +166,13 @@ export default function App() {
       }
     };
   }, []);
+
+  // Start the game implicitly if a first move has been recorded
+  useEffect(() => {
+    if (!gameStarted && Array.isArray(moves) && moves.length > 0) {
+      setGameStarted(true);
+    }
+  }, [moves, gameStarted]);
 
   const styles = {
     appContainer: {
@@ -220,7 +238,17 @@ export default function App() {
   const isUsersTurn = useCallback(() => !isOnline() || sideToMove === userTeam, [isOnline, sideToMove, userTeam]);
   const ownsPiece = useCallback((piece) => !isOnline() || (piece && piece.side === userTeam), [isOnline, userTeam]);
 
+  const guardExternalOver = useCallback(() => {
+    if (externalGameOver.over) {
+      setInfoMessage(externalGameOver.text || 'Game over.');
+      return true;
+    }
+    return false;
+  }, [externalGameOver]);
+
   const handleSquareClick = (data) => {
+    if (guardExternalOver()) return;
+
     if (!canMakeMove) {
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
@@ -255,6 +283,7 @@ export default function App() {
                 setSelectedId(null);
                 setTrayHighlights([]);
                 setInfoMessage('');
+                setGameStarted(true);
                 return;
               } else {
                 if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
@@ -293,6 +322,7 @@ export default function App() {
             sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: square, side: movingPiece.side });
           }
           setInfoMessage('');
+          setGameStarted(true);
         } else if (!result.success) {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
         }
@@ -305,6 +335,8 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
+    if (guardExternalOver()) return;
+
     if (!canMakeMove) {
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       return;
@@ -339,6 +371,7 @@ export default function App() {
               setSelectedId(null);
               setTrayHighlights([]);
               setInfoMessage('');
+              setGameStarted(true);
               return;
             } else {
               if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
@@ -377,6 +410,7 @@ export default function App() {
             sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: destSquare, side: movingPiece.side });
           }
           setInfoMessage('');
+          setGameStarted(true);
         } else if (!result.success) {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
         }
@@ -515,6 +549,7 @@ export default function App() {
         if (result && result.success) {
           dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
           setInfoMessage('Opponent moved.');
+          setGameStarted(true);
           console.debug('[WS][client] applied opponent move', { from, to, side: sideMsg });
         } else {
           console.warn('[WS][client] failed to apply opponent move', { from, to, sideMsg });
@@ -547,6 +582,7 @@ export default function App() {
           dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg }));
           dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg }));
           setInfoMessage('Opponent castled.');
+          setGameStarted(true);
           console.debug('[WS][client] applied opponent castle', { plan, side: sideMsg });
         } else {
           console.warn('[WS][client] failed to apply opponent castle', { plan, side: sideMsg });
@@ -611,6 +647,10 @@ export default function App() {
 
     setServerClock({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
 
+    // Starting a new game via the tray explicitly marks the session as started
+    setGameStarted(true);
+    setExternalGameOver({ over: false, text: '' });
+
     if (settings && settings.gameMode === 'online') {
       const clientId = getOrCreateClientId();
       mmClientIdRef.current = clientId;
@@ -672,6 +712,7 @@ export default function App() {
 
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
+    if (guardExternalOver()) return false;
     if (!canMakeMove) return false;
     if (isOnlineGameRef.current) {
       if (piece.side !== userTeam) return false;
@@ -687,9 +728,13 @@ export default function App() {
     setSelectedId(piece.id);
     setTrayHighlights([]);
     return true;
-  }, [sideToMove, canMakeMove, userTeam]);
+  }, [sideToMove, canMakeMove, userTeam, guardExternalOver]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
+    if (guardExternalOver()) { 
+      setSelectedId(null); 
+      return; 
+    }
     if (!canMakeMove) { 
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
       setSelectedId(null); 
@@ -741,6 +786,7 @@ export default function App() {
             sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: movingPiece.side, plan });
           }
           setInfoMessage('');
+          setGameStarted(true);
         } else {
           if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Castling failed.');
         }
@@ -765,11 +811,12 @@ export default function App() {
         sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to, side: movingPiece.side });
       }
       setInfoMessage('');
+      setGameStarted(true);
     } else if (!result.success) {
       if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');
     }
     setSelectedId(null);
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver]);
 
   const handleDragHover = useCallback(() => {}, []);
 
@@ -841,7 +888,7 @@ export default function App() {
   const localClock = useChessClock({
     timeControl,
     sideToMove,
-    isLive: canMakeMove && !gameOver && !isOnlineGameRef.current,
+    isLive: gameStarted && !externalGameOver.over && canMakeMove && !gameOver && !isOnlineGameRef.current,
     moves,
     gameInstanceId,
   });
@@ -860,14 +907,14 @@ export default function App() {
         blackMs: b,
         whiteText,
         blackText,
-        whiteActive: active === 'white' && w > 0 && b > 0,
-        blackActive: active === 'black' && w > 0 && b > 0,
+        whiteActive: gameStarted && !externalGameOver.over && active === 'white' && w > 0 && b > 0,
+        blackActive: gameStarted && !externalGameOver.over && active === 'black' && w > 0 && b > 0,
         whiteLow,
         blackLow,
       };
     }
     return localClock;
-  }, [serverClock, localClock]);
+  }, [serverClock, localClock, gameStarted, externalGameOver]);
 
   const aiSide = useMemo(() => (userTeam === 'white' ? 'black' : 'white'), [userTeam]);
 
@@ -884,6 +931,7 @@ export default function App() {
       if (res && res.success) {
         dispatch(addMove({ from: mv.from, to: mv.to, side }));
         setInfoMessage('AI moved.');
+        setGameStarted(true);
       }
       return;
     }
@@ -899,6 +947,7 @@ export default function App() {
         dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side }));
         dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side }));
         setInfoMessage('AI castled.');
+        setGameStarted(true);
       }
       return;
     }
@@ -958,6 +1007,26 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [currentMoveIndex, moves.length, historyLength, setViewIndex]);
 
+  const isPlaying = useMemo(() => gameStarted && !gameOver && !externalGameOver.over, [gameStarted, gameOver, externalGameOver]);
+
+  const handleResign = useCallback(() => {
+    const side = userTeam === 'white' ? 'white' : 'black';
+    const opp = side === 'white' ? 'Black' : 'White';
+    const confirmText = side === 'white' ? 'Resign as White?' : 'Resign as Black?';
+    if (!window.confirm(confirmText)) return;
+    setExternalGameOver({ over: true, text: `${side === 'white' ? 'White' : 'Black'} resigns. ${opp} wins.` });
+    setInfoMessage(`${side === 'white' ? 'White' : 'Black'} resigned.`);
+  }, [userTeam]);
+
+  const handleOfferDraw = useCallback(() => {
+    if (!window.confirm('Offer a draw?')) return;
+    // For now, treat offer as accepted immediately.
+    setExternalGameOver({ over: true, text: 'Draw by agreement.' });
+    setInfoMessage('Draw agreed.');
+  }, []);
+
+  const resolvedWinnerText = useMemo(() => (externalGameOver.over ? externalGameOver.text : winnerText), [externalGameOver, winnerText]);
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <AppHeader svgStyles={svgStyles} />
@@ -1011,6 +1080,9 @@ export default function App() {
                 onClearHighlights={handleClearHighlights}
                 onSeekToIndex={handleSeekToIndex}
                 externalIndex={currentMoveIndex}
+                isPlaying={isPlaying}
+                onResign={handleResign}
+                onOfferDraw={handleOfferDraw}
               />
             </div>
 
@@ -1031,7 +1103,7 @@ export default function App() {
         </div>
       </div>
 
-      <WinnerModal open={showWinPopup} winnerText={winnerText} onClose={() => setShowWinPopup(false)} />
+      <WinnerModal open={showWinPopup} winnerText={resolvedWinnerText} onClose={() => setShowWinPopup(false)} />
 
       <SettingsModal
         open={settingsOpen}
