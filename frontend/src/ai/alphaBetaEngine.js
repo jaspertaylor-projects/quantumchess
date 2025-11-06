@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Safer capture logic using SEE with hard demotion of losing captures, promotion bonus, stronger pawn-advance incentives, and improved move ordering to avoid reflexive captures.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Safer capture logic using SEE with hard demotion of losing captures, promotion bonus, stronger pawn-advance incentives, early opening development preferences, and improved move ordering.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js, ./aiWorker.js
 
@@ -32,19 +32,21 @@ const TRADE_RISK_WEIGHT = 0.9; // penalty for defended but losing exchanges (sof
 const PST_WEIGHT = 0.18; // piece-square table contribution
 const KING_THREAT_WEIGHT = 0.8; // king on threatened square penalty
 const KING_SHELL_WEIGHT = 0.12; // penalty per adjacent king square under control by opponent
-const CENTER_CONTROL_MAIN_WEIGHT = 0.08; // e4, d4, e5, d5
-const CENTER_CONTROL_EXT_WEIGHT = 0.04; // extended 3x3 ring
+const CENTER_CONTROL_MAIN_WEIGHT = 0.1; // e4, d4, e5, d5 (slightly increased)
+const CENTER_CONTROL_EXT_WEIGHT = 0.05; // extended 3x3 ring (slightly increased)
+const CENTER_OCCUPANCY_MAIN_WEIGHT = 0.05; // bonus for actually occupying e4, d4, e5, d5
+const CENTER_OCCUPANCY_EXT_WEIGHT = 0.025; // bonus for occupying the extended ring
 const DEVELOPMENT_MINOR_WEIGHT = 0.1; // reward for minor piece activation
 const DEVELOPMENT_ROOK_WEIGHT = 0.06; // rooks activation
 const DEVELOPMENT_GENERIC_WEIGHT = 0.06; // any piece moved from starting state
 const PAWN_ADVANCE_WEIGHT = 0.06; // encourage steady pawn progress (increased)
 const DEV_BREADTH_UNIT_WEIGHT = 0.08; // reward breadth: number of distinct movers (increased)
 
-// New: value retaining Pawn/King in superposition across your team
-const PAWN_PRESENCE_WEIGHT = 0.06; // per friendly piece containing 'p'
+// Value retaining Pawn/King in superposition across your team
+const PAWN_PRESENCE_WEIGHT = 0.09; // per friendly piece containing 'p' (increased to value pawn presence more)
 const KING_PRESENCE_WEIGHT = 0.04; // per friendly piece containing 'k'
 
-// New: promotion value bonus
+// Promotion value bonus
 const PROMOTION_BONUS_WEIGHT = 3.5; // big bonus for having a promoted piece on board
 
 // Quiescence search limits to resolve hanging/tactical capture sequences
@@ -409,6 +411,18 @@ function centerControlScoreForSide(pieces, side) {
   return s;
 }
 
+function centerOccupancyScoreForSide(pieces, side) {
+  const main = new Set(['d4', 'e4', 'd5', 'e5']);
+  const ext = new Set(['c3', 'd3', 'e3', 'f3', 'c4', 'f4', 'c5', 'f5', 'c6', 'd6', 'e6', 'f6']);
+  let s = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (main.has(p.square)) s += CENTER_OCCUPANCY_MAIN_WEIGHT;
+    else if (ext.has(p.square)) s += CENTER_OCCUPANCY_EXT_WEIGHT;
+  }
+  return s;
+}
+
 function developmentScoreForSide(pieces, side) {
   let s = 0;
   for (const p of pieces) {
@@ -540,6 +554,7 @@ function evaluatePosition(pieces) {
 
   // Center control and development
   const center = centerControlScoreForSide(pieces, 'white') - centerControlScoreForSide(pieces, 'black');
+  const centerOcc = centerOccupancyScoreForSide(pieces, 'white') - centerOccupancyScoreForSide(pieces, 'black');
   const dev = developmentScoreForSide(pieces, 'white') - developmentScoreForSide(pieces, 'black');
   const pawnAdv = pawnAdvanceScoreForSide(pieces, 'white') - pawnAdvanceScoreForSide(pieces, 'black');
 
@@ -552,7 +567,7 @@ function evaluatePosition(pieces) {
   // Promotion presence bonus
   const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
 
-  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + dev + pawnAdv + breadth + softSafety + promo;
+  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo;
 }
 
 function countCapturedPieces(pieces) {
@@ -714,7 +729,7 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
       }
 
-      // Development diversity: prefer moving new pieces; avoid spamming same piece
+      // Development diversity: prefer moving new pieces; avoid spamming the same piece
       let devScore = 0;
       if (m.type === 'move') {
         const moverBefore = getPieceAtSquare(prevPieces, m.from);

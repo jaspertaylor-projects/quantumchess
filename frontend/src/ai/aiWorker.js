@@ -1,5 +1,5 @@
 // frontend/src/ai/aiWorker.js
-// Purpose: Web Worker that performs AI computations off the main thread. Emits a safer baseline that avoids losing captures via SEE, then computes the alpha-beta best move and returns it.
+// Purpose: Web Worker that performs AI computations off the main thread. Emits a safer baseline, supports early-game random moves, then computes the alpha-beta best move and returns it.
 // Imports From: ./alphaBetaEngine.js, ../chessboard/quantumEngine.js
 // Exported To: ./useLocalAi.js
 
@@ -37,6 +37,18 @@ function isSeeSafeCapture(rootPieces, sideToMove, mv) {
   return net >= 0; // safe if SEE net is non-negative
 }
 
+function approximateGamePly(pieces) {
+  let total = 0;
+  for (const p of pieces) total += (p.moveCount || 0);
+  return Math.floor(total / 2);
+}
+
+function countFriendlyCaptured(pieces, side) {
+  let c = 0;
+  for (const p of pieces) if (p.side === side && p.captured) c += 1;
+  return c;
+}
+
 self.addEventListener('message', (e) => {
   const data = e.data || {};
   if (data.type !== 'think') return;
@@ -52,9 +64,30 @@ self.addEventListener('message', (e) => {
   try {
     const root = clonePieces(pieces || []);
 
+    // Generate legal replies once for this think cycle
+    const legal = generateLegalReplies(root, sideToMove, 0);
+
+    // Early-opening randomization: first 3 full moves (6 plies), unless AI has already lost a piece
+    const earlyPly = approximateGamePly(root);
+    const aiLosses = countFriendlyCaptured(root, sideToMove);
+    const inEarlyRandom = earlyPly < 6 && aiLosses === 0;
+
+    if (Array.isArray(legal) && legal.length > 0 && inEarlyRandom) {
+      const randomMove = randomChoice(legal);
+      const mini = minifyMove(randomMove);
+      if (DEBUG_WORKER) {
+        try {
+          // eslint-disable-next-line no-console
+          console.debug('[AI-Worker][early-random]', { id, side: sideToMove, ply: earlyPly, losses: aiLosses, chosen: mini });
+        } catch (_) {}
+      }
+      self.postMessage({ type: 'baseline', id, move: mini });
+      self.postMessage({ type: 'best', id, move: mini });
+      return; // skip deeper computation in early random phase
+    }
+
     // Emit a safer baseline move quickly. Prefer SEE-safe captures; else prefer non-captures; else fallback.
     try {
-      const legal = generateLegalReplies(root, sideToMove, 0);
       if (Array.isArray(legal) && legal.length > 0) {
         const capturing = legal.filter((mv) => isCapture(root, mv));
         const nonCaptures = legal.filter((mv) => !isCapture(root, mv));
