@@ -1,5 +1,5 @@
 // frontend/src/ai/aiWorker.js
-// Purpose: Web Worker that performs AI computations off the main thread. Quickly emits a baseline legal move, then computes the alpha-beta best move and returns it.
+// Purpose: Web Worker that performs AI computations off the main thread. Quickly emits a baseline legal move, then computes the alpha-beta best move and returns it. Adds slight randomness to baseline to avoid deterministic play.
 // Imports From: ./alphaBetaEngine.js, ../chessboard/quantumEngine.js
 // Exported To: ./useLocalAi.js
 
@@ -32,14 +32,19 @@ self.addEventListener('message', (e) => {
     try {
       const legal = generateLegalReplies(root, sideToMove, 0);
       if (Array.isArray(legal) && legal.length > 0) {
-        const idx = difficulty === 'easy' ? Math.floor(Math.random() * legal.length) : 0;
+        let idx = 0;
+        if (difficulty === 'easy') {
+          idx = Math.floor(Math.random() * legal.length);
+        } else {
+          const topK = Math.min(3, legal.length);
+          idx = Math.floor(Math.random() * topK);
+        }
         const baseline = minifyMove(legal[idx]);
         self.postMessage({ type: 'baseline', id, move: baseline });
       } else {
         self.postMessage({ type: 'baseline', id, move: null });
       }
     } catch (baselineErr) {
-      // Still try to compute the best move; baseline isn't critical.
       self.postMessage({ type: 'baseline', id, move: null });
     }
 
