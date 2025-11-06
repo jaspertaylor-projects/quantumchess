@@ -1,9 +1,17 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta search engine with a heuristic evaluator for Quantum Chess positions, producing a best move for a given side and difficulty.
+// Purpose: Alpha-beta engine with quiescence and trade-aware evaluation to avoid bad exchanges and hanging pieces in Quantum Chess.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js
 
-import { clonePieces, generateLegalReplies, buildOccupancy, movesForType, canSideCaptureSquare } from '../chessboard/quantumEngine.js';
+import {
+  clonePieces,
+  generateLegalReplies,
+  buildOccupancy,
+  movesForType,
+  canSideCaptureSquare,
+  subsetTypesThatCanMakeMove,
+  attacksForType,
+} from '../chessboard/quantumEngine.js';
 import { fromAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 
@@ -11,22 +19,30 @@ import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
 // Evaluation weights tuned to reduce reckless captures and value capture targets correctly.
-const MOBILITY_WEIGHT = 0.05; // small value to avoid dominating decisions
-const SUPERPOSITION_UNIT_WEIGHT = 0.2; // uncertainty is mildly valuable, but not decisive
+const MOBILITY_WEIGHT = 0.04;
+const SUPERPOSITION_UNIT_WEIGHT = 0.2;
 const COLLAPSED_KING_PENALTY = -10; // per fully collapsed king on a side
-const HANGING_WEIGHT = 1.0; // strong penalty for pieces that can be captured immediately
+const HANGING_WEIGHT = 1.8; // strong penalty for undefended capturable pieces
+const TRADE_RISK_WEIGHT = 0.7; // penalty for defended but losing exchanges
+
+// Quiescence search limits to resolve hanging/tactical capture sequences
+const QUIESCENCE_MAX_PLIES = 4;
 
 function leastNonKingType(types) {
   if (!Array.isArray(types) || types.length === 0) return null;
   return CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t)) || null;
 }
 
+function captureCollapseValueForTypes(types) {
+  const least = leastNonKingType(types);
+  const t = least || 'p';
+  return CAPTURE_VALUES[t];
+}
+
 function captureCollapseValueForPiece(p) {
   if (!p || p.captured || !p.square) return 0;
   const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-  const least = leastNonKingType(types);
-  const t = least || 'p'; // mirror simulation fallback for captures
-  return CAPTURE_VALUES[t];
+  return captureCollapseValueForTypes(types);
 }
 
 function onBoardMaterialSumForSide(pieces, side) {
@@ -91,14 +107,109 @@ function collapsedKingPenaltyForSide(pieces, side) {
   return count * COLLAPSED_KING_PENALTY;
 }
 
-function hangingExposureValueForSide(pieces, side) {
-  // Sum the capture-collapse values of all of this side's pieces that can be captured immediately by the opponent.
+function attackersToSquareWithValues(pieces, side, targetSq, occ) {
+  // Computes all attackers for "side" that can capture on targetSq under current occupancy,
+  // returning an array of { piece, value } where value is the collapse value the attacker risks when moving.
+  const out = [];
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    const { fileIndex: f, rankIndex: r } = pos;
+    const isFirstMove = (p.moveCount || 0) === 0;
+
+    // For this target, compute the subset of types that can make that move.
+    const subset = subsetTypesThatCanMakeMove(
+      p.possibleTypes,
+      f,
+      r,
+      fromAlgebraic(targetSq).fileIndex,
+      fromAlgebraic(targetSq).rankIndex,
+      occ,
+      p.side,
+      isFirstMove
+    );
+    if (!subset || subset.length === 0) continue;
+    const val = captureCollapseValueForTypes(subset);
+    out.push({ piece: p, value: val });
+  }
+  return out;
+}
+
+function defendersAfterCaptureWithValues(pieces, side, targetSq, occ, removedPieceId) {
+  // Approximates defenders that could recapture on targetSq after the current occupant is captured.
+  // We simulate by removing the current occupant from occupancy and computing attacks/moves.
+  const occ2 = new Map(occ);
+  if (occ2.has(targetSq)) occ2.delete(targetSq);
+
+  const out = [];
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (p.id === removedPieceId) continue; // the captured piece won't defend
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    const { fileIndex: f, rankIndex: r } = pos;
+    const isFirstMove = (p.moveCount || 0) === 0;
+
+    // Collect candidate types able to reach targetSq after the square is vacated.
+    const candidateTypes = [];
+
+    // Pawns: use attacks to preserve diagonal-only capture capability semantics.
+    if (p.possibleTypes.includes('p')) {
+      const atk = attacksForType('p', f, r, occ2, p.side) || [];
+      if (atk.includes(targetSq)) candidateTypes.push('p');
+    }
+
+    // Other types: use movesForType with occ2; reaching the square implies potential recapture next ply.
+    for (const t of p.possibleTypes) {
+      if (t === 'p') continue; // already handled
+      const list = movesForType(t, f, r, occ2, p.side, { isFirstMove });
+      if (list.includes(targetSq)) candidateTypes.push(t);
+    }
+
+    if (candidateTypes.length === 0) continue;
+    const val = captureCollapseValueForTypes(candidateTypes);
+    out.push({ piece: p, value: val });
+  }
+  return out;
+}
+
+function undefendedHangingValueForSide(pieces, side, occ) {
+  // Sum of collapse values of this side's pieces that can be captured immediately and have zero defenders.
   const opponent = side === 'white' ? 'black' : 'white';
   let sum = 0;
   for (const p of pieces) {
     if (p.captured || p.side !== side || !p.square) continue;
-    if (canSideCaptureSquare(pieces, opponent, p.square)) {
+    const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
+    if (attackers.length === 0) continue;
+    const defenders = defendersAfterCaptureWithValues(pieces, side, p.square, occ, p.id);
+    if (defenders.length === 0) {
       sum += captureCollapseValueForPiece(p);
+    }
+  }
+  return sum;
+}
+
+function tradeRiskPenaltyForSide(pieces, side, occ) {
+  // For pieces that are attacked and defended, penalize if the cheapest opposing attacker is cheaper than our piece value.
+  const opponent = side === 'white' ? 'black' : 'white';
+  let sum = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    const pVal = captureCollapseValueForPiece(p);
+    if (pVal <= 0) continue;
+
+    const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
+    if (attackers.length === 0) continue;
+
+    const defenders = defendersAfterCaptureWithValues(pieces, side, p.square, occ, p.id);
+    if (defenders.length === 0) continue; // accounted as hanging elsewhere
+
+    let minOpp = Infinity;
+    for (const a of attackers) if (a.value < minOpp) minOpp = a.value;
+
+    if (minOpp < pVal) {
+      sum += (pVal - minOpp);
     }
   }
   return sum;
@@ -110,8 +221,10 @@ function evaluatePosition(pieces) {
   const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
   const material = wMaterial - bMaterial;
 
-  // Mobility: number of pseudo-legal moves advantage (fast, no simulation)
+  // Occupancy for downstream tactical approximations and mobility
   const occ = buildOccupancy(pieces);
+
+  // Mobility: number of pseudo-legal moves advantage (fast, no simulation)
   const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
   const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
   const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
@@ -126,12 +239,17 @@ function evaluatePosition(pieces) {
   const bKingPen = collapsedKingPenaltyForSide(pieces, 'black');
   const kingCollapse = wKingPen - bKingPen;
 
-  // Immediate capture exposure: strongly penalize having capturable pieces, using capture-collapse values
-  const wHanging = hangingExposureValueForSide(pieces, 'white');
-  const bHanging = hangingExposureValueForSide(pieces, 'black');
-  const exposure = -(wHanging - bHanging) * HANGING_WEIGHT;
+  // Undefended hanging exposure: heavily penalize pieces that can be captured immediately with no recapture
+  const wHang = undefendedHangingValueForSide(pieces, 'white', occ);
+  const bHang = undefendedHangingValueForSide(pieces, 'black', occ);
+  const exposure = -(wHang - bHang) * HANGING_WEIGHT;
 
-  return material + mobility + superpos + kingCollapse + exposure;
+  // Trade risk: if defended but losing the exchange on the first trade, apply penalty equal to loss margin
+  const wTrade = tradeRiskPenaltyForSide(pieces, 'white', occ);
+  const bTrade = tradeRiskPenaltyForSide(pieces, 'black', occ);
+  const trade = -(wTrade - bTrade) * TRADE_RISK_WEIGHT;
+
+  return material + mobility + superpos + kingCollapse + exposure + trade;
 }
 
 function orderMoves(moves, currentEval, side) {
@@ -145,11 +263,66 @@ function orderMoves(moves, currentEval, side) {
     .map((x) => x.m);
 }
 
+function countCapturedPieces(pieces) {
+  let c = 0;
+  for (const p of pieces) if (p.captured) c += 1;
+  return c;
+}
+
+function isCaptureMove(prevPieces, nextPieces) {
+  return countCapturedPieces(nextPieces) > countCapturedPieces(prevPieces);
+}
+
+function generateCapturingReplies(pieces, side) {
+  const replies = generateLegalReplies(pieces, side, 0);
+  const caps = [];
+  for (const mv of replies) {
+    if (isCaptureMove(pieces, mv.resultPieces)) caps.push(mv);
+  }
+  return caps;
+}
+
+function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
+  const standPatVal = evaluatePosition(pieces);
+  const standPat = (rootSide === 'white' ? 1 : -1) * standPatVal;
+
+  if (standPat >= beta) return { score: beta, move: null };
+  if (alpha < standPat) alpha = standPat;
+  if (qPlies <= 0) return { score: standPat, move: null };
+
+  const caps = generateCapturingReplies(pieces, side);
+  if (caps.length === 0) return { score: standPat, move: null };
+
+  // Order capture moves greedily using evaluation delta
+  const ordered = orderMoves(caps, standPatVal, side);
+
+  let bestMove = null;
+  if (side === rootSide) {
+    let best = -Infinity;
+    for (const mv of ordered) {
+      const nextSide = side === 'white' ? 'black' : 'white';
+      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1);
+      if (res.score > best) { best = res.score; bestMove = mv; }
+      if (best > alpha) alpha = best;
+      if (beta <= alpha) break;
+    }
+    return { score: best, move: bestMove };
+  } else {
+    let best = Infinity;
+    for (const mv of ordered) {
+      const nextSide = side === 'white' ? 'black' : 'white';
+      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1);
+      if (res.score < best) { best = res.score; bestMove = mv; }
+      if (best < beta) beta = best;
+      if (beta <= alpha) break;
+    }
+    return { score: best, move: bestMove };
+  }
+}
+
 function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
   if (depth === 0) {
-    const val = evaluatePosition(pieces);
-    const score = (rootSide === 'white' ? 1 : -1) * val;
-    return { score, move: null };
+    return quiescenceSearch(pieces, side, alpha, beta, rootSide, QUIESCENCE_MAX_PLIES);
   }
 
   const replies = generateLegalReplies(pieces, side, 0);
