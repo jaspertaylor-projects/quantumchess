@@ -888,7 +888,7 @@ export default function App() {
   const localClock = useChessClock({
     timeControl,
     sideToMove,
-    isLive: gameStarted && !externalGameOver.over && canMakeMove && !gameOver && !isOnlineGameRef.current,
+    isLive: false, // offline games are untimed
     moves,
     gameInstanceId,
   });
@@ -1027,6 +1027,8 @@ export default function App() {
 
   const resolvedWinnerText = useMemo(() => (externalGameOver.over ? externalGameOver.text : winnerText), [externalGameOver, winnerText]);
 
+  const showClockUI = isOnlineGameRef.current; // only show timers for online games
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       <AppHeader svgStyles={svgStyles} />
@@ -1046,6 +1048,7 @@ export default function App() {
               capturedOthers={blackCapturedOthers}
               svgStyles={svgStyles}
               barRef={topBarRef}
+              showClock={showClockUI}
             />
 
             <div className="qc-board-row" style={styles.boardRow}>
@@ -1098,6 +1101,7 @@ export default function App() {
               capturedOthers={whiteCapturedOthers}
               svgStyles={svgStyles}
               barRef={bottomBarRef}
+              showClock={showClockUI}
             />
           </div>
         </div>

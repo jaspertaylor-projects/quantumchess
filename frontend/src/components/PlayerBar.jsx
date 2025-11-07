@@ -1,5 +1,5 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating, a chess clock, and a compact captured pieces area; captured pieces render at a fixed pixel size to prevent bar growth.
+// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a compact captured pieces area; captured pieces render at a fixed pixel size to prevent bar growth.
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
@@ -88,6 +88,7 @@ export default function PlayerBar({
   capturedOthers = [],
   svgStyles = { white: {}, black: {} },
   barRef = null,
+  showClock = true,
 }) {
   const styles = {
     playerBar: {
@@ -209,13 +210,15 @@ export default function PlayerBar({
           </span>
         </div>
         <div className={`qc-player-rating-row qc-player-rating-row--${side}`} style={styles.playerRatingRow}>
-          <span
-            className={`qc-player-clock-text qc-player-clock-text--${side}`}
-            style={styles.clockPill}
-            aria-label={`${side} remaining time`}
-          >
-            {clockText}
-          </span>
+          {showClock && (
+            <span
+              className={`qc-player-clock-text qc-player-clock-text--${side}`}
+              style={styles.clockPill}
+              aria-label={`${side} remaining time`}
+            >
+              {clockText}
+            </span>
+          )}
         </div>
       </div>
       <div
