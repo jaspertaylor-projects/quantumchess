@@ -48,7 +48,8 @@ def matchmaking_metrics() -> Dict[str, Any]:
 # In-memory ephemeral WS connections per room
 # { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int, "lock": asyncio.Lock,
 #              "clock": { "baseMs": int, "incMs": int, "whiteMs": int, "blackMs": int, "active": str,
-#                         "lastMono": float, "started": bool }, "clock_task": asyncio.Task|None } }
+#                         "lastMono": float, "started": bool }, "clock_task": asyncio.Task|None,
+#              "ended": bool, "winner": str|None, "end_reason": str|None, "announced_end": bool } }
 _WS_ROOMS: Dict[str, Dict[str, Any]] = {}
 
 
@@ -68,6 +69,10 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
             "turn": "white",
             "seq": 0,
             "lock": asyncio.Lock(),
+            "ended": False,
+            "winner": None,
+            "end_reason": None,
+            "announced_end": False,
         },
     )
     if "conns" not in s:
@@ -78,6 +83,14 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
         s["seq"] = 0
     if "lock" not in s or not isinstance(s.get("lock"), asyncio.Lock):
         s["lock"] = asyncio.Lock()
+    if "ended" not in s:
+        s["ended"] = False
+    if "winner" not in s:
+        s["winner"] = None
+    if "end_reason" not in s:
+        s["end_reason"] = None
+    if "announced_end" not in s:
+        s["announced_end"] = False
     _ensure_clock(s)
     return s
 
@@ -188,16 +201,53 @@ async def _ensure_clock_task(room_id: str) -> None:
                 # End loop if no connections remain
                 if not s["conns"]:
                     break
-                # Broadcast periodic clock update
-                view = _clock_view(s)
-                payload = {
-                    "type": "clock_update",
-                    "roomId": room_id,
-                    "clock": view,
-                    "turn": s.get("turn", "white"),
-                    "seq": s.get("seq", 0),
-                }
-                await _broadcast(room_id, payload)
+
+                game_over_payload: Optional[Dict[str, Any]] = None
+
+                # Evaluate clock and possible time loss; settle under lock and compute payload
+                async with s["lock"]:
+                    _settle_clock_locked(s)
+                    clk = s.get("clock", {})
+                    if not s.get("ended") and bool(clk.get("started")):
+                        if int(clk.get("whiteMs", 0)) <= 0:
+                            s["ended"] = True
+                            s["winner"] = "black"
+                            s["end_reason"] = "time"
+                            clk["active"] = "none"
+                        elif int(clk.get("blackMs", 0)) <= 0:
+                            s["ended"] = True
+                            s["winner"] = "white"
+                            s["end_reason"] = "time"
+                            clk["active"] = "none"
+                        s["clock"] = clk
+
+                    if s.get("ended") and s.get("end_reason") == "time" and not s.get("announced_end"):
+                        s["announced_end"] = True
+                        game_over_payload = {
+                            "type": "game_over",
+                            "roomId": room_id,
+                            "reason": "time",
+                            "winner": s.get("winner"),
+                            "seq": s.get("seq", 0),
+                            "turn": s.get("turn", "white"),
+                            "clock": _clock_view(s),
+                        }
+
+                    # Prepare a periodic clock update snapshot regardless
+                    view = _clock_view(s)
+                    clock_payload = {
+                        "type": "clock_update",
+                        "roomId": room_id,
+                        "clock": view,
+                        "turn": s.get("turn", "white"),
+                        "seq": s.get("seq", 0),
+                    }
+
+                # Broadcast game over exactly once if triggered, else normal clock update
+                if game_over_payload is not None:
+                    await _broadcast(room_id, game_over_payload)
+                else:
+                    await _broadcast(room_id, clock_payload)
         except Exception as ex:
             try:
                 print(f"[WS][clock][task_error] room={room_id} ex={ex}")
@@ -315,6 +365,10 @@ async def matchmaking_ws(
 
                 # Serialize turn/seq/clock updates per room
                 async with state["lock"]:
+                    if state.get("ended"):
+                        await _send(websocket, {"type": "error", "detail": "game_over"})
+                        continue
+
                     if state["turn"] != true_side:
                         print(
                             f"[WS][move][reject] not_your_turn room={room_id} cid={cid} side={true_side} turn={state['turn']}"
@@ -332,44 +386,75 @@ async def matchmaking_ws(
                     # Settle running clock up to now
                     _settle_clock_locked(state)
 
-                    # Apply increment to the mover
+                    # If time is out for either side, end immediately
                     clk = state.get("clock", {})
-                    inc_ms = int(clk.get("incMs", 0))
-                    if true_side == "white":
-                        clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                    time_over_payload: Optional[Dict[str, Any]] = None
+                    if bool(clk.get("started")) and (int(clk.get("whiteMs", 0)) <= 0 or int(clk.get("blackMs", 0)) <= 0):
+                        if int(clk.get("whiteMs", 0)) <= 0:
+                            state["winner"] = "black"
+                        else:
+                            state["winner"] = "white"
+                        state["ended"] = True
+                        state["end_reason"] = "time"
+                        clk["active"] = "none"
+                        state["clock"] = clk
+                        if not state.get("announced_end"):
+                            state["announced_end"] = True
+                            time_over_payload = {
+                                "type": "game_over",
+                                "roomId": room_id,
+                                "reason": "time",
+                                "winner": state.get("winner"),
+                                "seq": state.get("seq", 0),
+                                "turn": state.get("turn", "white"),
+                                "clock": _clock_view(state),
+                            }
+
+                    if time_over_payload is not None:
+                        pass  # Will broadcast after releasing lock and skip applying move
                     else:
-                        clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
+                        # Apply increment to the mover
+                        inc_ms = int(clk.get("incMs", 0))
+                        if true_side == "white":
+                            clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                        else:
+                            clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
 
-                    # Update sequence and turn
-                    state["seq"] += 1
-                    state["turn"] = _other_side(true_side)
+                        # Update sequence and turn
+                        state["seq"] += 1
+                        state["turn"] = _other_side(true_side)
 
-                    # Start white's clock after the first move only, otherwise run normal (active = side to move)
-                    if not bool(clk.get("started")):
-                        clk["started"] = True
-                        clk["active"] = "white"
-                        clk["lastMono"] = _now_mono()
-                    else:
-                        # Active clock follows the side to move for subsequent moves
-                        clk["active"] = state["turn"]
-                        clk["lastMono"] = _now_mono()
+                        # Start white's clock after the first move only, otherwise run normal (active = side to move)
+                        if not bool(clk.get("started")):
+                            clk["started"] = True
+                            clk["active"] = "white"
+                            clk["lastMono"] = _now_mono()
+                        else:
+                            # Active clock follows the side to move for subsequent moves
+                            clk["active"] = state["turn"]
+                            clk["lastMono"] = _now_mono()
 
-                    state["clock"] = clk
+                        state["clock"] = clk
 
-                    payload = {
-                        "type": "move",
-                        "roomId": room_id,
-                        "by": cid,
-                        "from": m_from,
-                        "to": m_to,
-                        "side": true_side,
-                        "seq": state["seq"],
-                        "turn": state["turn"],
-                        "clock": _clock_view(state),
-                    }
-                    print(
-                        f"[WS][move] room={room_id} by={cid} side={true_side} from={m_from} to={m_to} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
-                    )
+                        payload = {
+                            "type": "move",
+                            "roomId": room_id,
+                            "by": cid,
+                            "from": m_from,
+                            "to": m_to,
+                            "side": true_side,
+                            "seq": state["seq"],
+                            "turn": state["turn"],
+                            "clock": _clock_view(state),
+                        }
+                        print(
+                            f"[WS][move] room={room_id} by={cid} side={true_side} from={m_from} to={m_to} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
+                        )
+
+                if 'time_over_payload' in locals() and time_over_payload is not None:
+                    await _broadcast(room_id, time_over_payload)
+                    continue
+
                 await _broadcast(room_id, payload)
                 continue
 
@@ -395,7 +480,12 @@ async def matchmaking_ws(
                     await _send(websocket, {"type": "error", "detail": "unknown_side"})
                     continue
 
+                time_over_payload_castle: Optional[Dict[str, Any]] = None
                 async with state["lock"]:
+                    if state.get("ended"):
+                        await _send(websocket, {"type": "error", "detail": "game_over"})
+                        continue
+
                     if state["turn"] != true_side:
                         print(
                             f"[WS][castle][reject] not_your_turn room={room_id} cid={cid} side={true_side} turn={state['turn']}"
@@ -410,44 +500,70 @@ async def matchmaking_ws(
                         await _send(websocket, {"type": "error", "detail": "invalid_castle"})
                         continue
 
-                    # Settle clock then apply increment and turn switch
+                    # Settle clock then check time-based end before applying increment and turn switch
                     _settle_clock_locked(state)
                     clk = state.get("clock", {})
-                    inc_ms = int(clk.get("incMs", 0))
-                    if true_side == "white":
-                        clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                    if bool(clk.get("started")) and (int(clk.get("whiteMs", 0)) <= 0 or int(clk.get("blackMs", 0)) <= 0):
+                        if int(clk.get("whiteMs", 0)) <= 0:
+                            state["winner"] = "black"
+                        else:
+                            state["winner"] = "white"
+                        state["ended"] = True
+                        state["end_reason"] = "time"
+                        clk["active"] = "none"
+                        state["clock"] = clk
+                        if not state.get("announced_end"):
+                            state["announced_end"] = True
+                            time_over_payload_castle = {
+                                "type": "game_over",
+                                "roomId": room_id,
+                                "reason": "time",
+                                "winner": state.get("winner"),
+                                "seq": state.get("seq", 0),
+                                "turn": state.get("turn", "white"),
+                                "clock": _clock_view(state),
+                            }
                     else:
-                        clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
+                        inc_ms = int(clk.get("incMs", 0))
+                        if true_side == "white":
+                            clk["whiteMs"] = max(0, int(clk.get("whiteMs", 0)) + inc_ms)
+                        else:
+                            clk["blackMs"] = max(0, int(clk.get("blackMs", 0)) + inc_ms)
 
-                    state["seq"] += 1
-                    state["turn"] = _other_side(true_side)
+                        state["seq"] += 1
+                        state["turn"] = _other_side(true_side)
 
-                    if not bool(clk.get("started")):
-                        clk["started"] = True
-                        clk["active"] = "white"
-                        clk["lastMono"] = _now_mono()
-                    else:
-                        clk["active"] = state["turn"]
-                        clk["lastMono"] = _now_mono()
+                        if not bool(clk.get("started")):
+                            clk["started"] = True
+                            clk["active"] = "white"
+                            clk["lastMono"] = _now_mono()
+                        else:
+                            clk["active"] = state["turn"]
+                            clk["lastMono"] = _now_mono()
 
-                    state["clock"] = clk
+                        state["clock"] = clk
 
-                    payload = {
-                        "type": "castle",
-                        "roomId": room_id,
-                        "by": cid,
-                        "side": true_side,
-                        "piece1_from": p1f,
-                        "piece1_to": p1t,
-                        "piece2_from": p2f,
-                        "piece2_to": p2t,
-                        "seq": state["seq"],
-                        "turn": state["turn"],
-                        "clock": _clock_view(state),
-                    }
-                    print(
-                        f"[WS][castle] room={room_id} by={cid} side={true_side} p1={p1f}->{p1t} p2={p2f}->{p2t} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
-                    )
+                        payload = {
+                            "type": "castle",
+                            "roomId": room_id,
+                            "by": cid,
+                            "side": true_side,
+                            "piece1_from": p1f,
+                            "piece1_to": p1t,
+                            "piece2_from": p2f,
+                            "piece2_to": p2t,
+                            "seq": state["seq"],
+                            "turn": state["turn"],
+                            "clock": _clock_view(state),
+                        }
+                        print(
+                            f"[WS][castle] room={room_id} by={cid} side={true_side} p1={p1f}->{p1t} p2={p2f}->{p2t} seq={state['seq']} next_turn={state['turn']} conns={list(state['conns'].keys())}"
+                        )
+
+                if time_over_payload_castle is not None:
+                    await _broadcast(room_id, time_over_payload_castle)
+                    continue
+
                 await _broadcast(room_id, payload)
                 continue
 

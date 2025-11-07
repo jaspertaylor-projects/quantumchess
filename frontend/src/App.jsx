@@ -530,6 +530,15 @@ export default function App() {
         return;
       }
 
+      if (msg.type === 'game_over') {
+        const winSide = msg.winner === 'white' || msg.winner === 'black' ? msg.winner : null;
+        const text = winSide ? `${winSide[0].toUpperCase()}${winSide.slice(1)} wins on time.` : 'Game over on time.';
+        setExternalGameOver({ over: true, text });
+        setInfoMessage(text);
+        maybeApplyClock(msg.clock);
+        return;
+      }
+
       if (msg.type === 'move') {
         if (msg.by && myId && msg.by === myId) {
           maybeApplyClock(msg.clock);
