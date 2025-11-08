@@ -1,5 +1,5 @@
 // frontend/src/tray/NewGamePanel.jsx
-// Purpose: Renders the new game configuration options within the side tray.
+// Purpose: Renders the new game configuration options within the side tray, including local, AI (with side selection), and online matchmaking modes.
 // Imports From: ../theme.js
 // Exported To: ./SideTray.jsx
 
@@ -20,16 +20,7 @@ function OptionButton({ label, selected, onClick }) {
       transition: 'background 0.2s ease, color 0.2s ease',
       textAlign: 'center',
       minWidth: 80,
-    },
-    first: {
-      borderRadius: '8px 0 0 8px',
-    },
-    last: {
-      borderRadius: '0 8px 8px 0',
-      borderLeft: 'none',
-    },
-    middle: {
-      borderLeft: 'none',
+      borderRadius: 8,
     },
   };
 
@@ -39,6 +30,7 @@ function OptionButton({ label, selected, onClick }) {
       style={styles.button}
       onClick={onClick}
       className="qc-new-game-option-btn"
+      aria-pressed={selected}
     >
       {label}
     </button>
@@ -48,6 +40,7 @@ function OptionButton({ label, selected, onClick }) {
 export default function NewGamePanel({ onStartGame, onCancel }) {
   const [gameMode, setGameMode] = useState('local'); // 'local', 'ai', 'online'
   const [aiDifficulty, setAiDifficulty] = useState('medium'); // 'easy', 'medium', 'hard'
+  const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
   const [isRanked, setIsRanked] = useState(false); // boolean
   const [timeControl, setTimeControl] = useState('5+0'); // '3+0', '5+0', '10+0'
 
@@ -55,6 +48,7 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
     onStartGame({
       gameMode,
       aiDifficulty,
+      preferredSide,
       isRanked,
       timeControl,
     });
@@ -86,11 +80,12 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
     buttonGroup: {
       display: 'flex',
       width: '100%',
+      gap: 8,
     },
     animatedSectionContainer: {
       position: 'relative',
       flex: 1,
-      minHeight: 150, // Ensure space for animated content
+      minHeight: 200,
     },
     animatedSection: (visible) => ({
       position: 'absolute',
@@ -107,7 +102,7 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
       display: 'flex',
       justifyContent: 'flex-end',
       gap: 12,
-      marginTop: 'auto', // Pushes footer to the bottom
+      marginTop: 'auto',
       paddingTop: 16,
     },
     footerButton: (primary = false) => ({
@@ -141,6 +136,14 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
               <OptionButton label="Easy" selected={aiDifficulty === 'easy'} onClick={() => setAiDifficulty('easy')} />
               <OptionButton label="Medium" selected={aiDifficulty === 'medium'} onClick={() => setAiDifficulty('medium')} />
               <OptionButton label="Hard" selected={aiDifficulty === 'hard'} onClick={() => setAiDifficulty('hard')} />
+            </div>
+          </div>
+          <div className="qc-new-game-section" style={styles.section}>
+            <span className="qc-new-game-label" style={styles.label}>Your Side</span>
+            <div className="qc-new-game-button-group" style={styles.buttonGroup}>
+              <OptionButton label="White" selected={preferredSide === 'white'} onClick={() => setPreferredSide('white')} />
+              <OptionButton label="Black" selected={preferredSide === 'black'} onClick={() => setPreferredSide('black')} />
+              <OptionButton label="Random" selected={preferredSide === 'random'} onClick={() => setPreferredSide('random')} />
             </div>
           </div>
         </div>

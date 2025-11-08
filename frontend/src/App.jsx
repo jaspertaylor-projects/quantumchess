@@ -711,8 +711,15 @@ export default function App() {
 
     if (settings && settings.gameMode === 'ai') {
       aiEnabledRef.current = true;
-      dispatch(setUserTeam('white'));
-      setInfoMessage('New game vs AI started.');
+      const pref = settings && typeof settings.preferredSide === 'string' ? settings.preferredSide : 'random';
+      let side = 'white';
+      if (pref === 'white' || pref === 'black') {
+        side = pref;
+      } else {
+        side = Math.random() < 0.5 ? 'white' : 'black';
+      }
+      dispatch(setUserTeam(side));
+      setInfoMessage(`New game vs AI started. You are ${side[0].toUpperCase()}${side.slice(1)}.`);
       return;
     }
 
@@ -728,8 +735,9 @@ export default function App() {
       if (sideToMove !== userTeam) return false;
     } else {
       if (aiEnabledRef.current) {
-        if (piece.side !== 'white') return false;
-        if (sideToMove !== 'white') return false;
+        const userSide = userTeam;
+        if (piece.side !== userSide) return false;
+        if (sideToMove !== userSide) return false;
       } else {
         if (piece.side !== sideToMove) return false;
       }
@@ -755,7 +763,7 @@ export default function App() {
       setSelectedId(null);
       return;
     }
-    if (!isOnlineGameRef.current && aiEnabledRef.current && sideToMove !== 'white') {
+    if (!isOnlineGameRef.current && aiEnabledRef.current && sideToMove !== userTeam) {
       setInfoMessage('Not your turn.');
       setSelectedId(null);
       return;
@@ -772,8 +780,9 @@ export default function App() {
       setSelectedId(null);
       return;
     }
-    if (!isOnlineGameRef.current && aiEnabledRef.current && movingPiece.side !== 'white') {
-      setInfoMessage('You are playing White vs AI.');
+    if (!isOnlineGameRef.current && aiEnabledRef.current && movingPiece.side !== userTeam) {
+      const you = userTeam === 'white' ? 'White' : 'Black';
+      setInfoMessage(`You are playing ${you} vs AI.`);
       setSelectedId(null);
       return;
     }
