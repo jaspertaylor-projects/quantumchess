@@ -778,13 +778,17 @@ export default function App() {
       return;
     }
 
-    if (!to) {
-      setSelectedId(null);
+    const fromSquare = movingPiece.square || from || null;
+
+    // If the drop ends on the original square or is null, treat as a selection tap, not a move.
+    if (!to || to === fromSquare) {
+      setInfoMessage('');
+      setSelectedId(movingPiece.id);
       return;
     }
 
     const targetAtDest = getPieceAtSquare(to);
-    if (targetAtDest && targetAtDest.side === movingPiece.side) {
+    if (targetAtDest && targetAtDest.side === movingPiece.side && targetAtDest.id !== id) {
       const { canCastle, reason, plan } = canCastleBetween(id, targetAtDest.id);
       if (canCastle) {
         const result = castlePieces(id, targetAtDest.id);
@@ -812,7 +816,7 @@ export default function App() {
       setSelectedId(null);
       return;
     }
-    const fromSquare = movingPiece.square || from || null;
+
     const result = movePiece(id, to);
     if (result.success && fromSquare) {
       dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
