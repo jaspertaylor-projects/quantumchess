@@ -1,5 +1,5 @@
 // frontend/src/ai/aiWorker.js
-// Purpose: Web Worker that performs AI computations off the main thread. Adds a pre-capture trade scan that forces any materially winning capture, then runs alpha-beta restricted to up to 5 random movers.
+// Purpose: Web Worker that performs AI computations off the main thread. Adds a pre-capture trade scan forcing any materially winning capture, a defensive SEE escape if opponent has a winning trade, then runs alpha-beta restricted to up to 5 random movers.
 // Imports From: ./alphaBetaEngine.js, ../chessboard/quantumEngine.js
 // Exported To: ./useLocalAi.js
 
@@ -63,7 +63,6 @@ function pickUpToFiveMoverIds(rootPieces, legal, side) {
       const mover = getPieceAtSquare(rootPieces, mv.from);
       if (mover && mover.side === side) ids.add(mover.id);
     } else if (mv.type === 'castle' && mv.plan) {
-      // Allow either castle piece to count as a mover
       const p1 = rootPieces.find((p) => p.id === mv.plan.piece1_id);
       const p2 = rootPieces.find((p) => p.id === mv.plan.piece2_id);
       if (p1 && p1.side === side) ids.add(p1.id);
@@ -76,6 +75,62 @@ function pickUpToFiveMoverIds(rootPieces, legal, side) {
     [list[i], list[j]] = [list[j], list[i]];
   }
   return list.slice(0, 5);
+}
+
+function bestFavorableCapture(root, legal, side) {
+  let bestCap = null;
+  let bestNet = -Infinity;
+  for (const mv of legal) {
+    if (!isCapture(root, mv)) continue;
+    if (mv.type !== 'move') continue;
+    const net = seeNetForLandingSquare(mv.resultPieces, side, mv.to);
+    if (net > 0 && net > bestNet) {
+      bestNet = net;
+      bestCap = mv;
+    }
+  }
+  return bestCap ? { mv: bestCap, net: bestNet } : null;
+}
+
+function findWorstOpponentSEEThreat(root, sideToMove) {
+  const opp = sideToMove === 'white' ? 'black' : 'white';
+  const replies = generateLegalReplies(root, opp, 0);
+  let worst = null;
+  for (const mv of replies) {
+    if (mv.type !== 'move') continue;
+    if (!isCapture(root, mv)) continue;
+    const net = seeNetForLandingSquare(mv.resultPieces, opp, mv.to);
+    if (net > 0) {
+      const victim = getPieceAtSquare(root, mv.to); // piece captured on root board
+      if (!victim || victim.side !== sideToMove) continue;
+      if (!worst || net > worst.net) {
+        worst = { oppMove: mv, net, victimId: victim.id, victimSquare: victim.square };
+      }
+    }
+  }
+  return worst; // null or {oppMove, net, victimId}
+}
+
+function chooseEscapeMoveForPiece(root, sideToMove, pieceId) {
+  const legal = generateLegalReplies(root, sideToMove, 0);
+  const candidates = legal.filter((mv) => mv.type === 'move' && getPieceAtSquare(root, mv.from)?.id === pieceId);
+  if (candidates.length === 0) return null;
+
+  let best = null;
+  let bestScore = -Infinity;
+  for (const mv of candidates) {
+    // Prefer SEE-safe landings and retaining broader type sets
+    const safety = seeNetForLandingSquare(mv.resultPieces, sideToMove, mv.to); // >=0 good
+    const moverAfter = getPieceAtSquare(mv.resultPieces, mv.to);
+    const moverBefore = getPieceAtSquare(root, mv.from);
+    const afterCount = Array.isArray(moverAfter?.possibleTypes) ? moverAfter.possibleTypes.length : 0;
+    const beforeCount = Array.isArray(moverBefore?.possibleTypes) ? moverBefore.possibleTypes.length : 0;
+    const flexDelta = Math.max(-3, Math.min(3, afterCount - beforeCount));
+    const captureBias = isCapture(root, mv) ? -0.25 : 0; // bias away from trading when escaping
+    const score = safety * 2.0 + flexDelta * 0.4 + captureBias;
+    if (score > bestScore) { bestScore = score; best = mv; }
+  }
+  return best;
 }
 
 self.addEventListener('message', (e) => {
@@ -99,35 +154,49 @@ self.addEventListener('message', (e) => {
     // 1) Forced favorable capture based on SEE-style capture trade (continuous back-and-forth captures)
     try {
       if (Array.isArray(legal) && legal.length > 0) {
-        let bestCap = null;
-        let bestNet = -Infinity;
-        for (const mv of legal) {
-          if (!isCapture(root, mv)) continue;
-          if (mv.type !== 'move') continue; // castling never captures
-          const net = seeNetForLandingSquare(mv.resultPieces, sideToMove, mv.to);
-          if (net > 0 && net > bestNet) {
-            bestNet = net;
-            bestCap = mv;
-          }
-        }
-        if (bestCap) {
-          const mini = minifyMove(bestCap);
+        const forced = bestFavorableCapture(root, legal, sideToMove);
+        if (forced && forced.net > 0) {
+          const mini = minifyMove(forced.mv);
           if (DEBUG_WORKER) {
             try {
-              // eslint-disable-next-line no-console
-              console.debug('[AI-Worker][forced-favorable-capture]', { id, side: sideToMove, bestNet, chosen: mini });
+              console.debug('[AI-Worker][forced-favorable-capture]', { id, side: sideToMove, bestNet: forced.net, chosen: mini });
             } catch (_) {}
           }
           self.postMessage({ type: 'baseline', id, move: mini });
           self.postMessage({ type: 'best', id, move: mini });
-          return; // commit immediately to the materially winning capture
+          return;
         }
       }
     } catch (forcedErr) {
       if (DEBUG_WORKER) {
         try { console.error('[AI-Worker][forced-capture-error]', forcedErr); } catch (_) {}
       }
-      // continue to normal flow
+      // continue to defensive/normal flow
+    }
+
+    // 1b) Defensive SEE escape: if opponent has a winning capture sequence, move the victim away if possible.
+    try {
+      if (Array.isArray(legal) && legal.length > 0) {
+        const worstOpp = findWorstOpponentSEEThreat(root, sideToMove);
+        if (worstOpp && worstOpp.net > 0 && worstOpp.victimId) {
+          const escape = chooseEscapeMoveForPiece(root, sideToMove, worstOpp.victimId);
+          if (escape) {
+            const mini = minifyMove(escape);
+            if (DEBUG_WORKER) {
+              try {
+                console.debug('[AI-Worker][defensive-see-escape]', { id, side: sideToMove, threatNet: worstOpp.net, victimId: worstOpp.victimId, chosen: mini });
+              } catch (_) {}
+            }
+            self.postMessage({ type: 'baseline', id, move: mini });
+            self.postMessage({ type: 'best', id, move: mini });
+            return;
+          }
+        }
+      }
+    } catch (defErr) {
+      if (DEBUG_WORKER) {
+        try { console.error('[AI-Worker][defensive-error]', defErr); } catch (_) {}
+      }
     }
 
     // Early-opening randomization: first 3 full moves (6 plies), unless AI has already lost a piece
@@ -140,13 +209,12 @@ self.addEventListener('message', (e) => {
       const mini = minifyMove(randomMove);
       if (DEBUG_WORKER) {
         try {
-          // eslint-disable-next-line no-console
           console.debug('[AI-Worker][early-random]', { id, side: sideToMove, ply: earlyPly, losses: aiLosses, chosen: mini });
         } catch (_) {}
       }
       self.postMessage({ type: 'baseline', id, move: mini });
       self.postMessage({ type: 'best', id, move: mini });
-      return; // skip deeper computation in early random phase
+      return;
     }
 
     // Emit a safer baseline move quickly. Prefer SEE-safe captures; else prefer non-captures; else fallback.
@@ -169,7 +237,6 @@ self.addEventListener('message', (e) => {
         const baseline = minifyMove(baselineMove);
         if (DEBUG_WORKER) {
           try {
-            // eslint-disable-next-line no-console
             console.debug('[AI-Worker][baseline]', {
               id,
               side: sideToMove,
@@ -199,7 +266,6 @@ self.addEventListener('message', (e) => {
         allowedRootPieceIds = pickUpToFiveMoverIds(root, legal, sideToMove);
         if (DEBUG_WORKER) {
           try {
-            // eslint-disable-next-line no-console
             console.debug('[AI-Worker][root-mover-sample]', { id, side: sideToMove, count: allowedRootPieceIds.length, ids: allowedRootPieceIds });
           } catch (_) {}
         }
@@ -216,7 +282,6 @@ self.addEventListener('message', (e) => {
     const bestMin = minifyMove(best);
     if (DEBUG_WORKER) {
       try {
-        // eslint-disable-next-line no-console
         console.debug('[AI-Worker][best]', { id, side: sideToMove, best: bestMin });
       } catch (_) {}
     }

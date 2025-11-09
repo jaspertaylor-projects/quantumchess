@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds support for forced favorable captures and restricting root ply to a random subset of movers to control branching.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds forced favorable captures, root-mover restriction, SEE-based ordering, and high incentive for flexibility via combination valuation.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js, ./aiWorker.js
 
@@ -22,65 +22,64 @@ const DEBUG_AI = true;
 // Standard chess piece values used for material evaluation.
 const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
-// Heuristic weights tuned to play safer, develop more pieces, and avoid tunnel-vision on a single piece.
+// Heuristic weights tuned to value flexibility and safer play.
 const MOBILITY_WEIGHT = 0.02;
-const SUPERPOSITION_UNIT_WEIGHT = 0.1;
-const COLLAPSED_KING_PENALTY = -12; // per fully collapsed king on a side
-// Reduce fear, enable more captures and trades
-const HANGING_WEIGHT = 1.2; // penalty for undefended, capturable pieces (softened)
-const TRADE_RISK_WEIGHT = 0.9; // penalty for defended but losing exchanges (softened)
-const PST_WEIGHT = 0.18; // piece-square table contribution
-const KING_THREAT_WEIGHT = 0.8; // king on threatened square penalty
-const KING_SHELL_WEIGHT = 0.12; // penalty per adjacent king square under control by opponent
-const CENTER_CONTROL_MAIN_WEIGHT = 0.1; // e4, d4, e5, d5 (slightly increased)
-const CENTER_CONTROL_EXT_WEIGHT = 0.05; // extended 3x3 ring (slightly increased)
-const CENTER_OCCUPANCY_MAIN_WEIGHT = 0.05; // bonus for actually occupying e4, d4, e5, d5
-const CENTER_OCCUPANCY_EXT_WEIGHT = 0.025; // bonus for occupying the extended ring
-const DEVELOPMENT_MINOR_WEIGHT = 0.1; // reward for minor piece activation
-const DEVELOPMENT_ROOK_WEIGHT = 0.06; // rooks activation
-const DEVELOPMENT_GENERIC_WEIGHT = 0.06; // any piece moved from starting state
-const PAWN_ADVANCE_WEIGHT = 0.06; // encourage steady pawn progress (increased)
-const DEV_BREADTH_UNIT_WEIGHT = 0.08; // reward breadth: number of distinct movers (increased)
+const SUPERPOSITION_UNIT_WEIGHT = 0.22; // strong incentive to keep options
+const COLLAPSED_KING_PENALTY = -12;
+const HANGING_WEIGHT = 1.2;
+const TRADE_RISK_WEIGHT = 0.9;
+const PST_WEIGHT = 0.18;
+const KING_THREAT_WEIGHT = 0.8;
+const KING_SHELL_WEIGHT = 0.12;
+const CENTER_CONTROL_MAIN_WEIGHT = 0.1;
+const CENTER_CONTROL_EXT_WEIGHT = 0.05;
+const CENTER_OCCUPANCY_MAIN_WEIGHT = 0.05;
+const CENTER_OCCUPANCY_EXT_WEIGHT = 0.025;
+const DEVELOPMENT_MINOR_WEIGHT = 0.1;
+const DEVELOPMENT_ROOK_WEIGHT = 0.06;
+const DEVELOPMENT_GENERIC_WEIGHT = 0.06;
+const PAWN_ADVANCE_WEIGHT = 0.06;
+const DEV_BREADTH_UNIT_WEIGHT = 0.08;
 
 // Value retaining Pawn/King in superposition across your team
-const PAWN_PRESENCE_WEIGHT = 0.09; // per friendly piece containing 'p' (increased to value pawn presence more)
-const KING_PRESENCE_WEIGHT = 0.04; // per friendly piece containing 'k'
+const PAWN_PRESENCE_WEIGHT = 0.09;
+const KING_PRESENCE_WEIGHT = 0.04;
 
 // Promotion value bonus
-const PROMOTION_BONUS_WEIGHT = 3.5; // big bonus for having a promoted piece on board
+const PROMOTION_BONUS_WEIGHT = 3.5;
 
 // Quiescence search limits to resolve hanging/tactical capture sequences
 const QUIESCENCE_MAX_PLIES = 5;
 
 // SEE and move-ordering weights
-const SEE_RISK_WEIGHT = 1.2; // strong down-weight for losing captures
-const SEE_GOOD_WEIGHT = 0.9; // bonus if landing square yields favorable exchanges
+const SEE_RISK_WEIGHT = 1.2;
+const SEE_GOOD_WEIGHT = 0.9;
 
 // Collapse penalties: avoid over-narrowing too early or into single-type Knights
-const COLLAPSE_OVER_NARROW_PENALTY = 0.25; // base penalty for narrowing superposition (slightly softer)
-const SINGLE_TYPE_COLLAPSE_MULTIPLIER = 2.2; // stronger penalty for collapsing to a single type
-const DOUBLE_TYPE_COLLAPSE_MULTIPLIER = 0.5; // milder penalty for collapsing to two types
-const BQ_DOUBLE_TYPE_DISCOUNT = 0.7; // discount if the two types are exactly bishop-queen
-const KNIGHT_SINGLE_COLLAPSE_EXTRA = 0.8; // extra penalty when collapsing to a pure knight in early game
-const EARLY_GAME_PLY_THRESHOLD = 12; // until this ply, avoid narrow collapses
+const COLLAPSE_OVER_NARROW_PENALTY = 0.3;
+const SINGLE_TYPE_COLLAPSE_MULTIPLIER = 2.2;
+const DOUBLE_TYPE_COLLAPSE_MULTIPLIER = 0.5;
+const BQ_DOUBLE_TYPE_DISCOUNT = 0.7;
+const KNIGHT_SINGLE_COLLAPSE_EXTRA = 0.8;
+const EARLY_GAME_PLY_THRESHOLD = 12;
 
 // Development diversity ordering weights
-const FRESH_DEVELOPMENT_BONUS = 0.3; // prefer moving new pieces more strongly
-const REPEAT_MOVER_PENALTY = 0.35; // discourage repeating the same mover when many are unmoved
+const FRESH_DEVELOPMENT_BONUS = 0.3;
+const REPEAT_MOVER_PENALTY = 0.35;
 
 // Randomization to avoid deterministic play
-const RANDOM_MOVE_JITTER = 0.1; // smaller non-determinism in move ordering
+const RANDOM_MOVE_JITTER = 0.1;
 
 // Move-ordering specific bonuses
-const CAPTURE_ORDER_BONUS = 0.35; // softer capture preference
-const CAPTURE_VALUE_ORDER_BONUS = 0.08; // scale with value of captured piece
-const P_RETENTION_ORDER_BONUS = 0.08; // prefer moves that retain Pawn in mover's superposition
-const CHECK_ORDER_BONUS = 0.12; // prefer moves that result in a check (per checking rules)
+const CAPTURE_ORDER_BONUS = 0.35;
+const CAPTURE_VALUE_ORDER_BONUS = 0.08;
+const P_RETENTION_ORDER_BONUS = 0.08;
+const CHECK_ORDER_BONUS = 0.12;
 
 // Losing capture gating
-const LOSING_CAPTURE_DROP_THRESHOLD = -0.75; // if SEE net below this, heavily demote in ordering
-const LOSING_CAPTURE_HARD_PENALTY = 4.0; // large demotion so AI avoids reflexive losing captures
-const EXTREME_GAIN_THRESHOLD = 2.0; // if eval jump exceeds this, allow even losing capture
+const LOSING_CAPTURE_DROP_THRESHOLD = -0.75;
+const LOSING_CAPTURE_HARD_PENALTY = 4.0;
+const EXTREME_GAIN_THRESHOLD = 2.0;
 
 // Piece-square tables (white perspective)
 const PST = {
@@ -454,7 +453,7 @@ function pawnAdvanceScoreForSide(pieces, side) {
     const pos = fromAlgebraic(p.square);
     if (!pos) continue;
     const rank = pos.rankIndex;
-    const progress = side === 'white' ? rank - 1 : 6 - rank; // relative to starting pawn rank (1 for white, 6 for black)
+    const progress = side === 'white' ? rank - 1 : 6 - rank;
     s += Math.max(0, progress) * PAWN_ADVANCE_WEIGHT;
   }
   return s;
@@ -470,7 +469,6 @@ function promotionScoreForSide(pieces, side) {
 }
 
 function pieceSafetySoftPenaltyForSide(pieces, side, occ) {
-  // Soft penalty for being attacked even if defended, scaled by piece capture value.
   const opponent = side === 'white' ? 'black' : 'white';
   let sum = 0;
   for (const p of pieces) {
@@ -507,6 +505,46 @@ function isCheckOnSide(pieces, side) {
     if (oppThreats.has(k.square)) return true;
   }
   return false;
+}
+
+// --- Flexibility/combination valuation ---
+const FLEX_COMBO_WEIGHT = 0.95; // high incentive to keep pieces flexible
+const FLEX_BONUS_PER_EXTRA = 0.6; // bonus per extra possible type beyond 1
+const SYNERGY_BONUSES = [
+  ['b', 'q', 0.5],
+  ['r', 'q', 0.4],
+  ['b', 'r', 0.25],
+];
+
+function comboKeyFromTypes(types) {
+  const uniq = Array.from(new Set((types || []).filter(Boolean)));
+  uniq.sort();
+  return uniq.join('');
+}
+
+function comboValueFromTypes(types) {
+  const set = new Set(types || []);
+  if (set.size === 0) return 0;
+  let base = 0;
+  for (const t of set) if (t !== 'k') base = Math.max(base, CAPTURE_VALUES[t] || 0);
+  const extra = Math.max(0, set.size - 1);
+  let bonus = extra * FLEX_BONUS_PER_EXTRA;
+  for (const [a, b, v] of SYNERGY_BONUSES) {
+    if (set.has(a) && set.has(b)) bonus += v;
+  }
+  if (set.size === 1 && set.has('n')) bonus -= 0.2; // avoid early pure-knight narrowing
+  return Math.min(12, base + bonus);
+}
+
+function combinationFlexScoreForSide(pieces, side) {
+  let sum = 0;
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
+    if (types.length <= 1) continue;
+    sum += comboValueFromTypes(types);
+  }
+  return sum * FLEX_COMBO_WEIGHT;
 }
 
 function evaluatePosition(pieces) {
@@ -567,7 +605,10 @@ function evaluatePosition(pieces) {
   // Promotion presence bonus
   const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
 
-  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo;
+  // Flex/combination valuation
+  const flexCombo = combinationFlexScoreForSide(pieces, 'white') - combinationFlexScoreForSide(pieces, 'black');
+
+  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo + flexCombo;
 }
 
 function countCapturedPieces(pieces) {
@@ -698,7 +739,6 @@ function capturedValueDelta(prevPieces, nextPieces, moverSide) {
   const newly = listNewCaptures(prevPieces, nextPieces);
   let gain = 0;
   for (const p of newly) {
-    // If the newly captured piece belongs to the opponent, it's our gain.
     if (p.side !== moverSide) {
       const t = Array.isArray(p.possibleTypes) && p.possibleTypes.length > 0 ? p.possibleTypes[0] : 'p';
       gain += CAPTURE_VALUES[t] || 0;
@@ -736,7 +776,6 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         if (moverBefore) {
           const movedCount = moverBefore.moveCount || 0;
           if (movedCount === 0) devScore += FRESH_DEVELOPMENT_BONUS;
-          // Penalize repeated movers earlier and when there are many unmoved pieces
           if (movedCount > 0) {
             const baseRepeat = REPEAT_MOVER_PENALTY * Math.min(3, movedCount);
             const breadthFactor = early ? Math.max(0.75, unmovedFriends / 10) : Math.max(0.5, unmovedFriends / 12);
@@ -783,7 +822,6 @@ function orderMoves(moves, currentEval, side, prevPieces) {
   if (DEBUG_AI) {
     try {
       const top = ranked.slice(0, Math.min(8, ranked.length));
-      // eslint-disable-next-line no-console
       console.debug('[AI][orderMoves]', {
         side,
         early,
@@ -818,7 +856,6 @@ function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
   const caps = generateCapturingReplies(pieces, side);
   if (caps.length === 0) return { score: standPat, move: null };
 
-  // Order capture moves greedily using evaluation delta and SEE
   const ordered = orderMoves(caps, standPatVal, side, pieces);
 
   let bestMove = null;
@@ -866,11 +903,10 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
 
   let replies = generateLegalReplies(pieces, side, 0);
 
-  // Restrict only at this ply if a whitelist is provided
   if (Array.isArray(allowedRootPieceIdsForThisPly) && allowedRootPieceIdsForThisPly.length > 0) {
     const allowedSet = new Set(allowedRootPieceIdsForThisPly);
     const filtered = replies.filter((mv) => moveIsInAllowedRootSet(mv, pieces, allowedSet));
-    if (filtered.length > 0) replies = filtered; // fall back to all if filtered is empty
+    if (filtered.length > 0) replies = filtered;
   }
 
   if (replies.length === 0) {
@@ -887,7 +923,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
     let best = -Infinity;
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
-      const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0; // check/capture extension
+      const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
       const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null);
       if (res.score > best) { best = res.score; bestMove = mv; }
       alpha = Math.max(alpha, best);
@@ -913,14 +949,11 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
   const rootPieces = clonePieces(pieces);
   const rootSide = sideToMove;
 
-  // Run alpha-beta with optional root restriction
   const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide, Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds : []);
 
-  // Controlled randomness at root: occasionally select among the top few ordered moves
   try {
     let legal = generateLegalReplies(rootPieces, rootSide, 0);
 
-    // Apply the same root restriction to randomness pool if it leaves options; otherwise use full pool
     if (Array.isArray(allowedRootPieceIds) && allowedRootPieceIds.length > 0) {
       const allowedSet = new Set(allowedRootPieceIds);
       const filtered = legal.filter((mv) => moveIsInAllowedRootSet(mv, rootPieces, allowedSet));
@@ -939,7 +972,6 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
       if (DEBUG_AI) {
         try {
           const pick = chosen || null;
-          // eslint-disable-next-line no-console
           console.debug('[AI][rootPick]', {
             side: rootSide,
             depth,
@@ -958,7 +990,6 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
   if (DEBUG_AI) {
     try {
       const mv = res.move || null;
-      // eslint-disable-next-line no-console
       console.debug('[AI][rootPickFallback]', {
         side: rootSide,
         move: mv ? { type: mv.type, from: mv.from || (mv.plan ? `${mv.plan.piece1_from},${mv.plan.piece2_from}` : ''), to: mv.to || (mv.plan ? `${mv.plan.piece1_to},${mv.plan.piece2_to}` : '') } : null,
