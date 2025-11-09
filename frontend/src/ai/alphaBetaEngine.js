@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds forced favorable captures, root-mover restriction, SEE-based ordering with early-stop option, and high incentive for flexibility via combination valuation.
+// Purpose: Alpha-beta engine with quantum-aware heuristics and a classical mode when all pieces are collapsed. Adds forced favorable captures, root-mover restriction, SEE-based ordering with early-stop option, and flexible evaluation switching.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js, ./aiWorker.js
 
@@ -357,7 +357,6 @@ function approxThreatenedSquares(pieces, side) {
 }
 
 function kingSafetyPenaltyForSide(pieces, side) {
-  // Align with checking rules: only pieces with <= 2 possibilities contribute to threat map
   const opp = side === 'white' ? 'black' : 'white';
   const oppThreats = computeThreatenedSquaresForSide(pieces, opp);
   let penalty = 0;
@@ -547,68 +546,96 @@ function combinationFlexScoreForSide(pieces, side) {
   return sum * FLEX_COMBO_WEIGHT;
 }
 
-function evaluatePosition(pieces) {
-  // Material: sum of the pessimistic (lowest) value of all pieces remaining on board.
+// Evaluation mode helpers
+function evaluatePositionQuantum(pieces) {
   const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
   const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
   const material = wMaterial - bMaterial;
 
-  // Occupancy for downstream tactical approximations and mobility
   const occ = buildOccupancy(pieces);
 
-  // Mobility
   const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
   const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
   const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
 
-  // Superposition breadth
   const wSup = superpositionScoreForSide(pieces, 'white');
   const bSup = superpositionScoreForSide(pieces, 'black');
   const superpos = wSup - bSup;
 
-  // Presence of Pawn/King in superpositions across the team
   const wPresence = presenceScoreForSide(pieces, 'white');
   const bPresence = presenceScoreForSide(pieces, 'black');
   const presence = wPresence - bPresence;
 
-  // Collapsed king penalty
   const wKingPen = collapsedKingPenaltyForSide(pieces, 'white');
   const bKingPen = collapsedKingPenaltyForSide(pieces, 'black');
   const kingCollapse = wKingPen - bKingPen;
 
-  // Undefended hanging exposure
   const wHang = undefendedHangingValueForSide(pieces, 'white', occ);
   const bHang = undefendedHangingValueForSide(pieces, 'black', occ);
   const exposure = -(wHang - bHang) * HANGING_WEIGHT;
 
-  // Trade risk
   const wTrade = tradeRiskPenaltyForSide(pieces, 'white', occ);
   const bTrade = tradeRiskPenaltyForSide(pieces, 'black', occ);
   const trade = -(wTrade - bTrade) * TRADE_RISK_WEIGHT;
 
-  // PST and king safety
   const pst = pstScoreForSide(pieces, 'white') - pstScoreForSide(pieces, 'black');
   const kingSafety = kingSafetyPenaltyForSide(pieces, 'white') - kingSafetyPenaltyForSide(pieces, 'black');
 
-  // Center control and development
   const center = centerControlScoreForSide(pieces, 'white') - centerControlScoreForSide(pieces, 'black');
   const centerOcc = centerOccupancyScoreForSide(pieces, 'white') - centerOccupancyScoreForSide(pieces, 'black');
   const dev = developmentScoreForSide(pieces, 'white') - developmentScoreForSide(pieces, 'black');
   const pawnAdv = pawnAdvanceScoreForSide(pieces, 'white') - pawnAdvanceScoreForSide(pieces, 'black');
 
-  // Development breadth: number of distinct movers
   const breadth = movedBreadthForSide(pieces, 'white') - movedBreadthForSide(pieces, 'black');
 
-  // Soft safety penalty for attacked pieces even if defended
   const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
 
-  // Promotion presence bonus
   const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
 
-  // Flex/combination valuation
   const flexCombo = combinationFlexScoreForSide(pieces, 'white') - combinationFlexScoreForSide(pieces, 'black');
 
   return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo + flexCombo;
+}
+
+function evaluatePositionClassical(pieces) {
+  const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
+  const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
+  const material = wMaterial - bMaterial;
+
+  const occ = buildOccupancy(pieces);
+
+  const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
+  const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
+  const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
+
+  const wHang = undefendedHangingValueForSide(pieces, 'white', occ);
+  const bHang = undefendedHangingValueForSide(pieces, 'black', occ);
+  const exposure = -(wHang - bHang) * HANGING_WEIGHT;
+
+  const wTrade = tradeRiskPenaltyForSide(pieces, 'white', occ);
+  const bTrade = tradeRiskPenaltyForSide(pieces, 'black', occ);
+  const trade = -(wTrade - bTrade) * TRADE_RISK_WEIGHT;
+
+  const pst = pstScoreForSide(pieces, 'white') - pstScoreForSide(pieces, 'black');
+  const kingSafety = kingSafetyPenaltyForSide(pieces, 'white') - kingSafetyPenaltyForSide(pieces, 'black');
+
+  const center = centerControlScoreForSide(pieces, 'white') - centerControlScoreForSide(pieces, 'black');
+  const centerOcc = centerOccupancyScoreForSide(pieces, 'white') - centerOccupancyScoreForSide(pieces, 'black');
+  const dev = developmentScoreForSide(pieces, 'white') - developmentScoreForSide(pieces, 'black');
+  const pawnAdv = pawnAdvanceScoreForSide(pieces, 'white') - pawnAdvanceScoreForSide(pieces, 'black');
+
+  const breadth = movedBreadthForSide(pieces, 'white') - movedBreadthForSide(pieces, 'black');
+
+  const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
+
+  const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
+
+  // Classical excludes superposition presence, collapsed-king penalty, and combination-flex bonuses
+  return material + mobility + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo;
+}
+
+function evaluatePositionForMode(pieces, mode) {
+  return mode === 'classical' ? evaluatePositionClassical(pieces) : evaluatePositionQuantum(pieces);
 }
 
 function countCapturedPieces(pieces) {
@@ -654,7 +681,6 @@ export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
     .map((a) => a.value)
     .sort((a, b) => a - b);
 
-  // Early-stop SEE via memoized minimax on stacked attacker lists
   const memo = new Map();
   function key(target, oi, mi, turn) {
     return `${target}|${oi}|${mi}|${turn}`;
@@ -665,8 +691,7 @@ export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
     if (memo.has(k)) return memo.get(k);
 
     if (turn === 'opp') {
-      // Opponent can decline to capture or choose a capture if available; they minimize our net
-      let best = 0; // opponent stopping yields 0 delta from this state
+      let best = 0; // opponent stopping yields 0 delta
       if (oi < oppAttackers.length) {
         const take = -targetVal + rec(oppAttackers[oi], oi + 1, mi, 'mine');
         best = Math.min(best, take);
@@ -674,7 +699,6 @@ export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
       memo.set(k, best);
       return best;
     } else {
-      // Our turn: we can stop (0) or capture if available; we maximize our net
       let best = 0;
       if (mi < myDefenders.length) {
         const take = targetVal + rec(myDefenders[mi], oi, mi + 1, 'opp');
@@ -685,7 +709,6 @@ export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
     }
   }
 
-  // The opponent moves next against our piece now on toSq
   const net = rec(initialVal, 0, 0, 'opp');
   return net; // positive is good for mover, negative bad
 }
@@ -761,20 +784,20 @@ function capturedValueDelta(prevPieces, nextPieces, moverSide) {
   return gain;
 }
 
-function orderMoves(moves, currentEval, side, prevPieces) {
+function orderMoves(moves, currentEval, side, prevPieces, evalMode) {
   const sign = side === 'white' ? 1 : -1;
   const early = approximateGamePly(prevPieces) <= EARLY_GAME_PLY_THRESHOLD;
   const unmovedFriends = countUnmovedFriendly(prevPieces, side);
+  const classical = evalMode === 'classical';
 
   const ranked = moves
     .map((m) => {
-      const nextEval = evaluatePosition(m.resultPieces);
+      const nextEval = evaluatePositionForMode(m.resultPieces, evalMode);
       const isCap = isCaptureMove(prevPieces, m.resultPieces);
       const capBonus = isCap ? CAPTURE_ORDER_BONUS : 0;
       const capValueBonus = isCap ? CAPTURE_VALUE_ORDER_BONUS * capturedValueDelta(prevPieces, m.resultPieces, side) : 0;
       const castleBonus = m.type === 'castle' ? 0.25 : 0;
 
-      // SEE-based landing risk assessment
       let seeScore = 0;
       let riskNet = 0;
       if (m.type === 'move') {
@@ -783,7 +806,6 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
       }
 
-      // Development diversity: prefer moving new pieces; avoid spamming the same piece
       let devScore = 0;
       if (m.type === 'move') {
         const moverBefore = getPieceAtSquare(prevPieces, m.from);
@@ -798,26 +820,22 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         }
       }
 
-      // Encourage leaving Pawn in superposition after the move
       let pawnRetention = 0;
-      if (m.type === 'move') {
+      if (!classical && m.type === 'move') {
         const afterMover = getPieceAtSquare(m.resultPieces, m.to);
         if (afterMover && afterMover.side === side && Array.isArray(afterMover.possibleTypes) && afterMover.possibleTypes.includes('p')) {
           pawnRetention += P_RETENTION_ORDER_BONUS;
         }
       }
 
-      // Check bonus aligned with checking rules
       let checkBonus = 0;
       if (m.type === 'move' || m.type === 'castle') {
         const nextSide = side === 'white' ? 'black' : 'white';
         if (isCheckOnSide(m.resultPieces, nextSide)) checkBonus += CHECK_ORDER_BONUS;
       }
 
-      // Penalty for collapsing a broad superposition into a narrow one without compensation
-      const collapsePenalty = collapseNarrowingPenalty(prevPieces, m, side);
+      const collapsePenalty = classical ? 0 : collapseNarrowingPenalty(prevPieces, m, side);
 
-      // Demote clearly losing captures unless the move scores extremely well otherwise
       let losingCapturePenalty = 0;
       if (isCap && m.type === 'move' && riskNet < LOSING_CAPTURE_DROP_THRESHOLD) {
         const evalGain = sign * (nextEval - currentEval);
@@ -825,7 +843,6 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         if (!allowExtreme) losingCapturePenalty = LOSING_CAPTURE_HARD_PENALTY;
       }
 
-      // Small random jitter to avoid deterministic openings
       const jitter = (Math.random() - 0.5) * RANDOM_MOVE_JITTER;
 
       const score = sign * (nextEval - currentEval) + capBonus + capValueBonus + castleBonus + seeScore + devScore + pawnRetention + checkBonus - collapsePenalty - losingCapturePenalty + jitter;
@@ -840,6 +857,7 @@ function orderMoves(moves, currentEval, side, prevPieces) {
         side,
         early,
         unmovedFriends,
+        mode: evalMode,
         top: top.map((x) => ({
           type: x.m.type,
           from: x.m.from || (x.m.plan ? `${x.m.plan.piece1_from},${x.m.plan.piece2_from}` : ''),
@@ -859,8 +877,8 @@ function orderMoves(moves, currentEval, side, prevPieces) {
   return ranked.map((x) => x.m);
 }
 
-function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
-  const standPatVal = evaluatePosition(pieces);
+function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies, evalMode) {
+  const standPatVal = evaluatePositionForMode(pieces, evalMode);
   const standPat = (rootSide === 'white' ? 1 : -1) * standPatVal;
 
   if (standPat >= beta) return { score: beta, move: null };
@@ -870,14 +888,14 @@ function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
   const caps = generateCapturingReplies(pieces, side);
   if (caps.length === 0) return { score: standPat, move: null };
 
-  const ordered = orderMoves(caps, standPatVal, side, pieces);
+  const ordered = orderMoves(caps, standPatVal, side, pieces, evalMode);
 
   let bestMove = null;
   if (side === rootSide) {
     let best = -Infinity;
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
-      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1);
+      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1, evalMode);
       if (res.score > best) { best = res.score; bestMove = mv; }
       if (best > alpha) alpha = best;
       if (beta <= alpha) break;
@@ -887,7 +905,7 @@ function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
     let best = Infinity;
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
-      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1);
+      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1, evalMode);
       if (res.score < best) { best = res.score; bestMove = mv; }
       if (best < beta) beta = best;
       if (beta <= alpha) break;
@@ -910,9 +928,9 @@ function moveIsInAllowedRootSet(mv, prevPieces, allowedSet) {
   return false;
 }
 
-function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceIdsForThisPly = null) {
+function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceIdsForThisPly = null, evalMode = 'quantum') {
   if (depth === 0) {
-    return quiescenceSearch(pieces, side, alpha, beta, rootSide, QUIESCENCE_MAX_PLIES);
+    return quiescenceSearch(pieces, side, alpha, beta, rootSide, QUIESCENCE_MAX_PLIES, evalMode);
   }
 
   let replies = generateLegalReplies(pieces, side, 0);
@@ -924,13 +942,13 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
   }
 
   if (replies.length === 0) {
-    const val = evaluatePosition(pieces);
+    const val = evaluatePositionForMode(pieces, evalMode);
     const score = (rootSide === 'white' ? 1 : -1) * val;
     return { score, move: null };
   }
 
-  const currentEval = evaluatePosition(pieces);
-  const ordered = orderMoves(replies, currentEval, side, pieces);
+  const currentEval = evaluatePositionForMode(pieces, evalMode);
+  const ordered = orderMoves(replies, currentEval, side, pieces, evalMode);
 
   let bestMove = null;
   if (side === rootSide) {
@@ -938,7 +956,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
       const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null);
+      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null, evalMode);
       if (res.score > best) { best = res.score; bestMove = mv; }
       alpha = Math.max(alpha, best);
       if (beta <= alpha) break;
@@ -949,7 +967,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
       const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null);
+      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null, evalMode);
       if (res.score < best) { best = res.score; bestMove = mv; }
       beta = Math.min(beta, best);
       if (beta <= alpha) break;
@@ -958,12 +976,24 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceI
   }
 }
 
-export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium', allowedRootPieceIds = [] }) {
+export function stateIsFullyCollapsed(pieces) {
+  for (const p of pieces) {
+    if (p.captured) continue;
+    if (!p.square) continue;
+    const len = Array.isArray(p.possibleTypes) ? p.possibleTypes.length : 0;
+    if (len !== 1) return false;
+  }
+  return true;
+}
+
+export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium', allowedRootPieceIds = [], engineMode = 'auto' }) {
   const depth = difficulty === 'hard' ? 4 : difficulty === 'easy' ? 1 : 3;
   const rootPieces = clonePieces(pieces);
   const rootSide = sideToMove;
 
-  const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide, Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds : []);
+  const evalMode = engineMode === 'auto' ? (stateIsFullyCollapsed(rootPieces) ? 'classical' : 'quantum') : (engineMode === 'classical' ? 'classical' : 'quantum');
+
+  const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide, Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds : [], evalMode);
 
   try {
     let legal = generateLegalReplies(rootPieces, rootSide, 0);
@@ -975,8 +1005,8 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
     }
 
     if (Array.isArray(legal) && legal.length > 0) {
-      const currentEval = evaluatePosition(rootPieces);
-      const ordered = orderMoves(legal, currentEval, rootSide, rootPieces);
+      const currentEval = evaluatePositionForMode(rootPieces, evalMode);
+      const ordered = orderMoves(legal, currentEval, rootSide, rootPieces, evalMode);
       const top = ordered.slice(0, Math.min(3, ordered.length));
       const prob = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 0.3 : 0.1;
       let chosen = res.move || null;
@@ -991,6 +1021,7 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
             depth,
             difficulty,
             restricted: Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds.length : 0,
+            mode: evalMode,
             chosen: pick ? { type: pick.type, from: pick.from || (pick.plan ? `${pick.plan.piece1_from},${pick.plan.piece2_from}` : ''), to: pick.to || (pick.plan ? `${pick.plan.piece1_to},${pick.plan.piece2_to}` : '') } : null,
           });
         } catch (_) {}

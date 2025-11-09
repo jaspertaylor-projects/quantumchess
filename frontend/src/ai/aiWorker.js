@@ -1,9 +1,9 @@
 // frontend/src/ai/aiWorker.js
-// Purpose: Web Worker that performs AI computations off the main thread. Adds a pre-capture trade scan forcing any materially winning capture, a defensive SEE escape if opponent has a winning trade, then runs alpha-beta restricted to up to 5 random movers.
+// Purpose: Web Worker that performs AI computations off the main thread. Adds a pre-capture trade scan forcing any materially winning capture, a defensive SEE escape if opponent has a winning trade, then runs alpha-beta with optional classical mode when all pieces are collapsed.
 // Imports From: ./alphaBetaEngine.js, ../chessboard/quantumEngine.js
 // Exported To: ./useLocalAi.js
 
-import pickBestMove, { seeNetForLandingSquare } from './alphaBetaEngine.js';
+import pickBestMove, { seeNetForLandingSquare, stateIsFullyCollapsed } from './alphaBetaEngine.js';
 import { clonePieces, generateLegalReplies } from '../chessboard/quantumEngine.js';
 
 const DEBUG_WORKER = true;
@@ -119,7 +119,6 @@ function chooseEscapeMoveForPiece(root, sideToMove, pieceId) {
   let best = null;
   let bestScore = -Infinity;
   for (const mv of candidates) {
-    // Prefer SEE-safe landings and retaining broader type sets
     const safety = seeNetForLandingSquare(mv.resultPieces, sideToMove, mv.to); // >=0 good
     const moverAfter = getPieceAtSquare(mv.resultPieces, mv.to);
     const moverBefore = getPieceAtSquare(root, mv.from);
@@ -148,6 +147,9 @@ self.addEventListener('message', (e) => {
   try {
     const root = clonePieces(pieces || []);
 
+    // Decide engine mode based on whether the position is fully collapsed
+    const engineMode = stateIsFullyCollapsed(root) ? 'classical' : 'quantum';
+
     // Generate legal replies once for this think cycle
     const legal = generateLegalReplies(root, sideToMove, 0);
 
@@ -159,7 +161,7 @@ self.addEventListener('message', (e) => {
           const mini = minifyMove(forced.mv);
           if (DEBUG_WORKER) {
             try {
-              console.debug('[AI-Worker][forced-favorable-capture]', { id, side: sideToMove, bestNet: forced.net, chosen: mini });
+              console.debug('[AI-Worker][forced-favorable-capture]', { id, side: sideToMove, bestNet: forced.net, chosen: mini, mode: engineMode });
             } catch (_) {}
           }
           self.postMessage({ type: 'baseline', id, move: mini });
@@ -184,7 +186,7 @@ self.addEventListener('message', (e) => {
             const mini = minifyMove(escape);
             if (DEBUG_WORKER) {
               try {
-                console.debug('[AI-Worker][defensive-see-escape]', { id, side: sideToMove, threatNet: worstOpp.net, victimId: worstOpp.victimId, chosen: mini });
+                console.debug('[AI-Worker][defensive-see-escape]', { id, side: sideToMove, threatNet: worstOpp.net, victimId: worstOpp.victimId, chosen: mini, mode: engineMode });
               } catch (_) {}
             }
             self.postMessage({ type: 'baseline', id, move: mini });
@@ -209,7 +211,7 @@ self.addEventListener('message', (e) => {
       const mini = minifyMove(randomMove);
       if (DEBUG_WORKER) {
         try {
-          console.debug('[AI-Worker][early-random]', { id, side: sideToMove, ply: earlyPly, losses: aiLosses, chosen: mini });
+          console.debug('[AI-Worker][early-random]', { id, side: sideToMove, ply: earlyPly, losses: aiLosses, chosen: mini, mode: engineMode });
         } catch (_) {}
       }
       self.postMessage({ type: 'baseline', id, move: mini });
@@ -240,6 +242,7 @@ self.addEventListener('message', (e) => {
             console.debug('[AI-Worker][baseline]', {
               id,
               side: sideToMove,
+              mode: engineMode,
               legalCount: legal.length,
               captures: capturing.length,
               safeCaptures: safeCaptures.length,
@@ -266,7 +269,7 @@ self.addEventListener('message', (e) => {
         allowedRootPieceIds = pickUpToFiveMoverIds(root, legal, sideToMove);
         if (DEBUG_WORKER) {
           try {
-            console.debug('[AI-Worker][root-mover-sample]', { id, side: sideToMove, count: allowedRootPieceIds.length, ids: allowedRootPieceIds });
+            console.debug('[AI-Worker][root-mover-sample]', { id, side: sideToMove, count: allowedRootPieceIds.length, ids: allowedRootPieceIds, mode: engineMode });
           } catch (_) {}
         }
       }
@@ -277,12 +280,12 @@ self.addEventListener('message', (e) => {
       allowedRootPieceIds = [];
     }
 
-    // Compute the alpha-beta best move with root restriction.
-    const best = pickBestMove({ pieces: root, sideToMove, difficulty, allowedRootPieceIds });
+    // Compute the alpha-beta best move with root restriction and engine mode.
+    const best = pickBestMove({ pieces: root, sideToMove, difficulty, allowedRootPieceIds, engineMode });
     const bestMin = minifyMove(best);
     if (DEBUG_WORKER) {
       try {
-        console.debug('[AI-Worker][best]', { id, side: sideToMove, best: bestMin });
+        console.debug('[AI-Worker][best]', { id, side: sideToMove, best: bestMin, mode: engineMode });
       } catch (_) {}
     }
     self.postMessage({ type: 'best', id, move: bestMin });
