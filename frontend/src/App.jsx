@@ -32,6 +32,9 @@ export default function App() {
   const [boardSize, setBoardSize] = useState(0);
   const [trayHeight, setTrayHeight] = useState(0);
 
+  // Increment this to reset the engine timeline (fresh game state)
+  const [gameInstanceId, setGameInstanceId] = useState(0);
+
   const {
     pieces,
     sideToMove,
@@ -49,7 +52,7 @@ export default function App() {
     // game state
     gameOver,
     winner,
-  } = useQuantumGameState();
+  } = useQuantumGameState(gameInstanceId);
 
   const [selectedId, setSelectedId] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -64,8 +67,6 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   // Allows ending the game by actions outside the core engine (resign/draw), disabling further interaction and showing a result.
   const [externalGameOver, setExternalGameOver] = useState({ over: false, text: '' });
-
-  const [gameInstanceId, setGameInstanceId] = useState(0);
 
   const [mmActive, setMmActive] = useState(false);
   const mmAbortRef = useRef(false);
@@ -645,6 +646,7 @@ export default function App() {
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
 
+    // Bump engine reset key to clear the internal timeline and view index
     setGameInstanceId((n) => n + 1);
 
     isOnlineGameRef.current = false;

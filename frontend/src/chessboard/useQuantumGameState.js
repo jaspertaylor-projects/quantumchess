@@ -1,9 +1,9 @@
 // frontend/src/chessboard/useQuantumGameState.js
-// Purpose: Manage Quantum Chess state with an immutable timeline. Enforces collapse, dynamic promotion-aware global capacities, check pruning, flexible castling, move-into-check prevention, and checkmate detection with game-over handling.
+// Purpose: Manage Quantum Chess state with an immutable timeline. Enforces collapse, dynamic promotion-aware global capacities, check pruning, flexible castling, move-into-check prevention, and checkmate detection with game-over handling. Supports external resets via a key to start a fresh game state.
 // Imports From: ./boardUtils.js, ./gameConstants.js, ./quantumEngine.js
 // Exported To: ../App.jsx
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fromAlgebraic } from './boardUtils.js';
 import {
   createStartingPieces,
@@ -22,7 +22,7 @@ import {
   computeCastlePlanInPosition,
 } from './quantumEngine.js';
 
-export default function useQuantumGameState() {
+export default function useQuantumGameState(resetKey = 0) {
   const [history, setHistory] = useState(() => [{
     pieces: createStartingPieces(),
     sideToMove: 'white',
@@ -33,6 +33,19 @@ export default function useQuantumGameState() {
   const [viewIndex, setViewIndexState] = useState(0);
 
   const lastMoveSignatureRef = useRef(null);
+
+  // Reset the entire timeline when resetKey changes (e.g., starting a new game)
+  useEffect(() => {
+    setHistory([{
+      pieces: createStartingPieces(),
+      sideToMove: 'white',
+      captureCounter: 0,
+      gameOver: false,
+      winner: null,
+    }]);
+    setViewIndexState(0);
+    lastMoveSignatureRef.current = null;
+  }, [resetKey]);
 
   const current = history[Math.min(Math.max(0, viewIndex), history.length - 1)];
   const pieces = current.pieces;
