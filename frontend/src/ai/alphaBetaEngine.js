@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Safer capture logic using SEE with hard demotion of losing captures, promotion bonus, stronger pawn-advance incentives, early opening development preferences, and improved move ordering.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds support for forced favorable captures and restricting root ply to a random subset of movers to control branching.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js, ./aiWorker.js
 
@@ -845,12 +845,34 @@ function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies) {
   }
 }
 
-function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
+function moveIsInAllowedRootSet(mv, prevPieces, allowedSet) {
+  if (!allowedSet || allowedSet.size === 0) return true;
+  if (!mv) return false;
+  if (mv.type === 'move' && mv.from) {
+    const mover = getPieceAtSquare(prevPieces, mv.from);
+    if (!mover) return false;
+    return allowedSet.has(mover.id);
+  }
+  if (mv.type === 'castle' && mv.plan) {
+    return allowedSet.has(mv.plan.piece1_id) || allowedSet.has(mv.plan.piece2_id);
+  }
+  return false;
+}
+
+function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceIdsForThisPly = null) {
   if (depth === 0) {
     return quiescenceSearch(pieces, side, alpha, beta, rootSide, QUIESCENCE_MAX_PLIES);
   }
 
-  const replies = generateLegalReplies(pieces, side, 0);
+  let replies = generateLegalReplies(pieces, side, 0);
+
+  // Restrict only at this ply if a whitelist is provided
+  if (Array.isArray(allowedRootPieceIdsForThisPly) && allowedRootPieceIdsForThisPly.length > 0) {
+    const allowedSet = new Set(allowedRootPieceIdsForThisPly);
+    const filtered = replies.filter((mv) => moveIsInAllowedRootSet(mv, pieces, allowedSet));
+    if (filtered.length > 0) replies = filtered; // fall back to all if filtered is empty
+  }
+
   if (replies.length === 0) {
     const val = evaluatePosition(pieces);
     const score = (rootSide === 'white' ? 1 : -1) * val;
@@ -866,7 +888,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
       const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0; // check/capture extension
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide);
+      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null);
       if (res.score > best) { best = res.score; bestMove = mv; }
       alpha = Math.max(alpha, best);
       if (beta <= alpha) break;
@@ -877,7 +899,7 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
     for (const mv of ordered) {
       const nextSide = side === 'white' ? 'black' : 'white';
       const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide);
+      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null);
       if (res.score < best) { best = res.score; bestMove = mv; }
       beta = Math.min(beta, best);
       if (beta <= alpha) break;
@@ -886,16 +908,25 @@ function alphaBeta(pieces, side, depth, alpha, beta, rootSide) {
   }
 }
 
-export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium' }) {
+export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium', allowedRootPieceIds = [] }) {
   const depth = difficulty === 'hard' ? 4 : difficulty === 'easy' ? 1 : 3;
   const rootPieces = clonePieces(pieces);
   const rootSide = sideToMove;
 
-  const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide);
+  // Run alpha-beta with optional root restriction
+  const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide, Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds : []);
 
   // Controlled randomness at root: occasionally select among the top few ordered moves
   try {
-    const legal = generateLegalReplies(rootPieces, rootSide, 0);
+    let legal = generateLegalReplies(rootPieces, rootSide, 0);
+
+    // Apply the same root restriction to randomness pool if it leaves options; otherwise use full pool
+    if (Array.isArray(allowedRootPieceIds) && allowedRootPieceIds.length > 0) {
+      const allowedSet = new Set(allowedRootPieceIds);
+      const filtered = legal.filter((mv) => moveIsInAllowedRootSet(mv, rootPieces, allowedSet));
+      if (filtered.length > 0) legal = filtered;
+    }
+
     if (Array.isArray(legal) && legal.length > 0) {
       const currentEval = evaluatePosition(rootPieces);
       const ordered = orderMoves(legal, currentEval, rootSide, rootPieces);
@@ -913,6 +944,7 @@ export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium'
             side: rootSide,
             depth,
             difficulty,
+            restricted: Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds.length : 0,
             chosen: pick ? { type: pick.type, from: pick.from || (pick.plan ? `${pick.plan.piece1_from},${pick.plan.piece2_from}` : ''), to: pick.to || (pick.plan ? `${pick.plan.piece1_to},${pick.plan.piece2_to}` : '') } : null,
           });
         } catch (_) {}
