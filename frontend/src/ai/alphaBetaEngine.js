@@ -1,5 +1,5 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds forced favorable captures, root-mover restriction, SEE-based ordering, and high incentive for flexibility via combination valuation.
+// Purpose: Alpha-beta engine with quantum-aware heuristics. Adds forced favorable captures, root-mover restriction, SEE-based ordering with early-stop option, and high incentive for flexibility via combination valuation.
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
 // Exported To: ./useLocalAi.js, ./aiWorker.js
 
@@ -88,7 +88,7 @@ const PST = {
     [0.05, 0.1, 0.1, -0.12, -0.12, 0.1, 0.1, 0.05],
     [0.02, 0.04, 0.06, 0.08, 0.08, 0.06, 0.04, 0.02],
     [0.01, 0.03, 0.05, 0.07, 0.07, 0.05, 0.03, 0.01],
-    [0.02, 0.04, 0.04, 0.06, 0.06, 0.04, 0.04, 0.02],
+    [0.02, 0.04, 0.4, 0.06, 0.06, 0.04, 0.04, 0.02],
     [0.03, 0.05, 0.05, 0.06, 0.06, 0.05, 0.05, 0.03],
     [0.15, 0.18, 0.18, 0.22, 0.22, 0.18, 0.18, 0.15],
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -630,7 +630,7 @@ function generateCapturingReplies(pieces, side) {
   return caps;
 }
 
-// --- Static Exchange Evaluation (approximate) for landing square risk ---
+// --- Static Exchange Evaluation (approximate) for landing square risk with voluntary early stop ---
 function getPieceAtSquare(pieces, sq) {
   for (const p of pieces) {
     if (!p.captured && p.square === sq) return p;
@@ -654,25 +654,39 @@ export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
     .map((a) => a.value)
     .sort((a, b) => a - b);
 
-  let net = 0;
-  let targetVal = initialVal;
-  let oi = 0;
-  let mi = 0;
-  let turn = 'opp';
+  // Early-stop SEE via memoized minimax on stacked attacker lists
+  const memo = new Map();
+  function key(target, oi, mi, turn) {
+    return `${target}|${oi}|${mi}|${turn}`;
+  }
 
-  while (true) {
+  function rec(targetVal, oi, mi, turn) {
+    const k = key(targetVal, oi, mi, turn);
+    if (memo.has(k)) return memo.get(k);
+
     if (turn === 'opp') {
-      if (oi >= oppAttackers.length) break;
-      net -= targetVal; // opponent captures our target piece of value targetVal
-      targetVal = oppAttackers[oi++]; // the capturing piece becomes the new target
-      turn = 'mine';
+      // Opponent can decline to capture or choose a capture if available; they minimize our net
+      let best = 0; // opponent stopping yields 0 delta from this state
+      if (oi < oppAttackers.length) {
+        const take = -targetVal + rec(oppAttackers[oi], oi + 1, mi, 'mine');
+        best = Math.min(best, take);
+      }
+      memo.set(k, best);
+      return best;
     } else {
-      if (mi >= myDefenders.length) break;
-      net += targetVal; // we recapture that capturing piece
-      targetVal = myDefenders[mi++];
-      turn = 'opp';
+      // Our turn: we can stop (0) or capture if available; we maximize our net
+      let best = 0;
+      if (mi < myDefenders.length) {
+        const take = targetVal + rec(myDefenders[mi], oi, mi + 1, 'opp');
+        best = Math.max(best, take);
+      }
+      memo.set(k, best);
+      return best;
     }
   }
+
+  // The opponent moves next against our piece now on toSq
+  const net = rec(initialVal, 0, 0, 'opp');
   return net; // positive is good for mover, negative bad
 }
 
