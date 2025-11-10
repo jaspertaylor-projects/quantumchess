@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move. Ensures the header row is opaque so scrolling content is not visible behind it. Adds custom, minimal scrollbar behavior consistent with project colors.
+// Purpose: Displays the move list in two columns with playback controls. The header is now outside the scrollable area so the scrollbar stays beneath it. Emits seek events so the board can jump to the state after the selected move.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx, ../Styles/scrollbar.css
 // Exported To: ./SideTray.jsx
 
@@ -22,7 +22,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
 
-  // Keep stable refs for callbacks to avoid re-running effects due to identity changes
   const highlightRef = useRef(onHighlightMove);
   const clearRef = useRef(onClearHighlights);
   const seekRef = useRef(onSeekToIndex);
@@ -30,7 +29,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
   useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
 
-  // Sync internal index with an external controller when provided (e.g., keyboard arrows from App)
   useEffect(() => {
     if (typeof externalIndex !== 'number') return;
     const clamped = Math.max(-1, Math.min(moves.length - 1, externalIndex));
@@ -52,7 +50,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     }
   }, [index, moves]);
 
-  // Emit seek to the board so it can jump to the state after the selected move
   useEffect(() => {
     seekRef.current(index);
   }, [index]);
@@ -106,6 +103,20 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     return out;
   }, [moves]);
 
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
+  useEffect(() => {
+    const probe = document.createElement('div');
+    probe.style.width = '100px';
+    probe.style.height = '100px';
+    probe.style.overflow = 'scroll';
+    probe.style.position = 'absolute';
+    probe.style.top = '-9999px';
+    document.body.appendChild(probe);
+    const w = probe.offsetWidth - probe.clientWidth;
+    document.body.removeChild(probe);
+    setScrollbarWidth(w || 0);
+  }, []);
+
   const styles = useMemo(
     () => ({
       root: {
@@ -131,28 +142,27 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         fontSize: 12,
         color: theme.textSecondary,
       },
-      list: {
+      listContainer: {
         flex: 1,
-        overflow: 'auto',
         position: 'relative',
         border: `1px solid ${theme.border}`,
         borderRadius: 10,
         background: 'rgba(255,255,255,0.03)',
         display: 'flex',
         flexDirection: 'column',
-        scrollbarGutter: 'stable',
+        overflow: 'hidden',
       },
       headerRow: {
-        position: 'sticky',
-        top: 0,
         zIndex: 3,
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
         gap: 10,
         padding: '8px 10px',
+        paddingRight: 10 + scrollbarWidth,
         background: theme.boardAreaBackground ? theme.boardAreaBackground : 'var(--color-globalBackground)',
         borderBottom: `1px solid ${theme.border}`,
         boxShadow: `0 1px 0 0 ${theme.border}`,
+        flexShrink: 0,
       },
       headerCell: {
         color: theme.textSecondary,
@@ -160,6 +170,14 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         fontWeight: 700,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
+      },
+      rowsScroll: {
+        flex: 1,
+        overflow: 'auto',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        scrollbarGutter: 'stable',
       },
       row: (active) => ({
         display: 'grid',
@@ -209,7 +227,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         flexShrink: 0,
       },
     }),
-    []
+    [scrollbarWidth]
   );
 
   const handlePrev = () => setIndex((i) => Math.max(-1, i - 1));
@@ -239,7 +257,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
 
   const formatMove = (m) => (m ? `${m.from} - ${m.to}` : '');
 
-  // Manage the transient .scrolling class to reveal the thumb during active scrolling
   const listRef = useRef(null);
   useEffect(() => {
     const el = listRef.current;
@@ -319,16 +336,17 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         </div>
       </div>
 
-      <div ref={listRef} className="qc-move-history-list custom-scrollbar" style={styles.list} role="list">
-        {moves.length === 0 ? (
-          <div className="qc-move-history-empty" style={styles.empty}>No moves yet. Make a move to populate the history.</div>
-        ) : (
-          <>
-            <div className="qc-move-history-header-row" style={styles.headerRow} role="rowheader">
-              <div className="qc-move-history-header-white" style={styles.headerCell}>White</div>
-              <div className="qc-move-history-header-black" style={styles.headerCell}>Black</div>
-            </div>
-            {pairs.map((pair, rowIdx) => (
+      <div className="qc-move-history-list-container" style={styles.listContainer}>
+        <div className="qc-move-history-header-row" style={styles.headerRow} role="rowheader">
+          <div className="qc-move-history-header-white" style={styles.headerCell}>White</div>
+          <div className="qc-move-history-header-black" style={styles.headerCell}>Black</div>
+        </div>
+
+        <div ref={listRef} className="qc-move-history-rows custom-scrollbar" style={styles.rowsScroll} role="list">
+          {moves.length === 0 ? (
+            <div className="qc-move-history-empty" style={styles.empty}>No moves yet. Make a move to populate the history.</div>
+          ) : (
+            pairs.map((pair, rowIdx) => (
               <div
                 key={`row-${rowIdx}`}
                 className="qc-move-history-row"
@@ -360,10 +378,11 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                   )}
                 </div>
               </div>
-            ))}
-          </>
-        )}
+            ))
+          )}
+        </div>
       </div>
+
       {infoMessage && (
         <div className="qc-move-history-infobox" style={styles.infoBox}>
           {infoMessage}
