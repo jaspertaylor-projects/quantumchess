@@ -1,7 +1,7 @@
 /* frontend/src/Styles/scrollbar.css */
-/* Purpose: Provides a shared, minimal custom scrollbar style that keeps the track reserved but hides the thumb until hover or active scrolling. Colors match the app's existing palette.
-   Imports From: Used via className "custom-scrollbar" in components like MoveHistoryPanel.jsx
-   Exported To: Consumed by React components that import this stylesheet explicitly */
+/* Purpose: Shared custom scrollbar styles used by scrollable UI regions. Keeps the track reserved, hides the thumb until hover/active scroll, and removes WebKit scrollbar arrow buttons. Colors align with the app's theme.
+   Imports From: Consumed by React components via className "custom-scrollbar" (e.g., tray/MoveHistoryPanel.jsx)
+   Exported To: Imported explicitly by components that need custom scrollbars */
 
 .custom-scrollbar {
   scrollbar-gutter: stable;
@@ -25,6 +25,19 @@
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 4px;
+}
+
+/* Remove the up/down/right/left arrow buttons entirely */
+.custom-scrollbar::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+  background: transparent;
+}
+
+/* Hide the corner where horizontal and vertical scrollbars meet */
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Default hidden thumb */
