@@ -25,19 +25,24 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   const highlightRef = useRef(onHighlightMove);
   const clearRef = useRef(onClearHighlights);
   const seekRef = useRef(onSeekToIndex);
+  const suppressSeekRef = useRef(false); // prevents feedback loops when index is driven externally
+
   useEffect(() => { highlightRef.current = onHighlightMove; }, [onHighlightMove]);
   useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
   useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
 
+  // Keep local index in sync with an externally controlled index (from App viewIndex)
   useEffect(() => {
     if (typeof externalIndex !== 'number') return;
     const clamped = Math.max(-1, Math.min(moves.length - 1, externalIndex));
     if (clamped !== index) {
+      suppressSeekRef.current = true; // this change originates externally; don't echo back with onSeek
       setPlaying(false);
       setIndex(clamped);
     }
   }, [externalIndex, moves.length, index]);
 
+  // Apply highlights for the selected move
   useEffect(() => {
     if (index >= 0 && index < moves.length) {
       const m = moves[index];
@@ -50,10 +55,16 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     }
   }, [index, moves]);
 
+  // Emit seek events only when the index was changed by this component (not by external sync)
   useEffect(() => {
+    if (suppressSeekRef.current) {
+      suppressSeekRef.current = false;
+      return;
+    }
     seekRef.current(index);
   }, [index]);
 
+  // Auto-playback through the move list
   useEffect(() => {
     if (!playing) return;
     if (moves.length === 0) return;
@@ -67,9 +78,12 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     return () => clearInterval(id);
   }, [playing, moves.length]);
 
+  // When moves change, if we're in uncontrolled mode (no externalIndex), jump to the latest move
   useEffect(() => {
+    if (typeof externalIndex === 'number') return; // controlled by parent
+    suppressSeekRef.current = true;
     setIndex(moves.length - 1);
-  }, [moves.length]);
+  }, [moves.length, externalIndex]);
 
   const pairs = useMemo(() => {
     const out = [];
