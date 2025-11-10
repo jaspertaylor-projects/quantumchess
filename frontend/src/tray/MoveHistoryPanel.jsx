@@ -1,5 +1,5 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns with playback controls. The header is now outside the scrollable area so the scrollbar stays beneath it. Emits seek events so the board can jump to the state after the selected move.
+// Purpose: Displays the move list in two columns with playback controls and emits seek events for timeline navigation. Clicking a move now immediately jumps the board to that state without waiting for effects.
 // Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx, ../Styles/scrollbar.css
 // Exported To: ./SideTray.jsx
 
@@ -31,6 +31,14 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
   useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
 
+  // Helper: set local index and immediately emit seek (avoids waiting for effect tick)
+  const setIndexAndSeek = (nextIdx) => {
+    const clamped = Math.max(-1, Math.min(moves.length - 1, nextIdx));
+    suppressSeekRef.current = true; // avoid emitting again from the effect
+    setIndex(clamped);
+    seekRef.current(clamped);
+  };
+
   // Keep local index in sync with an externally controlled index (from App viewIndex)
   useEffect(() => {
     if (typeof externalIndex !== 'number') return;
@@ -55,7 +63,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     }
   }, [index, moves]);
 
-  // Emit seek events only when the index was changed by this component (not by external sync)
+  // Emit seek events only when the index was changed by this component via state updates (not by external sync)
   useEffect(() => {
     if (suppressSeekRef.current) {
       suppressSeekRef.current = false;
@@ -71,8 +79,10 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     const id = setInterval(() => {
       setIndex((prev) => {
         const next = prev + 1;
-        if (next >= moves.length) return 0;
-        return next;
+        const nextCycled = next >= moves.length ? 0 : next;
+        // Drive the external seek immediately for smoother playback
+        setIndexAndSeek(nextCycled);
+        return nextCycled;
       });
     }, 900);
     return () => clearInterval(id);
@@ -244,12 +254,18 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     [scrollbarWidth]
   );
 
-  const handlePrev = () => setIndex((i) => Math.max(-1, i - 1));
-  const handleNext = () => setIndex((i) => Math.min(moves.length - 1, i + 1));
+  const handlePrev = () => {
+    const next = Math.max(-1, index - 1);
+    setIndexAndSeek(next);
+  };
+  const handleNext = () => {
+    const next = Math.min(moves.length - 1, index + 1);
+    setIndexAndSeek(next);
+  };
   const handleTogglePlay = () => setPlaying((v) => !v);
   const handleClear = () => {
     setPlaying(false);
-    setIndex(-1);
+    setIndexAndSeek(-1);
     clearRef.current();
   };
 
@@ -370,7 +386,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                 <div
                   className="qc-move-history-cell-white"
                   style={styles.cell(isWhiteActive(rowIdx), !!pair.white)}
-                  onClick={pair.white ? () => setIndex(pair.whiteIndex) : undefined}
+                  onClick={pair.white ? () => setIndexAndSeek(pair.whiteIndex) : undefined}
                   aria-label={pair.white ? `White move ${formatMove(pair.white)}` : 'No move'}
                 >
                   {pair.white ? (
@@ -382,7 +398,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                 <div
                   className="qc-move-history-cell-black"
                   style={styles.cell(isBlackActive(rowIdx), !!pair.black)}
-                  onClick={pair.black ? () => setIndex(pair.blackIndex) : undefined}
+                  onClick={pair.black ? () => setIndexAndSeek(pair.blackIndex) : undefined}
                   aria-label={pair.black ? `Black move ${formatMove(pair.black)}` : 'No move'}
                 >
                   {pair.black ? (
