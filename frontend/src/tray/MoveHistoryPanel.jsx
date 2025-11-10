@@ -1,6 +1,6 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move. Ensures the header row is opaque so scrolling content is not visible behind it.
-// Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx
+// Purpose: Displays the move list in two columns (White, Black) with per-half-row highlighting, playback controls, and emits seek events so the board can jump to the state after the selected move. Ensures the header row is opaque so scrolling content is not visible behind it. Adds custom, minimal scrollbar behavior consistent with project colors.
+// Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx, ../Styles/scrollbar.css
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,6 +14,7 @@ import {
   XCircle as XCircleIcon,
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
+import '../Styles/scrollbar.css';
 
 export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {}, externalIndex = undefined }) {
   const moves = useSelector((s) => s.game.moves);
@@ -139,6 +140,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         background: 'rgba(255,255,255,0.03)',
         display: 'flex',
         flexDirection: 'column',
+        scrollbarGutter: 'stable',
       },
       headerRow: {
         position: 'sticky',
@@ -148,10 +150,8 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         gridTemplateColumns: '1fr 1fr',
         gap: 10,
         padding: '8px 10px',
-        // Use an opaque background to prevent scrolled content from showing through
         background: theme.boardAreaBackground ? theme.boardAreaBackground : 'var(--color-globalBackground)',
         borderBottom: `1px solid ${theme.border}`,
-        // Ensure the header forms its own stacking and painting context
         boxShadow: `0 1px 0 0 ${theme.border}`,
       },
       headerCell: {
@@ -239,6 +239,26 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
 
   const formatMove = (m) => (m ? `${m.from} - ${m.to}` : '');
 
+  // Manage the transient .scrolling class to reveal the thumb during active scrolling
+  const listRef = useRef(null);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    let timeoutId = null;
+    const onScroll = () => {
+      el.classList.add('scrolling');
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        el.classList.remove('scrolling');
+      }, 500);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
   return (
     <div className="qc-move-history-root" style={styles.root}>
       <div className="qc-move-history-toolbar" style={styles.toolbar}>
@@ -299,7 +319,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         </div>
       </div>
 
-      <div className="qc-move-history-list" style={styles.list} role="list">
+      <div ref={listRef} className="qc-move-history-list custom-scrollbar" style={styles.list} role="list">
         {moves.length === 0 ? (
           <div className="qc-move-history-empty" style={styles.empty}>No moves yet. Make a move to populate the history.</div>
         ) : (

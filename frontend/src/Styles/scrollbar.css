@@ -1,0 +1,46 @@
+/* frontend/src/Styles/scrollbar.css */
+/* Purpose: Provides a shared, minimal custom scrollbar style that keeps the track reserved but hides the thumb until hover or active scrolling. Colors match the app's existing palette.
+   Imports From: Used via className "custom-scrollbar" in components like MoveHistoryPanel.jsx
+   Exported To: Consumed by React components that import this stylesheet explicitly */
+
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+  /* Firefox defaults: hide thumb until hover/scrolling overrides */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.custom-scrollbar:hover,
+.custom-scrollbar.scrolling {
+  /* Firefox: show thumb color when hovered or actively scrolling */
+  scrollbar-color: rgba(97, 218, 251, 0.55) transparent;
+}
+
+/* WebKit-based browsers (Chrome, Safari, Edge Chromium, Electron) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+/* Default hidden thumb */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+/* Show thumb on hover or while scrolling */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.custom-scrollbar.scrolling::-webkit-scrollbar-thumb {
+  background: rgba(97, 218, 251, 0.55);
+}
+
+/* Slightly stronger color when hovering the thumb itself */
+.custom-scrollbar:hover::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar.scrolling::-webkit-scrollbar-thumb:hover {
+  background: rgba(97, 218, 251, 0.70);
+}
