@@ -43,3 +43,42 @@ button:hover {
   border-color: var(--color-buttonGenericBorderHover);
   background-color: var(--color-buttonGenericBackgroundHover);
 }
+
+/* Sleek, minimal scrollbars for the move history list (cross-browser) */
+.qc-move-history-list {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(97, 218, 251, 0.55) rgba(255, 255, 255, 0.08);
+  /* Reserve space so layout doesn't shift when scrollbar appears */
+  scrollbar-gutter: stable both-edges;
+}
+
+/* WebKit-based browsers */
+.qc-move-history-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.qc-move-history-list::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qc-move-history-list::-webkit-scrollbar-thumb {
+  background-color: rgba(97, 218, 251, 0.45);
+  border-radius: 8px;
+  border: 2px solid rgba(0, 0, 0, 0);
+  background-clip: padding-box;
+}
+
+.qc-move-history-list:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(97, 218, 251, 0.70);
+}
+
+.qc-move-history-list::-webkit-scrollbar-thumb:active {
+  background-color: rgba(97, 218, 251, 0.90);
+}
+
+.qc-move-history-list::-webkit-scrollbar-corner {
+  background: transparent;
+}
