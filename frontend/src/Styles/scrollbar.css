@@ -13,7 +13,7 @@
 .custom-scrollbar:hover,
 .custom-scrollbar.scrolling {
   /* Firefox: show thumb color when hovered or actively scrolling */
-  scrollbar-color: rgba(97, 218, 251, 0.55) transparent;
+  scrollbar-color: rgba(11, 214, 241, 0.959) transparent;
 }
 
 /* WebKit-based browsers (Chrome, Safari, Edge Chromium, Electron) */
@@ -57,3 +57,57 @@
 .custom-scrollbar.scrolling::-webkit-scrollbar-thumb:hover {
   background: rgba(97, 218, 251, 0.70);
 }
+
+
+/* --- MoveHistoryPanel: remove VERTICAL scrollbar arrows (Chromium) --- */
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical:decrement,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical:increment,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:single-button:vertical:decrement,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:single-button:vertical:increment,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:double-button:vertical:decrement,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:double-button:vertical:increment,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:start:vertical,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:end:vertical {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+
+
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:start,
+.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:end {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+
+/* Remove vertical (and any) arrow buttons on the custom scroller
+   – base, hovered, and "scrolling" states */
+:is(.custom-scrollbar,
+    .custom-scrollbar:hover,
+    .custom-scrollbar.scrolling)::-webkit-scrollbar-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+
+/* Defensive: some Chromium/GTK themes draw glyphs on start/end track pieces */
+:is(.custom-scrollbar,
+    .custom-scrollbar:hover,
+    .custom-scrollbar.scrolling)::-webkit-scrollbar-track-piece:vertical:start,
+:is(.custom-scrollbar,
+    .custom-scrollbar:hover,
+    .custom-scrollbar.scrolling)::-webkit-scrollbar-track-piece:vertical:end {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+

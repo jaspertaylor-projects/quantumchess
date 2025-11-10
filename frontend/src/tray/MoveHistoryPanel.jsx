@@ -156,7 +156,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        border: `1px solid ${theme.border}`,
         borderRadius: 10,
         padding: 8,
         background: 'rgba(255,255,255,0.03)',
@@ -169,7 +168,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
       listContainer: {
         flex: 1,
         position: 'relative',
-        border: `1px solid ${theme.border}`,
         borderRadius: 10,
         background: 'rgba(255,255,255,0.03)',
         display: 'flex',
