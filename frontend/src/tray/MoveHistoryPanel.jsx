@@ -384,7 +384,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
           ) : (
             pairs.map((pair, rowIdx) => (
               <div
-                key={`row-${rowIdx}`]
+                key={`row-${rowIdx}`}
                 className="qc-move-history-row"
                 style={styles.row(isRowActive(rowIdx))}
                 role="listitem"
