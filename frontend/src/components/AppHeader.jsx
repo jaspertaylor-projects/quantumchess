@@ -1,10 +1,9 @@
 // frontend/src/components/AppHeader.jsx
-// Purpose: Render the application header bar with animated title and showcase chess piece icons with PNG primary and SVG fallback.
-// Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
+// Purpose: Render the application header with stylish PNG piece icons as primary and SVG rasterized fallback.
+// Imports From: ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import theme from '../theme.js';
 import RasterizedSvgImg from '../chessboard/RasterizedSvgImg.jsx';
 
 import imgP from '../assets/p.svg?url';
@@ -13,6 +12,14 @@ import imgB from '../assets/b.svg?url';
 import imgR from '../assets/r.svg?url';
 import imgQ from '../assets/q.svg?url';
 import imgK from '../assets/k.svg?url';
+
+// Stylish PNGs served via Vite asset pipeline
+import pngPawn from '../public/stylish_pawn.png?url';
+import pngKnight from '../public/stylish_knight.png?url';
+import pngBishop from '../public/stylish_bishop.png?url';
+import pngRook from '../public/stylish_rook.png?url';
+import pngQueen from '../public/stylish_queen.png?url';
+import pngKing from '../public/stylish_king.png?url';
 
 const TYPE_TO_SVG = {
   p: imgP,
@@ -24,12 +31,12 @@ const TYPE_TO_SVG = {
 };
 
 const TYPE_TO_STYLISH_PNG = {
-  p: '/src/public/stylish_pawn.png',
-  n: '/src/public/stylish_knight.png',
-  b: '/src/public/stylish_bishop.png',
-  r: '/src/public/stylish_rook.png',
-  q: '/src/public/stylish_queen.png',
-  k: '/src/public/stylish_king.png',
+  p: pngPawn,
+  n: pngKnight,
+  b: pngBishop,
+  r: pngRook,
+  q: pngQueen,
+  k: pngKing,
 };
 
 function HeaderPieceIcon({ t, sideCssVars }) {
@@ -61,14 +68,17 @@ function HeaderPieceIcon({ t, sideCssVars }) {
     return 0.9;
   }, [t]);
 
-  const innerStyle = useMemo(() => ({
-    width: `${Math.round(sizeScale * 100)}%`,
-    height: `${Math.round(sizeScale * 100)}%`,
-    objectFit: 'contain',
-    objectPosition: 'bottom center',
-    display: 'block',
-    alignSelf: 'flex-end',
-  }), [sizeScale]);
+  const innerStyle = useMemo(
+    () => ({
+      width: `${Math.round(sizeScale * 100)}%`,
+      height: `${Math.round(sizeScale * 100)}%`,
+      objectFit: 'contain',
+      objectPosition: 'bottom center',
+      display: 'block',
+      alignSelf: 'flex-end',
+    }),
+    [sizeScale]
+  );
 
   const renderSize = Math.max(16, Math.floor(pxSize * sizeScale));
 
@@ -186,7 +196,8 @@ export default function AppHeader({ svgStyles }) {
       fontWeight: 1000,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      backgroundImage: 'linear-gradient(90deg, #00f5ff 0%, #b400ff 38%, #ff3b7f 64%, #00f5ff 100%)',
+      backgroundImage:
+        'linear-gradient(90deg, #00f5ff 0%, #b400ff 38%, #ff3b7f 64%, #00f5ff 100%)',
       WebkitBackgroundClip: 'text',
       backgroundClip: 'text',
       color: 'transparent',
@@ -194,7 +205,7 @@ export default function AppHeader({ svgStyles }) {
       textShadow: [
         '0 0 6px rgba(0,245,255,0.45)',
         '0 0 12px rgba(180,0,255,0.35)',
-        '0 0 22px rgba(255,59,127,0.35)'
+        '0 0 22px rgba(255,59,127,0.35)',
       ].join(', '),
       lineHeight: 1,
       display: 'inline-block',
@@ -205,7 +216,8 @@ export default function AppHeader({ svgStyles }) {
       marginTop: '4px',
       height: '3px',
       width: '100%',
-      background: 'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
+      background:
+        'linear-gradient(90deg, rgba(0,245,255,0) 0%, rgba(0,245,255,0.8) 16%, rgba(180,0,255,0.95) 50%, rgba(255,59,127,0.8) 84%, rgba(255,59,127,0) 100%)',
       borderRadius: 3,
       boxShadow: '0 0 18px rgba(180,0,255,0.45), 0 0 28px rgba(0,245,255,0.25)',
       alignSelf: 'center',
@@ -217,15 +229,25 @@ export default function AppHeader({ svgStyles }) {
     <header className="qc-app-header" style={styles.appHeader}>
       <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
         <div className="qc-app-title-row" style={styles.appTitleRow}>
-          <div className="qc-title-strip qc-title-strip--left" style={styles.titleStrip('left')} aria-hidden>
+          <div
+            className="qc-title-strip qc-title-strip--left"
+            style={styles.titleStrip('left')}
+            aria-hidden
+          >
             <HeaderPieceIcon t="q" sideCssVars={svgStyles.white || {}} />
             <HeaderPieceIcon t="b" sideCssVars={svgStyles.white || {}} />
             <HeaderPieceIcon t="n" sideCssVars={svgStyles.white || {}} />
           </div>
           <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
-            <h1 className="qc-app-title-text" style={styles.appTitleText}>Quantum Chess</h1>
+            <h1 className="qc-app-title-text" style={styles.appTitleText}>
+              Quantum Chess
+            </h1>
           </div>
-          <div className="qc-title-strip qc-title-strip--right" style={styles.titleStrip('right')} aria-hidden>
+          <div
+            className="qc-title-strip qc-title-strip--right"
+            style={styles.titleStrip('right')}
+            aria-hidden
+          >
             <HeaderPieceIcon t="p" sideCssVars={svgStyles.white || {}} />
             <HeaderPieceIcon t="r" sideCssVars={svgStyles.white || {}} />
             <HeaderPieceIcon t="k" sideCssVars={svgStyles.white || {}} />
