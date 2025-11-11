@@ -1,6 +1,6 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
-// Purpose: Displays the move list in two columns with playback controls and emits seek events for timeline navigation. Clicking a move now immediately jumps the board to that state without waiting for effects.
-// Imports From: ../theme.js, ../store/index.js (via useSelector), ../components/IconButton.jsx, ../Styles/scrollbar.css
+// Purpose: Displays the move list with responsive toolbar; avoids horizontal scrolling by wrapping controls and clamping text.
+// Imports From: ../theme.js, ../store/index.js, ../components/IconButton.jsx, ../Styles/scrollbar.css
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -25,32 +25,35 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   const highlightRef = useRef(onHighlightMove);
   const clearRef = useRef(onClearHighlights);
   const seekRef = useRef(onSeekToIndex);
-  const suppressSeekRef = useRef(false); // prevents feedback loops when index is driven externally
+  const suppressSeekRef = useRef(false);
 
-  useEffect(() => { highlightRef.current = onHighlightMove; }, [onHighlightMove]);
-  useEffect(() => { clearRef.current = onClearHighlights; }, [onClearHighlights]);
-  useEffect(() => { seekRef.current = onSeekToIndex; }, [onSeekToIndex]);
+  useEffect(() => {
+    highlightRef.current = onHighlightMove;
+  }, [onHighlightMove]);
+  useEffect(() => {
+    clearRef.current = onClearHighlights;
+  }, [onClearHighlights]);
+  useEffect(() => {
+    seekRef.current = onSeekToIndex;
+  }, [onSeekToIndex]);
 
-  // Helper: set local index and immediately emit seek (avoids waiting for effect tick)
   const setIndexAndSeek = (nextIdx) => {
     const clamped = Math.max(-1, Math.min(moves.length - 1, nextIdx));
-    suppressSeekRef.current = true; // avoid emitting again from the effect
+    suppressSeekRef.current = true;
     setIndex(clamped);
     seekRef.current(clamped);
   };
 
-  // Keep local index in sync with an externally controlled index (from App viewIndex)
   useEffect(() => {
     if (typeof externalIndex !== 'number') return;
     const clamped = Math.max(-1, Math.min(moves.length - 1, externalIndex));
     if (clamped !== index) {
-      suppressSeekRef.current = true; // this change originates externally; don't echo back with onSeek
+      suppressSeekRef.current = true;
       setPlaying(false);
       setIndex(clamped);
     }
   }, [externalIndex, moves.length, index]);
 
-  // Apply highlights for the selected move
   useEffect(() => {
     if (index >= 0 && index < moves.length) {
       const m = moves[index];
@@ -63,7 +66,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     }
   }, [index, moves]);
 
-  // Emit seek events only when the index was changed by this component via state updates (not by external sync)
   useEffect(() => {
     if (suppressSeekRef.current) {
       suppressSeekRef.current = false;
@@ -72,7 +74,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     seekRef.current(index);
   }, [index]);
 
-  // Auto-playback through the move list
   useEffect(() => {
     if (!playing) return;
     if (moves.length === 0) return;
@@ -80,7 +81,6 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
       setIndex((prev) => {
         const next = prev + 1;
         const nextCycled = next >= moves.length ? 0 : next;
-        // Drive the external seek immediately for smoother playback
         setIndexAndSeek(nextCycled);
         return nextCycled;
       });
@@ -88,9 +88,8 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     return () => clearInterval(id);
   }, [playing, moves.length]);
 
-  // When moves change, if we're in uncontrolled mode (no externalIndex), jump to the latest move
   useEffect(() => {
-    if (typeof externalIndex === 'number') return; // controlled by parent
+    if (typeof externalIndex === 'number') return;
     suppressSeekRef.current = true;
     setIndex(moves.length - 1);
   }, [moves.length, externalIndex]);
@@ -100,7 +99,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     let current = null;
     for (let i = 0; i < moves.length; i++) {
       const m = moves[i];
-      const side = m && (m.side === 'white' || m.side === 'black') ? m.side : (i % 2 === 0 ? 'white' : 'black');
+      const side = m && (m.side === 'white' || m.side === 'black') ? m.side : i % 2 === 0 ? 'white' : 'black';
       if (side === 'white') {
         if (!current || current.white !== null || current.black !== null) {
           current = { white: null, black: null, whiteIndex: null, blackIndex: null };
@@ -151,19 +150,28 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         boxSizing: 'border-box',
         gap: 10,
         overflow: 'hidden',
+        overflowX: 'hidden',
       },
       toolbar: {
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
+        flexWrap: 'wrap',
+        rowGap: 8,
+        columnGap: 8,
         borderRadius: 10,
         padding: 8,
         background: 'rgba(255,255,255,0.03)',
+        overflow: 'hidden',
       },
       indexInfo: {
         marginLeft: 'auto',
         fontSize: 12,
         color: theme.textSecondary,
+        minWidth: 0,
+        flexShrink: 1,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
       },
       listContainer: {
         flex: 1,
@@ -376,7 +384,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
           ) : (
             pairs.map((pair, rowIdx) => (
               <div
-                key={`row-${rowIdx}`}
+                key={`row-${rowIdx}`]
                 className="qc-move-history-row"
                 style={styles.row(isRowActive(rowIdx))}
                 role="listitem"

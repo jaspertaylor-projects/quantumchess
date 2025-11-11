@@ -1,5 +1,5 @@
 // frontend/src/tray/NewGamePanel.jsx
-// Purpose: Renders the new game configuration options within the side tray, including local, AI (with side selection), and online matchmaking modes.
+// Purpose: New game configuration panel with responsive layouts that wrap options and eliminate horizontal scrolling.
 // Imports From: ../theme.js
 // Exported To: ./SideTray.jsx
 
@@ -9,7 +9,7 @@ import theme from '../theme.js';
 function OptionButton({ label, selected, onClick }) {
   const styles = {
     button: {
-      flex: 1,
+      flex: '1 1 0',
       padding: '10px 12px',
       fontSize: 14,
       fontWeight: 600,
@@ -19,8 +19,11 @@ function OptionButton({ label, selected, onClick }) {
       cursor: 'pointer',
       transition: 'background 0.2s ease, color 0.2s ease',
       textAlign: 'center',
-      minWidth: 80,
+      minWidth: 0,
       borderRadius: 8,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
     },
   };
 
@@ -54,68 +57,78 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
     });
   };
 
-  const styles = useMemo(() => ({
-    panel: {
-      padding: 16,
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 20,
-      boxSizing: 'border-box',
-      overflowY: 'auto',
-    },
-    section: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-    },
-    label: {
-      fontSize: 13,
-      fontWeight: 700,
-      color: theme.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: '0.06em',
-    },
-    buttonGroup: {
-      display: 'flex',
-      width: '100%',
-      gap: 8,
-    },
-    animatedSectionContainer: {
-      position: 'relative',
-      flex: 1,
-      minHeight: 200,
-    },
-    animatedSection: (visible) => ({
-      position: 'absolute',
-      width: '100%',
-      opacity: visible ? 1 : 0,
-      transform: visible ? 'translateY(0)' : 'translateY(-10px)',
-      transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
-      pointerEvents: visible ? 'auto' : 'none',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 20,
+  const styles = useMemo(
+    () => ({
+      panel: {
+        padding: 16,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      },
+      section: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      },
+      label: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: theme.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      },
+      buttonGroup: {
+        display: 'flex',
+        width: '100%',
+        gap: 8,
+        flexWrap: 'wrap',
+      },
+      animatedSectionContainer: {
+        position: 'relative',
+        flex: 1,
+        minHeight: 200,
+      },
+      animatedSection: (visible) => ({
+        position: 'absolute',
+        width: '100%',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+        pointerEvents: visible ? 'auto' : 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+      }),
+      footer: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 12,
+        marginTop: 'auto',
+        paddingTop: 16,
+        flexWrap: 'wrap',
+      },
+      footerButton: (primary = false) => ({
+        padding: '10px 20px',
+        fontSize: 14,
+        fontWeight: 700,
+        borderRadius: 8,
+        border: primary ? 'none' : `1px solid ${theme.border}`,
+        background: primary ? theme.success : 'transparent',
+        color: primary ? theme.textPrimary : theme.textSecondary,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }),
     }),
-    footer: {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: 12,
-      marginTop: 'auto',
-      paddingTop: 16,
-    },
-    footerButton: (primary = false) => ({
-      padding: '10px 20px',
-      fontSize: 14,
-      fontWeight: 700,
-      borderRadius: 8,
-      border: primary ? 'none' : `1px solid ${theme.border}`,
-      background: primary ? theme.success : 'transparent',
-      color: primary ? theme.textPrimary : theme.textSecondary,
-      cursor: 'pointer',
-    }),
-  }), []);
+    []
+  );
 
   return (
     <div className="qc-new-game-panel" style={styles.panel}>

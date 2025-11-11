@@ -1,5 +1,5 @@
 // frontend/src/tray/SideTray.jsx
-// Purpose: Right-side tray that contains move history and contextual controls. Shows New Game options when idle and in-game actions (Resign/Offer Draw) when a game is active. Proxies highlight and seek events up to the App, and adapts to the board's height.
+// Purpose: Right-side tray with responsive header and content that never requires horizontal scrolling. Hosts move history, new game options, and in-game actions.
 // Imports From: ./MoveHistoryPanel.jsx, ./NewGamePanel.jsx, ../components/IconButton.jsx, ../theme.js
 // Exported To: ../App.jsx
 
@@ -41,43 +41,54 @@ export default function SideTray({
     setView('history');
   };
 
-  const styles = useMemo(() => ({
-    root: {
-      width: 'min(38vmin, 340px)',
-      minWidth: 220,
-      height: height || '100%',
-      maxHeight: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      border: `1px solid ${theme.border}`,
-      borderRadius: 12,
-      background: 'rgba(255,255,255,0.04)',
-      boxShadow: `0 6px 18px ${theme.shadow}`,
-      overflow: 'hidden',
-    },
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: 8,
-      borderBottom: `1px solid ${theme.border}`,
-      background: 'rgba(255,255,255,0.03)',
-    },
-    headerTitle: {
-      fontSize: 14,
-      fontWeight: 800,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      color: theme.textSecondary,
-    },
-    spacer: { flex: 1 },
-    content: {
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    },
-  }), [height]);
+  const styles = useMemo(
+    () => ({
+      root: {
+        width: 'clamp(260px, 38vmin, 360px)',
+        minWidth: 240,
+        height: height || '100%',
+        maxHeight: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        border: `1px solid ${theme.border}`,
+        borderRadius: 12,
+        background: 'rgba(255,255,255,0.04)',
+        boxShadow: `0 6px 18px ${theme.shadow}`,
+        overflow: 'hidden',
+      },
+      header: {
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        columnGap: 8,
+        rowGap: 8,
+        padding: 8,
+        borderBottom: `1px solid ${theme.border}`,
+        background: 'rgba(255,255,255,0.03)',
+        overflowX: 'hidden',
+      },
+      headerTitle: {
+        fontSize: 14,
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: theme.textSecondary,
+        minWidth: 0,
+        flexShrink: 1,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      },
+      spacer: { flex: 1, minWidth: 0 },
+      content: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      },
+    }),
+    [height]
+  );
 
   return (
     <aside className="qc-side-tray-root" style={styles.root} aria-label="Move history and controls">
@@ -171,10 +182,7 @@ export default function SideTray({
             externalIndex={externalIndex}
           />
         ) : (
-          <NewGamePanel
-            onStartGame={handleStartGame}
-            onCancel={handleCancelNewGame}
-          />
+          <NewGamePanel onStartGame={handleStartGame} onCancel={handleCancelNewGame} />
         )}
       </div>
     </aside>
