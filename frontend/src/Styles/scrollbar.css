@@ -3,20 +3,42 @@
    Imports From: Consumed by React components via className "custom-scrollbar" (e.g., tray/MoveHistoryPanel.jsx)
    Exported To: Imported explicitly by components that need custom scrollbars */
 
+/* --- Shared Style (All Browsers) --- */
+/* This reserves space for the scrollbar track to prevent layout shifts */
 .custom-scrollbar {
   scrollbar-gutter: stable;
-  /* Firefox defaults: hide thumb until hover/scrolling overrides */
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
 }
 
-.custom-scrollbar:hover,
-.custom-scrollbar.scrolling {
-  /* Firefox: show thumb color when hovered or actively scrolling */
-  scrollbar-color: rgba(11, 214, 241, 0.959) transparent;
+/* * ===================================================================
+ * Firefox-Only Styles
+ *
+ * We MUST hide these standard properties from Chrome, or Chrome
+ * will ignore all ::-webkit- styles. This @-moz-document block
+ * ensures only Firefox processes these rules.
+ * ===================================================================
+ */
+@-moz-document url-prefix() {
+  .custom-scrollbar {
+    /* Firefox defaults: hide thumb until hover/scrolling */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .custom-scrollbar:hover,
+  .custom-scrollbar.scrolling {
+    /* Firefox: show thumb color when hovered or actively scrolling */
+    scrollbar-color: rgba(11, 214, 241, 0.959) transparent;
+  }
 }
 
-/* WebKit-based browsers (Chrome, Safari, Edge Chromium, Electron) */
+/* * ===================================================================
+ * WebKit-Only Styles (Chrome, Safari, Edge)
+ *
+ * These selectors are correctly ignored by Firefox.
+ * ===================================================================
+ */
+
+/* --- 1. The Scrollbar Track --- */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -27,18 +49,7 @@
   border-radius: 4px;
 }
 
-/* Remove the up/down/right/left arrow buttons entirely */
-.custom-scrollbar::-webkit-scrollbar-button {
-  width: 0;
-  height: 0;
-  display: none;
-  background: transparent;
-}
-
-/* Hide the corner where horizontal and vertical scrollbars meet */
-.custom-scrollbar::-webkit-scrollbar-corner {
-  background: transparent;
-}
+/* --- 2. The Scrollbar Thumb (Handle) --- */
 
 /* Default hidden thumb */
 .custom-scrollbar::-webkit-scrollbar-thumb {
@@ -58,56 +69,30 @@
   background: rgba(97, 218, 251, 0.70);
 }
 
+/* --- 3. Remove Arrows, Corners, & End-Pieces (Simplified) --- */
 
-/* --- MoveHistoryPanel: remove VERTICAL scrollbar arrows (Chromium) --- */
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical:decrement,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:vertical:increment,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:single-button:vertical:decrement,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:single-button:vertical:increment,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:double-button:vertical:decrement,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:double-button:vertical:increment,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:start:vertical,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-button:end:vertical {
-  display: none !important;
-  height: 0 !important;
-  width: 0 !important;
-  background: none !important;
-  background-image: none !important;
-  border: 0 !important;
+/* * This is the only rule needed to remove the buttons.
+ * It replaces all the :vertical, :decrement, :is(...), 
+ * and .qc-move-history-rows rules from your original file.
+ */
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:start,
-.qc-move-history-rows.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:end {
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
+/* Hide the corner where horizontal and vertical scrollbars meet */
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+  display: none;
 }
 
-/* Remove vertical (and any) arrow buttons on the custom scroller
-   – base, hovered, and "scrolling" states */
-:is(.custom-scrollbar,
-    .custom-scrollbar:hover,
-    .custom-scrollbar.scrolling)::-webkit-scrollbar-button {
-  display: none !important;
-  -webkit-appearance: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
+/* * Hide the track "end pieces" where the arrows used to be.
+ * This replaces the specific .qc-move-history-rows rules.
+ */
+.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:start,
+.custom-scrollbar::-webkit-scrollbar-track-piece:vertical:end,
+.custom-scrollbar::-webkit-scrollbar-track-piece:horizontal:start,
+.custom-scrollbar::-webkit-scrollbar-track-piece:horizontal:end {
+  display: none;
 }
-
-/* Defensive: some Chromium/GTK themes draw glyphs on start/end track pieces */
-:is(.custom-scrollbar,
-    .custom-scrollbar:hover,
-    .custom-scrollbar.scrolling)::-webkit-scrollbar-track-piece:vertical:start,
-:is(.custom-scrollbar,
-    .custom-scrollbar:hover,
-    .custom-scrollbar.scrolling)::-webkit-scrollbar-track-piece:vertical:end {
-  background: transparent !important;
-  background-image: none !important;
-  border: 0 !important;
-}
-

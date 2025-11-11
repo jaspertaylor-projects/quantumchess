@@ -24,11 +24,13 @@ export default function SideTray({
   onResign = () => {},
   onOfferDraw = () => {},
 }) {
-  const [view, setView] = useState('history'); // 'history' or 'new-game'
+  const [view, setView] = useState('new-game'); // 'history' or 'new-game'
 
   useEffect(() => {
-    if (isPlaying && view !== 'history') setView('history');
-  }, [isPlaying, view]);
+    if (isPlaying) {
+      setView('history');
+    }
+  }, [isPlaying]);
 
   const handleStartGame = (settings) => {
     onStartGame(settings);

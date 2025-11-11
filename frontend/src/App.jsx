@@ -1060,20 +1060,22 @@ export default function App() {
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
           <div className="qc-board-stage" style={styles.boardStage} ref={boardStageRef}>
-            <PlayerBar
-              side="black"
-              playerName={blackPlayer}
-              rating={blackRating}
-              playerBarColors={playerBarColors}
-              clockText={effectiveClock.blackText}
-              clockActive={effectiveClock.blackActive}
-              clockLow={effectiveClock.blackLow}
-              capturedPawns={blackCapturedPawns}
-              capturedOthers={blackCapturedOthers}
-              svgStyles={svgStyles}
-              barRef={topBarRef}
-              showClock={showClockUI}
-            />
+            {gameStarted && (
+              <PlayerBar
+                side="black"
+                playerName={blackPlayer}
+                rating={blackRating}
+                playerBarColors={playerBarColors}
+                clockText={effectiveClock.blackText}
+                clockActive={effectiveClock.blackActive}
+                clockLow={effectiveClock.blackLow}
+                capturedPawns={blackCapturedPawns}
+                capturedOthers={blackCapturedOthers}
+                svgStyles={svgStyles}
+                barRef={topBarRef}
+                showClock={showClockUI}
+              />
+            )}
 
             <div className="qc-board-row" style={styles.boardRow}>
               <Board
@@ -1113,20 +1115,22 @@ export default function App() {
               />
             </div>
 
-            <PlayerBar
-              side="white"
-              playerName={whitePlayer}
-              rating={whiteRating}
-              playerBarColors={playerBarColors}
-              clockText={effectiveClock.whiteText}
-              clockActive={effectiveClock.whiteActive}
-              clockLow={effectiveClock.whiteLow}
-              capturedPawns={whiteCapturedPawns}
-              capturedOthers={whiteCapturedOthers}
-              svgStyles={svgStyles}
-              barRef={bottomBarRef}
-              showClock={showClockUI}
-            />
+            {gameStarted && (
+              <PlayerBar
+                side="white"
+                playerName={whitePlayer}
+                rating={whiteRating}
+                playerBarColors={playerBarColors}
+                clockText={effectiveClock.whiteText}
+                clockActive={effectiveClock.whiteActive}
+                clockLow={effectiveClock.whiteLow}
+                capturedPawns={whiteCapturedPawns}
+                capturedOthers={whiteCapturedOthers}
+                svgStyles={svgStyles}
+                barRef={bottomBarRef}
+                showClock={showClockUI}
+              />
+            )}
           </div>
         </div>
       </div>
