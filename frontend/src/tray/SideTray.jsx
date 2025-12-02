@@ -1,5 +1,5 @@
 // frontend/src/tray/SideTray.jsx
-// Purpose: Right-side tray with responsive header and content that never requires horizontal scrolling. Hosts move history, new game options, and in-game actions.
+// Purpose: Right-side tray with a two-row header: top row holds all action buttons aligned right, bottom row shows the full-width title on its own line. Hosts move history, new game options, and in-game actions without horizontal scrolling.
 // Imports From: ./MoveHistoryPanel.jsx, ./NewGamePanel.jsx, ../components/IconButton.jsx, ../theme.js
 // Exported To: ../App.jsx
 
@@ -58,26 +58,24 @@ export default function SideTray({
       },
       header: {
         display: 'flex',
-        alignItems: 'center',
-        flexWrap: 'nowrap',
-        columnGap: 8,
+        flexDirection: 'column',
         padding: 8,
         borderBottom: `1px solid ${theme.border}`,
         background: 'rgba(255,255,255,0.03)',
         overflow: 'hidden',
+        gap: 6,
       },
-      groupLeft: {
+      headerTopRow: {
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'flex-end',
+        flexWrap: 'wrap',
+        rowGap: 8,
         columnGap: 8,
-        minWidth: 0,
-        flex: 1,
       },
-      groupRight: {
-        display: 'flex',
-        alignItems: 'center',
-        columnGap: 8,
-        flex: '0 0 auto',
+      headerBottomRow: {
+        display: 'block',
+        width: '100%',
       },
       headerTitle: {
         fontSize: 14,
@@ -86,10 +84,10 @@ export default function SideTray({
         textTransform: 'uppercase',
         color: theme.textSecondary,
         minWidth: 0,
-        flexShrink: 1,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        overflow: 'visible',
+        textOverflow: 'clip',
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
       },
       content: {
         flex: 1,
@@ -97,93 +95,103 @@ export default function SideTray({
         flexDirection: 'column',
         overflow: 'hidden',
       },
+      actionGroup: {
+        display: 'flex',
+        alignItems: 'center',
+        columnGap: 8,
+        flexWrap: 'wrap',
+      },
     }),
     [height]
   );
 
+  const titleText = !isPlaying ? 'New Game' : 'Game Actions';
+
   return (
     <aside className="qc-side-tray-root" style={styles.root} aria-label="Move history and controls">
       <div className="qc-side-tray-header" style={styles.header}>
-        <div className="qc-side-tray-left" style={styles.groupLeft}>
-          {!isPlaying ? (
-            <>
-              <IconButton
-                icon={PlusIcon}
-                size={18}
-                width={32}
-                height={32}
-                title="New Game"
-                ariaLabel="Start a new game"
-                className="qc-side-tray-new-game-btn"
-                onClick={() => setView('new-game')}
-                bg={'transparent'}
-                color={theme.success}
-                hoverInvert={true}
-                hoverBg={theme.success}
-                hoverColor={'#ffffff'}
-              />
-              <span className="qc-side-tray-title" style={styles.headerTitle}>New Game</span>
-            </>
-          ) : (
-            <>
-              <IconButton
-                icon={FlagIcon}
-                size={18}
-                width={32}
-                height={32}
-                title="Resign"
-                ariaLabel="Resign the current game"
-                className="qc-side-tray-resign-btn"
-                onClick={onResign}
-                bg={theme.secondary}
-                color={theme.danger || '#ff3b30'}
-                hoverInvert={true}
-              />
-              <IconButton
-                icon={HandshakeIcon}
-                size={18}
-                width={32}
-                height={32}
-                title="Offer Draw"
-                ariaLabel="Offer a draw"
-                className="qc-side-tray-offer-draw-btn"
-                onClick={onOfferDraw}
-                bg={theme.secondary}
-                color={theme.warning || '#f5a524'}
-                hoverInvert={true}
-              />
-              <span className="qc-side-tray-title" style={styles.headerTitle}>Game Actions</span>
-            </>
-          )}
+        <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
+          <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
+            {!isPlaying ? (
+              <>
+                <IconButton
+                  icon={PlusIcon}
+                  size={18}
+                  width={32}
+                  height={32}
+                  title="New Game"
+                  ariaLabel="Start a new game"
+                  className="qc-side-tray-new-game-btn"
+                  onClick={() => setView('new-game')}
+                  bg={'transparent'}
+                  color={theme.success}
+                  hoverInvert={true}
+                  hoverBg={theme.success}
+                  hoverColor={'#ffffff'}
+                />
+              </>
+            ) : (
+              <>
+                <IconButton
+                  icon={FlagIcon}
+                  size={18}
+                  width={32}
+                  height={32}
+                  title="Resign"
+                  ariaLabel="Resign the current game"
+                  className="qc-side-tray-resign-btn"
+                  onClick={onResign}
+                  bg={theme.secondary}
+                  color={theme.danger || '#ff3b30'}
+                  hoverInvert={true}
+                />
+                <IconButton
+                  icon={HandshakeIcon}
+                  size={18}
+                  width={32}
+                  height={32}
+                  title="Offer Draw"
+                  ariaLabel="Offer a draw"
+                  className="qc-side-tray-offer-draw-btn"
+                  onClick={onOfferDraw}
+                  bg={theme.secondary}
+                  color={theme.warning || '#f5a524'}
+                  hoverInvert={true}
+                />
+              </>
+            )}
+
+            <IconButton
+              icon={BookOpenIcon}
+              size={16}
+              width={32}
+              height={32}
+              title="Rules"
+              ariaLabel="Open rules"
+              className="qc-side-tray-rules-btn"
+              onClick={onOpenRules}
+              bg={theme.secondary}
+              color={theme.primary}
+              hoverInvert={true}
+            />
+            <IconButton
+              icon={SettingsIcon}
+              size={16}
+              width={32}
+              height={32}
+              title="Settings"
+              ariaLabel="Open settings"
+              className="qc-side-tray-settings-btn"
+              onClick={onOpenSettings}
+              bg={theme.secondary}
+              color={theme.primary}
+              hoverInvert={true}
+            />
+          </div>
         </div>
 
-        <div className="qc-side-tray-right" style={styles.groupRight}>
-          <IconButton
-            icon={BookOpenIcon}
-            size={16}
-            width={32}
-            height={32}
-            title="Rules"
-            ariaLabel="Open rules"
-            className="qc-side-tray-rules-btn"
-            onClick={onOpenRules}
-            bg={theme.secondary}
-            color={theme.primary}
-            hoverInvert={true}
-          />
-          <IconButton
-            icon={SettingsIcon}
-            size={16}
-            width={32}
-            height={32}
-            title="Settings"
-            ariaLabel="Open settings"
-            className="qc-side-tray-settings-btn"
-            onClick={onOpenSettings}
-            bg={theme.secondary}
-            color={theme.primary}
-            hoverInvert={true}
-          />
+        <div className="qc-side-tray-header-bottom" style={styles.headerBottomRow}>
+          <span className="qc-side-tray-title" style={styles.headerTitle}>{titleText}</span>
         </div>
       </div>
 
