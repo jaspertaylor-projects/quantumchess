@@ -23,8 +23,8 @@ function OptionButton({ label, selected, onClick }) {
       borderRadius: 8,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
-      textOverflow: 'ellipsis'
-    }
+      textOverflow: 'ellipsis',
+    },
   };
 
   return (
@@ -44,7 +44,7 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
   const styles = useMemo(
     () => ({
       root: {
-        width: '100%'
+        width: '100%',
       },
       select: {
         width: '100%',
@@ -56,11 +56,11 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
         background: 'rgba(255,255,255,0.04)',
         color: theme.textPrimary,
         outline: 'none',
-        cursor: 'pointer'
+        cursor: 'pointer',
       },
       option: {
         background: theme.secondary,
-        color: theme.textPrimary
+        color: theme.textPrimary,
       },
       srOnly: {
         position: 'absolute',
@@ -71,8 +71,8 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
         overflow: 'hidden',
         clip: 'rect(0, 0, 0, 0)',
         whiteSpace: 'nowrap',
-        border: 0
-      }
+        border: 0,
+      },
     }),
     []
   );
@@ -117,7 +117,7 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
       aiDifficulty,
       preferredSide,
       isRanked,
-      timeControl
+      timeControl,
     });
   };
 
@@ -132,12 +132,12 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         gap: 20,
         boxSizing: 'border-box',
         overflowY: 'auto',
-        overflowX: 'hidden'
+        overflowX: 'hidden',
       },
       section: {
         display: 'flex',
         flexDirection: 'column',
-        gap: 10
+        gap: 10,
       },
       label: {
         fontSize: 13,
@@ -147,18 +147,18 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         letterSpacing: '0.06em',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-        textOverflow: 'ellipsis'
+        textOverflow: 'ellipsis',
       },
       buttonGroup: {
         display: 'flex',
         width: '100%',
         gap: 8,
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
       },
       animatedSectionContainer: {
         position: 'relative',
         flex: 1,
-        minHeight: 200
+        minHeight: 200,
       },
       animatedSection: (visible) => ({
         position: 'absolute',
@@ -169,7 +169,7 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         pointerEvents: visible ? 'auto' : 'none',
         display: 'flex',
         flexDirection: 'column',
-        gap: 20
+        gap: 20,
       }),
       footer: {
         display: 'flex',
@@ -177,7 +177,7 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         gap: 12,
         marginTop: 'auto',
         paddingTop: 16,
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
       },
       footerButton: (primary = false) => ({
         padding: '10px 20px',
@@ -188,8 +188,8 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         background: primary ? theme.success : 'transparent',
         color: primary ? theme.textPrimary : theme.textSecondary,
         cursor: 'pointer',
-        whiteSpace: 'nowrap'
-      })
+        whiteSpace: 'nowrap',
+      }),
     }),
     []
   );
@@ -198,7 +198,25 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
     () => [
       { value: 'local', label: 'Local' },
       { value: 'ai', label: 'vs. AI' },
-      { value: 'online', label: 'Online' }
+      { value: 'online', label: 'Online' },
+    ],
+    []
+  );
+
+  const aiDifficultyOptions = useMemo(
+    () => [
+      { value: 'easy', label: 'Easy' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'hard', label: 'Hard' },
+    ],
+    []
+  );
+
+  const preferredSideOptions = useMemo(
+    () => [
+      { value: 'white', label: 'White' },
+      { value: 'black', label: 'Black' },
+      { value: 'random', label: 'Random' },
     ],
     []
   );
@@ -224,21 +242,25 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
             <span className="qc-new-game-label" style={styles.label}>
               AI Difficulty
             </span>
-            <div className="qc-new-game-button-group" style={styles.buttonGroup}>
-              <OptionButton label="Easy" selected={aiDifficulty === 'easy'} onClick={() => setAiDifficulty('easy')} />
-              <OptionButton label="Medium" selected={aiDifficulty === 'medium'} onClick={() => setAiDifficulty('medium')} />
-              <OptionButton label="Hard" selected={aiDifficulty === 'hard'} onClick={() => setAiDifficulty('hard')} />
-            </div>
+            <OptionSelect
+              label="AI Difficulty"
+              ariaLabel="Select AI difficulty"
+              value={aiDifficulty}
+              options={aiDifficultyOptions}
+              onChange={setAiDifficulty}
+            />
           </div>
           <div className="qc-new-game-section" style={styles.section}>
             <span className="qc-new-game-label" style={styles.label}>
               Your Side
             </span>
-            <div className="qc-new-game-button-group" style={styles.buttonGroup}>
-              <OptionButton label="White" selected={preferredSide === 'white'} onClick={() => setPreferredSide('white')} />
-              <OptionButton label="Black" selected={preferredSide === 'black'} onClick={() => setPreferredSide('black')} />
-              <OptionButton label="Random" selected={preferredSide === 'random'} onClick={() => setPreferredSide('random')} />
-            </div>
+            <OptionSelect
+              label="Your Side"
+              ariaLabel="Select your side"
+              value={preferredSide}
+              options={preferredSideOptions}
+              onChange={setPreferredSide}
+            />
           </div>
         </div>
 
