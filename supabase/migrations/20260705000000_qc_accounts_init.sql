@@ -1,5 +1,6 @@
--- Quantum Chess account schema.
--- Run once: Supabase Dashboard -> SQL Editor -> paste -> Run.
+-- Quantum Chess account schema (initial migration).
+-- Applied automatically by the Supabase GitHub integration on merge to main;
+-- also safe to paste into the SQL Editor manually (fully re-runnable).
 -- Tables are qc_-prefixed so they coexist with your other project.
 
 -- ---------------------------------------------------------------- profiles
