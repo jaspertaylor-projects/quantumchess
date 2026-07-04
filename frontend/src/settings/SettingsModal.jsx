@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import theme from '../theme.js';
-import { X, RotateCcw } from 'lucide-react';
+import { X, RotateCcw, ChevronDown } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
+import { DEFAULT_INDICATORS, INDICATOR_LABELS } from './useIndicatorSettings.js';
 
 export default function SettingsModal({
   open = false,
@@ -15,32 +16,41 @@ export default function SettingsModal({
   blackColors,
   boardColors,
   playerBarColors,
+  measurementColors,
+  indicators,
   showCoordinates,
   showCheckOverlay,
   defaultWhiteColors,
   defaultBlackColors,
   defaultBoardColors,
   defaultPlayerBarColors,
+  defaultMeasurementColors,
   onAccept = async () => {},
 }) {
   const [localWhite, setLocalWhite] = useState(whiteColors);
   const [localBlack, setLocalBlack] = useState(blackColors);
   const [localBoard, setLocalBoard] = useState(boardColors);
   const [localPlayerBar, setLocalPlayerBar] = useState(playerBarColors);
+  const [localMeasurement, setLocalMeasurement] = useState(measurementColors);
+  const [localIndicators, setLocalIndicators] = useState(indicators || DEFAULT_INDICATORS);
   const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
   const [localShowCheckOverlay, setLocalShowCheckOverlay] = useState(showCheckOverlay);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [openSection, setOpenSection] = useState(null);
 
   useEffect(() => {
     if (open) {
+      setOpenSection(null);
       setLocalWhite(whiteColors);
       setLocalBlack(blackColors);
       setLocalBoard(boardColors);
       setLocalPlayerBar(playerBarColors);
+      setLocalMeasurement(measurementColors);
+      setLocalIndicators(indicators || DEFAULT_INDICATORS);
       setLocalShowCoordinates(showCoordinates);
       setLocalShowCheckOverlay(showCheckOverlay);
     }
-  }, [open, whiteColors, blackColors, boardColors, playerBarColors, showCoordinates, showCheckOverlay]);
+  }, [open, whiteColors, blackColors, boardColors, playerBarColors, measurementColors, indicators, showCoordinates, showCheckOverlay]);
 
   if (!open) return null;
 
@@ -52,6 +62,8 @@ export default function SettingsModal({
         black: localBlack,
         board: localBoard,
         playerBar: localPlayerBar,
+        measurement: localMeasurement,
+        indicators: localIndicators,
         coordinates: localShowCoordinates,
         checkOverlay: localShowCheckOverlay,
       });
@@ -68,6 +80,15 @@ export default function SettingsModal({
     if (defaultBlackColors) setLocalBlack(defaultBlackColors);
     if (defaultBoardColors) setLocalBoard(defaultBoardColors);
     if (defaultPlayerBarColors) setLocalPlayerBar(defaultPlayerBarColors);
+    if (defaultMeasurementColors) setLocalMeasurement(defaultMeasurementColors);
+    setLocalIndicators({ ...DEFAULT_INDICATORS });
+  };
+
+  const allIndicatorsOn = Object.keys(DEFAULT_INDICATORS).every((k) => localIndicators && localIndicators[k]);
+  const setAllIndicators = (value) => {
+    const next = {};
+    for (const k of Object.keys(DEFAULT_INDICATORS)) next[k] = value;
+    setLocalIndicators(next);
   };
 
   const styles = {
@@ -83,6 +104,8 @@ export default function SettingsModal({
     panel: {
       width: 'min(92vw, 560px)',
       maxWidth: '560px',
+      maxHeight: '90vh',
+      overflowY: 'auto',
       borderRadius: 12,
       border: `1px solid ${theme.border}`,
       backgroundColor: theme.cardBackground,
@@ -104,9 +127,9 @@ export default function SettingsModal({
       letterSpacing: '0.04em',
     },
     grid: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 16,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
       marginTop: 12,
     },
     card: {
@@ -118,6 +141,36 @@ export default function SettingsModal({
       borderRadius: 10,
       padding: 12,
     },
+    sectionCard: {
+      background: 'rgba(255,255,255,0.03)',
+      border: `1px solid ${theme.border}`,
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    sectionToggle: {
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      padding: '11px 12px',
+      background: 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+      textAlign: 'left',
+    },
+    sectionBody: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
+      padding: '2px 12px 12px',
+    },
+    chevron: (isOpen) => ({
+      transform: isOpen ? 'rotate(180deg)' : 'none',
+      transition: 'transform 150ms ease',
+      color: theme.textSecondary,
+      flex: 'none',
+    }),
     cardTitle: {
       fontSize: 13,
       color: theme.textSecondary,
@@ -199,6 +252,27 @@ export default function SettingsModal({
   const handleBlack = (key) => (e) => setLocalBlack((p) => ({ ...p, [key]: e.target.value }));
   const handleBoard = (key) => (e) => setLocalBoard((p) => ({ ...p, [key]: e.target.value }));
   const handlePlayerBar = (key) => (e) => setLocalPlayerBar((p) => ({ ...p, [key]: e.target.value }));
+  const handleMeasurement = (key) => (e) => setLocalMeasurement((p) => ({ ...p, [key]: e.target.value }));
+
+  // Accordion drawer: one section open at a time keeps the panel short.
+  const renderSection = (id, title, body) => {
+    const isOpen = openSection === id;
+    return (
+      <div className={`qc-settings-card qc-settings-card--${id}`} style={styles.sectionCard}>
+        <button
+          type="button"
+          className="qc-settings-section-toggle"
+          style={styles.sectionToggle}
+          onClick={() => setOpenSection(isOpen ? null : id)}
+          aria-expanded={isOpen}
+        >
+          <span className="qc-settings-card-title" style={styles.cardTitle}>{title}</span>
+          <ChevronDown size={16} style={styles.chevron(isOpen)} />
+        </button>
+        {isOpen ? <div className="qc-settings-section-body" style={styles.sectionBody}>{body}</div> : null}
+      </div>
+    );
+  };
 
   return (
     <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
@@ -238,9 +312,7 @@ export default function SettingsModal({
         </div>
 
         <div className="qc-settings-grid" style={styles.grid}>
-          <div className="qc-settings-card qc-settings-card--white" style={styles.card}>
-            <div className="qc-settings-card-title" style={styles.cardTitle}>White Team</div>
-
+          {renderSection('white', 'White Team', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-white-icon" style={styles.label}>Icon Color</label>
               <input
@@ -279,11 +351,9 @@ export default function SettingsModal({
                 aria-label="White band stroke color"
               />
             </div>
-          </div>
+          </>)}
 
-          <div className="qc-settings-card qc-settings-card--black" style={styles.card}>
-            <div className="qc-settings-card-title" style={styles.cardTitle}>Black Team</div>
-
+          {renderSection('black', 'Black Team', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-black-icon" style={styles.label}>Icon Color</label>
               <input
@@ -322,11 +392,9 @@ export default function SettingsModal({
                 aria-label="Black band stroke color"
               />
             </div>
-          </div>
+          </>)}
 
-          <div className="qc-settings-card qc-settings-card--player-bars" style={{ ...styles.card, ...styles.fullSpan }}>
-            <div className="qc-settings-card-title" style={styles.cardTitle}>Player Bars</div>
-
+          {renderSection('player-bars', 'Player Bars', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-playerbar-background" style={styles.label}>Bar Background</label>
               <input
@@ -352,11 +420,37 @@ export default function SettingsModal({
                 aria-label="Player bar text color"
               />
             </div>
-          </div>
+          </>)}
 
-          <div className="qc-settings-card qc-settings-card--board" style={{ ...styles.card, ...styles.fullSpan }}>
-            <div className="qc-settings-card-title" style={styles.cardTitle}>Board Squares</div>
+          {renderSection('targeting', 'Targeting Colors', <>
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-measure-white" style={styles.label}>White Targeting</label>
+              <input
+                id="qc-measure-white"
+                type="color"
+                className="qc-color-input qc-color-input--measure-white"
+                style={styles.colorInput}
+                value={(localMeasurement && localMeasurement.white) || '#4fc3f7'}
+                onChange={handleMeasurement('white')}
+                aria-label="White targeting color"
+              />
+            </div>
 
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-measure-black" style={styles.label}>Black Targeting</label>
+              <input
+                id="qc-measure-black"
+                type="color"
+                className="qc-color-input qc-color-input--measure-black"
+                style={styles.colorInput}
+                value={(localMeasurement && localMeasurement.black) || '#000000'}
+                onChange={handleMeasurement('black')}
+                aria-label="Black targeting color"
+              />
+            </div>
+          </>)}
+
+          {renderSection('board', 'Board Squares', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-board-light" style={styles.label}>Light Squares</label>
               <input
@@ -408,7 +502,37 @@ export default function SettingsModal({
                 aria-label="Toggle check overlay"
               />
             </div>
+          </>)}
+
+          {renderSection('indicators', 'Visual Reminders', <>
+          <div className="qc-settings-row qc-settings-row--indicators-all" style={styles.row}>
+            <label htmlFor="qc-indicators-all-toggle" style={{ ...styles.label, fontWeight: 700 }}>All Indicators</label>
+            <input
+              id="qc-indicators-all-toggle"
+              type="checkbox"
+              className="qc-checkbox-input qc-checkbox-input--indicators-all"
+              style={styles.checkboxInput}
+              checked={allIndicatorsOn}
+              onChange={(e) => setAllIndicators(e.target.checked)}
+              aria-label="Toggle all board indicators"
+            />
           </div>
+
+          {Object.keys(DEFAULT_INDICATORS).map((key) => (
+            <div key={key} className={`qc-settings-row qc-settings-row--indicator-${key}`} style={styles.row}>
+              <label htmlFor={`qc-indicator-${key}-toggle`} style={styles.label}>{INDICATOR_LABELS[key] || key}</label>
+              <input
+                id={`qc-indicator-${key}-toggle`}
+                type="checkbox"
+                className={`qc-checkbox-input qc-checkbox-input--indicator-${key}`}
+                style={styles.checkboxInput}
+                checked={Boolean(localIndicators && localIndicators[key])}
+                onChange={(e) => setLocalIndicators((prev) => ({ ...prev, [key]: e.target.checked }))}
+                aria-label={`Toggle ${INDICATOR_LABELS[key] || key}`}
+              />
+            </div>
+          ))}
+          </>)}
         </div>
 
         <p className="qc-settings-hint" style={styles.hint}>

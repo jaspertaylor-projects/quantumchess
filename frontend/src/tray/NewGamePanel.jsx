@@ -5,6 +5,7 @@
 
 import React, { useMemo, useState } from 'react';
 import theme from '../theme.js';
+import { BOTS, DEFAULT_BOT_ID, getBotById } from '../ai/bots.js';
 
 function OptionButton({ label, selected, onClick }) {
   const styles = {
@@ -105,16 +106,18 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
 }
 
 export default function NewGamePanel({ onStartGame, onCancel }) {
-  const [gameMode, setGameMode] = useState('local'); // 'local', 'ai', 'online'
-  const [aiDifficulty, setAiDifficulty] = useState('medium'); // 'easy', 'medium', 'hard'
+  const [gameMode, setGameMode] = useState('ai'); // 'local', 'ai', 'online'
+  const [aiBotId, setAiBotId] = useState(DEFAULT_BOT_ID);
   const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
   const [isRanked, setIsRanked] = useState(false); // boolean
   const [timeControl, setTimeControl] = useState('5+0'); // '3+0', '5+0', '10+0'
 
   const handleStart = () => {
+    const bot = getBotById(aiBotId);
     onStartGame({
       gameMode,
-      aiDifficulty,
+      aiBotId,
+      aiDifficulty: bot ? bot.tier : 'medium',
       preferredSide,
       isRanked,
       timeControl,
@@ -196,19 +199,16 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
 
   const gameModeOptions = useMemo(
     () => [
-      { value: 'local', label: 'Local' },
+      { value: 'local', label: 'Local 2 Player' },
       { value: 'ai', label: 'vs. AI' },
       { value: 'online', label: 'Online' },
     ],
     []
   );
 
-  const aiDifficultyOptions = useMemo(
-    () => [
-      { value: 'easy', label: 'Easy' },
-      { value: 'medium', label: 'Medium' },
-      { value: 'hard', label: 'Hard' },
-    ],
+  const tierTag = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+  const aiBotOptions = useMemo(
+    () => BOTS.map((b) => ({ value: b.id, label: `${tierTag[b.tier]} · ${b.name} (${b.rating})` })),
     []
   );
 
@@ -240,14 +240,14 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
         <div className="qc-animated-section-ai" style={styles.animatedSection(gameMode === 'ai')}>
           <div className="qc-new-game-section" style={styles.section}>
             <span className="qc-new-game-label" style={styles.label}>
-              AI Difficulty
+              Opponent
             </span>
             <OptionSelect
-              label="AI Difficulty"
-              ariaLabel="Select AI difficulty"
-              value={aiDifficulty}
-              options={aiDifficultyOptions}
-              onChange={setAiDifficulty}
+              label="Opponent"
+              ariaLabel="Select AI opponent"
+              value={aiBotId}
+              options={aiBotOptions}
+              onChange={setAiBotId}
             />
           </div>
           <div className="qc-new-game-section" style={styles.section}>

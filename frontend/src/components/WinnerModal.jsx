@@ -6,7 +6,7 @@
 import React from 'react';
 import theme from '../theme.js';
 
-export default function WinnerModal({ open = false, winnerText = '', onClose = () => {} }) {
+export default function WinnerModal({ open = false, winnerText = '', title = 'Game Over', onClose = () => {} }) {
   const styles = {
     winnerOverlay: {
       position: 'fixed',
@@ -61,7 +61,7 @@ export default function WinnerModal({ open = false, winnerText = '', onClose = (
   return (
     <div className="qc-winner-overlay" style={styles.winnerOverlay} role="dialog" aria-modal={open} aria-hidden={!open}>
       <div className="qc-winner-modal" style={styles.winnerModal}>
-        <h2 className="qc-winner-title" style={styles.winnerTitle}>Checkmate</h2>
+        <h2 className="qc-winner-title" style={styles.winnerTitle}>{title}</h2>
         <p className="qc-winner-sub" style={styles.winnerSub}>{winnerText || 'Game over.'}</p>
         <div className="qc-winner-button-row" style={styles.winnerButtonRow}>
           <button className="qc-winner-button" style={styles.primaryBtn} onClick={onClose} autoFocus>

@@ -57,9 +57,16 @@ export function createStartingPieces() {
       side: SIDES.WHITE,
       square: sq,
       possibleTypes: allTypes,
+      baseTypes: allTypes,
+      promoTypes: [],
       captured: false,
       moveCount: 0,
       wasPromoted: false,
+      coherence: DEFAULT_COHERENCE,
+      recohere: 0,
+      observed: false,
+      entangledWith: null,
+      castled: false,
     });
   });
 
@@ -69,9 +76,16 @@ export function createStartingPieces() {
       side: SIDES.BLACK,
       square: sq,
       possibleTypes: allTypes,
+      baseTypes: allTypes,
+      promoTypes: [],
       captured: false,
       moveCount: 0,
       wasPromoted: false,
+      coherence: DEFAULT_COHERENCE,
+      recohere: 0,
+      observed: false,
+      entangledWith: null,
+      castled: false,
     });
   });
 
@@ -80,6 +94,25 @@ export function createStartingPieces() {
 
 // Capture collapse priority: lowest valuable non-king first (P < N < B < R < Q)
 export const CAPTURE_COLLAPSE_ORDER = ['p', 'n', 'b', 'r', 'q'];
+
+// Measurement (decoherence) shed priority: the LEAST valuable possibility is
+// lost first — symmetric with recoherence (gain LVP, lose LVP). Losing the
+// cheap identities raises the piece's capture-collapse value and strips its
+// cheap threats. King is last and sheds stop at two possibilities, so
+// measurement can never remove King.
+export const DECOHERENCE_SHED_ORDER = ['p', 'n', 'b', 'r', 'q', 'k'];
+
+// Coherence points a superposed piece can absorb before shedding a type.
+// Moving a piece restores it to this value.
+export const DEFAULT_COHERENCE = 3;
+
+// Recoherence: a piece with two or fewer possibilities regains one feasible
+// possibility after this many of its owner's moves without being observed.
+// Any measurement pulse that touches it resets the progress (quantum Zeno).
+export const RECOHERE_THRESHOLD = 3;
+
+// Regain order: least valuable first. King never comes back once excluded.
+export const RECOHERE_GAIN_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
 export function isSide(value) {
   return value === SIDES.WHITE || value === SIDES.BLACK;

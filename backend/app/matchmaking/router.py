@@ -344,11 +344,14 @@ async def matchmaking_ws(
                 continue
 
             if mtype == "move":
-                # Expected: { type, roomId, clientId, from, to, side? }
+                # Expected: { type, roomId, clientId, from, to, side?, enPassant?, measureTargetId? }
                 m_room = str(msg.get("roomId") or "")
                 m_cid = str(msg.get("clientId") or "")
                 m_from = str(msg.get("from") or "")
                 m_to = str(msg.get("to") or "")
+                m_en_passant = bool(msg.get("enPassant", False))
+                m_measure_raw = msg.get("measureTargetId")
+                m_measure = m_measure_raw if isinstance(m_measure_raw, str) and m_measure_raw else None
 
                 if m_room != room_id or m_cid != cid:
                     print(
@@ -425,14 +428,11 @@ async def matchmaking_ws(
                         state["turn"] = _other_side(true_side)
 
                         # Start white's clock after the first move only, otherwise run normal (active = side to move)
+                        # The active clock always follows the side to move.
                         if not bool(clk.get("started")):
                             clk["started"] = True
-                            clk["active"] = "white"
-                            clk["lastMono"] = _now_mono()
-                        else:
-                            # Active clock follows the side to move for subsequent moves
-                            clk["active"] = state["turn"]
-                            clk["lastMono"] = _now_mono()
+                        clk["active"] = state["turn"]
+                        clk["lastMono"] = _now_mono()
 
                         state["clock"] = clk
 
@@ -443,6 +443,8 @@ async def matchmaking_ws(
                             "from": m_from,
                             "to": m_to,
                             "side": true_side,
+                            "enPassant": m_en_passant,
+                            "measureTargetId": m_measure,
                             "seq": state["seq"],
                             "turn": state["turn"],
                             "clock": _clock_view(state),
@@ -466,6 +468,8 @@ async def matchmaking_ws(
                 p1t = str(msg.get("piece1_to") or "")
                 p2f = str(msg.get("piece2_from") or "")
                 p2t = str(msg.get("piece2_to") or "")
+                c_measure_raw = msg.get("measureTargetId")
+                c_measure = c_measure_raw if isinstance(c_measure_raw, str) and c_measure_raw else None
 
                 if m_room != room_id or m_cid != cid:
                     print(
@@ -533,13 +537,11 @@ async def matchmaking_ws(
                         state["seq"] += 1
                         state["turn"] = _other_side(true_side)
 
+                        # The active clock always follows the side to move.
                         if not bool(clk.get("started")):
                             clk["started"] = True
-                            clk["active"] = "white"
-                            clk["lastMono"] = _now_mono()
-                        else:
-                            clk["active"] = state["turn"]
-                            clk["lastMono"] = _now_mono()
+                        clk["active"] = state["turn"]
+                        clk["lastMono"] = _now_mono()
 
                         state["clock"] = clk
 
@@ -552,6 +554,7 @@ async def matchmaking_ws(
                             "piece1_to": p1t,
                             "piece2_from": p2f,
                             "piece2_to": p2t,
+                            "measureTargetId": c_measure,
                             "seq": state["seq"],
                             "turn": state["turn"],
                             "clock": _clock_view(state),
@@ -565,6 +568,48 @@ async def matchmaking_ws(
                     continue
 
                 await _broadcast(room_id, payload)
+                continue
+
+            if mtype == "game_over":
+                # Client-reported rules-based end (checkmate/stalemate/draw).
+                # Both clients evaluate the rules deterministically, so the
+                # first report wins; the server stops the clocks and rebroadcasts.
+                m_room = str(msg.get("roomId") or "")
+                m_cid = str(msg.get("clientId") or "")
+                if m_room != room_id or m_cid != cid:
+                    await _send(websocket, {"type": "error", "detail": "room_or_client_mismatch"})
+                    continue
+
+                raw_winner = msg.get("winner")
+                report_winner = raw_winner if raw_winner in ("white", "black") else None
+                report_reason = str(msg.get("reason") or "rules")[:64]
+
+                over_payload: Optional[Dict[str, Any]] = None
+                async with state["lock"]:
+                    if not state.get("ended"):
+                        state["ended"] = True
+                        state["winner"] = report_winner
+                        state["end_reason"] = report_reason
+                        clk = state.get("clock", {})
+                        clk["active"] = "none"
+                        state["clock"] = clk
+                        if not state.get("announced_end"):
+                            state["announced_end"] = True
+                            over_payload = {
+                                "type": "game_over",
+                                "roomId": room_id,
+                                "reason": report_reason,
+                                "winner": report_winner,
+                                "seq": state.get("seq", 0),
+                                "turn": state.get("turn", "white"),
+                                "clock": _clock_view(state),
+                            }
+                        print(
+                            f"[WS][game_over] room={room_id} by={cid} winner={report_winner} reason={report_reason}"
+                        )
+
+                if over_payload is not None:
+                    await _broadcast(room_id, over_payload)
                 continue
 
             # Unknown message type

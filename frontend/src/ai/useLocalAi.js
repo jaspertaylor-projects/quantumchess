@@ -5,10 +5,17 @@
 
 import { useEffect, useRef } from 'react';
 
-const MIN_THINK_MS = 1000;
-const MAX_THINK_MS = 8000;
+// Minimum wall-clock delay before a bot's move lands — never under 2 seconds
+// at any difficulty, so instant replies (random openers, forced recaptures,
+// simple endgames) don't overwhelm the player. Weaker bots pause a beat
+// longer still.
+const MIN_THINK_MS_BY_DIFFICULTY = { easy: 2600, medium: 2200, hard: 2000 };
+const MIN_THINK_FLOOR_MS = 2000;
+// Hard kill-cap. Must exceed the largest engine time budget (hard: 12s) so the
+// search result is used instead of the baseline fallback.
+const MAX_THINK_MS = 15000;
 
-export default function useLocalAi({ enabled, aiSide, difficulty, pieces, sideToMove, canMakeMove, gameOver, onApplyMove }) {
+export default function useLocalAi({ enabled, aiSide, difficulty, botId = null, pieces, sideToMove, canMakeMove, gameOver, lastMove = null, onApplyMove }) {
   const thinkingRef = useRef(false);
   const workerRef = useRef(null);
   const requestIdRef = useRef(0);
@@ -95,7 +102,8 @@ export default function useLocalAi({ enabled, aiSide, difficulty, pieces, sideTo
         if (maxTimerRef.current) { clearTimeout(maxTimerRef.current); maxTimerRef.current = null; }
 
         const elapsed = performance.now() - startTimeRef.current;
-        const wait = Math.max(0, MIN_THINK_MS - elapsed);
+        const minThink = MIN_THINK_MS_BY_DIFFICULTY[difficulty] || MIN_THINK_FLOOR_MS;
+        const wait = Math.max(0, minThink - elapsed);
         if (applyTimerRef.current) clearTimeout(applyTimerRef.current);
         applyTimerRef.current = setTimeout(() => {
           const chosen = bestRef.current || baselineRef.current || null;
@@ -113,7 +121,7 @@ export default function useLocalAi({ enabled, aiSide, difficulty, pieces, sideTo
     worker.postMessage({
       type: 'think',
       id,
-      payload: { pieces, sideToMove: aiSide, difficulty },
+      payload: { pieces, sideToMove: aiSide, difficulty, botId, lastMove },
     });
 
     maxTimerRef.current = setTimeout(() => {
@@ -131,5 +139,5 @@ export default function useLocalAi({ enabled, aiSide, difficulty, pieces, sideTo
       if (applyTimerRef.current) { clearTimeout(applyTimerRef.current); applyTimerRef.current = null; }
       thinkingRef.current = false;
     };
-  }, [enabled, aiSide, difficulty, pieces, sideToMove, canMakeMove, gameOver, onApplyMove]);
+  }, [enabled, aiSide, difficulty, botId, pieces, sideToMove, canMakeMove, gameOver, lastMove, onApplyMove]);
 }

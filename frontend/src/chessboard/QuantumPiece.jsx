@@ -5,7 +5,10 @@
 
 import React, { useMemo } from 'react';
 import theme from '../theme.js';
-import RasterizedSvgImg from './RasterizedSvgImg.jsx';
+import StyledSvgImg from './StyledSvgImg.jsx';
+import { DEFAULT_COHERENCE, RECOHERE_THRESHOLD } from './gameConstants.js';
+import { DEFAULT_MEASUREMENT_COLORS } from '../settings/useMeasurementColors.js';
+import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 
 // Single-type assets
 import imgP from '../assets/p.svg?url';
@@ -93,6 +96,12 @@ export default function QuantumPiece({
   ariaLabel,
   svgStyleBySide = { white: {}, black: {} },
   rotate180 = false,
+  coherence = DEFAULT_COHERENCE,
+  recohere = 0,
+  entangled = false,
+  promoted = false,
+  indicators = DEFAULT_INDICATORS,
+  measurementColors = DEFAULT_MEASUREMENT_COLORS,
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
@@ -151,7 +160,138 @@ export default function QuantumPiece({
       width: '98%',
       height: '98%',
     }),
+    pipRow: {
+      position: 'absolute',
+      bottom: '3%',
+      left: 0,
+      right: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 2,
+      pointerEvents: 'none',
+      zIndex: 20,
+    },
+    ringRow: {
+      position: 'absolute',
+      bottom: '0%',
+      left: 0,
+      right: 0,
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      pointerEvents: 'none',
+      zIndex: 20,
+    },
+    promoBadge: {
+      position: 'absolute',
+      top: '3%',
+      left: 0,
+      right: 0,
+      display: 'flex',
+      justifyContent: 'center',
+      pointerEvents: 'none',
+      zIndex: 21,
+    },
+    pipCenter: {
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      width: 0,
+      height: 0,
+      pointerEvents: 'none',
+      zIndex: 20,
+    },
+    pip: (filled, attackerHex) => {
+      const d = Math.max(3, Math.round(size * 0.09));
+      return {
+        width: d,
+        height: d,
+        borderRadius: 999,
+        backgroundColor: filled ? attackerHex : 'rgba(255,255,255,0.28)',
+        border: '1px solid rgba(0,0,0,0.4)',
+        boxSizing: 'border-box',
+      };
+    },
+    pipAtAngle: (angleDeg, filled, attackerHex) => {
+      const d = Math.max(3, Math.round(size * 0.09));
+      const radius = Math.max(4, Math.round(size * 0.13));
+      const rad = (angleDeg * Math.PI) / 180;
+      return {
+        ...baseStyles.pip(filled, attackerHex),
+        position: 'absolute',
+        left: Math.round(Math.cos(rad) * radius) - d / 2,
+        top: Math.round(Math.sin(rad) * radius) - d / 2,
+      };
+    },
   };
+
+  // Coherence pips, drawn in the attacking side's color (filled = remaining).
+  // The triangle gauge lives in the center of measurable (3+ type) pieces
+  // only — nearly-defined pieces carry the bottom recoherence row instead.
+  const colors = measurementColors || DEFAULT_MEASUREMENT_COLORS;
+  const attackerHex = colors[side === 'white' ? 'black' : 'white'] || '#ba55d1';
+  const ownHex = colors[side] || '#4fc3f7';
+  const effectiveCoherence = Number.isFinite(coherence) ? coherence : DEFAULT_COHERENCE;
+  const TRIANGLE_ANGLES = [-90, 30, 150];
+  const pips = indicators.coherence && tCount > 2 ? (
+    <div className="qc-coherence-pips qc-coherence-pips--triangle" style={baseStyles.pipCenter} aria-hidden="true">
+      {TRIANGLE_ANGLES.map((angle, i) => (
+        <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, attackerHex)} />
+      ))}
+    </div>
+  ) : null;
+
+  // Recoherence progress on nearly-defined pieces: a bottom row of dots in the
+  // OWNER's color counting toward regaining a possibility. Always shown on
+  // <= 2 type pieces, empty until the clock starts (a fresh collapse sits at
+  // zero for one full turn — recohere -1/0 both render as empty). Entangled
+  // castle partners never recohere, so they carry a chain-link mark instead
+  // of a clock that would never fill.
+  const regainProgress = Math.max(0, Math.min(RECOHERE_THRESHOLD, recohere || 0));
+  const nearlyDefined = tCount >= 1 && tCount <= 2;
+  const linkWidth = Math.max(10, Math.round(size * 0.22));
+  const regainPips = nearlyDefined && entangled && indicators.entangled ? (
+    <div className="qc-entangled-mark" style={baseStyles.ringRow} aria-hidden="true">
+      <svg
+        width={linkWidth}
+        height={Math.round(linkWidth * 0.5)}
+        viewBox="0 0 24 12"
+        style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.7))' }}
+      >
+        <g fill="none" stroke={ownHex} strokeWidth="2.2">
+          <rect x="1.4" y="2.6" width="11.6" height="6.8" rx="3.4" />
+          <rect x="11" y="2.6" width="11.6" height="6.8" rx="3.4" />
+        </g>
+      </svg>
+    </div>
+  ) : nearlyDefined && !entangled && indicators.recohere ? (
+    <div className="qc-recohere-pips" style={baseStyles.pipRow} aria-hidden="true">
+      {Array.from({ length: RECOHERE_THRESHOLD }, (_, i) => (
+        <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ownHex)} />
+      ))}
+    </div>
+  ) : null;
+
+  // Promotion badge: a piece that has already promoted wears chevrons in the
+  // owner's indicator color, top-center — the slot where Pawn would have been
+  // drawn in the overlay layout, which a promoted piece can never be again.
+  const chevronSize = Math.max(8, Math.round(size * 0.2));
+  const promoBadge = promoted && indicators.promoted ? (
+    <div className="qc-promoted-badge" style={baseStyles.promoBadge} aria-hidden="true">
+      <svg
+        width={chevronSize}
+        height={chevronSize}
+        viewBox="0 0 10 10"
+        style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }}
+      >
+        <g fill="none" stroke={ownHex} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 4.6 L5 2 L8 4.6" />
+          <path d="M2 8.2 L5 5.6 L8 8.2" />
+        </g>
+      </svg>
+    </div>
+  ) : null;
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -185,7 +325,7 @@ export default function QuantumPiece({
         role="img"
         aria-label={ariaLabel || `Piece ${t}`}
       >
-        <RasterizedSvgImg
+        <StyledSvgImg
           srcSvgUrl={src}
           cssVarMap={sideVars}
           idPrefix={`${id}-single-${t}`}
@@ -195,6 +335,8 @@ export default function QuantumPiece({
           style={baseStyles.rasterImg}
           alt=""
         />
+        {regainPips}
+        {promoBadge}
       </div>
     );
   }
@@ -214,7 +356,7 @@ export default function QuantumPiece({
           role="img"
           aria-label={ariaLabel || `Piece ${a}/${b}`}
         >
-          <RasterizedSvgImg
+          <StyledSvgImg
             srcSvgUrl={src}
             cssVarMap={sideVars}
             idPrefix={`${id}-pair-${a}-${b}`}
@@ -224,6 +366,8 @@ export default function QuantumPiece({
             style={baseStyles.rasterImg}
             alt=""
           />
+          {regainPips}
+          {promoBadge}
         </div>
       );
     }
@@ -234,7 +378,7 @@ export default function QuantumPiece({
     const src = quantumUrlMap[t];
     if (!src) return null;
     return (
-      <RasterizedSvgImg
+      <StyledSvgImg
         key={`${id}-${t}`}
         srcSvgUrl={src}
         cssVarMap={sideVars}
@@ -258,6 +402,8 @@ export default function QuantumPiece({
       aria-label={ariaLabel || `Quantum piece: ${types.join('/')}`}
     >
       <div className="qc-quantum-overlay-stack" style={baseStyles.overlayStack}>{overlays}</div>
+      {pips}
+      {promoBadge}
     </div>
   );
 }

@@ -14,6 +14,9 @@ import {
 } from './boardUtils.js';
 import theme from '../theme.js';
 import QuantumPiece from './QuantumPiece.jsx';
+import { DEFAULT_MEASUREMENT_COLORS, hexToRgbString } from '../settings/useMeasurementColors.js';
+import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
+import { listCheckThreats } from './quantumEngine.js';
 
 export default function Board({
   orientation = 'white',
@@ -27,6 +30,9 @@ export default function Board({
   highlights = [], // [{ square: 'e4', color: 'rgba(255,255,0,0.4)' }]
   pieces = [], // [{ id, side, square, possibleTypes }]
   selectedId = null,
+  measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
+  measurementColors = DEFAULT_MEASUREMENT_COLORS, // per-side targeting colors for piece pips
+  indicators = DEFAULT_INDICATORS, // visibility toggles for the visual reminders
   legalMoves = [], // legal moves for the currently-selected piece id
   squareColors = { light: '#f0d9b5', dark: '#b58863' },
   borderColor = theme.border,
@@ -70,6 +76,15 @@ export default function Board({
     }
     return map;
   }, [pieces]);
+
+  // Active checks, using the game's own threat rule: only nearly-defined
+  // (<= 2 type) attackers project real threats, mirroring end-of-turn king
+  // pruning. Each threat is drawn as a ray from the checker to the checked
+  // king-holder, which gets a pulsing ring.
+  const checkThreats = useMemo(() => {
+    if (!indicators.checkGlow && !indicators.checkRing) return [];
+    return listCheckThreats(pieces);
+  }, [pieces, indicators.checkGlow, indicators.checkRing]);
 
   const styles = {
     root: {
@@ -142,6 +157,24 @@ export default function Board({
       borderRadius: 2,
       pointerEvents: 'none',
     },
+    checkOverlay: {
+      position: 'absolute',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: 7,
+    },
+    measureTargetRing: (rgb) => ({
+      position: 'absolute',
+      inset: '6%',
+      border: `2.5px dashed rgba(${rgb}, 0.95)`,
+      borderRadius: '50%',
+      boxShadow: `0 0 10px rgba(${rgb}, 0.55), inset 0 0 8px rgba(${rgb}, 0.35)`,
+      pointerEvents: 'none',
+      zIndex: 6,
+      boxSizing: 'border-box',
+    }),
     floatingLayer: {
       position: 'absolute',
       inset: 0,
@@ -263,6 +296,19 @@ export default function Board({
   const draggingPiece = dragState ? dragState.piece : null;
   const dragTargetSquare = dragState ? dragState.currentSquare : null;
 
+  // Pixel center of a square, honoring board orientation, for the check-ray
+  // overlay.
+  const squareCenterPx = useCallback((alg) => {
+    if (!alg || alg.length < 2) return null;
+    const file = alg.charCodeAt(0) - 97;
+    const rank = parseInt(alg[1], 10) - 1;
+    if (Number.isNaN(rank) || file < 0 || file > 7 || rank < 0 || rank > 7) return null;
+    const col = orientation === 'black' ? 7 - file : file;
+    const row = orientation === 'black' ? rank : 7 - rank;
+    const cell = dimensions.cell || 0;
+    return { x: (col + 0.5) * cell, y: (row + 0.5) * cell };
+  }, [orientation, dimensions.cell]);
+
   return (
     <div
       className="chessboard-root"
@@ -314,11 +360,29 @@ export default function Board({
                 <div className="chessboard-square-drag-target" style={styles.dragTargetOverlay} />
               ) : null}
 
+
+              {(indicators.pulseRings ? measureTargetMarks : [])
+                .filter((m) => m && m.square === squareAlg)
+                .map((m, mi) => (
+                  <div
+                    key={`target-ring-${squareAlg}-${mi}`}
+                    className="qc-measure-target-ring"
+                    style={styles.measureTargetRing(m.rgb || '186, 85, 211')}
+                    aria-label={`Measurement target at ${squareAlg}`}
+                  />
+                ))}
+
               {piece && !isDraggingThis ? (
                 <QuantumPiece
                   id={piece.id}
                   side={piece.side}
                   possibleTypes={piece.possibleTypes}
+                  coherence={piece.coherence}
+                  recohere={piece.recohere}
+                  entangled={Boolean(piece.entangledWith)}
+                  promoted={Boolean(piece.wasPromoted)}
+                  indicators={indicators}
+                  measurementColors={measurementColors}
                   size={pieceSize}
                   isSelected={selectedId === piece.id}
                   onClick={onPieceClick}
@@ -344,6 +408,76 @@ export default function Board({
           );
         })}
 
+        {/* Check rays: checker -> checked king-holder, ring on the target */}
+        {checkThreats.length > 0 ? (
+          <svg
+            className="qc-check-overlay"
+            style={styles.checkOverlay}
+            viewBox={`0 0 ${dimensions.width || 0} ${dimensions.height || 0}`}
+            aria-hidden="true"
+          >
+            {indicators.checkGlow ? checkThreats.map((t, i) => {
+              const from = squareCenterPx(t.from);
+              const to = squareCenterPx(t.to);
+              if (!from || !to) return null;
+              const cell = dimensions.cell || 0;
+              const dx = to.x - from.x;
+              const dy = to.y - from.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const ux = dx / len;
+              const uy = dy / len;
+              // Emanate from the edge of the attacker's square; stop the tip
+              // just outside the target ring, with the shaft ending at the
+              // arrowhead's base.
+              const headLen = cell * 0.2;
+              const headHalf = cell * 0.11;
+              const tipX = to.x - ux * cell * 0.46;
+              const tipY = to.y - uy * cell * 0.46;
+              const baseX = tipX - ux * headLen;
+              const baseY = tipY - uy * headLen;
+              const x1 = from.x + ux * cell * 0.5;
+              const y1 = from.y + uy * cell * 0.5;
+              const px = -uy;
+              const py = ux;
+              const headPoints = `${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`;
+              // Arrow wears the attacking piece's own body color (band fill),
+              // with a contrast halo picked by luminance so light arrows read
+              // on light squares and dark arrows on dark squares.
+              const sideVars = (pieceSvgStyles && pieceSvgStyles[t.side]) || {};
+              const bodyHex = sideVars['--band-fill'] || (t.side === 'white' ? '#e5e7eb' : '#254065');
+              const rgb = hexToRgbString(bodyHex);
+              const [rr, gg, bb] = rgb.split(',').map((n) => parseInt(n, 10));
+              const halo = (0.299 * rr + 0.587 * gg + 0.114 * bb) > 150 ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+              const w = Math.max(3, cell * 0.08);
+              return (
+                <g key={`check-ray-${t.from}-${t.to}-${i}`}>
+                  <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={halo} strokeWidth={w + 2.5} strokeLinecap="round" />
+                  <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={`rgba(${rgb}, 0.9)`} strokeWidth={w} strokeLinecap="round" />
+                  <polygon points={headPoints} fill={`rgba(${rgb}, 0.95)`} stroke={halo} strokeWidth="1.4" strokeLinejoin="round" />
+                </g>
+              );
+            }) : null}
+            {indicators.checkRing ? [...new Set(checkThreats.map((t) => t.to))].map((sq) => {
+              const to = squareCenterPx(sq);
+              if (!to) return null;
+              const cell = dimensions.cell || 0;
+              return (
+                <circle
+                  key={`check-ring-${sq}`}
+                  cx={to.x}
+                  cy={to.y}
+                  r={cell * 0.42}
+                  fill="none"
+                  stroke="rgba(255, 64, 64, 0.9)"
+                  strokeWidth={Math.max(2.5, cell * 0.055)}
+                >
+                  <animate attributeName="opacity" values="0.95;0.35;0.95" dur="1.4s" repeatCount="indefinite" />
+                </circle>
+              );
+            }) : null}
+          </svg>
+        ) : null}
+
         {/* Floating drag preview */}
         {draggingPiece ? (
           <div className="chessboard-floating-layer" ref={overlayRef} style={styles.floatingLayer} aria-hidden="true">
@@ -355,6 +489,12 @@ export default function Board({
                 id={draggingPiece.id}
                 side={draggingPiece.side}
                 possibleTypes={draggingPiece.possibleTypes}
+                coherence={draggingPiece.coherence}
+                recohere={draggingPiece.recohere}
+                entangled={Boolean(draggingPiece.entangledWith)}
+                promoted={Boolean(draggingPiece.wasPromoted)}
+                indicators={indicators}
+                measurementColors={measurementColors}
                 size={pieceSize}
                 isSelected={true}
                 onClick={null}

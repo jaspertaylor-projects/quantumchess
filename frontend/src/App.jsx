@@ -7,23 +7,30 @@ import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
+import useMeasurementColors, { DEFAULT_MEASUREMENT_COLORS, hexToRgbString } from './settings/useMeasurementColors.js';
+import useIndicatorSettings from './settings/useIndicatorSettings.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors, { DEFAULT_WHITE, DEFAULT_BLACK } from './settings/usePieceColors.js';
 import useBoardColors, { DEFAULT_BOARD } from './settings/useBoardColors.js';
 import usePlayerBarColors, { DEFAULT_PLAYER_BAR_COLORS } from './settings/usePlayerBarColors.js';
 import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
+import TutorialModal from './tutorial/TutorialModal.jsx';
+import ConfirmModal from './components/ConfirmModal.jsx';
+import { initAds, maybeShowGameEndAd } from './ads/adService.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
-import { prewarmAllPiecePngs, invalidateRasterPngs, prewarmCapturedPiecePngs } from './chessboard/rasterPrewarm.js';
-import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoomWs, sendMoveWs, sendCastleWs } from './tray/matchmakingClient.js';
+import { prewarmAllPieceSvgs, invalidateSvgCaches, prewarmCapturedPieceSvgs } from './chessboard/svgPrewarm.js';
+import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs } from './tray/matchmakingClient.js';
 import AppHeader from './components/AppHeader.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
+import EnPassantChoiceModal from './components/EnPassantChoiceModal.jsx';
 import useChessClock from './hooks/useChessClock.js';
 import { formatClock, clampMs } from './hooks/clockUtils.js';
 import useLocalAi from './ai/useLocalAi.js';
+import { getBotById, DEFAULT_BOT_ID, botInitials } from './ai/bots.js';
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -52,11 +59,54 @@ export default function App() {
     // game state
     gameOver,
     winner,
+    gameOverReason,
+    lastMove,
+    // en passant
+    getEnPassantMoves,
   } = useQuantumGameState(gameInstanceId);
 
   const [selectedId, setSelectedId] = useState(null);
+  // Pending disambiguation between an en passant capture and a quiet move to the same square.
+  const [pendingEpChoice, setPendingEpChoice] = useState(null);
+  // Narrow-screen (phone) layout: stack the tray under the board.
+  const [isNarrow, setIsNarrow] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 760 : false));
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px)');
+    const onChange = () => setIsNarrow(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [rulesInitialPage, setRulesInitialPage] = useState(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialLessonId, setTutorialLessonId] = useState(null);
+
+  // Ads: dormant until VITE_ADSENSE_CLIENT is configured (post-approval).
+  useEffect(() => {
+    initAds();
+  }, []);
+
+  // First visit: open the tutorial automatically, once.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('qcTutorialSeen')) setTutorialOpen(true);
+    } catch (_) {
+      // storage unavailable — skip auto-tutorial
+    }
+  }, []);
+
+  const closeTutorial = useCallback(() => {
+    setTutorialOpen(false);
+    setTutorialLessonId(null);
+    try {
+      localStorage.setItem('qcTutorialSeen', '1');
+    } catch (_) {
+      // ignore
+    }
+  }, []);
   const [trayHighlights, setTrayHighlights] = useState([]);
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [showCheckOverlay, setShowCheckOverlay] = useState(false);
@@ -81,6 +131,8 @@ export default function App() {
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
+  const { measurementColors, setMeasurementColors } = useMeasurementColors();
+  const { indicators, setIndicators } = useIndicatorSettings();
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
@@ -89,16 +141,88 @@ export default function App() {
 
   const aiEnabledRef = useRef(false);
   const aiDifficultyRef = useRef('medium');
+  // The selected AI opponent (null when not playing vs AI). State so the
+  // player bars re-render with the bot's name, rating, and avatar.
+  const [aiBot, setAiBot] = useState(null);
 
   const selectedMoves = useMemo(() => {
     if (!selectedId) return [];
     return getLegalMoves(selectedId);
   }, [selectedId, getLegalMoves]);
 
-  const whitePlayer = 'White';
-  const blackPlayer = 'Black';
-  const whiteRating = '????';
-  const blackRating = '????';
+  const selectedPiece = useMemo(() => {
+    if (!selectedId) return null;
+    return pieces.find((p) => p.id === selectedId && !p.captured) || null;
+  }, [selectedId, pieces]);
+
+  // Rings on every piece the last move's measurement pulse touched, in the
+  // measuring side's color. Cleared naturally when the next move lands.
+  const measuredMarks = useMemo(() => {
+    if (!lastMove || !Array.isArray(lastMove.measuredSquares) || lastMove.measuredSquares.length === 0) return [];
+    const colors = measurementColors || DEFAULT_MEASUREMENT_COLORS;
+    const rgb = hexToRgbString(colors[lastMove.side] || colors.white);
+    return lastMove.measuredSquares.map((sq) => ({ square: sq, rgb }));
+  }, [lastMove, measurementColors]);
+
+  // Player identities: the human is "Anonymous"; a bot shows its name,
+  // rating, and avatar; the second local player is "Stranger". Online games
+  // keep the classic White/Black labels.
+  const botSide = aiBot ? (userTeam === 'white' ? 'black' : 'white') : null;
+  const botAvatar = aiBot ? { initials: botInitials(aiBot), hue: aiBot.hue ?? 200, imageUrl: `/bots/${aiBot.id}.png`, name: aiBot.name, tagline: aiBot.tagline || '' } : null;
+  const anonymousAvatar = {
+    initials: 'A',
+    hue: 145,
+    imageUrl: '/bots/anonymous.png',
+    name: 'Anonymous',
+    tagline: '',
+    hoverNote: { text: 'Not affiliated with chess.com. Yet.', linkText: 'say hi', href: 'mailto:jaspertaylor15@protonmail.com' },
+  };
+  const strangerAvatar = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: '' };
+  const isOnlineBars = isOnlineGameRef.current;
+  const nameFor = (side) => {
+    if (botSide === side) return aiBot.name;
+    if (isOnlineBars) return side === 'white' ? 'White' : 'Black';
+    return side === userTeam ? 'Anonymous' : 'Stranger';
+  };
+  const avatarFor = (side) => {
+    if (botSide === side) return botAvatar;
+    if (isOnlineBars) return null;
+    return side === userTeam ? anonymousAvatar : strangerAvatar;
+  };
+  const whitePlayer = nameFor('white');
+  const blackPlayer = nameFor('black');
+  const whiteRating = botSide === 'white' ? aiBot.rating : '????';
+  const blackRating = botSide === 'black' ? aiBot.rating : '????';
+  const whiteAvatar = avatarFor('white');
+  const blackAvatar = avatarFor('black');
+  // The bar layout follows the table: your side sits at the bottom, the
+  // opponent (bot or otherwise) across from you at the top.
+  const topBarSide = userTeam === 'white' ? 'black' : 'white';
+  const bottomBarSide = userTeam;
+
+  const barPropsFor = (side) => (side === 'white' ? {
+    side: 'white',
+    playerName: whitePlayer,
+    rating: whiteRating,
+    avatar: whiteAvatar,
+    tagline: botSide === 'white' ? (aiBot.tagline || null) : null,
+    clockText: effectiveClock.whiteText,
+    clockActive: effectiveClock.whiteActive,
+    clockLow: effectiveClock.whiteLow,
+    capturedPawns: whiteCapturedPawns,
+    capturedOthers: whiteCapturedOthers,
+  } : {
+    side: 'black',
+    playerName: blackPlayer,
+    rating: blackRating,
+    avatar: blackAvatar,
+    tagline: botSide === 'black' ? (aiBot.tagline || null) : null,
+    clockText: effectiveClock.blackText,
+    clockActive: effectiveClock.blackActive,
+    clockLow: effectiveClock.blackLow,
+    capturedPawns: blackCapturedPawns,
+    capturedOthers: blackCapturedOthers,
+  });
 
   useEffect(() => {
     const el = boardStageRef.current;
@@ -114,7 +238,17 @@ export default function App() {
       const verticalGaps = 16;
       const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
 
-      const rawSize = Math.min(rawWidth, availableHeight);
+      // In the side-by-side layout the tray sits next to the board, so its
+      // width (clamp(260px, 38vmin, 360px)) must be reserved or the row
+      // overflows and gets clipped on wide monitors.
+      let widthBudget = rawWidth;
+      if (!isNarrow) {
+        const vmin = Math.min(window.innerWidth, window.innerHeight);
+        const trayWidth = Math.min(360, Math.max(260, Math.round(0.38 * vmin)));
+        widthBudget = Math.max(0, rawWidth - trayWidth - 16);
+      }
+
+      const rawSize = Math.min(widthBudget, availableHeight);
       const cell = Math.max(1, Math.floor(rawSize / 8));
       const quantizedSize = cell * 8;
       setBoardSize(quantizedSize);
@@ -124,36 +258,76 @@ export default function App() {
 
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+    // The player bars mount when a game starts and change the space available
+    // to the board; watch them too so the board re-fits around them.
+    if (topBarRef.current) ro.observe(topBarRef.current);
+    if (bottomBarRef.current) ro.observe(bottomBarRef.current);
     window.addEventListener('orientationchange', measure);
 
     return () => {
       ro.disconnect();
       window.removeEventListener('orientationchange', measure);
     };
-  }, []);
+  }, [isNarrow, gameStarted]);
 
   const currentPieceSize = useMemo(() => {
     if (!boardSize || boardSize <= 0) return 64;
     return Math.max(8, Math.floor(boardSize / 8));
   }, [boardSize]);
 
+  // Player bars span exactly the board + gap + side tray, centered with them.
+  const barsWidth = useMemo(() => {
+    if (!boardSize || boardSize <= 0 || isNarrow) return null;
+    const vmin = Math.min(window.innerWidth, window.innerHeight);
+    const trayWidth = Math.min(360, Math.max(260, Math.round(0.38 * vmin)));
+    return boardSize + 12 + trayWidth;
+  }, [boardSize, isNarrow]);
+
+  const barWrapStyle = useMemo(() => ({
+    width: barsWidth ? `${barsWidth}px` : '100%',
+    maxWidth: '100%',
+  }), [barsWidth]);
+
   useEffect(() => {
     if (!currentPieceSize || currentPieceSize <= 0) return;
-    prewarmAllPiecePngs({ cssVarsBySide: svgStyles, sizes: [currentPieceSize, 64, 26], renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision' });
-    prewarmCapturedPiecePngs({ cssVarsBySide: svgStyles, sizes: [26], renderHint: 'crisp' });
+    prewarmAllPieceSvgs({ cssVarsBySide: svgStyles });
+    prewarmCapturedPieceSvgs({ cssVarsBySide: svgStyles });
   }, [currentPieceSize, svgStyles]);
 
+  const reportedGameOverRef = useRef(false);
   useEffect(() => {
-    if (gameOver) {
-      setShowWinPopup(true);
+    if (!gameOver) {
+      reportedGameOverRef.current = false;
+      return;
     }
-  }, [gameOver]);
+    setShowWinPopup(true);
+    // Tell the server so it stops the clocks and informs the opponent. Both
+    // clients derive the same result deterministically; first report wins.
+    if (isOnlineGameRef.current && !reportedGameOverRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+      reportedGameOverRef.current = true;
+      sendGameOverWs(wsApiRef.current, {
+        roomId: mmRoomIdRef.current,
+        clientId: mmClientIdRef.current,
+        winner: winner || null,
+        reason: gameOverReason || 'rules',
+      });
+    }
+  }, [gameOver, winner, gameOverReason]);
 
   useEffect(() => {
-    if (externalGameOver.over) {
+    // silent: abandoning a game via "End & New Game" goes straight to the
+    // setup panel with no winner popup.
+    if (externalGameOver.over && !externalGameOver.silent) {
       setShowWinPopup(true);
     }
   }, [externalGameOver]);
+
+  // A genuine game end (winner popup) is the interstitial ad break point;
+  // silent abandons never trigger it. The ad service applies frequency caps
+  // and is a complete no-op until a publisher id is configured.
+  useEffect(() => {
+    if (showWinPopup) maybeShowGameEndAd();
+  }, [showWinPopup]);
 
   useEffect(() => {
     return () => {
@@ -207,7 +381,7 @@ export default function App() {
     boardStack: {
       width: '100%',
       height: '100%',
-      maxWidth: 'min(96vmin, 1200px)',
+      maxWidth: isNarrow ? 'min(96vmin, 1200px)' : 'min(98vw, 1500px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -221,7 +395,7 @@ export default function App() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: isNarrow ? 'flex-start' : 'center',
       gap: 8,
       boxSizing: 'border-box',
       overflow: 'hidden',
@@ -229,9 +403,18 @@ export default function App() {
     boardRow: {
       width: '100%',
       display: 'flex',
+      flexDirection: isNarrow ? 'column' : 'row',
+      alignItems: isNarrow ? 'stretch' : 'center',
+      justifyContent: 'center',
+      gap: isNarrow ? 8 : 12,
+      flex: isNarrow ? 1 : undefined,
+      minHeight: 0,
+    },
+    boardHolder: {
+      display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 12,
+      flexShrink: 0,
     },
   };
 
@@ -246,6 +429,57 @@ export default function App() {
     }
     return false;
   }, [externalGameOver]);
+
+  // Pending en passant choices are per-turn.
+  useEffect(() => {
+    setPendingEpChoice(null);
+  }, [sideToMove, gameInstanceId]);
+
+  // Commit a move (standard or en passant), carrying any marked measurement.
+  const performMove = useCallback((pieceId, toSquare, { enPassant = false } = {}) => {
+    const movingPiece = pieces.find((p) => p.id === pieceId);
+    if (!movingPiece) {
+      setSelectedId(null);
+      setPendingEpChoice(null);
+      return;
+    }
+    const fromSquare = movingPiece.square || null;
+    const result = movePiece(pieceId, toSquare, { enPassant });
+    if (result.success && fromSquare) {
+      dispatch(addMove({ from: fromSquare, to: toSquare, side: movingPiece.side }));
+      if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+        sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: toSquare, side: movingPiece.side, enPassant });
+      }
+      setInfoMessage('');
+      setGameStarted(true);
+    } else if (!result.success && result.hasOwnProperty('reason')) {
+      setInfoMessage(result.reason || 'Illegal move.');
+    }
+    setSelectedId(null);
+    setPendingEpChoice(null);
+  }, [pieces, movePiece, dispatch, isOnline]);
+
+  // Route a destination square to the right kind of move. Returns false if the
+  // square is neither a legal move nor an en passant capture for the piece.
+  const commitMoveOrChoose = useCallback((pieceId, toSquare) => {
+    const legal = new Set(getLegalMoves(pieceId));
+    const isEp = getEnPassantMoves(pieceId).some((ep) => ep.to === toSquare);
+    const isLegal = legal.has(toSquare);
+    if (isEp && isLegal) {
+      // Both readings exist: ask the player which world they are asserting.
+      setPendingEpChoice({ pieceId, to: toSquare });
+      return true;
+    }
+    if (isEp) {
+      performMove(pieceId, toSquare, { enPassant: true });
+      return true;
+    }
+    if (isLegal) {
+      performMove(pieceId, toSquare);
+      return true;
+    }
+    return false;
+  }, [getLegalMoves, getEnPassantMoves, performMove]);
 
   const handleSquareClick = (data) => {
     if (guardExternalOver()) return;
@@ -313,22 +547,7 @@ export default function App() {
         setSelectedId(null);
         return;
       }
-      const legal = new Set(getLegalMoves(selectedId));
-      if (legal.has(square)) {
-        const fromSquare = movingPiece && movingPiece.square ? movingPiece.square : null;
-        const result = movePiece(selectedId, square);
-        if (result.success && fromSquare) {
-          dispatch(addMove({ from: fromSquare, to: square, side: movingPiece.side }));
-          if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
-            sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: square, side: movingPiece.side });
-          }
-          setInfoMessage('');
-          setGameStarted(true);
-        } else if (!result.success) {
-          if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
-        }
-        setSelectedId(null);
-      } else {
+      if (!commitMoveOrChoose(selectedId, square)) {
         setInfoMessage('Illegal move.');
         setSelectedId(null);
       }
@@ -351,10 +570,8 @@ export default function App() {
     const clicked = pieces.find((x) => x.id === id);
     if (!clicked) return;
 
-    if (!ownsPiece(clicked)) {
-      setInfoMessage('You can only select your own pieces in online games.');
-      return;
-    }
+    // Note: clicking an opponent piece is legitimate — it is how captures and
+    // measurement targeting work. Ownership checks are applied per-action below.
 
     if (clicked.side === sideToMove) {
       if (selectedId && selectedId !== id) {
@@ -400,26 +617,13 @@ export default function App() {
         setSelectedId(null);
         return;
       }
-      const legal = new Set(getLegalMoves(selectedId));
       const destSquare = clicked.square;
-      if (destSquare && legal.has(destSquare)) {
-        const fromSquare = movingPiece.square || null;
-        const result = movePiece(selectedId, destSquare);
-        if (result.success && fromSquare) {
-          dispatch(addMove({ from: fromSquare, to: destSquare, side: movingPiece.side }));
-          if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
-            sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: destSquare, side: movingPiece.side });
-          }
-          setInfoMessage('');
-          setGameStarted(true);
-        } else if (!result.success) {
-          if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Illegal move.');
-        }
-        setSelectedId(null);
-      } else {
-        setInfoMessage('Illegal move.');
-        setSelectedId(null);
+      if (destSquare && commitMoveOrChoose(selectedId, destSquare)) {
+        return;
       }
+      setInfoMessage('Illegal move.');
+      setSelectedId(null);
+      return;
     }
   };
 
@@ -433,9 +637,13 @@ export default function App() {
       for (const sq of selectedMoves) {
         list.push({ square: sq, color: 'rgba(255, 206, 84, 0.35)' });
       }
+      // En passant destinations get a warmer tint: this move is a capture.
+      for (const ep of getEnPassantMoves(selectedId)) {
+        list.push({ square: ep.to, color: 'rgba(255, 120, 70, 0.45)' });
+      }
     }
     return list;
-  }, [selectedId, selectedMoves, pieces]);
+  }, [selectedId, selectedMoves, pieces, getEnPassantMoves]);
 
   const checkHighlights = useMemo(() => {
     if (!showCheckOverlay) return [];
@@ -450,8 +658,8 @@ export default function App() {
 
   const combinedHighlights = useMemo(() => {
     const combined = [];
-    if (baseHighlights && baseHighlights.length) combined.push(...baseHighlights);
     if (checkHighlights && checkHighlights.length) combined.push(...checkHighlights);
+    if (baseHighlights && baseHighlights.length) combined.push(...baseHighlights);
     if (trayHighlights && trayHighlights.length) combined.push(...trayHighlights);
     return combined;
   }, [baseHighlights, checkHighlights, trayHighlights]);
@@ -533,7 +741,15 @@ export default function App() {
 
       if (msg.type === 'game_over') {
         const winSide = msg.winner === 'white' || msg.winner === 'black' ? msg.winner : null;
-        const text = winSide ? `${winSide[0].toUpperCase()}${winSide.slice(1)} wins on time.` : 'Game over on time.';
+        const reason = typeof msg.reason === 'string' && msg.reason ? msg.reason : 'time';
+        let text;
+        if (reason === 'time') {
+          text = winSide ? `${winSide[0].toUpperCase()}${winSide.slice(1)} wins on time.` : 'Game over on time.';
+        } else if (!winSide) {
+          text = `Draw by ${reason}.`;
+        } else {
+          text = `${winSide[0].toUpperCase()}${winSide.slice(1)} wins by ${reason}.`;
+        }
         setExternalGameOver({ over: true, text });
         setInfoMessage(text);
         maybeApplyClock(msg.clock);
@@ -555,7 +771,12 @@ export default function App() {
           maybeApplyClock(msg.clock);
           return;
         }
-        const result = movePiece(piece.id, to);
+        const wsEnPassant = Boolean(msg.enPassant);
+        let result = movePiece(piece.id, to, { enPassant: wsEnPassant });
+        if (!result || !result.success) {
+          // Robustness for interpretation mismatches: try the other reading.
+          result = movePiece(piece.id, to, { enPassant: !wsEnPassant });
+        }
         if (result && result.success) {
           dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
           setInfoMessage('Opponent moved.');
@@ -652,6 +873,7 @@ export default function App() {
     isOnlineGameRef.current = false;
     aiEnabledRef.current = false;
     aiDifficultyRef.current = settings && typeof settings.aiDifficulty === 'string' ? settings.aiDifficulty : 'medium';
+    setAiBot(null);
 
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
@@ -713,6 +935,9 @@ export default function App() {
 
     if (settings && settings.gameMode === 'ai') {
       aiEnabledRef.current = true;
+      const bot = getBotById((settings && settings.aiBotId) || DEFAULT_BOT_ID) || getBotById(DEFAULT_BOT_ID);
+      setAiBot(bot);
+      aiDifficultyRef.current = bot ? bot.tier : aiDifficultyRef.current;
       const pref = settings && typeof settings.preferredSide === 'string' ? settings.preferredSide : 'random';
       let side = 'white';
       if (pref === 'white' || pref === 'black') {
@@ -725,6 +950,8 @@ export default function App() {
       return;
     }
 
+    // Local 2 Player always seats Anonymous as White at the bottom.
+    dispatch(setUserTeam('white'));
     setInfoMessage('New local game started.');
   }, [dispatch, startWsConnection]);
 
@@ -821,26 +1048,11 @@ export default function App() {
       return;
     }
 
-    const legal = new Set(getLegalMoves(id));
-    if (!legal.has(to)) {
+    if (!commitMoveOrChoose(id, to)) {
       setInfoMessage('Illegal move.');
       setSelectedId(null);
-      return;
     }
-
-    const result = movePiece(id, to);
-    if (result.success && fromSquare) {
-      dispatch(addMove({ from: fromSquare, to, side: movingPiece.side }));
-      if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
-        sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to, side: movingPiece.side });
-      }
-      setInfoMessage('');
-      setGameStarted(true);
-    } else if (!result.success) {
-      if (result.hasOwnProperty('reason')) setInfoMessage(result.reason || 'Move failed due to game constraints.');
-    }
-    setSelectedId(null);
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose]);
 
   const handleDragHover = useCallback(() => {}, []);
 
@@ -870,6 +1082,8 @@ export default function App() {
 
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
+    if (settings.measurement) setMeasurementColors(settings.measurement);
+    if (settings.indicators) setIndicators(settings.indicators);
     setShowCoordinates(settings.coordinates);
     setShowCheckOverlay(settings.checkOverlay);
 
@@ -893,21 +1107,21 @@ export default function App() {
       },
     };
 
-    invalidateRasterPngs('piece-colors-changed');
-    await prewarmAllPiecePngs({
+    invalidateSvgCaches('piece-colors-changed');
+    await prewarmAllPieceSvgs({
       cssVarsBySide: newSvgStyles,
       sizes: [currentPieceSize, 64, 26],
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
-    await prewarmCapturedPiecePngs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
-  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
+    await prewarmCapturedPieceSvgs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
+  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setMeasurementColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
   const winnerText = useMemo(() => {
     if (!gameOver) return '';
-    if (!winner) return 'Game over.';
+    if (!winner) return `Draw by ${gameOverReason || 'agreement'}.`;
     const w = winner[0].toUpperCase() + winner.slice(1);
-    return `${w} wins by checkmate!`;
-  }, [gameOver, winner]);
+    return `${w} wins by ${gameOverReason || 'checkmate'}!`;
+  }, [gameOver, winner, gameOverReason]);
 
   const localClock = useChessClock({
     timeControl,
@@ -948,10 +1162,10 @@ export default function App() {
     if (!aiEnabledRef.current) return;
     if (sideToMove !== side) return;
 
-    if (mv.type === 'move') {
+    if (mv.type === 'move' || mv.type === 'enpassant') {
       const piece = getPieceAtSquare(mv.from);
       if (!piece) return;
-      const res = movePiece(piece.id, mv.to);
+      const res = movePiece(piece.id, mv.to, { enPassant: mv.type === 'enpassant' });
       if (res && res.success) {
         dispatch(addMove({ from: mv.from, to: mv.to, side }));
         setInfoMessage('AI moved.');
@@ -981,10 +1195,12 @@ export default function App() {
     enabled: !isOnlineGameRef.current && aiEnabledRef.current,
     aiSide,
     difficulty: aiDifficultyRef.current,
+    botId: aiBot ? aiBot.id : null,
     pieces,
     sideToMove,
     canMakeMove,
     gameOver,
+    lastMove,
     onApplyMove: applyEngineMove,
   });
 
@@ -1033,20 +1249,52 @@ export default function App() {
 
   const isPlaying = useMemo(() => gameStarted && !gameOver && !externalGameOver.over, [gameStarted, gameOver, externalGameOver]);
 
+  const [confirmState, setConfirmState] = useState(null); // { title, message, confirmLabel, danger, run }
+
   const handleResign = useCallback(() => {
-    const side = userTeam === 'white' ? 'white' : 'black';
-    const opp = side === 'white' ? 'Black' : 'White';
-    const confirmText = side === 'white' ? 'Resign as White?' : 'Resign as Black?';
-    if (!window.confirm(confirmText)) return;
-    setExternalGameOver({ over: true, text: `${side === 'white' ? 'White' : 'Black'} resigns. ${opp} wins.` });
-    setInfoMessage(`${side === 'white' ? 'White' : 'Black'} resigned.`);
-  }, [userTeam]);
+    // In local hotseat the side to move resigns; otherwise the human's side.
+    const isHotseat = !isOnlineGameRef.current && !aiEnabledRef.current;
+    const resigning = isHotseat ? sideToMove : userTeam;
+    const side = resigning === 'white' ? 'White' : 'Black';
+    const opp = side === 'White' ? 'Black' : 'White';
+    setConfirmState({
+      title: `Resign as ${side}?`,
+      message: `${opp} will win the game.`,
+      confirmLabel: 'Resign',
+      danger: true,
+      run: () => {
+        setExternalGameOver({ over: true, text: `${side} resigns. ${opp} wins.` });
+        setInfoMessage(`${side} resigned.`);
+      },
+    });
+  }, [userTeam, sideToMove]);
 
   const handleOfferDraw = useCallback(() => {
-    if (!window.confirm('Offer a draw?')) return;
-    // For now, treat offer as accepted immediately.
-    setExternalGameOver({ over: true, text: 'Draw by agreement.' });
-    setInfoMessage('Draw agreed.');
+    setConfirmState({
+      title: 'Agree to a draw?',
+      message: 'The game ends immediately as a draw by agreement.',
+      confirmLabel: 'Draw',
+      danger: false,
+      run: () => {
+        setExternalGameOver({ over: true, text: 'Draw by agreement.' });
+        setInfoMessage('Draw agreed.');
+      },
+    });
+  }, []);
+
+  const [newGameSignal, setNewGameSignal] = useState(0);
+  const handleRequestNewGame = useCallback(() => {
+    setConfirmState({
+      title: 'End this game?',
+      message: 'The current game will be abandoned and you can set up a new one.',
+      confirmLabel: 'End & New Game',
+      danger: true,
+      run: () => {
+        setExternalGameOver({ over: true, text: 'Game abandoned.', silent: true });
+        setInfoMessage('Game ended. Set up your next game.');
+        setNewGameSignal((s) => s + 1);
+      },
+    });
   }, []);
 
   const resolvedWinnerText = useMemo(() => (externalGameOver.over ? externalGameOver.text : winnerText), [externalGameOver, winnerText]);
@@ -1060,82 +1308,108 @@ export default function App() {
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
           <div className="qc-board-stage" style={styles.boardStage} ref={boardStageRef}>
-            {gameStarted && (
+            <div className="qc-bar-wrap" style={barWrapStyle}>
               <PlayerBar
-                side="black"
-                playerName={blackPlayer}
-                rating={blackRating}
+                {...barPropsFor(topBarSide)}
                 playerBarColors={playerBarColors}
-                clockText={effectiveClock.blackText}
-                clockActive={effectiveClock.blackActive}
-                clockLow={effectiveClock.blackLow}
-                capturedPawns={blackCapturedPawns}
-                capturedOthers={blackCapturedOthers}
                 svgStyles={svgStyles}
                 barRef={topBarRef}
                 showClock={showClockUI}
               />
-            )}
-
-            <div className="qc-board-row" style={styles.boardRow}>
-              <Board
-                orientation={userTeam}
-                showCoordinates={showCoordinates}
-                highlights={combinedHighlights}
-                onSquareClick={handleSquareClick}
-                onSquareRightClick={handleSquareRightClick}
-                onPieceClick={handlePieceClick}
-                onPieceDragStart={handlePieceDragStart}
-                onPieceDrop={handlePieceDrop}
-                onDragHover={handleDragHover}
-                pieces={pieces}
-                selectedId={selectedId}
-                legalMoves={selectedMoves}
-                maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
-                borderColor="transparent"
-                shadow="rgba(0, 0, 0, 0.15)"
-                pieceSvgStyles={svgStyles}
-                onResize={handleBoardResize}
-                squareColors={boardColors}
-              />
-
-              <SideTray
-                height={trayHeight}
-                infoMessage={infoMessage}
-                onOpenSettings={handleOpenSettings}
-                onOpenRules={handleOpenRules}
-                onStartGame={handleStartGame}
-                onSetHighlights={handleSetHighlights}
-                onClearHighlights={handleClearHighlights}
-                onSeekToIndex={handleSeekToIndex}
-                externalIndex={currentMoveIndex}
-                isPlaying={isPlaying}
-                onResign={handleResign}
-                onOfferDraw={handleOfferDraw}
-              />
             </div>
 
-            {gameStarted && (
-              <PlayerBar
-                side="white"
-                playerName={whitePlayer}
-                rating={whiteRating}
-                playerBarColors={playerBarColors}
-                clockText={effectiveClock.whiteText}
-                clockActive={effectiveClock.whiteActive}
-                clockLow={effectiveClock.whiteLow}
-                capturedPawns={whiteCapturedPawns}
-                capturedOthers={whiteCapturedOthers}
-                svgStyles={svgStyles}
-                barRef={bottomBarRef}
-                showClock={showClockUI}
-              />
-            )}
+            {(() => {
+              const trayEl = (
+                <SideTray
+                  height={isNarrow ? 0 : trayHeight}
+                  stacked={isNarrow}
+                  infoMessage={infoMessage}
+                  onOpenSettings={handleOpenSettings}
+                  onOpenRules={handleOpenRules}
+                  onStartGame={handleStartGame}
+                  onSetHighlights={handleSetHighlights}
+                  onClearHighlights={handleClearHighlights}
+                  onSeekToIndex={handleSeekToIndex}
+                  externalIndex={currentMoveIndex}
+                  isPlaying={isPlaying}
+                  onResign={handleResign}
+                  onOfferDraw={handleOfferDraw}
+                  onRequestNewGame={handleRequestNewGame}
+                  newGameSignal={newGameSignal}
+                />
+              );
+              const whiteBarEl = (
+                <div className="qc-bar-wrap" style={barWrapStyle}>
+                  <PlayerBar
+                    {...barPropsFor(bottomBarSide)}
+                    playerBarColors={playerBarColors}
+                    svgStyles={svgStyles}
+                    barRef={bottomBarRef}
+                    showClock={showClockUI}
+                  />
+                </div>
+              );
+
+              return (
+                <>
+                  <div className="qc-board-row" style={styles.boardRow}>
+                    <div className="qc-board-holder" style={styles.boardHolder}>
+                      <Board
+                        orientation={userTeam}
+                        showCoordinates={showCoordinates}
+                        highlights={combinedHighlights}
+                        onSquareClick={handleSquareClick}
+                        onSquareRightClick={handleSquareRightClick}
+                        onPieceClick={handlePieceClick}
+                        onPieceDragStart={handlePieceDragStart}
+                        onPieceDrop={handlePieceDrop}
+                        onDragHover={handleDragHover}
+                        pieces={pieces}
+                        selectedId={selectedId}
+                        measureTargetMarks={measuredMarks}
+                        indicators={indicators}
+                        measurementColors={measurementColors}
+                        legalMoves={selectedMoves}
+                        maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
+                        borderColor="transparent"
+                        shadow="rgba(0, 0, 0, 0.15)"
+                        pieceSvgStyles={svgStyles}
+                        onResize={handleBoardResize}
+                        squareColors={boardColors}
+                      />
+                    </div>
+                    {!isNarrow ? trayEl : null}
+                  </div>
+
+                  {whiteBarEl}
+                  {isNarrow ? trayEl : null}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
 
-      <WinnerModal open={showWinPopup} winnerText={resolvedWinnerText} onClose={() => setShowWinPopup(false)} />
+      <WinnerModal
+        open={showWinPopup}
+        winnerText={resolvedWinnerText}
+        title={externalGameOver.over ? 'Game Over' : (winner ? 'Checkmate' : 'Draw')}
+        onClose={() => setShowWinPopup(false)}
+      />
+
+      <EnPassantChoiceModal
+        open={Boolean(pendingEpChoice)}
+        onEnPassant={() => {
+          if (pendingEpChoice) performMove(pendingEpChoice.pieceId, pendingEpChoice.to, { enPassant: true });
+        }}
+        onQuiet={() => {
+          if (pendingEpChoice) performMove(pendingEpChoice.pieceId, pendingEpChoice.to, { enPassant: false });
+        }}
+        onCancel={() => {
+          setPendingEpChoice(null);
+          setSelectedId(null);
+        }}
+      />
 
       <SettingsModal
         open={settingsOpen}
@@ -1144,16 +1418,55 @@ export default function App() {
         blackColors={blackColors}
         boardColors={boardColors}
         playerBarColors={playerBarColors}
+        measurementColors={measurementColors}
+        indicators={indicators}
         showCoordinates={showCoordinates}
         showCheckOverlay={showCheckOverlay}
         defaultWhiteColors={DEFAULT_WHITE}
         defaultBlackColors={DEFAULT_BLACK}
         defaultBoardColors={DEFAULT_BOARD}
         defaultPlayerBarColors={DEFAULT_PLAYER_BAR_COLORS}
+        defaultMeasurementColors={DEFAULT_MEASUREMENT_COLORS}
         onAccept={handleAcceptSettings}
       />
 
-      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <RulesModal
+        open={rulesOpen}
+        onClose={() => { setRulesOpen(false); setRulesInitialPage(null); }}
+        initialPageTitle={rulesInitialPage}
+        onPlayLesson={(lessonId) => {
+          setRulesOpen(false);
+          setRulesInitialPage(null);
+          setTutorialLessonId(lessonId);
+          setTutorialOpen(true);
+        }}
+      />
+
+      <ConfirmModal
+        open={Boolean(confirmState)}
+        title={confirmState ? confirmState.title : ''}
+        message={confirmState ? confirmState.message : ''}
+        confirmLabel={confirmState ? confirmState.confirmLabel : 'Confirm'}
+        danger={Boolean(confirmState && confirmState.danger)}
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const run = confirmState && confirmState.run;
+          setConfirmState(null);
+          if (run) run();
+        }}
+      />
+
+      <TutorialModal
+        open={tutorialOpen}
+        onClose={closeTutorial}
+        pieceSvgStyles={svgStyles}
+        initialLessonId={tutorialLessonId}
+        onOpenRules={(pageTitle) => {
+          closeTutorial();
+          setRulesInitialPage(pageTitle);
+          setRulesOpen(true);
+        }}
+      />
     </div>
   );
 }

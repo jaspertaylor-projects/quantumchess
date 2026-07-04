@@ -6,10 +6,77 @@
 import { fromAlgebraic, toAlgebraic } from './boardUtils.js';
 import {
   CAPTURE_COLLAPSE_ORDER,
+  DECOHERENCE_SHED_ORDER,
+  DEFAULT_COHERENCE,
   HEAVY_TYPES,
   PIECE_LIMITS,
   PIECE_TYPES,
+  RECOHERE_GAIN_ORDER,
+  RECOHERE_THRESHOLD,
 } from './gameConstants.js';
+
+// --- Origin-tagged type sets ---
+// Every possibility has an origin: `base` (one of the side's original slots)
+// or `promo` (a heavy identity funded by a pawn slot via promotion).
+// `possibleTypes` is always the union of the two and is what move generation,
+// threat maps, and the UI consume. Conservation reasons over the tagged sets.
+
+function orderTypes(list) {
+  const set = new Set(list);
+  return PIECE_TYPES.filter((t) => set.has(t));
+}
+
+export function getBaseTypes(p) {
+  return Array.isArray(p.baseTypes) ? p.baseTypes : (p.possibleTypes || []);
+}
+
+export function getPromoTypes(p) {
+  return Array.isArray(p.promoTypes) ? p.promoTypes : [];
+}
+
+// Set a piece's tagged sets and keep the union invariant. Mutates the piece.
+function withTypes(piece, base, promo) {
+  piece.baseTypes = orderTypes(base);
+  piece.promoTypes = orderTypes(promo);
+  piece.possibleTypes = orderTypes([...piece.baseTypes, ...piece.promoTypes]);
+}
+
+// Restrict a piece to `allowedTypes`, preserving origins. Mutates the piece.
+function restrictTypes(piece, allowedTypes) {
+  const allowed = new Set(allowedTypes);
+  withTypes(
+    piece,
+    getBaseTypes(piece).filter((t) => allowed.has(t)),
+    getPromoTypes(piece).filter((t) => allowed.has(t))
+  );
+}
+
+// Any collapse is a fresh start: whenever a piece's possibility set shrank
+// during a move's resolution (its own collapse, solver pruning, check
+// pruning, sheds, entanglement), its coherence resets to full. If the shrink
+// leaves the piece nearly defined (<= 2 possibilities), its recoherence
+// restarts with a one-turn grace: recohere = -1 means the piece must sit one
+// full owner-turn displayed at zero before the clock ticks (-1 -> 0 on the
+// owner's next move, then 0 -> 1 -> 2 -> 3). Mutates finalPieces in place.
+function resetCoherenceOnCollapse(prevPieces, finalPieces) {
+  const before = new Map(prevPieces.map((p) => [p.id, (p.possibleTypes || []).length]));
+  for (const p of finalPieces) {
+    if (p.captured || !p.square) continue;
+    const prevLen = before.get(p.id);
+    if (prevLen !== undefined && (p.possibleTypes || []).length < prevLen) {
+      p.coherence = DEFAULT_COHERENCE;
+      if ((p.possibleTypes || []).length <= 2) p.recohere = -1;
+    }
+  }
+}
+
+// End-of-turn king pruning helper: returns a copy of the piece with King
+// removed from its possibilities, origins preserved.
+function cloneWithoutKing(p) {
+  const clone = { ...p };
+  restrictTypes(clone, p.possibleTypes.filter((t) => t !== 'k'));
+  return clone;
+}
 
 function inBounds(file, rank) {
   return file >= 0 && file < 8 && rank >= 0 && rank < 8;
@@ -261,7 +328,12 @@ export function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, to
 }
 
 export function clonePieces(pieces) {
-  return pieces.map((p) => ({ ...p, possibleTypes: Array.isArray(p.possibleTypes) ? [...p.possibleTypes] : [] }));
+  return pieces.map((p) => ({
+    ...p,
+    possibleTypes: Array.isArray(p.possibleTypes) ? [...p.possibleTypes] : [],
+    baseTypes: [...getBaseTypes(p)],
+    promoTypes: [...getPromoTypes(p)],
+  }));
 }
 
 function computeConfirmedCountsForSide(pieces, side) {
@@ -332,11 +404,106 @@ function powersetTypes(allTypes) {
   return sets;
 }
 
+// --- Slot-matching conservation (exact, promotion-aware) ---
+// A side's ground truth is an assignment of each of its pieces (living and
+// captured) to one of 16 slots: 8 pawn, 2 knight, 2 bishop, 2 rook, 1 queen,
+// 1 king. A base-origin identity occupies its own type's slot; any
+// promo-origin identity occupies a PAWN slot (one pawn out, one heavy in).
+// A possibility is real iff some full seating of the side uses it.
+
+function buildSlotPool() {
+  const slots = [];
+  for (const t of PIECE_TYPES) {
+    const cap = PIECE_LIMITS[t] || 0;
+    for (let i = 0; i < cap; i++) slots.push(t);
+  }
+  return slots;
+}
+
+function poolOptionsForPiece(p) {
+  const pools = new Set(getBaseTypes(p));
+  if (getPromoTypes(p).length > 0) pools.add('p');
+  return pools;
+}
+
+// Kuhn's augmenting-path bipartite matching: can every piece be seated in a
+// distinct slot? Optionally pre-seats one piece in one slot to test support.
+function canSeatAll(pieceOptions, slots, forcedPieceIdx = -1, forcedSlotIdx = -1) {
+  const matchSlot = new Array(slots.length).fill(-1);
+  if (forcedPieceIdx >= 0) matchSlot[forcedSlotIdx] = forcedPieceIdx;
+
+  const tryAssign = (u, visited) => {
+    for (let s = 0; s < slots.length; s++) {
+      if (visited[s]) continue;
+      if (!pieceOptions[u].has(slots[s])) continue;
+      visited[s] = true;
+      const holder = matchSlot[s];
+      if (holder === -1 || (holder !== forcedPieceIdx && tryAssign(holder, visited))) {
+        matchSlot[s] = u;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  for (let u = 0; u < pieceOptions.length; u++) {
+    if (u === forcedPieceIdx) continue;
+    const visited = new Array(slots.length).fill(false);
+    if (forcedSlotIdx >= 0) visited[forcedSlotIdx] = true;
+    if (!tryAssign(u, visited)) return false;
+  }
+  return true;
+}
+
+// Prune every (piece, pool) option that appears in no full seating.
+// Returns whether anything changed; returns false untouched when the side has
+// no consistent seating at all (a lost/terminal state the game-over logic owns).
+function matchingPruneSide(updated, side) {
+  const sidePieces = updated.filter((p) => p.side === side);
+  const slots = buildSlotPool();
+  if (sidePieces.length === 0 || sidePieces.length > slots.length) return false;
+  const options = sidePieces.map(poolOptionsForPiece);
+
+  if (!canSeatAll(options, slots)) return false;
+
+  const slotIdxByType = {};
+  slots.forEach((t, i) => { if (!(t in slotIdxByType)) slotIdxByType[t] = i; });
+
+  let changed = false;
+  sidePieces.forEach((p, i) => {
+    const pools = options[i];
+    if (pools.size <= 1) return;
+    const feasible = new Set();
+    for (const t of pools) {
+      if (canSeatAll(options, slots, i, slotIdxByType[t])) feasible.add(t);
+    }
+    if (feasible.size === 0) return;
+    const newBase = getBaseTypes(p).filter((t) => feasible.has(t));
+    const newPromo = feasible.has('p') ? getPromoTypes(p) : [];
+    if (newBase.length + newPromo.length === 0) return;
+    if (newBase.length !== getBaseTypes(p).length || newPromo.length !== getPromoTypes(p).length) {
+      withTypes(p, newBase, newPromo);
+      options[i] = poolOptionsForPiece(p);
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function enforceGlobalTypeConstraintsOnce(pieces) {
   const updated = clonePieces(pieces);
   const sides = ['white', 'black'];
 
   for (const side of sides) {
+    // Once a side has any pawn-funded identity, exact slot matching is
+    // required; the cheaper Hall-set pass below is only sound without promos.
+    const hasPromo = updated.some((p) => p.side === side && getPromoTypes(p).length > 0);
+    if (hasPromo) {
+      let guard = 0;
+      while (matchingPruneSide(updated, side) && guard < 8) guard += 1;
+      continue;
+    }
+
     let changed = true;
     while (changed) {
       changed = false;
@@ -355,7 +522,7 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
           return base > 0;
         });
         if (filtered.length > 0 && filtered.length !== before) {
-          p.possibleTypes = filtered;
+          restrictTypes(p, filtered);
           changed = true;
         }
       }
@@ -391,7 +558,7 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
             const before = p.possibleTypes.length;
             const reduced = p.possibleTypes.filter((t) => !S.includes(t));
             if (reduced.length > 0 && reduced.length !== before) {
-              p.possibleTypes = reduced;
+              restrictTypes(p, reduced);
               changed = true;
             }
           }
@@ -404,20 +571,50 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
 }
 
 export function enforceGlobalTypeConstraintsToFixpoint(pieces) {
+  const sig = (p) => `${(p.possibleTypes || []).join('')}|${getBaseTypes(p).join('')}|${getPromoTypes(p).join('')}`;
   let current = clonePieces(pieces);
   while (true) {
     const next = enforceGlobalTypeConstraintsOnce(current);
     let diff = false;
     for (let i = 0; i < current.length; i++) {
-      const a = current[i].possibleTypes;
-      const b = next[i].possibleTypes;
-      if (a.length !== b.length) { diff = true; break; }
-      for (let j = 0; j < a.length; j++) { if (a[j] !== b[j]) { diff = true; break; } }
-      if (diff) break;
+      if (sig(current[i]) !== sig(next[i])) { diff = true; break; }
     }
     if (!diff) return next;
     current = next;
   }
+}
+
+// Castled pairs are entangled: exactly one of the two is the King and the
+// other the Rook in every consistent world. Whenever one partner resolves to a
+// single type (by move collapse, capture, check pruning, or measurement), the
+// other loses that type. Mutates in place; returns whether anything changed.
+function resolveEntanglements(pieces) {
+  let changed = false;
+  for (const p of pieces) {
+    if (!p.entangledWith) continue;
+    if (!Array.isArray(p.possibleTypes) || p.possibleTypes.length !== 1) continue;
+    const partner = pieces.find((x) => x.id === p.entangledWith);
+    if (!partner || partner.captured) continue;
+    if (!Array.isArray(partner.possibleTypes) || partner.possibleTypes.length <= 1) continue;
+    const resolvedType = p.possibleTypes[0];
+    const filtered = partner.possibleTypes.filter((t) => t !== resolvedType);
+    if (filtered.length > 0 && filtered.length !== partner.possibleTypes.length) {
+      restrictTypes(partner, filtered);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Run global conservation and entanglement resolution together to a fixpoint.
+export function applyQuantumConstraints(pieces) {
+  let current = enforceGlobalTypeConstraintsToFixpoint(pieces);
+  for (let i = 0; i < 8; i++) {
+    const changed = resolveEntanglements(current);
+    if (!changed) return current;
+    current = enforceGlobalTypeConstraintsToFixpoint(current);
+  }
+  return current;
 }
 
 export function computeThreatenedSquaresForSide(pieces, side) {
@@ -437,6 +634,39 @@ export function computeThreatenedSquaresForSide(pieces, side) {
     }
   }
   return threatened;
+}
+
+// List active check threats: every nearly-defined (<= 2 type) piece whose
+// attacks reach an enemy king-holder's square — the same attackers the
+// end-of-turn king pruning respects. Returns [{ from, to, side }] where
+// side is the ATTACKER's side. Used by the board's check-ray overlay.
+export function listCheckThreats(pieces) {
+  const occ = buildOccupancy(pieces);
+  const holders = pieces.filter((p) => !p.captured && p.square && (p.possibleTypes || []).includes('k'));
+  if (holders.length === 0) return [];
+  const holderBySquare = new Map(holders.map((h) => [h.square, h]));
+
+  const threats = [];
+  const seen = new Set();
+  for (const p of pieces) {
+    if (p.captured || !p.square) continue;
+    const types = p.possibleTypes || [];
+    if (types.length === 0 || types.length > 2) continue;
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    for (const t of types) {
+      const atk = attacksForType(t, pos.fileIndex, pos.rankIndex, occ, p.side);
+      for (const sq of atk) {
+        const h = holderBySquare.get(sq);
+        if (!h || h.side === p.side) continue;
+        const key = `${p.square}>${sq}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        threats.push({ from: p.square, to: sq, side: p.side });
+      }
+    }
+  }
+  return threats;
 }
 
 export function canSideCaptureSquare(pieces, side, targetSq) {
@@ -495,27 +725,43 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     const least = CAPTURE_COLLAPSE_ORDER.find((t) => targetPiece.possibleTypes.includes(t));
     targetPiece.captured = true;
     targetPiece.square = null;
-    targetPiece.possibleTypes = least ? [least] : ['p'];
+    // Collapse the captured piece's type; its origin stays as ambiguous as the
+    // type allows (a captured promoted knight still consumes a pawn slot).
+    if (least) {
+      restrictTypes(targetPiece, [least]);
+    } else {
+      withTypes(targetPiece, ['p'], []);
+    }
     targetPiece.captureIndex = captureCounter;
     didCapture = true;
   }
 
   moving.square = toSquare;
-  moving.possibleTypes = subset;
+  restrictTypes(moving, subset);
   moving.moveCount = (moving.moveCount || 0) + 1;
+  moving.coherence = DEFAULT_COHERENCE;
+  moving.observed = false;
 
   const promotionRank = moving.side === 'white' ? 7 : 0;
-  if (moving.possibleTypes.includes('p')) {
+  // Promotion fires at most once per piece: a piece that already carries
+  // promotion branches must never re-promote (which would overwrite branches
+  // that measurement or constraints have since narrowed).
+  if (moving.possibleTypes.includes('p') && getPromoTypes(moving).length === 0) {
     const toPos = to;
     if (toPos && toPos.rankIndex === promotionRank) {
-      const merged = new Set(moving.possibleTypes.filter((t) => t !== 'p'));
-      ['n', 'b', 'r', 'q'].forEach((t) => merged.add(t));
-      moving.possibleTypes = Array.from(merged);
+      // In the pawn-worlds the piece becomes any heavy, funded by a pawn slot;
+      // in the others it keeps its non-pawn base identities. Both branches are
+      // preserved via the origin tags.
+      withTypes(
+        moving,
+        getBaseTypes(moving).filter((t) => t !== 'p'),
+        ['n', 'b', 'r', 'q']
+      );
       moving.wasPromoted = true;
     }
   }
 
-  const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
+  const constrained = applyQuantumConstraints(next);
 
   const moverSide = moving.side;
   const opponentSide = moverSide === 'white' ? 'black' : 'white';
@@ -527,12 +773,268 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     if (!p.possibleTypes.includes('k')) return p;
     if (!oppThreats.has(p.square)) return p;
     if (p.possibleTypes.length === 1) return p;
-    const filtered = p.possibleTypes.filter((t) => t !== 'k');
-    return { ...p, possibleTypes: filtered };
+    return cloneWithoutKing(p);
   });
 
-  const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
-  return { ok: true, pieces: finalPieces, didCapture };
+  const prePulse = applyQuantumConstraints(afterCheck);
+  const pulse = applyMeasurementPulse(prePulse, [moving.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id]);
+  resetCoherenceOnCollapse(prevPieces, finalPieces);
+  return { ok: true, pieces: finalPieces, didCapture, measuredSquares: pulse.measuredSquares };
+}
+
+// --- Measurement (targeted decoherence) ---
+
+// Sheds the next type in DECOHERENCE_SHED_ORDER (least valuable first).
+function shedNextType(piece) {
+  if (!Array.isArray(piece.possibleTypes) || piece.possibleTypes.length <= 1) return false;
+  const shed = DECOHERENCE_SHED_ORDER.find((t) => piece.possibleTypes.includes(t));
+  if (!shed) return false;
+  restrictTypes(piece, piece.possibleTypes.filter((t) => t !== shed));
+  return true;
+}
+
+// Measurement pulse: when a piece completes a move, it soft-measures every
+// enemy piece it could capture from its final square (using any of its
+// remaining possible types). To observe something, you must be able to touch
+// it — and the act of moving is the observation.
+//
+// Observation is a MARK, not instant damage: the marked piece loses a
+// coherence point at ITS OWNER's next move — unless the owner moves that very
+// piece, which dodges the hit and resets it entirely (self-measurement on
+// your own terms). Returns { pieces, measuredSquares }.
+export function applyMeasurementPulse(pieces, moverIds) {
+  const occ = buildOccupancy(pieces);
+  const measured = new Set();
+
+  for (const moverId of moverIds) {
+    const mover = pieces.find((p) => p.id === moverId && !p.captured && p.square);
+    if (!mover) continue;
+    const pos = fromAlgebraic(mover.square);
+    if (!pos) continue;
+    const reach = new Set();
+    for (const t of mover.possibleTypes) {
+      const list = movesForType(t, pos.fileIndex, pos.rankIndex, occ, mover.side, { isFirstMove: false });
+      for (const sq of list) reach.add(sq);
+    }
+    for (const sq of reach) {
+      const target = occ.get(sq);
+      if (!target || target.side === mover.side || target.captured) continue;
+      if (!Array.isArray(target.possibleTypes)) continue;
+      if (target.possibleTypes.length <= 2) {
+        // Quantum Zeno: observing a nearly-defined piece cannot narrow it
+        // further, but it freezes any recoherence in progress. The reset
+        // carries the same one-turn grace as a fresh collapse (-1): the
+        // clock only restarts after a full turn displayed at zero.
+        if ((target.recohere || 0) > 0) {
+          target.recohere = -1;
+          measured.add(sq);
+        }
+        continue;
+      }
+      target.observed = true;
+      measured.add(sq);
+    }
+  }
+
+  return { pieces, measuredSquares: Array.from(measured) };
+}
+
+// Shed the target's least valuable possibility, guarded: soft measurement can
+// never fully define a piece — not even indirectly. If, after the team
+// constraints resolve, ANY piece would end up with a single definite identity
+// it did not already have, the measurement dissipates instead (the target
+// keeps its possibilities and its coherence simply resets).
+function attemptGuardedShed(current, targetId) {
+  const dissipate = () => {
+    const cur = current.find((p) => p.id === targetId);
+    if (cur) cur.coherence = DEFAULT_COHERENCE;
+    return current;
+  };
+
+  const liveTarget = current.find((p) => p.id === targetId && !p.captured);
+  if (!liveTarget || liveTarget.possibleTypes.length <= 2) return dissipate();
+
+  const trial = clonePieces(current);
+  const trialTarget = trial.find((p) => p.id === targetId);
+  shedNextType(trialTarget);
+  trialTarget.coherence = DEFAULT_COHERENCE;
+  const constrained = applyQuantumConstraints(trial);
+
+  const beforeCounts = new Map(current.map((p) => [p.id, (p.possibleTypes || []).length]));
+  const overDefined = constrained.some(
+    (p) => !p.captured && (p.possibleTypes || []).length === 1 && (beforeCounts.get(p.id) || 1) > 1
+  );
+
+  return overDefined ? dissipate() : constrained;
+}
+
+// End-of-turn effects for the side that just moved:
+//
+// 1. Deferred measurement damage: pieces the opponent marked (observed) lose
+//    one coherence point now — unless the owner just moved that very piece,
+//    which dodges the hit. At zero coherence the piece sheds its least
+//    valuable possibility (guarded against over-defining the position).
+//
+// 2. Recoherence: pieces with two or fewer possibilities diffuse back toward
+//    superposition. Each of the owner's moves advances every such piece by
+//    one step; at RECOHERE_THRESHOLD the piece regains its least valuable
+//    feasible possibility (never King, never Pawn on promoted pieces or the
+//    promotion rank, never anything conservation rules out). Pulses reset the
+//    progress (quantum Zeno) and entangled castle pairs never recohere.
+export function applyOwnerTurnEffects(pieces, moverSide, movedIds = []) {
+  let current = pieces;
+  const movedSet = new Set(movedIds);
+
+  // --- Deferred measurement damage ---
+  const shedDueIds = [];
+  for (const p of current) {
+    if (p.captured || !p.square || p.side !== moverSide) continue;
+    if (!p.observed) continue;
+    p.observed = false;
+    if (movedSet.has(p.id)) continue; // dodged by moving the threatened piece
+    if ((p.possibleTypes || []).length <= 2) continue;
+    const remaining = (p.coherence ?? DEFAULT_COHERENCE) - 1;
+    if (remaining <= 0) {
+      shedDueIds.push(p.id);
+    } else {
+      p.coherence = remaining;
+    }
+  }
+  for (const id of shedDueIds) {
+    current = attemptGuardedShed(current, id);
+  }
+
+  // --- Recoherence ---
+  const dueIds = [];
+
+  for (const p of current) {
+    if (p.captured || !p.square || p.side !== moverSide) continue;
+    const len = (p.possibleTypes || []).length;
+    if (len === 0 || len > 2) {
+      if ((p.recohere || 0) !== 0) p.recohere = 0;
+      continue;
+    }
+    if (p.entangledWith) {
+      p.recohere = 0;
+      continue;
+    }
+    const next = (p.recohere || 0) + 1;
+    if (next >= RECOHERE_THRESHOLD) {
+      p.recohere = 0;
+      dueIds.push(p.id);
+    } else {
+      p.recohere = next;
+    }
+  }
+
+  for (const id of dueIds) {
+    const live = current.find((x) => x.id === id && !x.captured);
+    if (!live || live.possibleTypes.length > 2) continue;
+    // Pawn never returns to a piece whose promotion was publicly observed,
+    // nor to a piece standing on its own promotion rank (an unpromoted pawn
+    // cannot exist there). The environment forgets quiet histories only.
+    const promoted = getPromoTypes(live).length > 0;
+    const pos = fromAlgebraic(live.square);
+    const promotionRank = live.side === 'white' ? 7 : 0;
+    const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
+    for (const t of RECOHERE_GAIN_ORDER) {
+      if (t === 'p' && (promoted || onPromotionRank)) continue;
+      if (live.possibleTypes.includes(t)) continue;
+      const trial = clonePieces(current);
+      const trialPiece = trial.find((x) => x.id === id);
+      withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
+      trialPiece.coherence = DEFAULT_COHERENCE;
+      const constrained = applyQuantumConstraints(trial);
+      const after = constrained.find((x) => x.id === id);
+      if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
+        current = constrained;
+        break;
+      }
+    }
+  }
+
+  return current;
+}
+
+// --- En passant (phantom capture) ---
+
+// A double-step first move by a piece that could still be a Pawn can be
+// captured en passant on the very next turn by any enemy piece that could
+// still be a Pawn, standing beside the arrival square, moving diagonally
+// forward into the crossed square.
+export function listEnPassantCaptures(pieces, side, lastMove) {
+  if (!lastMove || !lastMove.isDoubleStep) return [];
+  if (lastMove.side === side) return [];
+
+  const victim = pieces.find((p) => p.id === lastMove.pieceId && !p.captured);
+  if (!victim || !victim.square || victim.square !== lastMove.to) return [];
+  if (!victim.possibleTypes.includes('p')) return [];
+
+  const to = fromAlgebraic(lastMove.to);
+  const crossed = fromAlgebraic(lastMove.crossedSquare);
+  if (!to || !crossed) return [];
+
+  const occ = buildOccupancy(pieces);
+  if (occ.get(lastMove.crossedSquare)) return [];
+
+  const dir = side === 'white' ? 1 : -1;
+  const out = [];
+  for (const p of pieces) {
+    if (p.captured || p.side !== side || !p.square) continue;
+    if (!p.possibleTypes.includes('p')) continue;
+    const pos = fromAlgebraic(p.square);
+    if (!pos) continue;
+    if (pos.rankIndex !== to.rankIndex) continue;
+    if (Math.abs(pos.fileIndex - to.fileIndex) !== 1) continue;
+    if (crossed.rankIndex !== pos.rankIndex + dir) continue;
+    out.push({ pieceId: p.id, to: lastMove.crossedSquare, victimId: victim.id });
+  }
+  return out;
+}
+
+export function simulateEnPassant(prevPieces, pieceId, toSquare, victimId, captureCounter) {
+  const next = prevPieces.map((p) => ({ ...p, possibleTypes: [...p.possibleTypes] }));
+  const moving = next.find((p) => p.id === pieceId && !p.captured);
+  const victim = next.find((p) => p.id === victimId && !p.captured);
+  if (!moving || !victim) return { ok: false, reason: 'En passant pieces not found.', pieces: prevPieces };
+  if (moving.side === victim.side) return { ok: false, reason: 'Cannot capture your own piece.', pieces: prevPieces };
+  if (!moving.possibleTypes.includes('p') || !victim.possibleTypes.includes('p')) {
+    return { ok: false, reason: 'En passant requires both pieces to still possibly be Pawns.', pieces: prevPieces };
+  }
+
+  // The capture asserts the pawn-world on both sides of the interaction.
+  // Pawn is always a base-origin identity.
+  victim.captured = true;
+  victim.square = null;
+  restrictTypes(victim, ['p']);
+  victim.captureIndex = captureCounter;
+
+  moving.square = toSquare;
+  restrictTypes(moving, ['p']);
+  moving.moveCount = (moving.moveCount || 0) + 1;
+  moving.coherence = DEFAULT_COHERENCE;
+  moving.observed = false;
+
+  const constrained = applyQuantumConstraints(next);
+
+  const moverSide = moving.side;
+  const opponentSide = moverSide === 'white' ? 'black' : 'white';
+  const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
+
+  const afterCheck = constrained.map((p) => {
+    if (p.captured || p.side !== moverSide || !p.square) return p;
+    if (!p.possibleTypes.includes('k')) return p;
+    if (!oppThreats.has(p.square)) return p;
+    if (p.possibleTypes.length === 1) return p;
+    return cloneWithoutKing(p);
+  });
+
+  const prePulse = applyQuantumConstraints(afterCheck);
+  const pulse = applyMeasurementPulse(prePulse, [moving.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id]);
+  resetCoherenceOnCollapse(prevPieces, finalPieces);
+  return { ok: true, pieces: finalPieces, didCapture: true, measuredSquares: pulse.measuredSquares };
 }
 
 export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
@@ -543,6 +1045,10 @@ export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
   if (a.side !== b.side) return { canCastle: false, reason: 'Pieces must be on the same side.' };
   if (a.side !== sideToMove) return { canCastle: false, reason: 'It is not your turn to move.' };
   if (!a.square || !b.square) return { canCastle: false, reason: 'Pieces must be on the board.' };
+
+  if (pieces.some((p) => p.side === sideToMove && p.castled)) {
+    return { canCastle: false, reason: 'Your side has already castled this game.' };
+  }
 
   const isEligible = (p) => {
     if (!p.possibleTypes) return false;
@@ -659,12 +1165,24 @@ export function simulateCastle(prevPieces, plan) {
 
   piece1.square = plan.piece1_to;
   piece2.square = plan.piece2_to;
-  piece1.possibleTypes = ['r', 'k'];
-  piece2.possibleTypes = ['r', 'k'];
+  // Castling pieces are unmoved, so Rook and King are base-origin identities.
+  withTypes(piece1, ['r', 'k'], []);
+  withTypes(piece2, ['r', 'k'], []);
   piece1.moveCount = (piece1.moveCount || 0) + 1;
   piece2.moveCount = (piece2.moveCount || 0) + 1;
+  piece1.coherence = DEFAULT_COHERENCE;
+  piece2.coherence = DEFAULT_COHERENCE;
+  piece1.observed = false;
+  piece2.observed = false;
 
-  const constrained = enforceGlobalTypeConstraintsToFixpoint(next);
+  // The castled pair becomes an anti-correlated entangled pair: in every
+  // consistent world exactly one of them is the King and the other the Rook.
+  piece1.castled = true;
+  piece2.castled = true;
+  piece1.entangledWith = piece2.id;
+  piece2.entangledWith = piece1.id;
+
+  const constrained = applyQuantumConstraints(next);
   const moverSide = piece1.side;
   const opponentSide = moverSide === 'white' ? 'black' : 'white';
   const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
@@ -674,17 +1192,27 @@ export function simulateCastle(prevPieces, plan) {
     if (!p.possibleTypes.includes('k')) return p;
     if (!oppThreats.has(p.square)) return p;
     if (p.possibleTypes.length === 1) return p;
-    const filtered = p.possibleTypes.filter((t) => t !== 'k');
-    return { ...p, possibleTypes: filtered };
+    return cloneWithoutKing(p);
   });
 
-  const finalPieces = enforceGlobalTypeConstraintsToFixpoint(afterCheck);
-  return { ok: true, pieces: finalPieces };
+  const prePulse = applyQuantumConstraints(afterCheck);
+  const pulse = applyMeasurementPulse(prePulse, [piece1.id, piece2.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, piece1.side, [piece1.id, piece2.id]);
+  resetCoherenceOnCollapse(prevPieces, finalPieces);
+  return { ok: true, pieces: finalPieces, measuredSquares: pulse.measuredSquares };
 }
 
-export function generateLegalReplies(pieces, side, captureCounter) {
+export function generateLegalReplies(pieces, side, captureCounter, lastMove = null) {
   const occ = buildOccupancy(pieces);
   const legal = [];
+
+  for (const ep of listEnPassantCaptures(pieces, side, lastMove)) {
+    const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
+    if (!sim.ok) continue;
+    if (hasCollapsedKingCapturable(sim.pieces, side)) continue;
+    const mover = pieces.find((p) => p.id === ep.pieceId);
+    legal.push({ type: 'enpassant', from: mover ? mover.square : null, to: ep.to, victimId: ep.victimId, resultPieces: sim.pieces });
+  }
 
   for (const p of pieces) {
     if (p.captured || p.side !== side || !p.square) continue;
@@ -722,9 +1250,22 @@ export function generateLegalReplies(pieces, side, captureCounter) {
   return legal;
 }
 
-export function isCheckmateAfterPositionResolved(finalPieces, moverSide, captureCounter) {
+// Evaluate the opponent's situation after the mover's move fully resolves.
+// Returns 'checkmate', 'stalemate', or null (game continues).
+export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove = null) {
   const opponent = moverSide === 'white' ? 'black' : 'white';
-  const replies = generateLegalReplies(finalPieces, opponent, captureCounter);
+  const replies = generateLegalReplies(finalPieces, opponent, captureCounter, lastMove);
+
+  if (replies.length === 0) {
+    // No legal replies at all: checkmate only if the opponent is already
+    // lost-in-check (kingless, or a unique King the mover can capture);
+    // otherwise it is stalemate — a draw.
+    const holders = finalPieces.filter((p) => !p.captured && p.side === opponent && p.square && p.possibleTypes.includes('k'));
+    if (holders.length === 0) return 'checkmate';
+    if (holders.length === 1 && canSideCaptureSquare(finalPieces, moverSide, holders[0].square)) return 'checkmate';
+    return 'stalemate';
+  }
+
   for (const reply of replies) {
     const pos = reply.resultPieces;
     const oppKingHolders = pos.filter((p) => !p.captured && p.side === opponent && p.square && p.possibleTypes.includes('k'));
@@ -738,7 +1279,35 @@ export function isCheckmateAfterPositionResolved(finalPieces, moverSide, capture
         continue;
       }
     }
-    return false;
+    return null;
   }
-  return true;
+  return 'checkmate';
+}
+
+export function isCheckmateAfterPositionResolved(finalPieces, moverSide, captureCounter, lastMove = null) {
+  return evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove) === 'checkmate';
+}
+
+// Canonical signature of a position for repetition detection. Includes
+// everything the rules can depend on: occupancy, tagged possibility sets,
+// first-move rights, coherence, castling/entanglement state, the side to
+// move, and any live en passant window.
+export function computePositionSignature(pieces, sideToMove, lastMove = null) {
+  const parts = pieces
+    .map((p) => [
+      p.id,
+      p.captured ? 'x' : (p.square || '-'),
+      getBaseTypes(p).join(''),
+      getPromoTypes(p).join(''),
+      (p.moveCount || 0) === 0 ? 'f' : 'm',
+      (p.possibleTypes || []).length > 1 ? String(p.coherence ?? '') : '',
+      String(p.recohere || 0),
+      p.observed ? 'o' : '',
+      p.castled ? 'c' : '',
+      p.entangledWith || '',
+    ].join(':'))
+    .sort()
+    .join('|');
+  const ep = lastMove && lastMove.isDoubleStep ? lastMove.crossedSquare : '-';
+  return `${sideToMove}#${ep}#${parts}`;
 }

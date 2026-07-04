@@ -5,7 +5,7 @@
 # syntax=docker/dockerfile:1.4
 
 # ---- Base (shared) ----
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 ENV PNPM_HOME="/pnpm" \
     PNPM_STORE_DIR="/pnpm/store" \
     PATH="$PNPM_HOME:$PATH"
@@ -26,10 +26,10 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     if [ "$CLEAR_PNPM_STORE" = "true" ]; then \
       echo "🧹 Clearing /pnpm/store and reinstalling without frozen lockfile"; \
       rm -rf /pnpm/store/*; \
-      pnpm install --no-frozen-lockfile; \
+      pnpm install --no-frozen-lockfile --config.ignore-scripts=false; \
     else \
       echo "Installing dependencies (auto-healing lockfile if needed)"; \
-      pnpm install --no-frozen-lockfile; \
+      pnpm install --no-frozen-lockfile --config.ignore-scripts=false; \
     fi
 
 # ---- Builder (creates /app/dist) ----
@@ -40,7 +40,7 @@ COPY . .
 RUN pnpm run build
 
 # ---- Production (minimal runtime that serves static assets) ----
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm install -g serve

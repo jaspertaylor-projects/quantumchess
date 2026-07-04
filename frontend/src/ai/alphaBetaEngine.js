@@ -1,1046 +1,358 @@
 // frontend/src/ai/alphaBetaEngine.js
-// Purpose: Alpha-beta engine with quantum-aware heuristics and a classical mode when all pieces are collapsed. Adds forced favorable captures, root-mover restriction, SEE-based ordering with early-stop option, and flexible evaluation switching.
-// Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../chessboard/gameConstants.js
-// Exported To: ./useLocalAi.js, ./aiWorker.js
+// Purpose: Quantum Chess AI engine. Iterative-deepening negamax over the real
+// rules engine (generateLegalReplies, so collapse, conservation, pulses, and
+// castling are all "free"), with a compact evaluation built around expected
+// material, king-holder distribution, hanging pieces, information, and
+// position. Deterministic except for an optional root noise knob (easy mode).
+// Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js
+// Exported To: ./aiWorker.js
 
 import {
+  buildOccupancy,
   clonePieces,
   generateLegalReplies,
-  buildOccupancy,
-  movesForType,
-  canSideCaptureSquare,
-  subsetTypesThatCanMakeMove,
   attacksForType,
-  computeThreatenedSquaresForSide,
+  canSideCaptureSquare,
 } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 
-// Debug toggle
-const DEBUG_AI = true;
+const MATE = 1000;
 
-// Standard chess piece values used for material evaluation.
-const CAPTURE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+// Type values in pawns. King carries no trade value; king danger is scored
+// separately via holder distribution and threats.
+const VAL = { p: 1, n: 3, b: 3.1, r: 5, q: 9, k: 0 };
 
-// Heuristic weights tuned to value flexibility and safer play.
-const MOBILITY_WEIGHT = 0.02;
-const SUPERPOSITION_UNIT_WEIGHT = 0.22; // strong incentive to keep options
-const COLLAPSED_KING_PENALTY = -12;
-const HANGING_WEIGHT = 1.2;
-const TRADE_RISK_WEIGHT = 0.9;
-const PST_WEIGHT = 0.18;
-const KING_THREAT_WEIGHT = 0.8;
-const KING_SHELL_WEIGHT = 0.12;
-const CENTER_CONTROL_MAIN_WEIGHT = 0.1;
-const CENTER_CONTROL_EXT_WEIGHT = 0.05;
-const CENTER_OCCUPANCY_MAIN_WEIGHT = 0.05;
-const CENTER_OCCUPANCY_EXT_WEIGHT = 0.025;
-const DEVELOPMENT_MINOR_WEIGHT = 0.1;
-const DEVELOPMENT_ROOK_WEIGHT = 0.06;
-const DEVELOPMENT_GENERIC_WEIGHT = 0.06;
-const PAWN_ADVANCE_WEIGHT = 0.06;
-const DEV_BREADTH_UNIT_WEIGHT = 0.08;
+// What a piece is worth to whoever captures it: the game collapses a captured
+// piece to its least valuable possibility, so that IS the material ledger.
+// Fresh superpositions are cheap to lose (a pawn); confirmed queens are not.
+function collapseValue(piece) {
+  const types = piece.possibleTypes || [];
+  const least = CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t));
+  return least ? VAL[least] : 0;
+}
 
-// Value retaining Pawn/King in superposition across your team
-const PAWN_PRESENCE_WEIGHT = 0.09;
-const KING_PRESENCE_WEIGHT = 0.04;
+// Evaluation weights (pawn units). Bots override subsets of these to give
+// each opponent a personality; see ./bots.js.
+export const DEFAULT_WEIGHTS = {
+  mobility: 0.012, // per attacked square
+  extraType: 0.09, // option value per extra possibility on own pieces
+  oppDamage: 0.04, // per coherence point knocked off enemy pieces
+  kingSpread: 0.28, // per king-holder up to a cap: ambiguity shields the king
+  soleKingAttacked: 4.0, // unique king holder standing in capture range
+  soleKingCollapsedAttacked: 8.0, // and it is a known king
+  hangUndefended: 0.85, // fraction of EV lost when attacked and undefended
+  hangBadTrade: 0.5, // fraction of (EV - cheapest attacker) when defended
+  center: 0.035, // per step of centrality per piece
+  pawnAdvance: 0.05, // per rank of progress for pawn-including pieces
+  pawnRace: 0.03, // quadratic kicker so far-advanced pawns become urgent
+  development: 0.06, // per piece that has moved at least once
+  kingHunt: 0.15, // per attacked square around a unique enemy king holder
+};
+const KING_SPREAD_CAP = 5;
 
-// Promotion value bonus
-const PROMOTION_BONUS_WEIGHT = 3.5;
-
-// Quiescence search limits to resolve hanging/tactical capture sequences
-const QUIESCENCE_MAX_PLIES = 5;
-
-// SEE and move-ordering weights
-const SEE_RISK_WEIGHT = 1.2;
-const SEE_GOOD_WEIGHT = 0.9;
-
-// Collapse penalties: avoid over-narrowing too early or into single-type Knights
-const COLLAPSE_OVER_NARROW_PENALTY = 0.3;
-const SINGLE_TYPE_COLLAPSE_MULTIPLIER = 2.2;
-const DOUBLE_TYPE_COLLAPSE_MULTIPLIER = 0.5;
-const BQ_DOUBLE_TYPE_DISCOUNT = 0.7;
-const KNIGHT_SINGLE_COLLAPSE_EXTRA = 0.8;
-const EARLY_GAME_PLY_THRESHOLD = 12;
-
-// Development diversity ordering weights
-const FRESH_DEVELOPMENT_BONUS = 0.3;
-const REPEAT_MOVER_PENALTY = 0.35;
-
-// Randomization to avoid deterministic play
-const RANDOM_MOVE_JITTER = 0.1;
-
-// Move-ordering specific bonuses
-const CAPTURE_ORDER_BONUS = 0.35;
-const CAPTURE_VALUE_ORDER_BONUS = 0.08;
-const P_RETENTION_ORDER_BONUS = 0.08;
-const CHECK_ORDER_BONUS = 0.12;
-
-// Losing capture gating
-const LOSING_CAPTURE_DROP_THRESHOLD = -0.75;
-const LOSING_CAPTURE_HARD_PENALTY = 4.0;
-const EXTREME_GAIN_THRESHOLD = 2.0;
-
-// Piece-square tables (white perspective)
-const PST = {
-  p: [
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0.05, 0.1, 0.1, -0.12, -0.12, 0.1, 0.1, 0.05],
-    [0.02, 0.04, 0.06, 0.08, 0.08, 0.06, 0.04, 0.02],
-    [0.01, 0.03, 0.05, 0.07, 0.07, 0.05, 0.03, 0.01],
-    [0.02, 0.04, 0.4, 0.06, 0.06, 0.04, 0.04, 0.02],
-    [0.03, 0.05, 0.05, 0.06, 0.06, 0.05, 0.05, 0.03],
-    [0.15, 0.18, 0.18, 0.22, 0.22, 0.18, 0.18, 0.15],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-  ],
-  n: [
-    [-0.5, -0.3, -0.2, -0.2, -0.2, -0.2, -0.3, -0.5],
-    [-0.3, -0.1, 0, 0.05, 0.05, 0, -0.1, -0.3],
-    [-0.2, 0.05, 0.12, 0.15, 0.15, 0.12, 0.05, -0.2],
-    [-0.2, 0, 0.15, 0.18, 0.18, 0.15, 0, -0.2],
-    [-0.2, 0, 0.15, 0.18, 0.18, 0.15, 0, -0.2],
-    [-0.2, 0.05, 0.12, 0.15, 0.15, 0.12, 0.05, -0.2],
-    [-0.3, -0.1, 0, 0.05, 0.05, 0, -0.1, -0.3],
-    [-0.5, -0.3, -0.2, -0.2, -0.2, -0.2, -0.3, -0.5],
-  ],
-  b: [
-    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
-    [-0.1, 0, 0.05, 0.08, 0.08, 0.05, 0, -0.1],
-    [-0.1, 0.06, 0.08, 0.1, 0.1, 0.08, 0.06, -0.1],
-    [-0.05, 0.08, 0.1, 0.12, 0.12, 0.1, 0.08, -0.05],
-    [-0.05, 0.08, 0.1, 0.12, 0.12, 0.1, 0.08, -0.05],
-    [-0.1, 0.06, 0.08, 0.1, 0.1, 0.08, 0.06, -0.1],
-    [-0.1, 0, 0.05, 0.08, 0.08, 0.05, 0, -0.1],
-    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
-  ],
-  r: [
-    [0, 0, 0.02, 0.04, 0.04, 0.02, 0, 0],
-    [0.02, 0.05, 0.06, 0.08, 0.08, 0.06, 0.05, 0.02],
-    [-0.02, 0, 0.02, 0.04, 0.04, 0.02, 0, -0.02],
-    [-0.03, -0.01, 0.01, 0.03, 0.03, 0.01, -0.01, -0.03],
-    [-0.03, -0.01, 0.01, 0.03, 0.03, 0.01, -0.01, -0.03],
-    [-0.02, 0, 0.02, 0.04, 0.04, 0.02, 0, -0.02],
-    [0.02, 0.05, 0.06, 0.08, 0.08, 0.06, 0.05, 0.02],
-    [0, 0, 0.02, 0.04, 0.04, 0.02, 0, 0],
-  ],
-  q: [
-    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
-    [-0.1, 0, 0.05, 0.05, 0.05, 0.05, 0, -0.1],
-    [-0.1, 0.05, 0.06, 0.07, 0.07, 0.06, 0.05, -0.1],
-    [-0.05, 0.06, 0.08, 0.1, 0.1, 0.08, 0.06, -0.05],
-    [-0.05, 0.06, 0.08, 0.1, 0.1, 0.08, 0.06, -0.05],
-    [-0.1, 0.05, 0.06, 0.07, 0.07, 0.06, 0.05, -0.1],
-    [-0.1, 0, 0.05, 0.05, 0.05, 0.05, 0, -0.1],
-    [-0.2, -0.1, -0.1, -0.05, -0.05, -0.1, -0.1, -0.2],
-  ],
-  k: [
-    [0.2, 0.25, 0.1, 0, 0, 0.1, 0.25, 0.2],
-    [0.15, 0.18, 0.08, -0.1, -0.1, 0.08, 0.18, 0.15],
-    [0.1, 0.12, -0.05, -0.15, -0.15, -0.05, 0.12, 0.1],
-    [0.05, 0.08, -0.12, -0.2, -0.2, -0.12, 0.08, 0.05],
-    [0.05, 0.08, -0.12, -0.2, -0.2, -0.12, 0.08, 0.05],
-    [0.1, 0.12, -0.05, -0.15, -0.15, -0.05, 0.12, 0.1],
-    [0.15, 0.18, 0.08, -0.1, -0.1, 0.08, 0.18, 0.15],
-    [0.2, 0.25, 0.1, 0, 0, 0.1, 0.25, 0.2],
-  ],
+const DIFFICULTY_CONFIG = {
+  easy: { maxDepth: 1, widths: [40], timeMs: 800, noise: 1.2 },
+  medium: { maxDepth: 2, widths: [40, 12], timeMs: 5000, noise: 0 },
+  hard: { maxDepth: 3, widths: [20, 12, 8], timeMs: 12000, noise: 0 },
 };
 
-function mirrorForBlack(rankIndex) {
-  return 7 - rankIndex;
+function otherSide(side) {
+  return side === 'white' ? 'black' : 'white';
 }
 
-function pstValueForTypeAt(t, fileIndex, rankIndex, side) {
-  const table = PST[t];
-  if (!table) return 0;
-  const r = side === 'white' ? rankIndex : mirrorForBlack(rankIndex);
-  const f = fileIndex;
-  const v = table[r][f] || 0;
-  return v;
-}
-
-function leastNonKingType(types) {
-  if (!Array.isArray(types) || types.length === 0) return null;
-  return CAPTURE_COLLAPSE_ORDER.find((t) => types.includes(t)) || null;
-}
-
-function captureCollapseValueForTypes(types) {
-  const least = leastNonKingType(types);
-  const t = least || 'p';
-  return CAPTURE_VALUES[t];
-}
-
-function captureCollapseValueForPiece(p) {
-  if (!p || p.captured || !p.square) return 0;
-  const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-  return captureCollapseValueForTypes(types);
-}
-
-function onBoardMaterialSumForSide(pieces, side) {
-  let sum = 0;
+// Per-side attack info: which squares each side attacks, and the cheapest
+// piece-value it can bring to bear on each square. Rays respect blockers.
+function buildAttackInfo(pieces, occ) {
+  const info = {
+    white: { squares: new Set(), cheapest: new Map() },
+    black: { squares: new Set(), cheapest: new Map() },
+  };
   for (const p of pieces) {
-    if (p.side !== side) continue;
     if (p.captured || !p.square) continue;
-
-    const types = p.possibleTypes || [];
-    if (types.length === 0) continue;
-
-    const leastValuableType = leastNonKingType(types);
-    const typeToValue = leastValuableType || (types.includes('k') ? 'k' : null);
-
-    if (typeToValue) {
-      sum += CAPTURE_VALUES[typeToValue];
-    }
-  }
-  return sum;
-}
-
-function pseudoLegalMoveCountForSide(pieces, side, occ) {
-  let total = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
     const pos = fromAlgebraic(p.square);
     if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    const isFirstMove = (p.moveCount || 0) === 0;
-
-    const merged = new Set();
-    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-    for (const t of types) {
-      const list = movesForType(t, f, r, occ, side, { isFirstMove });
-      for (const sq of list) merged.add(sq);
-    }
-    total += merged.size;
-  }
-  return total;
-}
-
-function superpositionScoreForSide(pieces, side) {
-  let total = 0;
-  for (const p of pieces) {
-    if (p.side !== side) continue;
-    if (p.captured || !p.square) continue;
-    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-    if (types.length <= 1) continue;
-    total += (types.length - 1) * SUPERPOSITION_UNIT_WEIGHT;
-  }
-  return total;
-}
-
-function collapsedKingPenaltyForSide(pieces, side) {
-  let count = 0;
-  for (const p of pieces) {
-    if (p.side !== side) continue;
-    if (p.captured || !p.square) continue;
-    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-    if (types.length === 1 && types[0] === 'k') count += 1;
-  }
-  return count * COLLAPSED_KING_PENALTY;
-}
-
-function attackersToSquareWithValues(pieces, side, targetSq, occ) {
-  const out = [];
-  const toPos = fromAlgebraic(targetSq);
-  if (!toPos) return out;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    const isFirstMove = (p.moveCount || 0) === 0;
-
-    const subset = subsetTypesThatCanMakeMove(
-      p.possibleTypes,
-      f,
-      r,
-      toPos.fileIndex,
-      toPos.rankIndex,
-      occ,
-      p.side,
-      isFirstMove
-    );
-    if (!subset || subset.length === 0) continue;
-    const val = captureCollapseValueForTypes(subset);
-    out.push({ piece: p, value: val });
-  }
-  return out;
-}
-
-function defendersAfterCaptureWithValues(pieces, side, targetSq, occ, removedPieceId) {
-  const occ2 = new Map(occ);
-  if (occ2.has(targetSq)) occ2.delete(targetSq);
-
-  const out = [];
-  const toPos = fromAlgebraic(targetSq);
-  if (!toPos) return out;
-
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (p.id === removedPieceId) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    const isFirstMove = (p.moveCount || 0) === 0;
-
-    const candidateTypes = [];
-
-    if (p.possibleTypes.includes('p')) {
-      const atk = attacksForType('p', f, r, occ2, p.side) || [];
-      if (atk.includes(targetSq)) candidateTypes.push('p');
-    }
-
-    for (const t of p.possibleTypes) {
-      if (t === 'p') continue;
-      const list = movesForType(t, f, r, occ2, p.side, { isFirstMove });
-      if (list.includes(targetSq)) candidateTypes.push(t);
-    }
-
-    if (candidateTypes.length === 0) continue;
-    const val = captureCollapseValueForTypes(candidateTypes);
-    out.push({ piece: p, value: val });
-  }
-  return out;
-}
-
-function undefendedHangingValueForSide(pieces, side, occ) {
-  const opponent = side === 'white' ? 'black' : 'white';
-  let sum = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
-    if (attackers.length === 0) continue;
-    const defenders = defendersAfterCaptureWithValues(pieces, side, p.square, occ, p.id);
-    if (defenders.length === 0) {
-      sum += captureCollapseValueForPiece(p);
+    const side = info[p.side];
+    for (const t of p.possibleTypes || []) {
+      const atk = attacksForType(t, pos.fileIndex, pos.rankIndex, occ, p.side) || [];
+      const v = VAL[t] || 0;
+      for (const sq of atk) {
+        side.squares.add(sq);
+        const prev = side.cheapest.get(sq);
+        if (prev === undefined || v < prev) side.cheapest.set(sq, v);
+      }
     }
   }
-  return sum;
+  return info;
 }
 
-function tradeRiskPenaltyForSide(pieces, side, occ) {
-  const opponent = side === 'white' ? 'black' : 'white';
-  let sum = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const pVal = captureCollapseValueForPiece(p);
-    if (pVal <= 0) continue;
-
-    const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
-    if (attackers.length === 0) continue;
-
-    const defenders = defendersAfterCaptureWithValues(pieces, side, p.square, occ, p.id);
-    if (defenders.length === 0) continue; // counted as hanging elsewhere
-
-    let minOpp = Infinity;
-    for (const a of attackers) if (a.value < minOpp) minOpp = a.value;
-
-    if (minOpp < pVal) {
-      sum += (pVal - minOpp);
-    }
-  }
-  return sum;
-}
-
-function approxThreatenedSquares(pieces, side) {
+// White-positive static evaluation in pawn units.
+export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
   const occ = buildOccupancy(pieces);
-  const threatened = new Set();
+
+  // Kinglessness is a loss; catch it before anything else.
+  let whiteHolders = 0;
+  let blackHolders = 0;
+  let whiteSoleHolder = null;
+  let blackSoleHolder = null;
   for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    for (const t of p.possibleTypes) {
-      const atk = attacksForType(t, f, r, occ, p.side) || [];
-      for (const sq of atk) threatened.add(sq);
+    if (p.captured || !p.square) continue;
+    if (!(p.possibleTypes || []).includes('k')) continue;
+    if (p.side === 'white') {
+      whiteHolders += 1;
+      whiteSoleHolder = p;
+    } else {
+      blackHolders += 1;
+      blackSoleHolder = p;
     }
   }
-  return threatened;
-}
+  if (whiteHolders === 0) return -MATE;
+  if (blackHolders === 0) return MATE;
 
-function kingSafetyPenaltyForSide(pieces, side) {
-  const opp = side === 'white' ? 'black' : 'white';
-  const oppThreats = computeThreatenedSquaresForSide(pieces, opp);
-  let penalty = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (!p.possibleTypes || !p.possibleTypes.includes('k')) continue;
-    if (oppThreats.has(p.square)) penalty += KING_THREAT_WEIGHT;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const kAdj = [
-      [-1, -1], [0, -1], [1, -1],
-      [-1, 0], /*self*/ [1, 0],
-      [-1, 1], [0, 1], [1, 1],
-    ];
-    for (const [df, dr] of kAdj) {
-      const f = pos.fileIndex + df;
-      const r = pos.rankIndex + dr;
-      if (f < 0 || f > 7 || r < 0 || r > 7) continue;
-      const sq = `${'abcdefgh'[f]}${'12345678'[r]}`;
-      if (oppThreats.has(sq)) penalty += KING_SHELL_WEIGHT;
-    }
-  }
-  return -penalty;
-}
+  const attacks = buildAttackInfo(pieces, occ);
 
-function pstScoreForSide(pieces, side) {
   let score = 0;
   for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
+    const sign = p.side === 'white' ? 1 : -1;
+
+    // Material follows the game's ledger: it only changes when a piece is
+    // captured, at its collapse value. Collapsing on the board is free;
+    // ambiguity is priced as option value below.
+    if (p.captured) {
+      score -= sign * (VAL[(p.possibleTypes || [])[0]] || 0);
+      continue;
+    }
+    if (!p.square) continue;
+
+    const enemy = attacks[otherSide(p.side)];
+    const friendly = attacks[p.side];
+    const riskValue = collapseValue(p);
+    const types = p.possibleTypes || [];
     const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-    if (types.length === 0) continue;
-    let sum = 0;
-    for (const t of types) sum += pstValueForTypeAt(t, f, r, side);
-    const avg = sum / types.length;
-    score += avg * PST_WEIGHT;
+
+    // Option value of remaining ambiguity.
+    if (types.length > 1) score += sign * W.extraType * (types.length - 1);
+
+    // Decoherence damage already inflicted on this piece favors the opponent.
+    if (types.length > 2) {
+      const damage = Math.max(0, 3 - (p.coherence ?? 3));
+      score -= sign * W.oppDamage * damage;
+    }
+
+    // Hanging / bad-trade exposure, in collapse-value terms.
+    if (enemy.squares.has(p.square) && riskValue > 0.01) {
+      const defended = friendly.cheapest.has(p.square);
+      if (!defended) {
+        score -= sign * W.hangUndefended * riskValue;
+      } else {
+        const cheapest = enemy.cheapest.get(p.square) ?? 99;
+        if (cheapest < riskValue) score -= sign * W.hangBadTrade * (riskValue - cheapest);
+      }
+    }
+
+    // Positional shape: centrality, pawn progress, development.
+    if (pos) {
+      const centrality = 3.5 - Math.max(Math.abs(pos.fileIndex - 3.5), Math.abs(pos.rankIndex - 3.5));
+      score += sign * W.center * centrality;
+      if (types.includes('p')) {
+        const progress = p.side === 'white' ? pos.rankIndex - 1 : 6 - pos.rankIndex;
+        if (progress > 0) score += sign * (W.pawnAdvance * progress + W.pawnRace * progress * progress);
+      }
+    }
+    if ((p.moveCount || 0) > 0) score += sign * W.development;
   }
+
+  // Mobility via attacked-square counts.
+  score += W.mobility * (attacks.white.squares.size - attacks.black.squares.size);
+
+  // King distribution: many possible kings = a hidden king.
+  score += W.kingSpread * (Math.min(whiteHolders, KING_SPREAD_CAP) - Math.min(blackHolders, KING_SPREAD_CAP));
+
+  // A unique king holder under fire is close to losing, and pressure on the
+  // squares around it drives mating attacks in classical endgames.
+  const huntPressure = (holderSquare, attackerInfo) => {
+    const pos = fromAlgebraic(holderSquare);
+    if (!pos) return 0;
+    let count = 0;
+    for (let df = -1; df <= 1; df++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const f = pos.fileIndex + df;
+        const r = pos.rankIndex + dr;
+        if (f < 0 || f > 7 || r < 0 || r > 7) continue;
+        const sq = `${'abcdefgh'[f]}${'12345678'[r]}`;
+        if (attackerInfo.squares.has(sq)) count += 1;
+      }
+    }
+    return count;
+  };
+
+  if (whiteHolders === 1) {
+    if (attacks.black.squares.has(whiteSoleHolder.square)) {
+      const collapsed = (whiteSoleHolder.possibleTypes || []).length === 1;
+      score -= collapsed ? W.soleKingCollapsedAttacked : W.soleKingAttacked;
+    }
+    score -= W.kingHunt * huntPressure(whiteSoleHolder.square, attacks.black);
+  }
+  if (blackHolders === 1) {
+    if (attacks.white.squares.has(blackSoleHolder.square)) {
+      const collapsed = (blackSoleHolder.possibleTypes || []).length === 1;
+      score += collapsed ? W.soleKingCollapsedAttacked : W.soleKingAttacked;
+    }
+    score += W.kingHunt * huntPressure(blackSoleHolder.square, attacks.white);
+  }
+
   return score;
 }
 
-function centerControlScoreForSide(pieces, side) {
-  const threats = approxThreatenedSquares(pieces, side);
-  const main = ['d4', 'e4', 'd5', 'e5'];
-  const ext = ['c3', 'd3', 'e3', 'f3', 'c4', 'f4', 'c5', 'f5', 'c6', 'd6', 'e6', 'f6'];
-  let s = 0;
-  for (const sq of main) if (threats.has(sq)) s += CENTER_CONTROL_MAIN_WEIGHT;
-  for (const sq of ext) if (threats.has(sq)) s += CENTER_CONTROL_EXT_WEIGHT;
-  return s;
+class SearchTimeout extends Error {}
+
+// Score a no-legal-replies node from `side`'s perspective, mirroring the
+// game's terminal rules: checkmate if lost-in-check, else stalemate (draw).
+function noReplyScore(pieces, side, ply) {
+  const opp = otherSide(side);
+  const holders = pieces.filter((p) => !p.captured && p.side === side && p.square && (p.possibleTypes || []).includes('k'));
+  if (holders.length === 0) return -MATE + ply;
+  if (holders.length === 1 && canSideCaptureSquare(pieces, opp, holders[0].square)) return -MATE + ply;
+  return 0;
 }
 
-function centerOccupancyScoreForSide(pieces, side) {
-  const main = new Set(['d4', 'e4', 'd5', 'e5']);
-  const ext = new Set(['c3', 'd3', 'e3', 'f3', 'c4', 'f4', 'c5', 'f5', 'c6', 'd6', 'e6', 'f6']);
-  let s = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (main.has(p.square)) s += CENTER_OCCUPANCY_MAIN_WEIGHT;
-    else if (ext.has(p.square)) s += CENTER_OCCUPANCY_EXT_WEIGHT;
-  }
-  return s;
+function sideSign(side) {
+  return side === 'white' ? 1 : -1;
 }
 
-function developmentScoreForSide(pieces, side) {
-  let s = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const moved = (p.moveCount || 0) > 0;
-    if (!moved) continue;
-    s += DEVELOPMENT_GENERIC_WEIGHT;
-    const tset = new Set(p.possibleTypes || []);
-    if (tset.has('n') || tset.has('b')) s += DEVELOPMENT_MINOR_WEIGHT;
-    if (tset.has('r')) s += DEVELOPMENT_ROOK_WEIGHT;
-  }
-  return s;
+// Generate replies and order them best-first for `side` using the child
+// evaluations (the simulate results are already computed by the engine).
+function orderedChildren(pieces, side, ctx, lastMove = null) {
+  const replies = generateLegalReplies(pieces, side, 0, lastMove);
+  const sign = sideSign(side);
+  const scored = replies.map((mv) => ({ mv, score: sign * evaluatePosition(mv.resultPieces, ctx.W) }));
+  scored.sort((a, b) => b.score - a.score);
+  return scored;
 }
 
-function movedBreadthForSide(pieces, side) {
-  let count = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if ((p.moveCount || 0) > 0) count += 1;
-  }
-  return count * DEV_BREADTH_UNIT_WEIGHT;
-}
-
-function pawnAdvanceScoreForSide(pieces, side) {
-  let s = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (!p.possibleTypes || !p.possibleTypes.includes('p')) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const rank = pos.rankIndex;
-    const progress = side === 'white' ? rank - 1 : 6 - rank;
-    s += Math.max(0, progress) * PAWN_ADVANCE_WEIGHT;
-  }
-  return s;
-}
-
-function promotionScoreForSide(pieces, side) {
-  let s = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (p.wasPromoted) s += PROMOTION_BONUS_WEIGHT;
-  }
-  return s;
-}
-
-function pieceSafetySoftPenaltyForSide(pieces, side, occ) {
-  const opponent = side === 'white' ? 'black' : 'white';
-  let sum = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const attackers = attackersToSquareWithValues(pieces, opponent, p.square, occ);
-    if (attackers.length === 0) continue;
-    const val = captureCollapseValueForPiece(p);
-    sum += 0.1 * val;
-  }
-  return -sum;
-}
-
-function presenceCountForSide(pieces, side, typeChar) {
-  let c = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (Array.isArray(p.possibleTypes) && p.possibleTypes.includes(typeChar)) c += 1;
-  }
-  return c;
-}
-
-function presenceScoreForSide(pieces, side) {
-  const pawnPresence = presenceCountForSide(pieces, side, 'p') * PAWN_PRESENCE_WEIGHT;
-  const kingPresence = presenceCountForSide(pieces, side, 'k') * KING_PRESENCE_WEIGHT;
-  return pawnPresence + kingPresence;
-}
-
-function isCheckOnSide(pieces, side) {
-  const opp = side === 'white' ? 'black' : 'white';
-  const oppThreats = computeThreatenedSquaresForSide(pieces, opp);
-  for (const k of pieces) {
-    if (k.captured || k.side !== side || !k.square) continue;
-    if (!k.possibleTypes || !k.possibleTypes.includes('k')) continue;
-    if (oppThreats.has(k.square)) return true;
-  }
-  return false;
-}
-
-// --- Flexibility/combination valuation ---
-const FLEX_COMBO_WEIGHT = 0.95; // high incentive to keep pieces flexible
-const FLEX_BONUS_PER_EXTRA = 0.6; // bonus per extra possible type beyond 1
-const SYNERGY_BONUSES = [
-  ['b', 'q', 0.5],
-  ['r', 'q', 0.4],
-  ['b', 'r', 0.25],
-];
-
-function comboKeyFromTypes(types) {
-  const uniq = Array.from(new Set((types || []).filter(Boolean)));
-  uniq.sort();
-  return uniq.join('');
-}
-
-function comboValueFromTypes(types) {
-  const set = new Set(types || []);
-  if (set.size === 0) return 0;
-  let base = 0;
-  for (const t of set) if (t !== 'k') base = Math.max(base, CAPTURE_VALUES[t] || 0);
-  const extra = Math.max(0, set.size - 1);
-  let bonus = extra * FLEX_BONUS_PER_EXTRA;
-  for (const [a, b, v] of SYNERGY_BONUSES) {
-    if (set.has(a) && set.has(b)) bonus += v;
-  }
-  if (set.size === 1 && set.has('n')) bonus -= 0.2; // avoid early pure-knight narrowing
-  return Math.min(12, base + bonus);
-}
-
-function combinationFlexScoreForSide(pieces, side) {
-  let sum = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    const types = Array.isArray(p.possibleTypes) ? p.possibleTypes : [];
-    if (types.length <= 1) continue;
-    sum += comboValueFromTypes(types);
-  }
-  return sum * FLEX_COMBO_WEIGHT;
-}
-
-// Evaluation mode helpers
-function evaluatePositionQuantum(pieces) {
-  const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
-  const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
-  const material = wMaterial - bMaterial;
-
-  const occ = buildOccupancy(pieces);
-
-  const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
-  const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
-  const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
-
-  const wSup = superpositionScoreForSide(pieces, 'white');
-  const bSup = superpositionScoreForSide(pieces, 'black');
-  const superpos = wSup - bSup;
-
-  const wPresence = presenceScoreForSide(pieces, 'white');
-  const bPresence = presenceScoreForSide(pieces, 'black');
-  const presence = wPresence - bPresence;
-
-  const wKingPen = collapsedKingPenaltyForSide(pieces, 'white');
-  const bKingPen = collapsedKingPenaltyForSide(pieces, 'black');
-  const kingCollapse = wKingPen - bKingPen;
-
-  const wHang = undefendedHangingValueForSide(pieces, 'white', occ);
-  const bHang = undefendedHangingValueForSide(pieces, 'black', occ);
-  const exposure = -(wHang - bHang) * HANGING_WEIGHT;
-
-  const wTrade = tradeRiskPenaltyForSide(pieces, 'white', occ);
-  const bTrade = tradeRiskPenaltyForSide(pieces, 'black', occ);
-  const trade = -(wTrade - bTrade) * TRADE_RISK_WEIGHT;
-
-  const pst = pstScoreForSide(pieces, 'white') - pstScoreForSide(pieces, 'black');
-  const kingSafety = kingSafetyPenaltyForSide(pieces, 'white') - kingSafetyPenaltyForSide(pieces, 'black');
-
-  const center = centerControlScoreForSide(pieces, 'white') - centerControlScoreForSide(pieces, 'black');
-  const centerOcc = centerOccupancyScoreForSide(pieces, 'white') - centerOccupancyScoreForSide(pieces, 'black');
-  const dev = developmentScoreForSide(pieces, 'white') - developmentScoreForSide(pieces, 'black');
-  const pawnAdv = pawnAdvanceScoreForSide(pieces, 'white') - pawnAdvanceScoreForSide(pieces, 'black');
-
-  const breadth = movedBreadthForSide(pieces, 'white') - movedBreadthForSide(pieces, 'black');
-
-  const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
-
-  const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
-
-  const flexCombo = combinationFlexScoreForSide(pieces, 'white') - combinationFlexScoreForSide(pieces, 'black');
-
-  return material + mobility + superpos + presence + kingCollapse + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo + flexCombo;
-}
-
-function evaluatePositionClassical(pieces) {
-  const wMaterial = onBoardMaterialSumForSide(pieces, 'white');
-  const bMaterial = onBoardMaterialSumForSide(pieces, 'black');
-  const material = wMaterial - bMaterial;
-
-  const occ = buildOccupancy(pieces);
-
-  const wMoves = pseudoLegalMoveCountForSide(pieces, 'white', occ);
-  const bMoves = pseudoLegalMoveCountForSide(pieces, 'black', occ);
-  const mobility = (wMoves - bMoves) * MOBILITY_WEIGHT;
-
-  const wHang = undefendedHangingValueForSide(pieces, 'white', occ);
-  const bHang = undefendedHangingValueForSide(pieces, 'black', occ);
-  const exposure = -(wHang - bHang) * HANGING_WEIGHT;
-
-  const wTrade = tradeRiskPenaltyForSide(pieces, 'white', occ);
-  const bTrade = tradeRiskPenaltyForSide(pieces, 'black', occ);
-  const trade = -(wTrade - bTrade) * TRADE_RISK_WEIGHT;
-
-  const pst = pstScoreForSide(pieces, 'white') - pstScoreForSide(pieces, 'black');
-  const kingSafety = kingSafetyPenaltyForSide(pieces, 'white') - kingSafetyPenaltyForSide(pieces, 'black');
-
-  const center = centerControlScoreForSide(pieces, 'white') - centerControlScoreForSide(pieces, 'black');
-  const centerOcc = centerOccupancyScoreForSide(pieces, 'white') - centerOccupancyScoreForSide(pieces, 'black');
-  const dev = developmentScoreForSide(pieces, 'white') - developmentScoreForSide(pieces, 'black');
-  const pawnAdv = pawnAdvanceScoreForSide(pieces, 'white') - pawnAdvanceScoreForSide(pieces, 'black');
-
-  const breadth = movedBreadthForSide(pieces, 'white') - movedBreadthForSide(pieces, 'black');
-
-  const softSafety = pieceSafetySoftPenaltyForSide(pieces, 'white', occ) - pieceSafetySoftPenaltyForSide(pieces, 'black', occ);
-
-  const promo = promotionScoreForSide(pieces, 'white') - promotionScoreForSide(pieces, 'black');
-
-  // Classical excludes superposition presence, collapsed-king penalty, and combination-flex bonuses
-  return material + mobility + exposure + trade + pst + kingSafety + center + centerOcc + dev + pawnAdv + breadth + softSafety + promo;
-}
-
-function evaluatePositionForMode(pieces, mode) {
-  return mode === 'classical' ? evaluatePositionClassical(pieces) : evaluatePositionQuantum(pieces);
-}
-
-function countCapturedPieces(pieces) {
-  let c = 0;
-  for (const p of pieces) if (p.captured) c += 1;
-  return c;
-}
-
-function isCaptureMove(prevPieces, nextPieces) {
-  return countCapturedPieces(nextPieces) > countCapturedPieces(prevPieces);
-}
-
-function generateCapturingReplies(pieces, side) {
-  const replies = generateLegalReplies(pieces, side, 0);
-  const caps = [];
-  for (const mv of replies) {
-    if (isCaptureMove(pieces, mv.resultPieces)) caps.push(mv);
-  }
-  return caps;
-}
-
-// --- Static Exchange Evaluation (approximate) for landing square risk with voluntary early stop ---
-function getPieceAtSquare(pieces, sq) {
-  for (const p of pieces) {
-    if (!p.captured && p.square === sq) return p;
-  }
-  return null;
-}
-
-export function seeNetForLandingSquare(piecesAfterMove, movedSide, toSq) {
-  const occ = buildOccupancy(piecesAfterMove);
-  const occupant = occ.get(toSq);
-  if (!occupant || occupant.side !== movedSide) return 0; // not a standard single move or castle
-
-  const initialVal = captureCollapseValueForPiece(occupant);
-  const opponent = movedSide === 'white' ? 'black' : 'white';
-
-  const oppAttackers = attackersToSquareWithValues(piecesAfterMove, opponent, toSq, occ)
-    .map((a) => a.value)
-    .sort((a, b) => a - b);
-
-  const myDefenders = defendersAfterCaptureWithValues(piecesAfterMove, movedSide, toSq, occ, occupant.id)
-    .map((a) => a.value)
-    .sort((a, b) => a - b);
-
-  const memo = new Map();
-  function key(target, oi, mi, turn) {
-    return `${target}|${oi}|${mi}|${turn}`;
-  }
-
-  function rec(targetVal, oi, mi, turn) {
-    const k = key(targetVal, oi, mi, turn);
-    if (memo.has(k)) return memo.get(k);
-
-    if (turn === 'opp') {
-      let best = 0; // opponent stopping yields 0 delta
-      if (oi < oppAttackers.length) {
-        const take = -targetVal + rec(oppAttackers[oi], oi + 1, mi, 'mine');
-        best = Math.min(best, take);
-      }
-      memo.set(k, best);
-      return best;
-    } else {
-      let best = 0;
-      if (mi < myDefenders.length) {
-        const take = targetVal + rec(myDefenders[mi], oi, mi + 1, 'opp');
-        best = Math.max(best, take);
-      }
-      memo.set(k, best);
-      return best;
-    }
-  }
-
-  const net = rec(initialVal, 0, 0, 'opp');
-  return net; // positive is good for mover, negative bad
-}
-
-function approximateGamePly(pieces) {
-  let total = 0;
-  for (const p of pieces) total += (p.moveCount || 0);
-  return Math.floor(total / 2);
-}
-
-function countUnmovedFriendly(pieces, side) {
-  let count = 0;
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if ((p.moveCount || 0) === 0) count += 1;
-  }
-  return count;
-}
-
-function collapseNarrowingPenalty(prevPieces, mv, side) {
-  if (mv.type !== 'move') return 0;
-  const fromSq = mv.from;
-  const toSq = mv.to;
-  const before = getPieceAtSquare(prevPieces, fromSq);
-  if (!before || before.side !== side) return 0;
-  const after = getPieceAtSquare(mv.resultPieces, toSq);
-  if (!after || after.side !== side) return 0;
-  const beforeCount = (before.possibleTypes || []).length;
-  const afterTypes = Array.isArray(after.possibleTypes) ? after.possibleTypes : [];
-  const afterCount = afterTypes.length;
-  if (afterCount >= beforeCount) return 0;
-
-  const early = approximateGamePly(prevPieces) <= EARLY_GAME_PLY_THRESHOLD;
-  const narrowed = Math.max(0, beforeCount - afterCount);
-  const isCapture = isCaptureMove(prevPieces, mv.resultPieces);
-  if (isCapture) return 0; // allow tactical narrowing
-
-  let mult = 1;
-  if (afterCount === 1) mult *= SINGLE_TYPE_COLLAPSE_MULTIPLIER;
-  if (afterCount === 2) mult *= DOUBLE_TYPE_COLLAPSE_MULTIPLIER;
-
-  const isBQ = afterCount === 2 && afterTypes.includes('b') && afterTypes.includes('q');
-  if (isBQ) mult *= BQ_DOUBLE_TYPE_DISCOUNT;
-
-  if (early && afterCount === 1 && afterTypes[0] === 'n') {
-    mult += KNIGHT_SINGLE_COLLAPSE_EXTRA; // avoid early pure-knight collapses
-  }
-
-  return narrowed * COLLAPSE_OVER_NARROW_PENALTY * mult;
-}
-
-// --- Capture value helpers for ordering ---
-function listNewCaptures(prevPieces, nextPieces) {
-  const prevMap = new Map();
-  for (const p of prevPieces) prevMap.set(p.id, p);
-  const newly = [];
-  for (const n of nextPieces) {
-    const prev = prevMap.get(n.id);
-    if (prev && !prev.captured && n.captured) newly.push(n);
-  }
-  return newly;
-}
-
-function capturedValueDelta(prevPieces, nextPieces, moverSide) {
-  const newly = listNewCaptures(prevPieces, nextPieces);
-  let gain = 0;
-  for (const p of newly) {
-    if (p.side !== moverSide) {
-      const t = Array.isArray(p.possibleTypes) && p.possibleTypes.length > 0 ? p.possibleTypes[0] : 'p';
-      gain += CAPTURE_VALUES[t] || 0;
-    }
-  }
-  return gain;
-}
-
-function orderMoves(moves, currentEval, side, prevPieces, evalMode) {
-  const sign = side === 'white' ? 1 : -1;
-  const early = approximateGamePly(prevPieces) <= EARLY_GAME_PLY_THRESHOLD;
-  const unmovedFriends = countUnmovedFriendly(prevPieces, side);
-  const classical = evalMode === 'classical';
-
-  const ranked = moves
-    .map((m) => {
-      const nextEval = evaluatePositionForMode(m.resultPieces, evalMode);
-      const isCap = isCaptureMove(prevPieces, m.resultPieces);
-      const capBonus = isCap ? CAPTURE_ORDER_BONUS : 0;
-      const capValueBonus = isCap ? CAPTURE_VALUE_ORDER_BONUS * capturedValueDelta(prevPieces, m.resultPieces, side) : 0;
-      const castleBonus = m.type === 'castle' ? 0.25 : 0;
-
-      let seeScore = 0;
-      let riskNet = 0;
-      if (m.type === 'move') {
-        riskNet = seeNetForLandingSquare(m.resultPieces, side, m.to);
-        if (riskNet < 0) seeScore -= SEE_RISK_WEIGHT * (-riskNet);
-        else if (riskNet > 0) seeScore += SEE_GOOD_WEIGHT * riskNet;
-      }
-
-      let devScore = 0;
-      if (m.type === 'move') {
-        const moverBefore = getPieceAtSquare(prevPieces, m.from);
-        if (moverBefore) {
-          const movedCount = moverBefore.moveCount || 0;
-          if (movedCount === 0) devScore += FRESH_DEVELOPMENT_BONUS;
-          if (movedCount > 0) {
-            const baseRepeat = REPEAT_MOVER_PENALTY * Math.min(3, movedCount);
-            const breadthFactor = early ? Math.max(0.75, unmovedFriends / 10) : Math.max(0.5, unmovedFriends / 12);
-            devScore -= baseRepeat * breadthFactor;
-          }
-        }
-      }
-
-      let pawnRetention = 0;
-      if (!classical && m.type === 'move') {
-        const afterMover = getPieceAtSquare(m.resultPieces, m.to);
-        if (afterMover && afterMover.side === side && Array.isArray(afterMover.possibleTypes) && afterMover.possibleTypes.includes('p')) {
-          pawnRetention += P_RETENTION_ORDER_BONUS;
-        }
-      }
-
-      let checkBonus = 0;
-      if (m.type === 'move' || m.type === 'castle') {
-        const nextSide = side === 'white' ? 'black' : 'white';
-        if (isCheckOnSide(m.resultPieces, nextSide)) checkBonus += CHECK_ORDER_BONUS;
-      }
-
-      const collapsePenalty = classical ? 0 : collapseNarrowingPenalty(prevPieces, m, side);
-
-      let losingCapturePenalty = 0;
-      if (isCap && m.type === 'move' && riskNet < LOSING_CAPTURE_DROP_THRESHOLD) {
-        const evalGain = sign * (nextEval - currentEval);
-        const allowExtreme = checkBonus > 0 || evalGain >= EXTREME_GAIN_THRESHOLD;
-        if (!allowExtreme) losingCapturePenalty = LOSING_CAPTURE_HARD_PENALTY;
-      }
-
-      const jitter = (Math.random() - 0.5) * RANDOM_MOVE_JITTER;
-
-      const score = sign * (nextEval - currentEval) + capBonus + capValueBonus + castleBonus + seeScore + devScore + pawnRetention + checkBonus - collapsePenalty - losingCapturePenalty + jitter;
-      return { m, score, meta: { isCap, capValue: capValueBonus / (CAPTURE_VALUE_ORDER_BONUS || 1), seeScore, devScore, collapsePenalty, losingCapturePenalty } };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  if (DEBUG_AI) {
-    try {
-      const top = ranked.slice(0, Math.min(8, ranked.length));
-      console.debug('[AI][orderMoves]', {
-        side,
-        early,
-        unmovedFriends,
-        mode: evalMode,
-        top: top.map((x) => ({
-          type: x.m.type,
-          from: x.m.from || (x.m.plan ? `${x.m.plan.piece1_from},${x.m.plan.piece2_from}` : ''),
-          to: x.m.to || (x.m.plan ? `${x.m.plan.piece1_to},${x.m.plan.piece2_to}` : ''),
-          score: Number(x.score.toFixed(3)),
-          isCap: x.meta.isCap,
-          capValue: x.meta.capValue,
-          see: Number(x.meta.seeScore.toFixed(3)),
-          dev: Number(x.meta.devScore.toFixed(3)),
-          collapse: Number(x.meta.collapsePenalty.toFixed(3)),
-          loseCap: Number((x.meta.losingCapturePenalty || 0).toFixed(3)),
-        }))
-      });
-    } catch (_) {}
-  }
-
-  return ranked.map((x) => x.m);
-}
-
-function quiescenceSearch(pieces, side, alpha, beta, rootSide, qPlies, evalMode) {
-  const standPatVal = evaluatePositionForMode(pieces, evalMode);
-  const standPat = (rootSide === 'white' ? 1 : -1) * standPatVal;
-
-  if (standPat >= beta) return { score: beta, move: null };
-  if (alpha < standPat) alpha = standPat;
-  if (qPlies <= 0) return { score: standPat, move: null };
-
-  const caps = generateCapturingReplies(pieces, side);
-  if (caps.length === 0) return { score: standPat, move: null };
-
-  const ordered = orderMoves(caps, standPatVal, side, pieces, evalMode);
-
-  let bestMove = null;
-  if (side === rootSide) {
-    let best = -Infinity;
-    for (const mv of ordered) {
-      const nextSide = side === 'white' ? 'black' : 'white';
-      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1, evalMode);
-      if (res.score > best) { best = res.score; bestMove = mv; }
+function negamax(pieces, side, depth, ply, alpha, beta, ctx) {
+  ctx.nodes += 1;
+  if ((ctx.nodes & 15) === 0 && performance.now() > ctx.deadline) throw new SearchTimeout();
+
+  if (depth <= 0) return sideSign(side) * evaluatePosition(pieces, ctx.W);
+
+  const children = orderedChildren(pieces, side, ctx);
+  if (children.length === 0) return noReplyScore(pieces, side, ply);
+
+  const width = ctx.widths[Math.min(ply, ctx.widths.length - 1)] || 8;
+  const limit = Math.min(children.length, width);
+
+  let best = -Infinity;
+  for (let i = 0; i < limit; i++) {
+    const child = children[i].mv;
+    // Immediate decisive results shortcut deeper search.
+    if (Math.abs(children[i].score) >= MATE - 100) {
+      const s = children[i].score >= MATE - 100 ? MATE - ply : -MATE + ply;
+      if (s > best) best = s;
       if (best > alpha) alpha = best;
-      if (beta <= alpha) break;
+      if (alpha >= beta) break;
+      continue;
     }
-    return { score: best, move: bestMove };
-  } else {
-    let best = Infinity;
-    for (const mv of ordered) {
-      const nextSide = side === 'white' ? 'black' : 'white';
-      const res = quiescenceSearch(mv.resultPieces, nextSide, alpha, beta, rootSide, qPlies - 1, evalMode);
-      if (res.score < best) { best = res.score; bestMove = mv; }
-      if (best < beta) beta = best;
-      if (beta <= alpha) break;
-    }
-    return { score: best, move: bestMove };
+    const s = -negamax(child.resultPieces, otherSide(side), depth - 1, ply + 1, -beta, -alpha, ctx);
+    if (s > best) best = s;
+    if (best > alpha) alpha = best;
+    if (alpha >= beta) break;
   }
+  return best;
 }
 
-function moveIsInAllowedRootSet(mv, prevPieces, allowedSet) {
-  if (!allowedSet || allowedSet.size === 0) return true;
-  if (!mv) return false;
-  if (mv.type === 'move' && mv.from) {
-    const mover = getPieceAtSquare(prevPieces, mv.from);
-    if (!mover) return false;
-    return allowedSet.has(mover.id);
-  }
-  if (mv.type === 'castle' && mv.plan) {
-    return allowedSet.has(mv.plan.piece1_id) || allowedSet.has(mv.plan.piece2_id);
-  }
-  return false;
-}
+// Iterative-deepening search. Returns { move, score, depth, nodes } where
+// score is from the mover's perspective. onDepthComplete (optional) receives
+// the best move after each completed depth for progressive reporting.
+export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot = null, lastMove = null, onDepthComplete = null }) {
+  const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
+  const cfg = { ...base, ...((bot && bot.search) || {}) };
+  const W = { ...DEFAULT_WEIGHTS, ...((bot && bot.weights) || {}) };
+  const root = clonePieces(pieces);
 
-function alphaBeta(pieces, side, depth, alpha, beta, rootSide, allowedRootPieceIdsForThisPly = null, evalMode = 'quantum') {
-  if (depth === 0) {
-    return quiescenceSearch(pieces, side, alpha, beta, rootSide, QUIESCENCE_MAX_PLIES, evalMode);
-  }
-
-  let replies = generateLegalReplies(pieces, side, 0);
-
-  if (Array.isArray(allowedRootPieceIdsForThisPly) && allowedRootPieceIdsForThisPly.length > 0) {
-    const allowedSet = new Set(allowedRootPieceIdsForThisPly);
-    const filtered = replies.filter((mv) => moveIsInAllowedRootSet(mv, pieces, allowedSet));
-    if (filtered.length > 0) replies = filtered;
-  }
-
-  if (replies.length === 0) {
-    const val = evaluatePositionForMode(pieces, evalMode);
-    const score = (rootSide === 'white' ? 1 : -1) * val;
-    return { score, move: null };
-  }
-
-  const currentEval = evaluatePositionForMode(pieces, evalMode);
-  const ordered = orderMoves(replies, currentEval, side, pieces, evalMode);
-
-  let bestMove = null;
-  if (side === rootSide) {
-    let best = -Infinity;
-    for (const mv of ordered) {
-      const nextSide = side === 'white' ? 'black' : 'white';
-      const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null, evalMode);
-      if (res.score > best) { best = res.score; bestMove = mv; }
-      alpha = Math.max(alpha, best);
-      if (beta <= alpha) break;
+  // Opening variety: a bot's very first move of the game is a uniformly
+  // random quiet move (never a capture), at every difficulty — restricted
+  // to its own half of the board so it never collapses a piece deep into
+  // enemy territory and hangs it on move one. Exception: if the opponent's
+  // opener already captured one of our pieces, skip the script and search
+  // for real — the bot is allowed to take back.
+  const sideHasMoved = root.some((p) => p.side === sideToMove && (p.moveCount || 0) > 0);
+  const sideHasLosses = root.some((p) => p.side === sideToMove && p.captured);
+  if (!sideHasMoved && !sideHasLosses) {
+    const replies = generateLegalReplies(root, sideToMove, 0, lastMove);
+    const occupied = new Set(root.filter((p) => !p.captured && p.square).map((p) => p.square));
+    const quiet = replies.filter((mv) => {
+      if (mv.type !== 'move' || occupied.has(mv.to)) return false;
+      const rank = parseInt(mv.to.slice(1), 10);
+      return sideToMove === 'white' ? rank <= 4 : rank >= 5;
+    });
+    if (quiet.length > 0) {
+      const pick = quiet[Math.floor(Math.random() * quiet.length)];
+      return { move: pick, score: 0, depth: 0, nodes: 0 };
     }
-    return { score: best, move: bestMove };
-  } else {
-    let best = Infinity;
-    for (const mv of ordered) {
-      const nextSide = side === 'white' ? 'black' : 'white';
-      const ext = isCaptureMove(pieces, mv.resultPieces) || isCheckOnSide(mv.resultPieces, nextSide) ? 1 : 0;
-      const res = alphaBeta(mv.resultPieces, nextSide, Math.max(0, depth - 1 + ext), alpha, beta, rootSide, null, evalMode);
-      if (res.score < best) { best = res.score; bestMove = mv; }
-      beta = Math.min(beta, best);
-      if (beta <= alpha) break;
-    }
-    return { score: best, move: bestMove };
-  }
-}
-
-export function stateIsFullyCollapsed(pieces) {
-  for (const p of pieces) {
-    if (p.captured) continue;
-    if (!p.square) continue;
-    const len = Array.isArray(p.possibleTypes) ? p.possibleTypes.length : 0;
-    if (len !== 1) return false;
-  }
-  return true;
-}
-
-export default function pickBestMove({ pieces, sideToMove, difficulty = 'medium', allowedRootPieceIds = [], engineMode = 'auto' }) {
-  const depth = difficulty === 'hard' ? 4 : difficulty === 'easy' ? 1 : 3;
-  const rootPieces = clonePieces(pieces);
-  const rootSide = sideToMove;
-
-  const evalMode = engineMode === 'auto' ? (stateIsFullyCollapsed(rootPieces) ? 'classical' : 'quantum') : (engineMode === 'classical' ? 'classical' : 'quantum');
-
-  const res = alphaBeta(rootPieces, rootSide, depth, -Infinity, Infinity, rootSide, Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds : [], evalMode);
-
-  try {
-    let legal = generateLegalReplies(rootPieces, rootSide, 0);
-
-    if (Array.isArray(allowedRootPieceIds) && allowedRootPieceIds.length > 0) {
-      const allowedSet = new Set(allowedRootPieceIds);
-      const filtered = legal.filter((mv) => moveIsInAllowedRootSet(mv, rootPieces, allowedSet));
-      if (filtered.length > 0) legal = filtered;
-    }
-
-    if (Array.isArray(legal) && legal.length > 0) {
-      const currentEval = evaluatePositionForMode(rootPieces, evalMode);
-      const ordered = orderMoves(legal, currentEval, rootSide, rootPieces, evalMode);
-      const top = ordered.slice(0, Math.min(3, ordered.length));
-      const prob = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 0.3 : 0.1;
-      let chosen = res.move || null;
-      if (top.length > 1 && Math.random() < prob) {
-        chosen = top[Math.floor(Math.random() * top.length)] || res.move || null;
-      }
-      if (DEBUG_AI) {
-        try {
-          const pick = chosen || null;
-          console.debug('[AI][rootPick]', {
-            side: rootSide,
-            depth,
-            difficulty,
-            restricted: Array.isArray(allowedRootPieceIds) ? allowedRootPieceIds.length : 0,
-            mode: evalMode,
-            chosen: pick ? { type: pick.type, from: pick.from || (pick.plan ? `${pick.plan.piece1_from},${pick.plan.piece2_from}` : ''), to: pick.to || (pick.plan ? `${pick.plan.piece1_to},${pick.plan.piece2_to}` : '') } : null,
-          });
-        } catch (_) {}
-      }
-      return chosen;
-    }
-  } catch (_) {
-    // ignore randomness fallback errors
   }
 
-  if (DEBUG_AI) {
+  const deadline = performance.now() + cfg.timeMs;
+  const ctx = { deadline, nodes: 0, widths: cfg.widths, W };
+
+  // As the board classicalizes, positions get cheaper to simulate and the
+  // branching shrinks — spend the same time budget on more depth. Iterative
+  // deepening plus the deadline make an optimistic cap safe.
+  let maxDepth = cfg.maxDepth;
+  if (difficulty !== 'easy') {
+    const alive = root.filter((p) => !p.captured && p.square).length;
+    let extraTypes = 0;
+    for (const p of root) {
+      if (!p.captured && p.square) extraTypes += Math.max(0, (p.possibleTypes || []).length - 1);
+    }
+    if (alive <= 10 || extraTypes <= 4) maxDepth = cfg.maxDepth + 3;
+    else if (alive <= 14 || extraTypes <= 10) maxDepth = cfg.maxDepth + 2;
+    else if (extraTypes <= 24) maxDepth = cfg.maxDepth + 1;
+  }
+
+  const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove);
+  if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
+
+  // Depth-1 result is always available instantly.
+  let best = { move: rootChildren[0].mv, score: rootChildren[0].score, depth: 1, nodes: ctx.nodes };
+  if (typeof onDepthComplete === 'function') onDepthComplete(best);
+
+  const rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
+
+  for (let depth = 2; depth <= maxDepth; depth++) {
     try {
-      const mv = res.move || null;
-      console.debug('[AI][rootPickFallback]', {
-        side: rootSide,
-        move: mv ? { type: mv.type, from: mv.from || (mv.plan ? `${mv.plan.piece1_from},${mv.plan.piece2_from}` : ''), to: mv.to || (mv.plan ? `${mv.plan.piece1_to},${mv.plan.piece2_to}` : '') } : null,
-      });
-    } catch (_) {}
+      let alpha = -Infinity;
+      let depthBest = null;
+      for (let i = 0; i < rootWidth; i++) {
+        const child = rootChildren[i];
+        let s;
+        if (Math.abs(child.score) >= MATE - 100) {
+          s = child.score;
+        } else {
+          s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, -alpha, ctx);
+        }
+        if (!depthBest || s > depthBest.score) depthBest = { move: child.mv, score: s };
+        if (s > alpha) alpha = s;
+      }
+      if (depthBest) {
+        best = { move: depthBest.move, score: depthBest.score, depth, nodes: ctx.nodes };
+        if (typeof onDepthComplete === 'function') onDepthComplete(best);
+      }
+    } catch (err) {
+      if (err instanceof SearchTimeout) break;
+      throw err;
+    }
+    if (performance.now() > deadline) break;
   }
 
-  return res.move || null;
+  // Easy mode: blur the top of the root ordering so play is beatable.
+  if (cfg.noise > 0 && rootChildren.length > 1) {
+    const jittered = rootChildren
+      .slice(0, Math.min(6, rootChildren.length))
+      .map((c) => ({ mv: c.mv, s: c.score + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .sort((a, b) => b.s - a.s);
+    return { ...best, move: jittered[0].mv };
+  }
+
+  return best;
 }

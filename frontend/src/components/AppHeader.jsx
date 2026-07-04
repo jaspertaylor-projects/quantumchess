@@ -4,7 +4,7 @@
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import RasterizedSvgImg from '../chessboard/RasterizedSvgImg.jsx';
+import StyledSvgImg from '../chessboard/StyledSvgImg.jsx';
 
 import imgP from '../assets/p.svg?url';
 import imgN from '../assets/n.svg?url';
@@ -107,12 +107,11 @@ function HeaderPieceIcon({ t, sideCssVars }) {
           onError={() => setUseFallback(true)}
         />
       ) : (
-        <RasterizedSvgImg
+        <StyledSvgImg
           srcSvgUrl={srcSvg}
           cssVarMap={sideCssVars}
           idPrefix={`hdr-${t}`}
           size={renderSize}
-          renderHint={renderSize <= 32 ? 'crisp' : 'precision'}
           className="qc-title-icon-fallback"
           style={innerStyle}
           alt=""

@@ -121,7 +121,7 @@ services:
         if [ ! -d /app/node_modules/.pnpm ] || [ ! -f "$MODS" ] \
           || [ /app/pnpm-lock.yaml -nt "$MODS" ] || [ /app/package.json -nt "$MODS" ]; then
           echo "[frontend] Installing dependencies..."
-          pnpm install --frozen-lockfile || pnpm install
+          pnpm install --frozen-lockfile --config.ignore-scripts=false || pnpm install --config.ignore-scripts=false
         fi
 
         exec su-exec ${UID:-1000}:${GID:-1000} pnpm run dev

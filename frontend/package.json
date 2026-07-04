@@ -20,5 +20,6 @@
     "@vitejs/plugin-react": "^4.2.1",
     "vite": "^5.0.8",
     "vite-plugin-svgr": "^4.5.0"
-  }
+  },
+  "packageManager": "pnpm@8.15.6"
 }

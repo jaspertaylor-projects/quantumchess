@@ -225,12 +225,12 @@ export function connectToRoomWs({
   return api;
 }
 
-export function sendMoveWs(api, { roomId, clientId, from, to, side }) {
+export function sendMoveWs(api, { roomId, clientId, from, to, side, enPassant = false, measureTargetId = null }) {
   if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
-  api.send({ type: 'move', roomId, clientId, from, to, side });
+  api.send({ type: 'move', roomId, clientId, from, to, side, enPassant: Boolean(enPassant), measureTargetId: measureTargetId || null });
 }
 
-export function sendCastleWs(api, { roomId, clientId, side, plan }) {
+export function sendCastleWs(api, { roomId, clientId, side, plan, measureTargetId = null }) {
   if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
   api.send({
     type: 'castle',
@@ -241,5 +241,13 @@ export function sendCastleWs(api, { roomId, clientId, side, plan }) {
     piece1_to: plan.piece1_to,
     piece2_from: plan.piece2_from,
     piece2_to: plan.piece2_to,
+    measureTargetId: measureTargetId || null,
   });
+}
+
+// Report a rules-based game end (checkmate, stalemate, draw) so the server
+// stops the clocks and informs both players.
+export function sendGameOverWs(api, { roomId, clientId, winner = null, reason = 'rules' }) {
+  if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
+  api.send({ type: 'game_over', roomId, clientId, winner, reason });
 }

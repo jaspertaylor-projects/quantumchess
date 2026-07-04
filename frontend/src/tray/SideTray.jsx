@@ -12,6 +12,7 @@ import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, F
 
 export default function SideTray({
   height = 0,
+  stacked = false,
   infoMessage = '',
   onOpenSettings = () => {},
   onOpenRules = () => {},
@@ -22,6 +23,8 @@ export default function SideTray({
   externalIndex = undefined,
   isPlaying = false,
   onResign = () => {},
+  onRequestNewGame = () => {},
+  newGameSignal = 0,
   onOfferDraw = () => {},
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
@@ -31,6 +34,12 @@ export default function SideTray({
       setView('history');
     }
   }, [isPlaying]);
+
+  // App bumps this after the player confirms "End & New Game": jump straight
+  // to the new-game setup panel.
+  useEffect(() => {
+    if (newGameSignal > 0) setView('new-game');
+  }, [newGameSignal]);
 
   const handleStartGame = (settings) => {
     onStartGame(settings);
@@ -44,9 +53,11 @@ export default function SideTray({
   const styles = useMemo(
     () => ({
       root: {
-        width: 'clamp(260px, 38vmin, 360px)',
-        minWidth: 240,
-        height: height || '100%',
+        width: stacked ? '100%' : 'clamp(260px, 38vmin, 360px)',
+        minWidth: stacked ? 0 : 240,
+        height: stacked ? 'auto' : (height || '100%'),
+        flex: stacked ? '1 1 0' : undefined,
+        minHeight: stacked ? 140 : undefined,
         maxHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -93,7 +104,8 @@ export default function SideTray({
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: stacked ? 'auto' : 'hidden',
+        WebkitOverflowScrolling: 'touch',
       },
       actionGroup: {
         display: 'flex',
@@ -102,7 +114,7 @@ export default function SideTray({
         flexWrap: 'wrap',
       },
     }),
-    [height]
+    [height, stacked]
   );
 
   const titleText = !isPlaying ? 'New Game' : 'Game Actions';
@@ -132,6 +144,21 @@ export default function SideTray({
               </>
             ) : (
               <>
+                <IconButton
+                  icon={PlusIcon}
+                  size={18}
+                  width={32}
+                  height={32}
+                  title="New Game"
+                  ariaLabel="End this game and start a new one"
+                  className="qc-side-tray-new-game-btn"
+                  onClick={onRequestNewGame}
+                  bg={'transparent'}
+                  color={theme.success}
+                  hoverInvert={true}
+                  hoverBg={theme.success}
+                  hoverColor={'#ffffff'}
+                />
                 <IconButton
                   icon={FlagIcon}
                   size={18}

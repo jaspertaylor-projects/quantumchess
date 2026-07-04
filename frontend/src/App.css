@@ -45,3 +45,13 @@ button:hover {
   border-color: var(--color-buttonGenericBorderHover);
   background-color: var(--color-buttonGenericBackgroundHover);
 }
+
+/* Measurement target ring: rotating dashed reticle over the marked enemy piece */
+@keyframes qc-target-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.qc-measure-target-ring {
+  animation: qc-target-spin 6s linear infinite;
+}
