@@ -1,5 +1,21 @@
 # Human TODO — things only you can do
 
+## Accounts (Supabase — code is wired, needs one-time setup)
+- [ ] Enable the GitHub integration (repo: jaspertaylor-projects/quantumchess,
+      working dir ".", production branch "main", Deploy to production ON,
+      Automatic branching OFF — it bills outside the spend cap). The schema
+      in supabase/migrations/ then applies on merge to main.
+      Fallback if the storage-policy section of the migration errors: paste
+      that section into the SQL Editor once by hand.
+- [ ] Auth settings check (Dashboard → Authentication → Sign In/Providers):
+      email+password should be enabled; decide whether to keep
+      "Confirm email" on (default) — with it on, users must click the
+      email link before first sign-in.
+- [ ] To grant paid tier manually until Stripe exists:
+      `update qc_profiles set tier = 'paid' where id = '<user uuid>';`
+- [ ] Later: Stripe Checkout + webhook to flip tier automatically, and
+      move rating updates server-side before any public leaderboard.
+
 ## Release blockers
 - [ ] Buy a domain and deploy the site to it (HTTPS). This is the critical
       path for everything ad-related — AdSense reviews the live site.

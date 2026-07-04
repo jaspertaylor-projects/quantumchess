@@ -18,6 +18,9 @@ import RulesModal from './tray/RulesModal.jsx';
 import TutorialModal from './tutorial/TutorialModal.jsx';
 import ConfirmModal from './components/ConfirmModal.jsx';
 import { initAds, maybeShowGameEndAd } from './ads/adService.js';
+import useAuth from './account/useAuth.js';
+import AccountModal from './account/AccountModal.jsx';
+import { recordFinishedGame } from './account/gameSync.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
@@ -133,6 +136,7 @@ export default function App() {
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
   const { measurementColors, setMeasurementColors } = useMeasurementColors();
   const { indicators, setIndicators } = useIndicatorSettings();
+  const auth = useAuth();
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
@@ -179,10 +183,13 @@ export default function App() {
   };
   const strangerAvatar = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: '' };
   const isOnlineBars = isOnlineGameRef.current;
+  // Signed-in players appear under their unique account username and rating.
+  const selfName = (auth.profile && auth.profile.username) || 'Anonymous';
+  const selfRating = auth.profile && Number.isFinite(auth.profile.rating) ? auth.profile.rating : '????';
   const nameFor = (side) => {
     if (botSide === side) return aiBot.name;
     if (isOnlineBars) return side === 'white' ? 'White' : 'Black';
-    return side === userTeam ? 'Anonymous' : 'Stranger';
+    return side === userTeam ? selfName : 'Stranger';
   };
   const avatarFor = (side) => {
     if (botSide === side) return botAvatar;
@@ -191,8 +198,13 @@ export default function App() {
   };
   const whitePlayer = nameFor('white');
   const blackPlayer = nameFor('black');
-  const whiteRating = botSide === 'white' ? aiBot.rating : '????';
-  const blackRating = botSide === 'black' ? aiBot.rating : '????';
+  const ratingFor = (side) => {
+    if (botSide === side) return aiBot.rating;
+    if (!isOnlineBars && side === userTeam) return selfRating;
+    return '????';
+  };
+  const whiteRating = ratingFor('white');
+  const blackRating = ratingFor('black');
   const whiteAvatar = avatarFor('white');
   const blackAvatar = avatarFor('black');
   // The bar layout follows the table: your side sits at the bottom, the
@@ -328,6 +340,42 @@ export default function App() {
   useEffect(() => {
     if (showWinPopup) maybeShowGameEndAd();
   }, [showWinPopup]);
+
+  // Accounts (optional): save finished games for signed-in players and
+  // apply Elo against rated bots. Saved exactly once per game end.
+  const [accountOpen, setAccountOpen] = useState(false);
+  const gameRecordedRef = useRef(false);
+  useEffect(() => {
+    if (!showWinPopup) {
+      gameRecordedRef.current = false;
+      return;
+    }
+    if (gameRecordedRef.current || !auth.user) return;
+    gameRecordedRef.current = true;
+
+    const text = externalGameOver.over ? externalGameOver.text || '' : '';
+    const winnerSide = gameOver
+      ? winner || null
+      : /White (wins|resigns)/i.test(text)
+        ? (/resigns/i.test(text) ? 'black' : 'white')
+        : /Black (wins|resigns)/i.test(text)
+          ? (/resigns/i.test(text) ? 'white' : 'black')
+          : null;
+    const result = winnerSide == null ? 'draw' : winnerSide === userTeam ? 'win' : 'loss';
+    const vsBot = Boolean(aiBot) && !isOnlineGameRef.current;
+
+    recordFinishedGame({
+      user: auth.user,
+      profile: auth.profile,
+      opponent: vsBot ? aiBot.id : (isOnlineGameRef.current ? 'online' : 'local'),
+      opponentRating: vsBot ? aiBot.rating : null,
+      userSide: userTeam,
+      result,
+      moves,
+    })
+      .then(() => auth.refreshProfile())
+      .catch(() => {});
+  }, [showWinPopup, gameOver, winner, externalGameOver, userTeam, aiBot, moves]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
@@ -1336,6 +1384,8 @@ export default function App() {
                   onOfferDraw={handleOfferDraw}
                   onRequestNewGame={handleRequestNewGame}
                   newGameSignal={newGameSignal}
+                  onOpenAccount={() => setAccountOpen(true)}
+                  accountSignedIn={Boolean(auth.user)}
                 />
               );
               const whiteBarEl = (
@@ -1441,6 +1491,8 @@ export default function App() {
           setTutorialOpen(true);
         }}
       />
+
+      <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} auth={auth} />
 
       <ConfirmModal
         open={Boolean(confirmState)}

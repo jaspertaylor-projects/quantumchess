@@ -8,7 +8,7 @@ import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon } from 'lucide-react';
 
 export default function SideTray({
   height = 0,
@@ -25,6 +25,8 @@ export default function SideTray({
   onResign = () => {},
   onRequestNewGame = () => {},
   newGameSignal = 0,
+  onOpenAccount = () => {},
+  accountSignedIn = false,
   onOfferDraw = () => {},
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
@@ -188,6 +190,19 @@ export default function SideTray({
               </>
             )}
 
+            <IconButton
+              icon={UserIcon}
+              size={16}
+              width={32}
+              height={32}
+              title={accountSignedIn ? 'Account' : 'Sign In'}
+              ariaLabel="Open account panel"
+              className="qc-side-tray-account-btn"
+              onClick={onOpenAccount}
+              bg={theme.secondary}
+              color={accountSignedIn ? theme.success : theme.primary}
+              hoverInvert={true}
+            />
             <IconButton
               icon={BookOpenIcon}
               size={16}
