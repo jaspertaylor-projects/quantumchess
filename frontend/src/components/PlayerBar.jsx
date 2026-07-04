@@ -167,6 +167,7 @@ export default function PlayerBar({
   side = 'white',
   playerName = 'Player',
   rating = '????',
+  onRatingClick = null,
   playerBarColors = { background: '#000', text: '#fff' },
   clockText = '—:—',
   clockActive = false,
@@ -305,12 +306,33 @@ export default function PlayerBar({
       <div className={`qc-player-info qc-player-info--${side}`} style={styles.playerInfo}>
         <div className={`qc-player-name-row qc-player-name-row--${side}`} style={styles.playerNameRow}>
           <span className={`qc-player-name-text qc-player-name-text--${side}`}>{playerName}</span>
-          <span
-            className={`qc-player-rating-text qc-player-rating-text--${side}`}
-            style={styles.playerRatingText}
-          >
-            ({rating})
-          </span>
+          {onRatingClick ? (
+            <button
+              type="button"
+              className={`qc-player-rating-text qc-player-rating-text--${side} qc-player-rating-cta`}
+              style={{
+                ...styles.playerRatingText,
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                textDecoration: 'underline dotted',
+                textUnderlineOffset: 3,
+              }}
+              onClick={onRatingClick}
+              title="Get a rating — create a free account"
+              aria-label="Get a rating by creating a free account"
+            >
+              ({rating})
+            </button>
+          ) : (
+            <span
+              className={`qc-player-rating-text qc-player-rating-text--${side}`}
+              style={styles.playerRatingText}
+            >
+              ({rating})
+            </span>
+          )}
         </div>
         <div className={`qc-player-rating-row qc-player-rating-row--${side}`} style={styles.playerRatingRow}>
           {showClock && (

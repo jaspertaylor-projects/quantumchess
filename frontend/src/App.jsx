@@ -212,10 +212,15 @@ export default function App() {
   const topBarSide = userTeam === 'white' ? 'black' : 'white';
   const bottomBarSide = userTeam;
 
+  // Signed-out players' "????" rating doubles as a sign-up call to action.
+  const ratingClickFor = (side) =>
+    !isOnlineBars && side === userTeam && !auth.user ? () => setAccountOpen(true) : null;
+
   const barPropsFor = (side) => (side === 'white' ? {
     side: 'white',
     playerName: whitePlayer,
     rating: whiteRating,
+    onRatingClick: ratingClickFor('white'),
     avatar: whiteAvatar,
     tagline: botSide === 'white' ? (aiBot.tagline || null) : null,
     clockText: effectiveClock.whiteText,
@@ -227,6 +232,7 @@ export default function App() {
     side: 'black',
     playerName: blackPlayer,
     rating: blackRating,
+    onRatingClick: ratingClickFor('black'),
     avatar: blackAvatar,
     tagline: botSide === 'black' ? (aiBot.tagline || null) : null,
     clockText: effectiveClock.blackText,
