@@ -83,13 +83,17 @@ export function initAds() {
     window.adsbygoogle.requestNonPersonalizedAds = 1;
   }
 
-  const s = document.createElement('script');
-  s.async = true;
-  s.crossOrigin = 'anonymous';
-  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CLIENT)}`;
-  s.setAttribute('data-ad-frequency-hint', '120s');
-  if (TEST_MODE) s.setAttribute('data-adbreak-test', 'on');
-  document.head.appendChild(s);
+  // The AdSense script is loaded statically from index.html <head>. Only
+  // inject it here if it isn't already present (avoids a duplicate tag).
+  if (!document.querySelector('script[src*="adsbygoogle.js"]')) {
+    const s = document.createElement('script');
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(CLIENT)}`;
+    s.setAttribute('data-ad-frequency-hint', '120s');
+    if (TEST_MODE) s.setAttribute('data-adbreak-test', 'on');
+    document.head.appendChild(s);
+  }
 
   adConfig({ preloadAdBreaks: 'on', sound: 'off' });
 }

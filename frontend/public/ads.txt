@@ -1,3 +1,1 @@
-# Placeholder — replace this file's contents with the exact line AdSense
-# gives you after approval (AdSense -> Sites -> ads.txt). It looks like:
-# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+google.com, pub-5481833391571778, DIRECT, f08c47fec0942fa0
