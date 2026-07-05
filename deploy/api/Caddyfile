@@ -1,0 +1,8 @@
+# Caddy config for the API box (api.quantumchess.ninja).
+# Caddy auto-provisions and renews the Let's Encrypt certificate, and
+# proxies WebSocket upgrades to the FastAPI relay automatically.
+
+api.quantumchess.ninja {
+	encode gzip
+	reverse_proxy backend:8000
+}

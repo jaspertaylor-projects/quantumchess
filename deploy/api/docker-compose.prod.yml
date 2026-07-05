@@ -1,0 +1,36 @@
+# Production compose for the API box (one small EC2/Lightsail instance).
+# Run from this directory:  docker compose -f docker-compose.prod.yml up -d
+#
+# IMPORTANT: exactly ONE backend instance. Matchmaking and live-game state
+# are in-memory; horizontal scaling would need shared state (Redis) first.
+
+services:
+  backend:
+    build:
+      context: ../../backend
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_DIR=/logs
+    volumes:
+      - api_logs:/logs
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  api_logs:
+  caddy_data:
+  caddy_config:
