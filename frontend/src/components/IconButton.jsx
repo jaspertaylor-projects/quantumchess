@@ -58,13 +58,18 @@ export default function IconButton({
         transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.06s ease',
         WebkitTapHighlightColor: 'transparent',
         position: glow || hint ? 'relative' : undefined,
-        ...(glow
+        // Pulse only when NOT hovered; on hover freeze to a static glow so the
+        // neon hint (a child of this button) doesn't scale/pulse with it.
+        ...(glow && !hovered
           ? { animation: 'qc-onboard-pulse 1.5s ease-in-out infinite', ['--qc-glow']: glowColor }
+          : {}),
+        ...(glow && hovered
+          ? { boxShadow: `0 0 12px 3px ${glowColor}, 0 2px 8px ${shadow}` }
           : {}),
         ...style,
       },
     }),
-    [width, height, radius, bgColor, iconColor, shadow, style, glow, glowColor, hint]
+    [width, height, radius, bgColor, iconColor, shadow, style, glow, glowColor, hint, hovered]
   );
 
   return (

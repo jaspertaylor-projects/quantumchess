@@ -237,6 +237,10 @@ export default function SideTray({
               onClick={onOpenSettings}
               bg={theme.secondary}
               color={theme.primary}
+              glow={onboarding}
+              glowColor="#c792ea"
+              hint={onboarding ? 'Customize colors, board & reminders' : ''}
+              hintColor="#c792ea"
               hoverInvert={true}
             />
           </div>

@@ -779,8 +779,8 @@ export default function App() {
     setTrayHighlights([]);
   }, []);
 
-  const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   // Engaging with a glowing onboarding button also retires the glow.
+  const handleOpenSettings = useCallback(() => { setSettingsOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenRules = useCallback(() => { setRulesOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenAccount = useCallback(() => { setAccountOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
 
