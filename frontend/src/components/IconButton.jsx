@@ -25,10 +25,11 @@ export default function IconButton({
   shadow = theme.shadow,
   glow = false, // onboarding: pulse to draw attention
   glowColor = '#4fc3f7',
-  hint = '', // onboarding: neon sign shown on hover
-  hintColor = '#4fc3f7',
+  suppressTitle = false, // hide native tooltip (a neon coach-sign covers it)
+  onHoverChange = null, // report hover so a parent can show a coach-sign
 }) {
   const [hovered, setHovered] = useState(false);
+  const setHover = (v) => { setHovered(v); if (onHoverChange) onHoverChange(v); };
 
   const { bgColor, iconColor } = useMemo(() => {
     if (hovered && hoverInvert) {
@@ -57,9 +58,8 @@ export default function IconButton({
         boxShadow: `0 2px 8px ${shadow}`,
         transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.06s ease',
         WebkitTapHighlightColor: 'transparent',
-        position: glow || hint ? 'relative' : undefined,
-        // Pulse only when NOT hovered; on hover freeze to a static glow so the
-        // neon hint (a child of this button) doesn't scale/pulse with it.
+        position: glow ? 'relative' : undefined,
+        // Pulse only when NOT hovered; on hover freeze to a static glow.
         ...(glow && !hovered
           ? { animation: 'qc-onboard-pulse 1.5s ease-in-out infinite', ['--qc-glow']: glowColor }
           : {}),
@@ -69,55 +69,23 @@ export default function IconButton({
         ...style,
       },
     }),
-    [width, height, radius, bgColor, iconColor, shadow, style, glow, glowColor, hint, hovered]
+    [width, height, radius, bgColor, iconColor, shadow, style, glow, glowColor, hovered]
   );
 
   return (
     <button
       type="button"
-      title={hint ? undefined : title}
+      title={suppressTitle ? undefined : title}
       aria-label={ariaLabel || title || 'icon button'}
       className={`qc-icon-button ${className}`.trim()}
       style={styles.root}
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
     >
       {Icon ? <Icon size={size} color={iconColor} /> : null}
-      {hint && hovered ? (
-        <span
-          className="qc-onboard-hint"
-          style={{
-            position: 'absolute',
-            top: '118%',
-            right: 0,
-            // Wrap instead of overflowing the tray edge (the leftmost glowing
-            // button's long label was clipping). Max width keeps it in-panel.
-            whiteSpace: 'normal',
-            maxWidth: 230,
-            width: 'max-content',
-            lineHeight: 1.3,
-            textAlign: 'right',
-            zIndex: 80,
-            padding: '10px 16px',
-            borderRadius: 10,
-            background: 'rgba(10,12,20,0.97)',
-            border: `1.5px solid ${hintColor}`,
-            color: hintColor,
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: '0.03em',
-            // No text glow — the fuzzy shadow read badly. The box border and
-            // outer glow carry the neon look; the text stays crisp.
-            boxShadow: `0 0 10px ${hintColor}88, 0 0 2px ${hintColor} inset`,
-            pointerEvents: 'none',
-          }}
-        >
-          {hint}
-        </span>
-      ) : null}
     </button>
   );
 }

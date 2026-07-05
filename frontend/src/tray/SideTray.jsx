@@ -32,6 +32,9 @@ export default function SideTray({
   onDismissOnboarding = () => {},
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
+  // Onboarding coach-sign shown on hover of a glowing button. Anchored to the
+  // button-row's right edge (= tray content edge) so it never clips.
+  const [coachHint, setCoachHint] = useState(null); // { text, color }
 
   useEffect(() => {
     if (isPlaying) {
@@ -116,6 +119,7 @@ export default function SideTray({
         alignItems: 'center',
         columnGap: 8,
         flexWrap: 'wrap',
+        position: 'relative', // anchor for the onboarding coach-sign
       },
     }),
     [height, stacked]
@@ -206,8 +210,10 @@ export default function SideTray({
               hoverInvert={true}
               glow={onboarding && !accountSignedIn}
               glowColor="#7ee787"
-              hint={onboarding && !accountSignedIn ? 'Sign up — get a rating & save games' : ''}
-              hintColor="#7ee787"
+              suppressTitle={onboarding && !accountSignedIn}
+              onHoverChange={onboarding && !accountSignedIn
+                ? (h) => setCoachHint(h ? { text: 'Sign up for a rating', color: '#7ee787' } : null)
+                : null}
             />
             <IconButton
               icon={BookOpenIcon}
@@ -223,8 +229,10 @@ export default function SideTray({
               hoverInvert={true}
               glow={onboarding}
               glowColor="#4fc3f7"
-              hint={onboarding ? 'New? Rules & interactive tutorial' : ''}
-              hintColor="#4fc3f7"
+              suppressTitle={onboarding}
+              onHoverChange={onboarding
+                ? (h) => setCoachHint(h ? { text: 'Rules & tutorial', color: '#4fc3f7' } : null)
+                : null}
             />
             <IconButton
               icon={SettingsIcon}
@@ -239,10 +247,40 @@ export default function SideTray({
               color={theme.primary}
               glow={onboarding}
               glowColor="#c792ea"
-              hint={onboarding ? 'Customize colors, board & reminders' : ''}
-              hintColor="#c792ea"
+              suppressTitle={onboarding}
+              onHoverChange={onboarding
+                ? (h) => setCoachHint(h ? { text: 'Customize the board', color: '#c792ea' } : null)
+                : null}
               hoverInvert={true}
             />
+
+            {onboarding && coachHint ? (
+              <div
+                className="qc-onboard-hint"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  whiteSpace: 'nowrap',
+                  width: 'max-content',
+                  zIndex: 80,
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  background: 'rgba(10,12,20,0.97)',
+                  border: `1.5px solid ${coachHint.color}`,
+                  color: coachHint.color,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  lineHeight: 1.35,
+                  letterSpacing: '0.02em',
+                  textAlign: 'center',
+                  boxShadow: `0 0 10px ${coachHint.color}88, 0 0 2px ${coachHint.color} inset`,
+                  pointerEvents: 'none',
+                }}
+              >
+                {coachHint.text}
+              </div>
+            ) : null}
           </div>
         </div>
 
