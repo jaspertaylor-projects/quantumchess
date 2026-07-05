@@ -16,6 +16,20 @@
 - [ ] Later: Stripe Checkout + webhook to flip tier automatically, and
       move rating updates server-side before any public leaderboard.
 
+## Auth emails from noreply@quantumchess.com (needs the domain first)
+- [ ] Buy quantumchess.com and set up an email sending service (Resend is
+      the easy one; Postmark/SES also fine). Add their SPF + DKIM DNS
+      records for the domain.
+- [ ] Supabase Dashboard → Project Settings → Authentication → SMTP:
+      enable custom SMTP with the service's credentials and set sender to
+      noreply@quantumchess.com.
+- [ ] Do this before launch regardless of branding: Supabase's built-in
+      sender is rate-limited to a handful of emails per hour — real signup
+      traffic will hit that wall immediately.
+- [ ] Optional polish while in there: Authentication → Email Templates,
+      retitle the confirmation email (e.g. "Confirm your Quantum Chess
+      account").
+
 ## Release blockers
 - [ ] Buy a domain and deploy the site to it (HTTPS). This is the critical
       path for everything ad-related — AdSense reviews the live site.
