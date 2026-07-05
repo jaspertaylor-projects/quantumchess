@@ -24,10 +24,8 @@ scale).
 
 ### Phase 0 — before you start (2 min)
 
-- [ ] If the GitHub repo is private, the EC2 box won't be able to clone it.
-      Easiest fix: make it public (GitHub -> repo -> Settings -> scroll to
-      Danger Zone -> Change visibility). Given the chess.com plan, public
-      is probably what you want anyway.
+- [ ] Keep the repo PRIVATE (it's the product). The server gets read-only
+      access via a deploy key, created in Phase 2 step 13a.
 - [ ] In the AWS console, note the region selector (top right). For
       everything EXCEPT the certificate, pick one region and stay in it —
       `us-east-1 (N. Virginia)` for everything is the simplest choice.
@@ -89,9 +87,22 @@ scale).
     sudo usermod -aG docker ubuntu
     exit
     ```
-13. SSH back in (the group change needs a fresh login), then:
+13. SSH back in (the group change needs a fresh login).
+
+    13a. Give the box read-only repo access with a deploy key. On the
+    SERVER:
     ```bash
-    git clone https://github.com/jaspertaylor-projects/quantumchess.git
+    ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "qc-api deploy key"
+    cat ~/.ssh/id_ed25519.pub
+    ```
+    Copy the printed line. Then on GitHub: repo ->
+    **Settings -> Deploy keys -> Add deploy key** -> title `qc-api`,
+    paste the key, leave "Allow write access" UNCHECKED -> Add key.
+
+    13b. Clone and start (back on the server):
+    ```bash
+    git clone git@github.com:jaspertaylor-projects/quantumchess.git
+    # type "yes" at the github.com fingerprint prompt
     cd quantumchess/deploy/api
     docker compose -f docker-compose.prod.yml up -d --build
     ```
