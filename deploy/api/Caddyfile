@@ -2,14 +2,19 @@
 # Caddy auto-provisions and renews the Let's Encrypt certificate, and
 # proxies WebSocket upgrades to the FastAPI relay automatically.
 
-api.quantumchess.ninja {
+# CloudFront reaches the origin over plain HTTP on port 80. Its origin-side
+# trust store lags behind Let's Encrypt's current intermediates (both the
+# ECDSA and RSA 2024 roots), so an HTTPS origin 502s even though every
+# browser trusts the cert. The viewer<->CloudFront leg is still HTTPS, so
+# users are unaffected; only the CloudFront-edge<->origin hop (game moves,
+# no secrets) rides HTTP. No auto-redirect here, or CloudFront would loop.
+http://api.quantumchess.ninja {
 	encode gzip
-	# Force an RSA certificate (chains to ISRG Root X1). CloudFront's
-	# origin-side trust store lags on Let's Encrypt's newer ECDSA roots
-	# (ISRG Root X2), which makes the CloudFront->origin TLS handshake fail
-	# with a 502 even though every browser trusts it. RSA/X1 avoids that.
-	tls {
-		key_type rsa2048
-	}
+	reverse_proxy backend:8000
+}
+
+# HTTPS still served for direct testing and any future non-CloudFront use.
+https://api.quantumchess.ninja {
+	encode gzip
 	reverse_proxy backend:8000
 }
