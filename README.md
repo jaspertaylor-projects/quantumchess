@@ -143,9 +143,8 @@ Legend: [ ] not started · [~] in progress · [X] done
       (host email-smtp.us-east-1.amazonaws.com:587, sender
       noreply@quantumchess.ninja). Works for verified test addresses now;
       for everyone once AWS grants production access.
-- [ ] **Security cleanup:** detach the temporary AmazonSESFullAccess,
-      AmazonRoute53FullAccess, and IAMFullAccess policies from `qc-deployer`
-      (they were added only for the SES CLI setup).
+- [X] Security cleanup: temporary SES/Route53/IAM policies detached from
+      `qc-deployer` (verified: SES + Route53 now denied, S3 deploy intact).
 - [ ] Optional: branded receiving inbox (e.g. contact@quantumchess.ninja) via
       Proton custom domain — separate DNS, coexists with SES sending.
 
