@@ -116,12 +116,10 @@ Legend: [ ] not started · [~] in progress · [X] done
 ### Deployment / infra
 - [X] Frontend live on quantumchess.ninja (S3 + CloudFront, HTTPS)
 - [X] Backend API box live at api.quantumchess.ninja (Caddy auto-HTTPS)
-- [ ] Fix `qc-deployer` IAM user: attach **CloudFrontFullAccess** (currently
-      only has S3, so cache invalidation fails on deploy — the upload still
-      works, but updates may lag until this is added)
-- [ ] Wire online 1v1: add the CloudFront `/api/*` behavior pointing at the
-      api origin (all HTTP methods, CachingDisabled, AllViewer). Everything
-      else works without it; this is the only deferred deploy step.
+- [X] `qc-deployer` has CloudFrontFullAccess (deploys invalidate cleanly)
+- [X] Online 1v1 live: CloudFront `/api/*` -> HTTP origin (trust-store
+      workaround) with AllViewerExceptHostHeader; WebSocket play verified
+      end-to-end in production.
 - [ ] Optional: add `www.quantumchess.ninja` (add it to the distribution's
       alternate domain names first, then the Route 53 alias).
 

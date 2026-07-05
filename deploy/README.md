@@ -11,6 +11,16 @@ Target shape (built for a viral burst without babysitting):
   relative URLs and there is no CORS anywhere.
 - Supabase (accounts) and SES (auth email) are managed separately.
 
+**Why the API origin is HTTP, not HTTPS:** CloudFront's origin-side trust
+store lags behind Let's Encrypt's current (2024+) intermediate CAs, so an
+HTTPS origin with a fresh Caddy cert returns 502 even though every browser
+trusts it. We serve the API on plain HTTP:80 for the CloudFront hop and set
+the CloudFront origin protocol to http-only. The viewer<->CloudFront leg is
+still HTTPS, so users are fully encrypted; only the CloudFront-edge<->origin
+hop (game moves, client IDs — no passwords or PII) rides HTTP over the
+public internet. Future hardening: a CloudFront VPC origin, or an ALB/ACM
+cert in front of the box, would re-encrypt that hop.
+
 ## One-time provisioning — first-timer walkthrough
 
 Every step, in order. Total time ~1 hour, mostly waiting for AWS.
