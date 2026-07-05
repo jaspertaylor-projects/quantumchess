@@ -24,9 +24,9 @@ scale).
 
 ### Phase 0 — before you start (2 min)
 
-- [ ] Keep the repo PRIVATE (it's the product). The server gets read-only
+- [X] Keep the repo PRIVATE (it's the product). The server gets read-only
       access via a deploy key, created in Phase 2 step 13a.
-- [ ] In the AWS console, note the region selector (top right). For
+- [X] In the AWS console, note the region selector (top right). For
       everything EXCEPT the certificate, pick one region and stay in it —
       `us-east-1 (N. Virginia)` for everything is the simplest choice.
 
@@ -196,7 +196,7 @@ Route 53 -> Hosted zones -> quantumchess.ninja -> Create record, TWICE:
    ```
 4. First deploy, from the repo root:
    ```bash
-   QC_CF_DISTRIBUTION_ID=<your distribution id> ./deploy/deploy-frontend.sh
+   QC_CF_DISTRIBUTION_ID=E3G9M8CYMWWNUF ./deploy/deploy-frontend.sh
    ```
    (If you used a different bucket name: also set QC_S3_BUCKET=<name>.)
 5. Open **https://quantumchess.ninja** — you should be looking at your
@@ -219,7 +219,7 @@ Route 53 -> Hosted zones -> quantumchess.ninja -> Create record, TWICE:
 ## Each frontend release
 
 ```bash
-QC_CF_DISTRIBUTION_ID=EXXXXXXXXXXXXX ./deploy/deploy-frontend.sh
+QC_CF_DISTRIBUTION_ID=E3G9M8CYMWWNUF ./deploy/deploy-frontend.sh
 ```
 
 ## Each backend release
