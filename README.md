@@ -17,8 +17,8 @@ quantum promotion, recoherence — deterministic throughout, no dice anywhere.
 | Frontend | React + Vite SPA; the whole game engine is client-side | S3 + CloudFront (`quantumchess.ninja`) |
 | Backend | FastAPI WebSocket relay for online 1v1 only | One EC2 box behind Caddy (`api.quantumchess.ninja`) |
 | Accounts | Auth, profiles, ratings, saved games | Supabase (`qc_`-prefixed tables) |
-| Auth email | Signup confirmation emails | Amazon SES (custom SMTP, pending) |
-| Ads | Dormant AdSense interstitial at game end | Google AdSense (pending approval) |
+| Auth email | Signup confirmation emails | Amazon SES (domain verified; Supabase SMTP paste + prod-access pending) |
+| Ads | Dormant AdSense interstitial at game end | Google AdSense (applied; in review) |
 
 Bot and local games touch nothing but the CDN, so a traffic spike is cheap.
 Only online 1v1 hits the backend. See `deploy/README.md` for the full
@@ -112,64 +112,68 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
 
 Legend: [ ] not started · [~] in progress · [X] done
 
-### Deployment / infra
+### Deployment / infra  — DONE
 - [X] Frontend live on quantumchess.ninja (S3 + CloudFront, HTTPS)
 - [X] Backend API box live at api.quantumchess.ninja (Caddy auto-HTTPS)
-- [X] `qc-deployer` has CloudFrontFullAccess (deploys invalidate cleanly)
+- [X] `qc-deployer` scoped to S3 + CloudFront; deploys invalidate cleanly
 - [X] Online 1v1 live: CloudFront `/api/*` -> HTTP origin (trust-store
-      workaround) with AllViewerExceptHostHeader; WebSocket play verified
-      end-to-end in production.
-- [X] Optional: add `www.quantumchess.ninja` (add it to the distribution's
-      alternate domain names first, then the Route 53 alias).
+      workaround) + AllViewerExceptHostHeader; WebSocket play verified
+      end-to-end in production
+- [X] `www.quantumchess.ninja` resolves and serves (alias + cert)
 
 ### Accounts (Supabase)
 - [X] Schema applied via GitHub integration (profiles, games, retention,
       username uniqueness, avatar bucket)
-- [ ] Confirm auth settings: Dashboard → Authentication → email+password on;
-      decide whether to keep "Confirm email" on (default).
-- [ ] To comp paid tier until Stripe exists:
-      `update qc_profiles set tier = 'paid' where id = '<user uuid>';`
-- [ ] Later: Stripe Checkout + webhook to flip tier automatically.
+- [X] Email/password auth + accounts live (rating, saved games)
+- [ ] Decide whether to keep "Confirm email" ON (Dashboard → Authentication).
+      With SES SMTP set (below), confirmation emails will actually deliver.
+- [ ] Later: Stripe Checkout + webhook to flip `tier` to 'paid' automatically
+      (until then, comp manually via the SQL in "How to update" above).
 - [ ] Later: move rating updates server-side (Edge Function) before any
       public leaderboard — bot-game ratings are currently client-reported.
 
 ### Auth email (Amazon SES → noreply@quantumchess.ninja)
-- [ ] Verify the domain in SES (one-click DKIM/SPF into Route 53).
-- [ ] Request SES production access (sandbox → live, usually <24h).
-- [ ] Create SES SMTP creds → Supabase → Auth → SMTP → custom sender.
-- [ ] **Pre-launch necessity:** Supabase's built-in mailer is rate-limited
-      to a few emails/hour; real signup traffic hits that wall immediately.
-- [ ] Add DMARC: TXT `_dmarc.quantumchess.ninja` = `v=DMARC1; p=none;`
-      (.ninja gets more spam scrutiny than .com — full SPF+DKIM+DMARC helps).
-- [ ] Optional: retitle the confirmation email template.
+- [X] Domain verified in SES (Easy DKIM CNAMEs into Route 53)
+- [X] Custom MAIL FROM (mail.quantumchess.ninja) + SPF
+- [X] DMARC record (`_dmarc` TXT = `v=DMARC1; p=none;`)
+- [X] Dedicated send-only `qc-ses-smtp` IAM user + SMTP credentials created
+- [X] Production-access request submitted to AWS (auto-exits sandbox on
+      approval, usually <24h — no changes needed when it lands)
+- [ ] **Paste SMTP creds into Supabase** → Authentication → Emails → SMTP
+      (host email-smtp.us-east-1.amazonaws.com:587, sender
+      noreply@quantumchess.ninja). Works for verified test addresses now;
+      for everyone once AWS grants production access.
+- [ ] **Security cleanup:** detach the temporary AmazonSESFullAccess,
+      AmazonRoute53FullAccess, and IAMFullAccess policies from `qc-deployer`
+      (they were added only for the SES CLI setup).
+- [ ] Optional: branded receiving inbox (e.g. contact@quantumchess.ninja) via
+      Proton custom domain — separate DNS, coexists with SES sending.
 
 ### Ads (Google AdSense)
-- [X] Privacy policy page (/privacy.html) + About page (/about.html),
-      crawlable static HTML, linked in the site footer.
-- [X] Privacy policy + About pages, footer links (done above).
-- [X] Google's certified CMP ENABLED in the AdSense dashboard (chosen during
-      application). Our custom ConsentBanner.jsx is now redundant.
-      AT APPROVAL: delete <ConsentBanner/> from App.jsx so EEA visitors
-      aren't double-prompted; Google's CMP + the Consent Mode default in
-      index.html <head> then own consent.
+- [X] Privacy policy (/privacy.html) + About (/about.html), crawlable static
+      HTML, linked in the site footer
+- [X] Cookie consent handled by Google's certified CMP (enabled in the
+      AdSense dashboard during application)
 - [X] Applied to AdSense (pub-5481833391571778): ownership verified via the
-      <head> snippet, real ads.txt live, review requested. Waiting on the
-      decision email.
-- [ ] ON APPROVAL — turn ads on: set `VITE_ADSENSE_CLIENT=ca-pub-5481833391571778`
-      in `frontend/.env.production`, remove the custom consent banner, and
-      redeploy. Verify first with `VITE_ADSENSE_TEST=1` (finish 3 games, see
-      the test ad), then remove the test flag.
+      `<head>` snippet, real ads.txt live, review requested
+- [ ] Waiting on Google's decision email (days to ~2 weeks)
+- [ ] ON APPROVAL — turn ads on: set
+      `VITE_ADSENSE_CLIENT=ca-pub-5481833391571778` in
+      `frontend/.env.production`, delete `<ConsentBanner/>` from App.jsx (now
+      redundant with Google's CMP — avoids double-prompting EEA), redeploy.
+      Verify first with `VITE_ADSENSE_TEST=1` (finish 3 games, see the test
+      ad), then remove the test flag.
 
 ### Product / features (nice-to-have)
 - [ ] Replay saved games from stored move lists (moves are already saved;
-      the engine is deterministic, so this is a UI feature).
+      the engine is deterministic, so this is a UI feature)
 - [ ] Paid-tier custom avatar upload UI (storage bucket + policies already
-      exist in the schema).
+      exist in the schema)
 - [ ] Rewarded ad placement (opt-in, ~3-5x interstitial CPM) — e.g. "watch
-      to see full post-game analysis".
+      to see full post-game analysis"
 
 ### Art
-- [X] `anonymous.png` and `stranger.png` for the human players.
+- [X] `anonymous.png` and `stranger.png` for the human players
 
 ### Growth
 - [ ] Launch post for r/chess and Hacker News ("chess where no piece knows
