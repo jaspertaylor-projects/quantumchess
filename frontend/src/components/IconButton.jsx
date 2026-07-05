@@ -93,17 +93,24 @@ export default function IconButton({
             position: 'absolute',
             top: '118%',
             right: 0,
-            whiteSpace: 'nowrap',
+            // Wrap instead of overflowing the tray edge (the leftmost glowing
+            // button's long label was clipping). Max width keeps it in-panel.
+            whiteSpace: 'normal',
+            maxWidth: 230,
+            width: 'max-content',
+            lineHeight: 1.3,
+            textAlign: 'right',
             zIndex: 80,
             padding: '10px 16px',
             borderRadius: 10,
-            background: 'rgba(10,12,20,0.96)',
+            background: 'rgba(10,12,20,0.97)',
             border: `1.5px solid ${hintColor}`,
             color: hintColor,
             fontSize: 14,
             fontWeight: 800,
             letterSpacing: '0.03em',
-            textShadow: `0 0 6px ${hintColor}`,
+            // No text glow — the fuzzy shadow read badly. The box border and
+            // outer glow carry the neon look; the text stays crisp.
             boxShadow: `0 0 10px ${hintColor}88, 0 0 2px ${hintColor} inset`,
             pointerEvents: 'none',
           }}
