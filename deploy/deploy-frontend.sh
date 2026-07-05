@@ -25,13 +25,14 @@ aws s3 sync dist "s3://$BUCKET" \
   --delete \
   --exclude "index.html" \
   --cache-control "public, max-age=31536000, immutable"
-# index.html (and root files like ads.txt/humans.txt): always revalidate.
-aws s3 cp dist/index.html "s3://$BUCKET/index.html" \
-  --cache-control "no-cache"
+# Root files that change but aren't content-hashed must always revalidate.
+for f in index.html ads.txt privacy.html about.html humans.txt; do
+  [ -f "dist/$f" ] && aws s3 cp "dist/$f" "s3://$BUCKET/$f" --cache-control "no-cache"
+done
 
 echo "==> Invalidating CloudFront"
 aws cloudfront create-invalidation \
   --distribution-id "$DISTRIBUTION_ID" \
-  --paths "/index.html" "/" >/dev/null
+  --paths "/" "/index.html" "/ads.txt" "/privacy.html" "/about.html" "/humans.txt" >/dev/null
 
 echo "==> Done: https://quantumchess.ninja"
