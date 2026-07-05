@@ -9,9 +9,15 @@ BUCKET="${QC_S3_BUCKET:-quantumchess-ninja-site}"
 DISTRIBUTION_ID="${QC_CF_DISTRIBUTION_ID:?Set QC_CF_DISTRIBUTION_ID to your CloudFront distribution id}"
 
 echo "==> Building frontend"
-cd "$(dirname "$0")/../frontend"
-pnpm install --frozen-lockfile
-pnpm exec vite build
+cd "$(dirname "$0")/.."
+if command -v pnpm >/dev/null 2>&1; then
+  (cd frontend && pnpm install --frozen-lockfile && pnpm exec vite build)
+else
+  # No Node on the host: build inside the dev container (frontend/ is
+  # bind-mounted, so dist/ appears on the host).
+  docker compose exec -T frontend sh -c "cd /app && npx vite build"
+fi
+cd frontend
 
 echo "==> Syncing to s3://$BUCKET"
 # Hashed assets: cache forever.
