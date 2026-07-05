@@ -144,11 +144,14 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Optional: retitle the confirmation email template.
 
 ### Ads (Google AdSense)
-- [ ] Add a **privacy policy page** (required for approval).
-- [ ] Enable a **consent banner** for EU/UK — Google's "Privacy & messaging"
-      CMP, configured in the AdSense dashboard (no code).
-- [ ] Consider an **About page** (crawlable rules/tutorial text) — game
-      sites often get rejected for "thin content"; this insures against it.
+- [X] Privacy policy page (/privacy.html) + About page (/about.html),
+      crawlable static HTML, linked in the site footer.
+- [X] Consent banner live (Accept all / Necessary only), Google Consent
+      Mode v2 signals + non-personalized fallback. NOTE: for full EEA ad
+      serving Google also wants a *certified* CMP — enable "Privacy &
+      messaging" in the AdSense dashboard after approval; retire this custom
+      banner then to avoid double-prompting.
+
 - [ ] Sign up for AdSense; submit quantumchess.ninja for review.
 - [ ] After approval: set `VITE_ADSENSE_CLIENT=ca-pub-XXXX` in
       `frontend/.env.production` and redeploy.

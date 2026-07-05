@@ -17,6 +17,7 @@ import SideTray from './tray/SideTray.jsx';
 import RulesModal from './tray/RulesModal.jsx';
 import TutorialModal from './tutorial/TutorialModal.jsx';
 import ConfirmModal from './components/ConfirmModal.jsx';
+import ConsentBanner from './components/ConsentBanner.jsx';
 import { initAds, maybeShowGameEndAd } from './ads/adService.js';
 import useAuth from './account/useAuth.js';
 import AccountModal from './account/AccountModal.jsx';
@@ -1472,6 +1473,23 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <footer
+        className="qc-site-footer"
+        style={{
+          textAlign: 'center',
+          padding: '10px 0 16px',
+          fontSize: 12,
+          color: theme.textSecondary,
+          opacity: 0.7,
+        }}
+      >
+        <a href="/about.html" style={{ color: theme.textSecondary, textDecoration: 'none', margin: '0 8px' }}>About</a>
+        <span style={{ opacity: 0.4 }}>·</span>
+        <a href="/privacy.html" style={{ color: theme.textSecondary, textDecoration: 'none', margin: '0 8px' }}>Privacy</a>
+      </footer>
+
+      <ConsentBanner />
 
       <WinnerModal
         open={showWinPopup}

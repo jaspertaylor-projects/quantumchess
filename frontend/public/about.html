@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About Quantum Chess — rules, mechanics, and the story</title>
+<meta name="description" content="Quantum Chess is chess where every piece begins as a superposition of all six piece types and collapses as it moves. Learn the rules, the quantum mechanics behind them, and how the game was built." />
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; background: #0a0e1a; color: #dfe6f2;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.68;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { font-size: 2rem; letter-spacing: 0.02em; margin: 0 0 4px; }
+  .tag { color: #9db4ff; font-style: italic; margin: 0 0 20px; }
+  h2 { font-size: 1.25rem; margin: 34px 0 8px; color: #8fd6ff; }
+  h3 { font-size: 1.05rem; margin: 20px 0 4px; color: #c792ea; }
+  a { color: #4fc3f7; }
+  .home { display: inline-block; margin-bottom: 26px; color: #4fc3f7; text-decoration: none; font-weight: 700; }
+  .cta {
+    display: inline-block; margin: 8px 0 6px; padding: 11px 22px; border-radius: 10px;
+    background: #4fc3f7; color: #06121b; font-weight: 800; text-decoration: none;
+  }
+  ul { padding-left: 20px; }
+  li { margin: 5px 0; }
+  .muted { color: #93a1b5; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0; }
+  footer a { margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="/">&larr; Back to the game</a>
+  <h1>About Quantum Chess</h1>
+  <p class="tag">Every piece is every piece &mdash; until it moves.</p>
+
+  <p>Quantum Chess is a free browser game that reimagines chess through the lens of quantum mechanics. It is not a chess set so much as thirty-two unresolved questions: every piece begins as a <strong>superposition</strong> of all six classical types &mdash; Pawn, Knight, Bishop, Rook, Queen, and King &mdash; and only becomes something definite as the game forces it to. Nobody knows which piece is your King at the start. Not your opponent. Not you.</p>
+
+  <p><a class="cta" href="/">Play Quantum Chess &rarr;</a></p>
+
+  <h2>How it works</h2>
+
+  <h3>Moving is measuring</h3>
+  <p>A piece may move like any type it might still be. But the move itself is evidence: afterward, the piece keeps only the identities that could have made that move. A knight&rsquo;s jump collapses a piece to a definite Knight forever; a long diagonal slide narrows it to Bishop-or-Queen. Choosing <em>how</em> to move is choosing how much of a piece&rsquo;s identity to spend.</p>
+
+  <h3>Measurement pulses and decoherence</h3>
+  <p>When your piece finishes a move, it performs a soft measurement on every enemy piece it could capture from its new square. Those pieces are marked, and their &ldquo;coherence&rdquo; erodes over the following turns &mdash; eventually shedding their least valuable possible identity. Aggression is how you gather information; passivity earns none.</p>
+
+  <h3>Recoherence</h3>
+  <p>A piece narrowed down to two or fewer possibilities slowly diffuses back toward superposition if left unobserved &mdash; a nod to the quantum Zeno effect, where constant observation freezes a system in place and inattention lets it evolve.</p>
+
+  <h3>Entangled castling</h3>
+  <p>Castling can be performed between any two of your unmoved pieces whose possibilities still include both Rook and King. They collapse into an anti-correlated <strong>entangled pair</strong>: in every consistent world, exactly one is the King and the other the Rook. Resolve one, and the other instantly becomes its complement &mdash; no matter where it stands on the board.</p>
+
+  <h3>Quantum promotion and conservation</h3>
+  <p>Promotion is a branch, not an assertion: in the worlds where a piece was a Pawn, it becomes a heavy piece funded by a pawn slot; in the others, nothing happened. Throughout, a strict conservation law holds &mdash; every side always accounts for exactly its original sixteen pieces across all possible worlds. Normal chess is simply one arrangement this game can collapse into.</p>
+
+  <h2>Ways to play</h2>
+  <ul>
+    <li><strong>Versus AI</strong> &mdash; twelve bots across easy, medium, and hard, each a playful mashup of a physicist and a chess legend, with distinct styles and ratings.</li>
+    <li><strong>Local two-player</strong> &mdash; hotseat on one device.</li>
+    <li><strong>Online 1v1</strong> &mdash; real-time matches against another player.</li>
+    <li><strong>Accounts</strong> (optional) &mdash; earn a rating and keep a history of your recent games.</li>
+  </ul>
+  <p>New players get a built-in interactive tutorial that walks each rule through with playable diagrams, alongside a full rulebook &mdash; both reachable from inside the game.</p>
+
+  <h2>How it was built</h2>
+  <p>Quantum Chess is an independent project built by one developer. The game engine &mdash; superposition, collapse, the conservation solver, measurement pulses, and the AI &mdash; runs entirely in your browser; a small server handles only online matchmaking and move relay. The rules are fully deterministic: despite the quantum theming, there is no randomness in how positions resolve.</p>
+
+  <h2>Contact</h2>
+  <p>Feedback, bugs, or hello: <a href="mailto:jaspertaylor15@protonmail.com">jaspertaylor15@protonmail.com</a>.</p>
+
+  <hr />
+  <footer class="muted">
+    <a href="/">Play</a>
+    <a href="/about.html">About</a>
+    <a href="/privacy.html">Privacy</a>
+  </footer>
+</div>
+</body>
+</html>
