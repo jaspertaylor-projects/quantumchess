@@ -473,8 +473,21 @@ export default function App() {
   };
 
   const isOnline = useCallback(() => Boolean(isOnlineGameRef.current), []);
-  const isUsersTurn = useCallback(() => !isOnline() || sideToMove === userTeam, [isOnline, sideToMove, userTeam]);
-  const ownsPiece = useCallback((piece) => !isOnline() || (piece && piece.side === userTeam), [isOnline, userTeam]);
+  // Local hotseat controls BOTH sides; online and AI games control only the
+  // user's side. (isOnline alone missed AI games — you could move the bot's
+  // pieces during its think time via the click path.)
+  const controlsBothSides = useCallback(
+    () => !isOnlineGameRef.current && !aiEnabledRef.current,
+    []
+  );
+  const isUsersTurn = useCallback(
+    () => controlsBothSides() || sideToMove === userTeam,
+    [controlsBothSides, sideToMove, userTeam]
+  );
+  const ownsPiece = useCallback(
+    (piece) => controlsBothSides() || Boolean(piece && piece.side === userTeam),
+    [controlsBothSides, userTeam]
+  );
 
   const guardExternalOver = useCallback(() => {
     if (externalGameOver.over) {
@@ -543,8 +556,8 @@ export default function App() {
       return;
     }
 
-    if (isOnline() && !isUsersTurn()) {
-      setInfoMessage('Not your turn.');
+    if (!isUsersTurn()) {
+      setInfoMessage("Not your turn.");
       return;
     }
 
@@ -616,8 +629,8 @@ export default function App() {
       return;
     }
 
-    if (isOnline() && !isUsersTurn()) {
-      setInfoMessage('Not your turn.');
+    if (!isUsersTurn()) {
+      setInfoMessage("Not your turn.");
       return;
     }
 
