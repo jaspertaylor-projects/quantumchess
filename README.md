@@ -164,6 +164,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       ad), then remove the test flag.
 
 ### Product / features (nice-to-have)
+- [ ] The Mobile page looks horrible with the side bar beneath the board.  
 - [ ] Replay saved games from stored move lists (moves are already saved;
       the engine is deterministic, so this is a UI feature)
 - [ ] Paid-tier custom avatar upload UI (storage bucket + policies already
