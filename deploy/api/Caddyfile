@@ -4,5 +4,12 @@
 
 api.quantumchess.ninja {
 	encode gzip
+	# Force an RSA certificate (chains to ISRG Root X1). CloudFront's
+	# origin-side trust store lags on Let's Encrypt's newer ECDSA roots
+	# (ISRG Root X2), which makes the CloudFront->origin TLS handshake fail
+	# with a 502 even though every browser trusts it. RSA/X1 avoids that.
+	tls {
+		key_type rsa2048
+	}
 	reverse_proxy backend:8000
 }
