@@ -5,9 +5,8 @@ collapses as it moves. Measurement pulses, decoherence, entangled castling,
 quantum promotion, recoherence — deterministic throughout, no dice anywhere.
 
 - **Live:** https://quantumchess.ninja
-- **Play:** vs 12 AI bots, local 2-player hotseat, or online 1v1 (once the
-  API route is wired — see below). Optional accounts add a rating and saved
-  games.
+- **Play:** vs 12 AI bots, local 2-player hotseat, or online 1v1. Optional
+  accounts add a rating and saved games.
 
 ---
 
