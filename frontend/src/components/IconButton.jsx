@@ -23,6 +23,10 @@ export default function IconButton({
   hoverBg,
   hoverColor,
   shadow = theme.shadow,
+  glow = false, // onboarding: pulse to draw attention
+  glowColor = '#4fc3f7',
+  hint = '', // onboarding: neon sign shown on hover
+  hintColor = '#4fc3f7',
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -53,16 +57,20 @@ export default function IconButton({
         boxShadow: `0 2px 8px ${shadow}`,
         transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.06s ease',
         WebkitTapHighlightColor: 'transparent',
+        position: glow || hint ? 'relative' : undefined,
+        ...(glow
+          ? { animation: 'qc-onboard-pulse 1.5s ease-in-out infinite', ['--qc-glow']: glowColor }
+          : {}),
         ...style,
       },
     }),
-    [width, height, radius, bgColor, iconColor, shadow, style]
+    [width, height, radius, bgColor, iconColor, shadow, style, glow, glowColor, hint]
   );
 
   return (
     <button
       type="button"
-      title={title}
+      title={hint ? undefined : title}
       aria-label={ariaLabel || title || 'icon button'}
       className={`qc-icon-button ${className}`.trim()}
       style={styles.root}
@@ -73,6 +81,31 @@ export default function IconButton({
       onBlur={() => setHovered(false)}
     >
       {Icon ? <Icon size={size} color={iconColor} /> : null}
+      {hint && hovered ? (
+        <span
+          className="qc-onboard-hint"
+          style={{
+            position: 'absolute',
+            top: '112%',
+            right: 0,
+            whiteSpace: 'nowrap',
+            zIndex: 80,
+            padding: '6px 11px',
+            borderRadius: 8,
+            background: 'rgba(10,12,20,0.96)',
+            border: `1.5px solid ${hintColor}`,
+            color: hintColor,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.03em',
+            textShadow: `0 0 6px ${hintColor}`,
+            boxShadow: `0 0 10px ${hintColor}88, 0 0 2px ${hintColor} inset`,
+            pointerEvents: 'none',
+          }}
+        >
+          {hint}
+        </span>
+      ) : null}
     </button>
   );
 }

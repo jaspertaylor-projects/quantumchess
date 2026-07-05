@@ -55,3 +55,19 @@ button:hover {
 .qc-measure-target-ring {
   animation: qc-target-spin 6s linear infinite;
 }
+
+/* Onboarding coach-marks: pulse glow on key buttons for first-time visitors */
+@keyframes qc-onboard-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--qc-glow, #4fc3f7), 0 0 9px 1px var(--qc-glow, #4fc3f7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent, 0 0 18px 6px var(--qc-glow, #4fc3f7);
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-icon-button[style*="qc-onboard-pulse"] { animation: none !important; }
+}

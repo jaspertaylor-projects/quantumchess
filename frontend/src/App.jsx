@@ -92,12 +92,22 @@ export default function App() {
     initAds();
   }, []);
 
-  // First visit: open the tutorial automatically, once.
+  // First visit: instead of a modal wall, glow the Rules/tutorial and Sign-up
+  // buttons and let the player dismiss with "Got it". Stored per-browser.
+  const [onboarding, setOnboarding] = useState(false);
   useEffect(() => {
     try {
-      if (!localStorage.getItem('qcTutorialSeen')) setTutorialOpen(true);
+      if (!localStorage.getItem('qcOnboardSeen')) setOnboarding(true);
     } catch (_) {
-      // storage unavailable — skip auto-tutorial
+      // storage unavailable — skip onboarding glow
+    }
+  }, []);
+  const dismissOnboarding = useCallback(() => {
+    setOnboarding(false);
+    try {
+      localStorage.setItem('qcOnboardSeen', '1');
+    } catch (_) {
+      // ignore
     }
   }, []);
 
@@ -770,7 +780,9 @@ export default function App() {
   }, []);
 
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
-  const handleOpenRules = useCallback(() => setRulesOpen(true), []);
+  // Engaging with a glowing onboarding button also retires the glow.
+  const handleOpenRules = useCallback(() => { setRulesOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+  const handleOpenAccount = useCallback(() => { setAccountOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
 
   useEffect(() => {
     wsMessageHandlerRef.current = (msg) => {
@@ -1403,8 +1415,10 @@ export default function App() {
                   onOfferDraw={handleOfferDraw}
                   onRequestNewGame={handleRequestNewGame}
                   newGameSignal={newGameSignal}
-                  onOpenAccount={() => setAccountOpen(true)}
+                  onOpenAccount={handleOpenAccount}
                   accountSignedIn={Boolean(auth.user)}
+                  onboarding={onboarding}
+                  onDismissOnboarding={dismissOnboarding}
                 />
               );
               const whiteBarEl = (

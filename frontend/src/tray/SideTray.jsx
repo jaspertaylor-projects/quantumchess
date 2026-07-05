@@ -28,6 +28,8 @@ export default function SideTray({
   onOpenAccount = () => {},
   accountSignedIn = false,
   onOfferDraw = () => {},
+  onboarding = false,
+  onDismissOnboarding = () => {},
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
 
@@ -202,6 +204,10 @@ export default function SideTray({
               bg={theme.secondary}
               color={accountSignedIn ? theme.success : theme.primary}
               hoverInvert={true}
+              glow={onboarding && !accountSignedIn}
+              glowColor="#7ee787"
+              hint={onboarding && !accountSignedIn ? 'Sign up — get a rating & save games' : ''}
+              hintColor="#7ee787"
             />
             <IconButton
               icon={BookOpenIcon}
@@ -215,6 +221,10 @@ export default function SideTray({
               bg={theme.secondary}
               color={theme.primary}
               hoverInvert={true}
+              glow={onboarding}
+              glowColor="#4fc3f7"
+              hint={onboarding ? 'New? Rules & interactive tutorial' : ''}
+              hintColor="#4fc3f7"
             />
             <IconButton
               icon={SettingsIcon}
@@ -235,6 +245,46 @@ export default function SideTray({
         <div className="qc-side-tray-header-bottom" style={styles.headerBottomRow}>
           <span className="qc-side-tray-title" style={styles.headerTitle}>{titleText}</span>
         </div>
+
+        {onboarding ? (
+          <div
+            className="qc-onboard-banner"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginTop: 8,
+              padding: '7px 10px',
+              borderRadius: 8,
+              background: 'rgba(79,195,247,0.08)',
+              border: '1px solid rgba(79,195,247,0.4)',
+              fontSize: 12,
+              lineHeight: 1.4,
+            }}
+          >
+            <span style={{ flex: 1, color: theme.textSecondary }}>
+              👋 New here? Hover the glowing buttons.
+            </span>
+            <button
+              type="button"
+              className="qc-onboard-gotit"
+              onClick={onDismissOnboarding}
+              style={{
+                flex: 'none',
+                padding: '4px 12px',
+                borderRadius: 7,
+                border: 'none',
+                background: theme.primary,
+                color: theme.secondary,
+                fontWeight: 800,
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="qc-side-tray-content" style={styles.content}>
