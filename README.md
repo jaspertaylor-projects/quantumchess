@@ -119,7 +119,7 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [X] Online 1v1 live: CloudFront `/api/*` -> HTTP origin (trust-store
       workaround) with AllViewerExceptHostHeader; WebSocket play verified
       end-to-end in production.
-- [ ] Optional: add `www.quantumchess.ninja` (add it to the distribution's
+- [X] Optional: add `www.quantumchess.ninja` (add it to the distribution's
       alternate domain names first, then the Route 53 alias).
 
 ### Accounts (Supabase)
@@ -146,18 +146,19 @@ Legend: [ ] not started · [~] in progress · [X] done
 ### Ads (Google AdSense)
 - [X] Privacy policy page (/privacy.html) + About page (/about.html),
       crawlable static HTML, linked in the site footer.
-- [X] Consent banner live (Accept all / Necessary only), Google Consent
-      Mode v2 signals + non-personalized fallback. NOTE: for full EEA ad
-      serving Google also wants a *certified* CMP — enable "Privacy &
-      messaging" in the AdSense dashboard after approval; retire this custom
-      banner then to avoid double-prompting.
-
-- [ ] Sign up for AdSense; submit quantumchess.ninja for review.
-- [ ] After approval: set `VITE_ADSENSE_CLIENT=ca-pub-XXXX` in
-      `frontend/.env.production` and redeploy.
-- [ ] Replace the placeholder line in `frontend/public/ads.txt`.
-- [ ] Verify with `VITE_ADSENSE_TEST=1` (finish 3 games, see the ad), then
-      remove the test flag.
+- [X] Privacy policy + About pages, footer links (done above).
+- [X] Google's certified CMP ENABLED in the AdSense dashboard (chosen during
+      application). Our custom ConsentBanner.jsx is now redundant.
+      AT APPROVAL: delete <ConsentBanner/> from App.jsx so EEA visitors
+      aren't double-prompted; Google's CMP + the Consent Mode default in
+      index.html <head> then own consent.
+- [X] Applied to AdSense (pub-5481833391571778): ownership verified via the
+      <head> snippet, real ads.txt live, review requested. Waiting on the
+      decision email.
+- [ ] ON APPROVAL — turn ads on: set `VITE_ADSENSE_CLIENT=ca-pub-5481833391571778`
+      in `frontend/.env.production`, remove the custom consent banner, and
+      redeploy. Verify first with `VITE_ADSENSE_TEST=1` (finish 3 games, see
+      the test ad), then remove the test flag.
 
 ### Product / features (nice-to-have)
 - [ ] Replay saved games from stored move lists (moves are already saved;
