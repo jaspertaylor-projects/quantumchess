@@ -28,6 +28,22 @@ provisioning runbook and capacity math.
 
 ## Local development
 
+> **⚠️ THIS PROJECT IS BUILT AND RUN IN DOCKER — LOCALLY AND ON AWS.**
+> Do **not** run `npm install` / `npm run dev` / `pip install` on the host
+> and expect it to work; the containers are the supported environment.
+> - **Local dev:** `docker compose up` (below) is the one command that runs
+>   everything.
+> - **Frontend production build:** `deploy/deploy-frontend.sh` builds inside
+>   the dev container — don't build with host Node.
+> - **Backend production:** built and run via
+>   `deploy/api/docker-compose.prod.yml` on the API box.
+> - **Node tools** (`tools/*.mjs` harnesses/miners): the frontend container
+>   only mounts `frontend/`, so run these from a one-off container with the
+>   repo root mounted:
+>   `docker compose run --rm --no-deps -v "$PWD":/repo -w /repo frontend node tools/puzzle-harness.mjs`
+>   (they are dependency-free ESM, so host Node ≥18 also works in a pinch —
+>   but app builds must stay in Docker).
+
 ```bash
 docker compose up            # frontend on :5175, backend on :8001
 ```

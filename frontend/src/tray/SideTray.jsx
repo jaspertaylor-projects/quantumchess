@@ -185,9 +185,7 @@ export default function SideTray({
     [height, stacked]
   );
 
-  const titleText = isPlaying
-    ? 'Game Actions'
-    : view === 'new-game' ? 'New Game'
+  const titleText = view === 'new-game' ? 'New Game'
     : view === 'history' ? 'Last Game'
     : 'Quantum Chess';
 
@@ -228,25 +226,6 @@ export default function SideTray({
               )
             ) : searching ? null : (
               <>
-                {/* No abandoning into a fresh game while an online opponent
-                    is at the table — resign first. */}
-                {!isOnlineGame ? (
-                  <IconButton
-                    icon={PlusIcon}
-                    size={18}
-                    width={32}
-                    height={32}
-                    title="New Game"
-                    ariaLabel="End this game and start a new one"
-                    className="qc-side-tray-new-game-btn"
-                    onClick={onRequestNewGame}
-                    bg={'transparent'}
-                    color={theme.success}
-                    hoverInvert={true}
-                    hoverBg={theme.success}
-                    hoverColor={'#ffffff'}
-                  />
-                ) : null}
                 <IconButton
                   icon={FlagIcon}
                   size={18}
@@ -276,53 +255,7 @@ export default function SideTray({
               </>
             )}
 
-            {isPlaying ? (
-            <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <IconButton
-                icon={PuzzleIcon}
-                size={16}
-                width={32}
-                height={32}
-                title="Daily Puzzle"
-                ariaLabel="Open the daily puzzle"
-                className="qc-side-tray-puzzle-btn"
-                onClick={onOpenPuzzle}
-                bg={theme.secondary}
-                color={'#f6c445'}
-                hoverInvert={true}
-              />
-              {puzzleUnsolved ? (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute', top: -2, right: -2, width: 9, height: 9,
-                    borderRadius: 999, background: '#f6c445',
-                    border: '1.5px solid rgba(10,12,20,0.9)', pointerEvents: 'none',
-                  }}
-                />
-              ) : null}
-            </span>
-            ) : null}
             {isPlaying ? (<>
-            <IconButton
-              icon={UserIcon}
-              size={16}
-              width={32}
-              height={32}
-              title={accountSignedIn ? 'Account' : 'Sign In'}
-              ariaLabel="Open account panel"
-              className="qc-side-tray-account-btn"
-              onClick={onOpenAccount}
-              bg={theme.secondary}
-              color={accountSignedIn ? theme.success : theme.primary}
-              hoverInvert={true}
-              glow={onboarding && !accountSignedIn}
-              glowColor="#7ee787"
-              suppressTitle={onboarding && !accountSignedIn}
-              onHoverChange={onboarding && !accountSignedIn
-                ? (h) => setCoachHint(h ? { text: 'Sign up for a rating', color: '#7ee787' } : null)
-                : null}
-            />
             <IconButton
               icon={BookOpenIcon}
               size={16}
@@ -393,11 +326,6 @@ export default function SideTray({
           </div>
         </div>
 
-        {isPlaying ? (
-          <div className="qc-side-tray-header-bottom" style={styles.headerBottomRow}>
-            <span className="qc-side-tray-title" style={styles.headerTitle}>{titleText}</span>
-          </div>
-        ) : null}
 
         {onboarding ? (
           <div
