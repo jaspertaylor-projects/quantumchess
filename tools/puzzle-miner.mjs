@@ -67,11 +67,12 @@ const CFG = {
   verifyCap: Number(argVal('verifyCap', 120)), // max only-move plies to re-verify
   minChoices: Number(argVal('minChoices', 6)), // fewer legal moves = not a real search
   holdEval: Number(argVal('holdEval', -0.5)), // best move must score at least this
-  failEval: Number(argVal('failEval', -1.5)), // every alternative must score at most this
+  failEval: Number(argVal('failEval', -1.0)), // every alternative must score at most this (the gap does the anti-noise work)
   minGap: Number(argVal('minGap', 2.0)), // and trail the best by at least this
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), 'mined')),
 };
 
+const PREFILTER_WIDTHS = [64, 10, 8]; // narrow: 24% of positions timed out at [64,14,10]
 const MINE_WIDTHS = [64, 14, 10, 8, 6];
 const VERIFY_WIDTHS = [64, 16, 12, 10, 8, 6];
 
@@ -435,7 +436,7 @@ function mineGame(game, stats) {
     }
     stats.scanned++;
     const t0 = performance.now();
-    const shallow = analyzePosition(rec, Math.max(2, CFG.mineDepth - 1), MINE_WIDTHS, CFG.prefilterMs);
+    const shallow = analyzePosition(rec, Math.max(2, CFG.mineDepth - 1), PREFILTER_WIDTHS, CFG.prefilterMs);
     if (!shallow) { stats.prefilterTimeouts++; stats.mineMsTotal += performance.now() - t0; continue; }
     if (!prefilterOnlyMove(shallow)) { stats.mineMsTotal += performance.now() - t0; continue; }
     stats.funnelSurvivors++;

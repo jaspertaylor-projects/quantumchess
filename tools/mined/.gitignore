@@ -1,0 +1,4 @@
+# Mined-puzzle artifacts are generated, large, and reproducible from --seed;
+# curated picks get promoted to a committed puzzles.json instead.
+*
+!.gitignore

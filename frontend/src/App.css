@@ -117,5 +117,5 @@ button:hover {
 .qc-header-account { transition: filter 0.15s ease, background 0.15s ease; }
 .qc-header-account:hover { filter: brightness(1.15); }
 
-.qc-header-settings { transition: filter 0.15s ease, transform 0.2s ease; }
-.qc-header-settings:hover { filter: brightness(1.3); transform: rotate(30deg); }
+.qc-header-settings { transition: color 0.15s ease, transform 0.25s ease; }
+.qc-header-settings:hover { color: #ffffff !important; transform: rotate(45deg); }

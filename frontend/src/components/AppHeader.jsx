@@ -84,11 +84,11 @@ export default function AppHeader({
       placeItems: 'center',
       width: 36,
       height: 36,
-      borderRadius: 999,
-      border: '1px solid rgba(255,255,255,0.18)',
-      background: 'rgba(12,14,22,0.85)',
-      color: '#9db4ff',
+      border: 'none',
+      background: 'transparent',
+      color: '#93a1b5',
       cursor: 'pointer',
+      padding: 0,
     },
   };
 
@@ -107,7 +107,7 @@ export default function AppHeader({
           title="Settings"
           style={styles.gearBtn}
         >
-          <SettingsIcon size={18} />
+          <SettingsIcon size={20} />
         </button>
         <button
           type="button"
