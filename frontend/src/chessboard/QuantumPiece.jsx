@@ -58,7 +58,7 @@ const pairAssetMap = new Map([
   ['b|q', imgBQ],
   ['b|r', imgBR],
   ['b|n', imgNB],
-  ['n|k', imgNK],
+  ['k|n', imgNK],
   ['n|q', imgNQ],
   ['n|r', imgNR],
   ['b|p', imgPB],
