@@ -58,6 +58,16 @@ Deno.serve(async (req) => {
     if (kind === 'premium' && profile?.tier === 'paid') return json({ error: 'Already premium' }, 400);
 
     let customerId = profile?.stripe_customer_id ?? null;
+    // A stored id can go stale (deleted in the dashboard, or minted in
+    // test mode before the live switch) — verify it, else mint fresh.
+    if (customerId) {
+      try {
+        const existing = await stripe.customers.retrieve(customerId);
+        if ((existing as { deleted?: boolean }).deleted) customerId = null;
+      } catch (_) {
+        customerId = null;
+      }
+    }
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
