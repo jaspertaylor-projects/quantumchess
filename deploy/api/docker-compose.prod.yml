@@ -12,6 +12,13 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_DIR=/logs
+      # Error-alert emails (optional; alerting is off unless USER/PASS/TO are
+      # all set). Uses the qc-ses-smtp credentials. Put real values in ./.env
+      # next to this file — compose reads it automatically; never commit them.
+      - QC_ALERT_SMTP_USER=${QC_ALERT_SMTP_USER:-}
+      - QC_ALERT_SMTP_PASS=${QC_ALERT_SMTP_PASS:-}
+      - QC_ALERT_TO=${QC_ALERT_TO:-}
+      - QC_ALERT_FROM=${QC_ALERT_FROM:-noreply@quantumchess.ninja}
     volumes:
       - api_logs:/logs
     expose:

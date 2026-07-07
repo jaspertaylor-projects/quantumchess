@@ -8,10 +8,13 @@ import datetime
 import logging
 import logging.config
 import os
+import smtplib
 import sys
+import threading
 import time
 import traceback
 import uuid
+from email.message import EmailMessage
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -125,7 +128,93 @@ def configure_logging() -> None:
     sys.excepthook = _excepthook  # type: ignore[assignment]
 
 
+# ---- Error Alert Emails (SES SMTP) --------------------------------------------
+class ThrottledEmailAlertHandler(logging.Handler):
+    # Purpose: Email ERROR-level log records to the operator via SES SMTP so
+    # production failures page someone instead of rotting in /logs on the box.
+    # Throttled: at most one email per QC_ALERT_MIN_INTERVAL_SECONDS; errors in
+    # between are counted and summarized in the next email. Disabled unless
+    # QC_ALERT_SMTP_USER, QC_ALERT_SMTP_PASS, and QC_ALERT_TO are all set.
+    # Sending happens on a daemon thread and never raises into the app.
+    # Imports From: None
+    # Exported To: attached to the error loggers in configure_alerting()
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.ERROR)
+        self.host = os.getenv("QC_ALERT_SMTP_HOST", "email-smtp.us-east-1.amazonaws.com")
+        self.port = int(os.getenv("QC_ALERT_SMTP_PORT", "587"))
+        self.user = os.getenv("QC_ALERT_SMTP_USER", "")
+        self.password = os.getenv("QC_ALERT_SMTP_PASS", "")
+        self.to_addr = os.getenv("QC_ALERT_TO", "")
+        self.from_addr = os.getenv("QC_ALERT_FROM", "noreply@quantumchess.ninja")
+        self.min_interval = int(os.getenv("QC_ALERT_MIN_INTERVAL_SECONDS", "900"))
+        self.enabled = bool(self.user and self.password and self.to_addr)
+        self._lock = threading.Lock()
+        self._last_sent = 0.0
+        self._suppressed = 0
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if not self.enabled:
+            return
+        try:
+            with self._lock:
+                now = time.time()
+                if now - self._last_sent < self.min_interval:
+                    self._suppressed += 1
+                    return
+                suppressed = self._suppressed
+                self._suppressed = 0
+                self._last_sent = now
+            body = self.format(record)
+            threading.Thread(
+                target=self._send, args=(record.name, body, suppressed), daemon=True
+            ).start()
+        except Exception:
+            pass  # alerting must never take the app down with it
+
+    def _send(self, logger_name: str, body: str, suppressed: int) -> None:
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = f"[quantumchess] {logger_name} error" + (
+                f" (+{suppressed} more since last alert)" if suppressed else ""
+            )
+            msg["From"] = self.from_addr
+            msg["To"] = self.to_addr
+            note = (
+                f"{suppressed} earlier error(s) were suppressed by the "
+                f"{self.min_interval}s throttle since the last alert.\n\n"
+                if suppressed
+                else ""
+            )
+            msg.set_content(
+                f"{note}{body}\n\nFull logs: /logs on the API box "
+                "(docker volume api_logs)."
+            )
+            with smtplib.SMTP(self.host, self.port, timeout=15) as smtp:
+                smtp.starttls()
+                smtp.login(self.user, self.password)
+                smtp.send_message(msg)
+        except Exception as exc:  # pragma: no cover - network failure path
+            print(f"[alerts] failed to send error email: {exc}", file=sys.stderr)
+
+
+def configure_alerting() -> None:
+    handler = ThrottledEmailAlertHandler()
+    if not handler.enabled:
+        return
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S%z",
+        )
+    )
+    # The error loggers don't propagate to root, so attach to each directly.
+    for name in ("", "uvicorn", "uvicorn.error", "uvicorn.access", "fastapi", "frontend.client"):
+        logging.getLogger(name).addHandler(handler)
+
+
 configure_logging()
+configure_alerting()
 
 
 # ---- FastAPI App --------------------------------------------------------------

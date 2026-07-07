@@ -92,13 +92,9 @@ button:hover {
 .qc-menu-btn {
   transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
-.qc-menu-btn:hover {
+.qc-menu-btn:not(.qc-menu-btn--primary):hover {
   background: rgba(255, 255, 255, 0.09) !important;
   transform: translateX(3px);
-}
-.qc-menu-btn--play:hover {
-  background: #3fbf6f !important;
-  transform: translateX(3px) scale(1.01);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -106,7 +102,7 @@ button:hover {
 }
 
 .qc-menu-btn--primary:hover {
-  background: #3fbf6f !important;
+  filter: brightness(1.15);
   transform: translateX(3px) scale(1.01);
 }
 .qc-new-game-challenge {

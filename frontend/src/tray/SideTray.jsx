@@ -13,7 +13,9 @@ import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, F
 // Big labeled home-menu button. The pre-game tray is a menu, not a form:
 // setup, puzzle, tutorial, rules, account, settings each get a full-width
 // row (hover styles live in App.css under .qc-menu-btn).
-function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null, dot = false, glow = null, className = '' }) {
+function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null, dot = false, glow = null, className = '', bg = null, fg = null }) {
+  const background = primary ? (bg || theme.success) : 'rgba(255,255,255,0.04)';
+  const color = primary ? (fg || '#ffffff') : theme.textPrimary;
   return (
     <button
       type="button"
@@ -27,9 +29,9 @@ function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null
         boxSizing: 'border-box',
         padding: primary ? '16px 18px' : '13px 18px',
         borderRadius: 12,
-        border: `1px solid ${primary ? theme.success : theme.border}`,
-        background: primary ? theme.success : 'rgba(255,255,255,0.04)',
-        color: primary ? '#ffffff' : theme.textPrimary,
+        border: `1px solid ${primary ? background : theme.border}`,
+        background,
+        color,
         fontWeight: 800,
         fontSize: primary ? 16 : 14.5,
         letterSpacing: '0.03em',
@@ -39,13 +41,14 @@ function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null
         boxShadow: glow ? `0 0 0 1.5px ${glow}, 0 0 12px ${glow}88` : 'none',
       }}
     >
-      <Icon size={primary ? 22 : 19} color={primary ? '#ffffff' : (accent || theme.primary)} />
+      <Icon size={primary ? 22 : 19} color={primary ? color : (accent || theme.primary)} />
       <span style={{ flex: 1 }}>{label}</span>
       {dot ? (
         <span
           aria-hidden="true"
           style={{
-            width: 10, height: 10, borderRadius: 999, background: '#f6c445',
+            width: 10, height: 10, borderRadius: 999,
+            background: primary ? color : '#f6c445',
             border: '1.5px solid rgba(10,12,20,0.9)',
           }}
         />
@@ -428,6 +431,7 @@ export default function SideTray({
           >
             <MenuButton
               icon={UserIcon} label={accountSignedIn ? 'Account' : 'Sign In'} primary
+              bg="#4fc3f7" fg="#06121b"
               className="qc-menu-btn--account"
               glow={onboarding && !accountSignedIn ? '#7ee787' : null}
               onClick={() => { onOpenAccount(); }}
@@ -439,6 +443,7 @@ export default function SideTray({
             />
             <MenuButton
               icon={PuzzleIcon} label="Daily Puzzle" primary dot={puzzleUnsolved}
+              bg="#f6c445" fg="#1a1a1a"
               className="qc-menu-btn--puzzle"
               onClick={() => { onOpenPuzzle(); }}
             />
