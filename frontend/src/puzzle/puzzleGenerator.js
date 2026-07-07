@@ -126,6 +126,22 @@ const atkQueenly = (f, r, f2, r2) => atkLine(f, r, f2, r2) || atkDiag(f, r, f2, 
 const atkNear = (f, r, f2, r2) => Math.max(Math.abs(f - f2), Math.abs(r - r2)) <= 1;
 const atkBlackPawn = (f, r, f2, r2) => r === r2 - 1 && Math.abs(f - f2) === 1;
 
+
+function placeKingSafely(rng, b, pieces, side, fLo, fHi, rLo, rHi, tries = 40) {
+  const opp = side === 'white' ? 'black' : 'white';
+  for (let i = 0; i < tries; i++) {
+    const f = randInt(rng, fLo, fHi);
+    const r = randInt(rng, rLo, rHi);
+    if (!b.free(f, r)) continue;
+    const kp = P(side, sq(f, r), 'k');
+    if (canSideCaptureSquare([...pieces, kp], opp, kp.square)) continue;
+    b.take(f, r);
+    pieces.push(kp);
+    return kp;
+  }
+  return null;
+}
+
 const KNIGHT_OFFS = [[-1, -2], [1, -2], [-2, -1], [2, -1], [-2, 1], [2, 1], [-1, 2], [1, 2]];
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
@@ -1000,7 +1016,7 @@ const R_LEDGER = {
     // knight lands here, so the square must be off every black reach — T's
     // queen-lines included.
     const Xspot = b.findFree(rng, 1, 6, 2, 4, 30, (f, r) => atkQueenly(f, r, Tf, 0));
-    if (!Xspot) return null;
+    if (!Xspot) return bfail('led-Xspot');
     const [Xf, Xr] = Xspot;
     pieces.push(P('black', b.take(Xf, Xr), 'nr'));
     // X2 = {b,r}: a knight-hop from X1's square (so the auditor chains);
@@ -1012,7 +1028,7 @@ const R_LEDGER = {
       const r = Xr + dr;
       if (b.free(f, r) && r >= 1 && !atkQueenly(f, r, Tf, 0)) X2spot = [f, r];
     }
-    if (!X2spot) return null;
+    if (!X2spot) return bfail('led-X2spot');
     pieces.push(P('black', b.take(X2spot[0], X2spot[1]), 'br'));
     // landings the rest of Black's army must not reach
     const landings = [[Xf, Xr], X2spot];
@@ -1020,60 +1036,54 @@ const R_LEDGER = {
       if (kinds.includes('n') && atkKnight(lf, lr, f, r)) return true;
       if (kinds.includes('q') && atkQueenly(lf, lr, f, r)) return true;
       if (kinds.includes('line') && atkLine(lf, lr, f, r)) return true;
+      if (kinds.includes('file') && f === lf) return true;
       if (kinds.includes('diag') && atkDiag(lf, lr, f, r)) return true;
       if (kinds.includes('p') && atkBlackPawn(lf, lr, f, r)) return true;
       if (kinds.includes('k') && atkNear(lf, lr, f, r)) return true;
       return false;
     });
-    // the auditor: a white knight a hop away from X1
+    // the auditor: a white knight a hop away from X1 — but blind to T1 and
+    // the blur (their capture-collapse is 'n' too: taking either would be a
+    // second census solution)
     let att = null;
     for (let tries = 0; tries < 12 && !att; tries++) {
       const [df, dr] = pick(rng, KNIGHT_OFFS);
-      if (b.free(Xf + df, Xr + dr)) att = P('white', b.take(Xf + df, Xr + dr), 'n');
+      const f = Xf + df;
+      const r = Xr + dr;
+      if (!b.free(f, r)) continue;
+      if (atkKnight(t1[0], t1[1], f, r)) continue;
+      att = P('white', b.take(f, r), 'n');
     }
-    if (!att) return null;
+    if (!att) return bfail('led-att');
     pieces.push(att);
     // ply-1 cascade target: a maybe-queen, out of reach of both landings
     const t1 = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['n', 'q']));
-    if (!t1) return null;
+    if (!t1) return bfail('led-t1');
     const t1Square = sq(t1[0], t1[1]);
     const T1 = P('black', b.take(t1[0], t1[1]), 'nq');
     pieces.push(T1);
     // confirmed census pieces: one knight, one bishop
     const cn = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['n']));
-    if (!cn) return null;
+    if (!cn) return bfail('led-cn');
     pieces.push(P('black', b.take(cn[0], cn[1]), 'n'));
     const cb = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['diag']));
-    if (!cb) return null;
+    if (!cb) return bfail('led-cb');
     pieces.push(P('black', b.take(cb[0], cb[1]), 'b'));
-    // black king — the lone carrier, so definite; only its step-reach matters
-    const kh = b.findFree(rng, 0, 7, 6, 7, 40, (f, r) => reaches(f, r, ['k']));
-    if (!kh) return null;
-    pieces.push(P('black', b.take(kh[0], kh[1]), 'k'));
     // scripted-reply blur {n,b,r}: safe both where it stands and after its
     // push (its rook branch moves it straight down one)
-    const blur = b.findFree(rng, 0, 7, 4, 5, 40, (f, r) =>
-      reaches(f, r, ['n', 'line', 'diag']) || reaches(f, r - 1, ['n', 'line', 'diag']));
-    if (!blur) return null;
+    const blur = b.findFree(rng, 0, 7, 3, 5, 60, (f, r) =>
+      reaches(f, r, ['n', 'file', 'diag']) || reaches(f, r - 1, ['n', 'file', 'diag']));
+    if (!blur) return bfail('led-blur');
     pieces.push(P('black', b.take(blur[0], blur[1]), 'nbr'));
-    // white king on rank 2, off the back-rank target's file/diagonals and
-    // clear of the census pieces' knight rings; positionSane rejects any
-    // remaining attack, so this filter only needs to be roughly right
-    let wkFile = -1;
-    for (const f of [0, 7, 1, 6, 2, 5, 3, 4]) {
-      if (!b.free(f, 1)) continue;
-      if (f === Tf || Math.abs(f - Tf) === 1) continue;
-      if (atkKnight(f, 1, Xf, Xr) || atkKnight(f, 1, X2spot[0], X2spot[1])) continue;
-      wkFile = f;
-      break;
-    }
-    if (wkFile < 0) return null;
-    pieces.push(P('white', b.take(wkFile, 1), 'k'));
+
     // decoy rook: off both X files/ranks so it can never be a second census
     // capture (which would break uniqueness at either ply)
     const dec = b.findFree(rng, 0, 7, 1, 2, 30, (f, r) => reaches(f, r, ['line']));
-    if (!dec) return null;
+    if (!dec) return bfail('led-dec');
     pieces.push(P('white', b.take(dec[0], dec[1]), 'r'));
+    // kings last, on provably safe squares
+    if (!placeKingSafely(rng, b, pieces, 'black', 0, 7, 6, 7)) return bfail('led-bk');
+    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 1)) return bfail('led-wk');
 
     return {
       pieces,
@@ -1293,10 +1303,11 @@ const R_INVESTIGATION = {
     pieces.push(N);
     // T: the maybe-queen the census will name, with exactly one white
     // attacker (a rook) aimed at it. Kept off X's lines and jumps.
-    const Tspot = b.findFree(rng, 0, 7, 5, 7, 90, (f, r) =>
-      aligned(f, r, Lf, Lr) || knightOff(f, r, Lf, Lr) ||
-      aligned(f, r, Xspot[0], Xspot[1]) || knightOff(f, r, Xspot[0], Xspot[1]) ||
-      spotRisk(f, r) || r <= Xspot[1]);
+    const Tspot = b.findFree(rng, 0, 7, 5, 7, 90, (f, r) => {
+      if (aligned(f, r, Lf, Lr) || aligned(f, r, Xspot[0], Xspot[1]) || r <= Xspot[1]) return true;
+      for (let rr2 = 0; rr2 < r; rr2++) if (!b.free(f, rr2)) return true; // rook aim needs the file
+      return false;
+    });
     if (!Tspot) return bfail('inv6-T');
     const tSquare = sq(Tspot[0], Tspot[1]);
     const T = P('black', b.take(Tspot[0], Tspot[1]), 'bq');
@@ -1305,13 +1316,9 @@ const R_INVESTIGATION = {
     if (!b.free(Tspot[0], rr)) return null;
     for (let r = rr + 1; r < Tspot[1]; r++) if (!b.free(Tspot[0], r)) return null;
     pieces.push(P('white', b.take(Tspot[0], rr), 'r'));
-    // black king — the lone carrier, so definite; only its step-reach matters
-    const kh = b.findFree(rng, 0, 7, 6, 7, 30, (f, r) =>
-      near(f, r, Xspot[0], Xspot[1]) || near(f, r, Tspot[0], Tspot[1]));
-    if (!kh) return bfail('inv7-kh');
-    pieces.push(P('black', b.take(kh[0], kh[1]), 'k'));
-    if (!b.free(0, 0) && !b.free(7, 0)) return null;
-    pieces.push(whiteKingHolder(b.free(0, 0) ? 0 : 7));
+    // kings last, on provably safe squares
+    if (!placeKingSafely(rng, b, pieces, 'black', 0, 7, 6, 7)) return bfail('inv7-bk');
+    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 1)) return bfail('inv8-wk');
 
     const [b1f, b1r] = spots[replierIdx[0]];
     const [b2f, b2r] = spots[replierIdx[1]];

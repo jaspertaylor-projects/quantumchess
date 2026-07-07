@@ -1859,6 +1859,7 @@ export default function App() {
                   attentionSignal={startCtaPulse}
                   onOpenPuzzle={handleOpenPuzzle}
                   puzzleUnsolved={puzzleUnsolved}
+                  onOpenTutorial={handleOpenTutorial}
                 />
               );
               const whiteBarEl = (

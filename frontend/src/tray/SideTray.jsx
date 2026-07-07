@@ -8,7 +8,51 @@ import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon, X as XIcon } from 'lucide-react';
+
+// Big labeled home-menu button. The pre-game tray is a menu, not a form:
+// setup, puzzle, tutorial, rules, account, settings each get a full-width
+// row (hover styles live in App.css under .qc-menu-btn).
+function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null, dot = false, glow = null, className = '' }) {
+  return (
+    <button
+      type="button"
+      className={`qc-menu-btn ${className}`}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: primary ? '16px 18px' : '13px 18px',
+        borderRadius: 12,
+        border: `1px solid ${primary ? theme.success : theme.border}`,
+        background: primary ? theme.success : 'rgba(255,255,255,0.04)',
+        color: primary ? '#ffffff' : theme.textPrimary,
+        fontWeight: 800,
+        fontSize: primary ? 16 : 14.5,
+        letterSpacing: '0.03em',
+        cursor: 'pointer',
+        textAlign: 'left',
+        position: 'relative',
+        boxShadow: glow ? `0 0 0 1.5px ${glow}, 0 0 12px ${glow}88` : 'none',
+      }}
+    >
+      <Icon size={primary ? 22 : 19} color={primary ? '#ffffff' : (accent || theme.primary)} />
+      <span style={{ flex: 1 }}>{label}</span>
+      {dot ? (
+        <span
+          aria-hidden="true"
+          style={{
+            width: 10, height: 10, borderRadius: 999, background: '#f6c445',
+            border: '1.5px solid rgba(10,12,20,0.9)',
+          }}
+        />
+      ) : null}
+    </button>
+  );
+}
 
 export default function SideTray({
   height = 0,
@@ -37,9 +81,10 @@ export default function SideTray({
   onRequirePremium = null,
   onOpenPuzzle = () => {},
   puzzleUnsolved = false,
+  onOpenTutorial = () => {},
   attentionSignal = 0, // bump to flash the tray (board Start CTA clicked)
 }) {
-  const [view, setView] = useState('new-game'); // 'history' or 'new-game'
+  const [view, setView] = useState('menu'); // 'menu' | 'new-game' | 'history'
   // Onboarding coach-sign shown on hover of a glowing button. Anchored to the
   // button-row's right edge (= tray content edge) so it never clips.
   const [coachHint, setCoachHint] = useState(null); // { text, color }
@@ -140,7 +185,11 @@ export default function SideTray({
     [height, stacked]
   );
 
-  const titleText = !isPlaying ? 'New Game' : 'Game Actions';
+  const titleText = isPlaying
+    ? 'Game Actions'
+    : view === 'new-game' ? 'New Game'
+    : view === 'history' ? 'Last Game'
+    : 'Quantum Chess';
 
   return (
     <aside
@@ -152,24 +201,22 @@ export default function SideTray({
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
           <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
             {!isPlaying ? (
-              // Home screen: the setup panel already dominates the tray with
-              // its own Start Game button, so no header New Game shortcut
-              // while it is visible. It returns after a finished game.
-              view === 'new-game' ? null : (
+              // Pre-game the tray is a two-level menu: the home view needs no
+              // header buttons (everything is a big row below); the setup and
+              // post-game views get a single X back to the menu.
+              view === 'menu' ? null : (
                 <IconButton
-                  icon={PlusIcon}
+                  icon={XIcon}
                   size={18}
                   width={32}
                   height={32}
-                  title="New Game"
-                  ariaLabel="Start a new game"
-                  className="qc-side-tray-new-game-btn"
-                  onClick={() => setView('new-game')}
-                  bg={'transparent'}
-                  color={theme.success}
+                  title="Back to menu"
+                  ariaLabel="Back to menu"
+                  className="qc-side-tray-back-btn"
+                  onClick={() => setView('menu')}
+                  bg={theme.secondary}
+                  color={theme.error}
                   hoverInvert={true}
-                  hoverBg={theme.success}
-                  hoverColor={'#ffffff'}
                 />
               )
             ) : searching ? null : (
@@ -222,6 +269,7 @@ export default function SideTray({
               </>
             )}
 
+            {isPlaying ? (
             <span style={{ position: 'relative', display: 'inline-flex' }}>
               <IconButton
                 icon={PuzzleIcon}
@@ -247,6 +295,8 @@ export default function SideTray({
                 />
               ) : null}
             </span>
+            ) : null}
+            {isPlaying ? (<>
             <IconButton
               icon={UserIcon}
               size={16}
@@ -304,6 +354,7 @@ export default function SideTray({
                 : null}
               hoverInvert={true}
             />
+            </>) : null}
 
             {onboarding && coachHint ? (
               <div
@@ -356,7 +407,7 @@ export default function SideTray({
             }}
           >
             <span style={{ flex: 1, color: theme.textSecondary }}>
-              👋 New here? Hover the glowing buttons.
+              👋 New here? Start with the Tutorial.
             </span>
             <button
               type="button"
@@ -429,8 +480,47 @@ export default function SideTray({
             onSeekToIndex={onSeekToIndex}
             externalIndex={externalIndex}
           />
-        ) : (
+        ) : view === 'new-game' ? (
           <NewGamePanel onStartGame={handleStartGame} isPaid={isPaid} onRequirePremium={onRequirePremium} />
+        ) : (
+          <div
+            className="qc-side-tray-menu"
+            style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, overflowY: 'auto' }}
+          >
+            <MenuButton
+              icon={PlayIcon} label="Play Game" primary
+              className="qc-menu-btn--play"
+              onClick={() => { setView('new-game'); onDismissOnboarding(); }}
+            />
+            <MenuButton
+              icon={PuzzleIcon} label="Daily Puzzle" accent="#f6c445" dot={puzzleUnsolved}
+              className="qc-menu-btn--puzzle"
+              onClick={() => { onOpenPuzzle(); }}
+            />
+            <MenuButton
+              icon={GraduationCapIcon} label="Tutorial" accent="#4fc3f7"
+              className="qc-menu-btn--tutorial"
+              glow={onboarding ? '#4fc3f7' : null}
+              onClick={() => { onOpenTutorial(); }}
+            />
+            <MenuButton
+              icon={BookOpenIcon} label="Rules" accent="#c792ea"
+              className="qc-menu-btn--rules"
+              onClick={() => { onOpenRules(); }}
+            />
+            <MenuButton
+              icon={UserIcon} label={accountSignedIn ? 'Account' : 'Sign In'}
+              accent={accountSignedIn ? theme.success : '#7ee787'}
+              className="qc-menu-btn--account"
+              glow={onboarding && !accountSignedIn ? '#7ee787' : null}
+              onClick={() => { onOpenAccount(); }}
+            />
+            <MenuButton
+              icon={SettingsIcon} label="Settings"
+              className="qc-menu-btn--settings"
+              onClick={() => { onOpenSettings(); }}
+            />
+          </div>
         )}
       </div>
     </aside>
