@@ -994,12 +994,20 @@ export default function App() {
   const handleOpenPuzzle = useCallback(() => { setDailyPuzzleOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleClosePuzzle = useCallback(() => { setDailyPuzzleOpen(false); setPuzzleStateBump((n) => n + 1); }, []);
 
+  // Share deep-link: /?puzzle opens today's daily puzzle directly — it's the
+  // URL on the share card, so a friend following it lands on the puzzle, not
+  // the home screen. Works in production builds.
   // Dev tool: ?puzzleDate=YYYY-MM-DD previews any date's puzzle in practice
   // mode (nothing recorded). Dev builds only.
   const [puzzlePreviewDate, setPuzzlePreviewDate] = useState(null);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('puzzle') !== null) {
+      setDailyPuzzleOpen(true);
+      return;
+    }
     if (!import.meta.env.DEV) return;
-    const d = new URLSearchParams(window.location.search).get('puzzleDate');
+    const d = params.get('puzzleDate');
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
       setPuzzlePreviewDate(d);
       setDailyPuzzleOpen(true);

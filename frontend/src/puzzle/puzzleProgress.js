@@ -135,7 +135,8 @@ export function buildShareText(puzzle, { solved, tries }, streak) {
     solved
       ? `${attempts} solved on try ${tries}${streak > 1 ? ` · 🔥 ${streak} day streak` : ''}`
       : `${attempts} it collapsed on me`,
-    'quantumchess.ninja',
+    // deep-link: opens the daily puzzle directly, not the home screen
+    'quantumchess.ninja/?puzzle',
   ];
   return lines.join('\n');
 }

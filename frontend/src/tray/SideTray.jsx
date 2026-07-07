@@ -199,6 +199,13 @@ export default function SideTray({
     >
       <div className="qc-side-tray-header" style={styles.header}>
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
+          {/* Pre-game the title sits inline with the lone X/menu row; the
+              two-row split only earns its space in-game with many icons. */}
+          {!isPlaying ? (
+            <span className="qc-side-tray-title" style={{ ...styles.headerTitle, flex: 1, alignSelf: 'center' }}>
+              {titleText}
+            </span>
+          ) : null}
           <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
             {!isPlaying ? (
               // Pre-game the tray is a two-level menu: the home view needs no
@@ -386,9 +393,11 @@ export default function SideTray({
           </div>
         </div>
 
-        <div className="qc-side-tray-header-bottom" style={styles.headerBottomRow}>
-          <span className="qc-side-tray-title" style={styles.headerTitle}>{titleText}</span>
-        </div>
+        {isPlaying ? (
+          <div className="qc-side-tray-header-bottom" style={styles.headerBottomRow}>
+            <span className="qc-side-tray-title" style={styles.headerTitle}>{titleText}</span>
+          </div>
+        ) : null}
 
         {onboarding ? (
           <div
