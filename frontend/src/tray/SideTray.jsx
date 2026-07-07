@@ -430,13 +430,6 @@ export default function SideTray({
             style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, overflowY: 'auto' }}
           >
             <MenuButton
-              icon={UserIcon} label={accountSignedIn ? 'Account' : 'Sign In'} primary
-              bg="#4fc3f7" fg="#06121b"
-              className="qc-menu-btn--account"
-              glow={onboarding && !accountSignedIn ? '#7ee787' : null}
-              onClick={() => { onOpenAccount(); }}
-            />
-            <MenuButton
               icon={PlayIcon} label="Play Game" primary
               className="qc-menu-btn--play"
               onClick={() => { setView('new-game'); onDismissOnboarding(); }}

@@ -1,0 +1,20 @@
+# Purpose: Free uptime monitoring via a scheduled probe of the production
+# frontend and API. When a probe fails, GitHub emails the workflow's last
+# committer (Settings -> Notifications controls delivery). Every 30 minutes:
+# ~1440 Actions-minutes/month, inside the 2000 free for private repos —
+# don't tighten the cron without checking the quota.
+name: uptime
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Frontend serves the game
+        run: curl -fsS --max-time 20 --retry 2 https://quantumchess.ninja/ | grep -qi "quantum"
+      - name: API answers
+        run: curl -fsS --max-time 20 --retry 2 https://api.quantumchess.ninja/api/hello >/dev/null

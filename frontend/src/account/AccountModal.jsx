@@ -233,6 +233,27 @@ export default function AccountModal({
     }
   };
 
+  const handleAvatarFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-picking the same file
+    if (!file || !user) return;
+    setBusy(true);
+    setNotice(null);
+    const { url, error } = await uploadAvatar(user, file);
+    if (error) {
+      setBusy(false);
+      setNotice({ kind: 'error', text: error });
+      return;
+    }
+    const { error: profileError } = await supabase.from('qc_profiles').update({ avatar_url: url }).eq('id', user.id);
+    setBusy(false);
+    if (profileError) setNotice({ kind: 'error', text: profileError.message });
+    else {
+      setNotice({ kind: 'info', text: 'Profile pic updated.' });
+      refreshProfile();
+    }
+  };
+
   return (
     <div className="qc-account-backdrop" style={styles.backdrop} onClick={onClose}>
       <div

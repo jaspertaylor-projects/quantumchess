@@ -113,3 +113,6 @@ button:hover {
   border-color: #4fc3f7 !important;
   transform: translateX(2px);
 }
+
+.qc-header-account { transition: filter 0.15s ease, background 0.15s ease; }
+.qc-header-account:hover { filter: brightness(1.15); }

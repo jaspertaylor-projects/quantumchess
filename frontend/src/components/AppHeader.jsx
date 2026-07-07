@@ -4,6 +4,7 @@
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { User as UserIcon } from 'lucide-react';
 import StyledSvgImg from '../chessboard/StyledSvgImg.jsx';
 
 import imgP from '../assets/p.svg?url';
@@ -121,11 +122,21 @@ function HeaderPieceIcon({ t, sideCssVars }) {
   );
 }
 
-export default function AppHeader({ svgStyles }) {
+export default function AppHeader({
+  svgStyles,
+  // Account chip in the universal top-right spot: a Sign In pill when
+  // signed out, avatar + username when signed in. Clicking opens the
+  // account panel either way.
+  accountSignedIn = false,
+  accountName = '',
+  accountAvatarUrl = null,
+  onOpenAccount = () => {},
+}) {
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
 
   const styles = {
     appHeader: {
+      position: 'relative',
       backgroundColor: '#000',
       padding: '0 clamp(8px, 1.5vw, 16px)',
       borderRadius: 0,
@@ -254,6 +265,59 @@ export default function AppHeader({ svgStyles }) {
         </div>
       </div>
       <div className="qc-app-title-underline" style={styles.appTitleUnderline} />
+      <button
+        type="button"
+        className="qc-header-account"
+        onClick={onOpenAccount}
+        aria-label={accountSignedIn ? 'Open account panel' : 'Sign in'}
+        style={{
+          position: 'absolute',
+          right: 'clamp(10px, 1.5vw, 20px)',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 5,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: accountSignedIn ? '4px 12px 4px 4px' : '8px 16px',
+          borderRadius: 999,
+          border: accountSignedIn ? '1px solid rgba(79,195,247,0.45)' : 'none',
+          background: accountSignedIn ? 'rgba(12,14,22,0.85)' : '#4fc3f7',
+          color: accountSignedIn ? '#dfe6f2' : '#06121b',
+          fontWeight: 800,
+          fontSize: 13,
+          letterSpacing: '0.03em',
+          cursor: 'pointer',
+          maxWidth: 'clamp(120px, 18vw, 220px)',
+        }}
+      >
+        {accountSignedIn ? (
+          <>
+            <span
+              aria-hidden
+              style={{
+                width: 28, height: 28, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto',
+                display: 'grid', placeItems: 'center', background: 'rgba(79,195,247,0.18)',
+                color: '#4fc3f7', fontSize: 13, fontWeight: 900,
+              }}
+            >
+              {accountAvatarUrl ? (
+                <img src={accountAvatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                (accountName[0] || '?').toUpperCase()
+              )}
+            </span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {accountName || 'Account'}
+            </span>
+          </>
+        ) : (
+          <>
+            <UserIcon size={15} />
+            <span>Sign In</span>
+          </>
+        )}
+      </button>
     </header>
   );
 }

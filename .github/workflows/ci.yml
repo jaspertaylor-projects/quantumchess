@@ -1,0 +1,24 @@
+# Purpose: Run the frontend test suite (engine replay fixtures) on every push
+# so engine regressions surface before a deploy, not after.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      # --store-dir overrides .npmrc's /pnpm/store, which only exists in the
+      # dev container image.
+      - run: pnpm install --frozen-lockfile --store-dir ~/.pnpm-store
+      - run: pnpm test
