@@ -16,7 +16,7 @@ import theme from '../theme.js';
 import QuantumPiece from './QuantumPiece.jsx';
 import { DEFAULT_MEASUREMENT_COLORS, hexToRgbString } from '../settings/useMeasurementColors.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
-import { listCheckThreats } from './quantumEngine.js';
+import { listCheckThreats, canPieceRecohere } from './quantumEngine.js';
 
 export default function Board({
   orientation = 'white',
@@ -85,6 +85,21 @@ export default function Board({
     if (!indicators.checkGlow && !indicators.checkRing) return [];
     return listCheckThreats(pieces);
   }, [pieces, indicators.checkGlow, indicators.checkRing]);
+
+  // Sealed pieces: nearly-defined pieces that can never regain a possibility
+  // (conservation has settled every question). Their recoherence clock would
+  // cycle forever, so QuantumPiece draws a solid line instead of the dots.
+  const sealedIds = useMemo(() => {
+    if (!indicators.recohere) return new Set();
+    const out = new Set();
+    for (const p of pieces) {
+      if (p.captured || !p.square || p.entangledWith) continue;
+      const len = (p.possibleTypes || []).length;
+      if (len === 0 || len > 2) continue;
+      if (!canPieceRecohere(pieces, p.id)) out.add(p.id);
+    }
+    return out;
+  }, [pieces, indicators.recohere]);
 
   const styles = {
     root: {
@@ -381,6 +396,7 @@ export default function Board({
                   recohere={piece.recohere}
                   entangled={Boolean(piece.entangledWith)}
                   promoted={Boolean(piece.wasPromoted)}
+                  sealed={sealedIds.has(piece.id)}
                   indicators={indicators}
                   measurementColors={measurementColors}
                   size={pieceSize}
@@ -428,15 +444,23 @@ export default function Board({
               const uy = dy / len;
               // Emanate from the edge of the attacker's square; stop the tip
               // just outside the target ring, with the shaft ending at the
-              // arrowhead's base.
-              const headLen = cell * 0.2;
+              // arrowhead's base. Adjacent squares leave less room than the
+              // default insets assume, so shrink the start inset (and if
+              // needed the head) rather than letting the shaft run backwards.
+              const tipInset = cell * 0.46;
+              let startInset = cell * 0.5;
+              let headLen = cell * 0.2;
               const headHalf = cell * 0.11;
-              const tipX = to.x - ux * cell * 0.46;
-              const tipY = to.y - uy * cell * 0.46;
+              if (len - tipInset - startInset < headLen) {
+                startInset = Math.max(cell * 0.1, len - tipInset - headLen - cell * 0.06);
+                headLen = Math.min(headLen, Math.max(cell * 0.12, len - tipInset - startInset));
+              }
+              const tipX = to.x - ux * tipInset;
+              const tipY = to.y - uy * tipInset;
               const baseX = tipX - ux * headLen;
               const baseY = tipY - uy * headLen;
-              const x1 = from.x + ux * cell * 0.5;
-              const y1 = from.y + uy * cell * 0.5;
+              const x1 = from.x + ux * startInset;
+              const y1 = from.y + uy * startInset;
               const px = -uy;
               const py = ux;
               const headPoints = `${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`;
@@ -493,6 +517,7 @@ export default function Board({
                 recohere={draggingPiece.recohere}
                 entangled={Boolean(draggingPiece.entangledWith)}
                 promoted={Boolean(draggingPiece.wasPromoted)}
+                sealed={sealedIds.has(draggingPiece.id)}
                 indicators={indicators}
                 measurementColors={measurementColors}
                 size={pieceSize}

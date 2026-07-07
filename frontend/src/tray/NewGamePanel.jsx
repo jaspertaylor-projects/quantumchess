@@ -105,15 +105,24 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
   );
 }
 
-export default function NewGamePanel({ onStartGame, onCancel }) {
+export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePremium = null }) {
   const [gameMode, setGameMode] = useState('ai'); // 'local', 'ai', 'online'
   const [aiBotId, setAiBotId] = useState(DEFAULT_BOT_ID);
   const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
   const [isRanked, setIsRanked] = useState(false); // boolean
   const [timeControl, setTimeControl] = useState('5+0'); // '3+0', '5+0', '10+0'
 
+  const selectedBot = getBotById(aiBotId);
+  const premiumLocked = Boolean(gameMode === 'ai' && selectedBot && selectedBot.premium && !isPaid);
+
   const handleStart = () => {
     const bot = getBotById(aiBotId);
+    // Premium bots are browsable by everyone (that's the pitch) but only
+    // playable on the paid tier — the block lands here, not in the list.
+    if (gameMode === 'ai' && bot && bot.premium && !isPaid) {
+      if (onRequirePremium) onRequirePremium();
+      return;
+    }
     onStartGame({
       gameMode,
       aiBotId,
@@ -208,8 +217,13 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
 
   const tierTag = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
   const aiBotOptions = useMemo(
-    () => BOTS.map((b) => ({ value: b.id, label: `${tierTag[b.tier]} · ${b.name} (${b.rating})` })),
-    []
+    () => BOTS.map((b) => ({
+      value: b.id,
+      label: b.premium
+        ? `★ Premium · ${b.name} (${b.rating})${isPaid ? '' : ' 🔒'}`
+        : `${tierTag[b.tier]} · ${b.name} (${b.rating})`,
+    })),
+    [isPaid]
   );
 
   const preferredSideOptions = useMemo(
@@ -249,6 +263,18 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
               options={aiBotOptions}
               onChange={setAiBotId}
             />
+            {premiumLocked ? (
+              <div
+                className="qc-new-game-premium-hint"
+                style={{
+                  fontSize: 12, lineHeight: 1.45, borderRadius: 8, padding: '7px 10px',
+                  border: '1px solid rgba(246,196,69,0.55)', background: 'rgba(246,196,69,0.08)',
+                  color: '#f6c445',
+                }}
+              >
+                ★ {selectedBot.name} is a Premium bot — upgrade for $3/month to play the premium roster.
+              </div>
+            ) : null}
           </div>
           <div className="qc-new-game-section" style={styles.section}>
             <span className="qc-new-game-label" style={styles.label}>
@@ -284,15 +310,33 @@ export default function NewGamePanel({ onStartGame, onCancel }) {
               <OptionButton label="10 + 0" selected={timeControl === '10+0'} onClick={() => setTimeControl('10+0')} />
             </div>
           </div>
+          <div className="qc-new-game-section" style={styles.section}>
+            <span className="qc-new-game-label" style={styles.label}>
+              Play a Friend
+            </span>
+            <button
+              type="button"
+              className="qc-new-game-challenge"
+              style={{ ...styles.footerButton(false), alignSelf: 'flex-start' }}
+              onClick={() => onStartGame({
+                gameMode: 'online',
+                privateFriend: true,
+                preferredSide,
+                isRanked: false,
+                timeControl,
+              })}
+            >
+              ⚔ Challenge a Friend — get a link
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="qc-new-game-footer" style={styles.footer}>
-        <button type="button" style={styles.footerButton(false)} onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="button" style={styles.footerButton(true)} onClick={handleStart}>
-          Start Game
+        {/* No Cancel here — cancelling only exists while queued for an
+            online match, next to the "Searching…" banner. */}
+        <button type="button" className="qc-new-game-start" style={styles.footerButton(true)} onClick={handleStart}>
+          {premiumLocked ? 'Unlock Premium' : 'Start Game'}
         </button>
       </div>
     </div>

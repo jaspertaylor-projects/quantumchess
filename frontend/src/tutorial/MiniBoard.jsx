@@ -121,6 +121,7 @@ export default function MiniBoard({
               recohere={Number.isFinite(p.regain) ? p.regain : 0}
               entangled={Boolean(p.chain)}
               promoted={Boolean(p.chevrons)}
+              sealed={Boolean(p.sealed)}
               svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}
               ariaLabel={`Tutorial piece at ${p.sq}`}
             />
@@ -137,14 +138,22 @@ export default function MiniBoard({
           const len = Math.hypot(dx, dy) || 1;
           const ux = dx / len;
           const uy = dy / len;
-          const headLen = cell * 0.2;
+          // Same short-arrow guard as the live board: adjacent squares get a
+          // compact arrow instead of a shaft that runs backwards.
+          const tipInset = cell * 0.46;
+          let startInset = cell * 0.5;
+          let headLen = cell * 0.2;
           const headHalf = cell * 0.11;
-          const tipX = to.x - ux * cell * 0.46;
-          const tipY = to.y - uy * cell * 0.46;
+          if (len - tipInset - startInset < headLen) {
+            startInset = Math.max(cell * 0.1, len - tipInset - headLen - cell * 0.06);
+            headLen = Math.min(headLen, Math.max(cell * 0.12, len - tipInset - startInset));
+          }
+          const tipX = to.x - ux * tipInset;
+          const tipY = to.y - uy * tipInset;
           const baseX = tipX - ux * headLen;
           const baseY = tipY - uy * headLen;
-          const x1 = from.x + ux * cell * 0.5;
-          const y1 = from.y + uy * cell * 0.5;
+          const x1 = from.x + ux * startInset;
+          const y1 = from.y + uy * startInset;
           const px = -uy;
           const py = ux;
           const hex = bodyHex(a.side || 'white');

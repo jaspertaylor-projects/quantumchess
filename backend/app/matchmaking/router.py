@@ -13,7 +13,14 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from . import service
-from .models import HeartbeatPayload, JoinPayload, LeavePayload, MatchResponse
+from .models import (
+    CreatePrivatePayload,
+    HeartbeatPayload,
+    JoinPayload,
+    JoinPrivatePayload,
+    LeavePayload,
+    MatchResponse,
+)
 
 router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])  # noqa: E231
 
@@ -26,6 +33,18 @@ def matchmaking_join(payload: JoinPayload) -> MatchResponse:
 @router.get("/status/{client_id}", response_model=MatchResponse)
 def matchmaking_status(client_id: str) -> MatchResponse:
     return service.get_status(client_id)
+
+
+# Challenge a friend: open a private room + invite code, then the friend
+# seats themselves with the code. The WS relay treats the room like any other.
+@router.post("/create-private", response_model=MatchResponse)
+def matchmaking_create_private(payload: CreatePrivatePayload) -> MatchResponse:
+    return service.create_private(payload.clientId)
+
+
+@router.post("/join-private", response_model=MatchResponse)
+def matchmaking_join_private(payload: JoinPrivatePayload) -> MatchResponse:
+    return service.join_private(payload.clientId, payload.code)
 
 
 @router.post("/leave")
@@ -51,6 +70,12 @@ def matchmaking_metrics() -> Dict[str, Any]:
 #                         "lastMono": float, "started": bool }, "clock_task": asyncio.Task|None,
 #              "ended": bool, "winner": str|None, "end_reason": str|None, "announced_end": bool } }
 _WS_ROOMS: Dict[str, Dict[str, Any]] = {}
+
+# A game that never sees a first move within this window is voided.
+FIRST_MOVE_TIMEOUT_S = 30.0
+# A player who stays disconnected this long forfeits (remaining player wins);
+# if nobody ever moved, the game is voided instead.
+DISCONNECT_TIMEOUT_S = 60.0
 
 
 def _other_side(side: str) -> str:
@@ -91,6 +116,12 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
         s["end_reason"] = None
     if "announced_end" not in s:
         s["announced_end"] = False
+    if "history" not in s:
+        s["history"] = []
+    if "both_connected_at" not in s:
+        s["both_connected_at"] = None
+    if "dc_at" not in s:
+        s["dc_at"] = {}
     _ensure_clock(s)
     return s
 
@@ -221,12 +252,38 @@ async def _ensure_clock_task(room_id: str) -> None:
                             clk["active"] = "none"
                         s["clock"] = clk
 
-                    if s.get("ended") and s.get("end_reason") == "time" and not s.get("announced_end"):
+                    nowm = _now_mono()
+                    if not s.get("ended"):
+                        bca = s.get("both_connected_at")
+                        if s.get("seq", 0) == 0 and bca and (nowm - bca) > FIRST_MOVE_TIMEOUT_S:
+                            # Nobody moved within the window: void the game.
+                            s["ended"] = True
+                            s["winner"] = None
+                            s["end_reason"] = "first-move timeout"
+                            clk = s.get("clock", {})
+                            clk["active"] = "none"
+                            s["clock"] = clk
+                        else:
+                            for dcid, ts in list((s.get("dc_at") or {}).items()):
+                                if (nowm - ts) > DISCONNECT_TIMEOUT_S:
+                                    s["ended"] = True
+                                    if s.get("seq", 0) > 0:
+                                        side_gone = service.get_side_for_client(room_id, dcid)
+                                        s["winner"] = _other_side(side_gone) if side_gone in ("white", "black") else None
+                                    else:
+                                        s["winner"] = None
+                                    s["end_reason"] = "abandonment"
+                                    clk = s.get("clock", {})
+                                    clk["active"] = "none"
+                                    s["clock"] = clk
+                                    break
+
+                    if s.get("ended") and not s.get("announced_end"):
                         s["announced_end"] = True
                         game_over_payload = {
                             "type": "game_over",
                             "roomId": room_id,
-                            "reason": "time",
+                            "reason": s.get("end_reason") or "rules",
                             "winner": s.get("winner"),
                             "seq": s.get("seq", 0),
                             "turn": s.get("turn", "white"),
@@ -288,6 +345,12 @@ async def matchmaking_ws(
 
     state["conns"][cid] = websocket
 
+    # A returning player is no longer disconnected; two seated players start
+    # the first-move countdown.
+    state.setdefault("dc_at", {}).pop(cid, None)
+    if len(state["conns"]) == 2 and not state.get("both_connected_at"):
+        state["both_connected_at"] = _now_mono()
+
     side = service.get_side_for_client(room_id, cid) or "white"
     room_snapshot = service.get_room_snapshot(room_id) or {"players": [], "sides": {}}
     opponent_present = len(room_snapshot.get("players", [])) == 2
@@ -310,6 +373,8 @@ async def matchmaking_ws(
             "turn": state["turn"],
             "seq": state["seq"],
             "clock": _clock_view(state),
+            # Full move history so a rejoining client can rebuild the game.
+            "history": list(state.get("history", [])),
         },
     )
 
@@ -339,6 +404,12 @@ async def matchmaking_ws(
 
             mtype = msg.get("type")
             if mtype == "ping":
+                # Keep the matchmaking-layer liveness fresh during play so the
+                # room survives long games and validates rejoins.
+                try:
+                    service.heartbeat(cid)
+                except Exception:
+                    pass
                 # Also return a clock snapshot with pong to help clients sync
                 await _send(websocket, {"type": "pong", "clock": _clock_view(state)})
                 continue
@@ -435,6 +506,14 @@ async def matchmaking_ws(
                         clk["lastMono"] = _now_mono()
 
                         state["clock"] = clk
+
+                        state.setdefault("history", []).append({
+                            "type": "move",
+                            "from": m_from,
+                            "to": m_to,
+                            "side": true_side,
+                            "enPassant": m_en_passant,
+                        })
 
                         payload = {
                             "type": "move",
@@ -545,6 +624,15 @@ async def matchmaking_ws(
 
                         state["clock"] = clk
 
+                        state.setdefault("history", []).append({
+                            "type": "castle",
+                            "side": true_side,
+                            "piece1_from": p1f,
+                            "piece1_to": p1t,
+                            "piece2_from": p2f,
+                            "piece2_to": p2t,
+                        })
+
                         payload = {
                             "type": "castle",
                             "roomId": room_id,
@@ -628,13 +716,18 @@ async def matchmaking_ws(
         except Exception:
             pass
     finally:
-        # Cleanup connection and notify room
+        # Cleanup connection and notify room. Only deregister if THIS socket
+        # is still the one on record — a client that reconnected (same cid,
+        # new socket) must not be kicked when its old socket finishes closing.
         room_state = _WS_ROOMS.get(room_id)
-        if room_state and cid in room_state.get("conns", {}):
+        if room_state and room_state.get("conns", {}).get(cid) is websocket:
             try:
                 room_state["conns"].pop(cid, None)
             except Exception:
                 pass
+            # Start the abandonment countdown for this seat; a rejoin clears it.
+            if not room_state.get("ended"):
+                room_state.setdefault("dc_at", {})[cid] = _now_mono()
             room_snapshot = service.get_room_snapshot(room_id) or {"players": [], "sides": {}}
             print(
                 f"[WS][cleanup] room={room_id} removed={cid} remaining={list(room_state.get('conns', {}).keys())} turn={room_state.get('turn')} seq={room_state.get('seq')}"

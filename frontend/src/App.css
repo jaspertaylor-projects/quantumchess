@@ -71,3 +71,8 @@ button:hover {
 @media (prefers-reduced-motion: reduce) {
   .qc-icon-button[style*="qc-onboard-pulse"] { animation: none !important; }
 }
+
+@keyframes qc-speech-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

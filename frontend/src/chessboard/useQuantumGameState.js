@@ -302,6 +302,136 @@ export default function useQuantumGameState(resetKey = 0) {
     return { success: true };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot, gameOver, enPassantMovesForSide, halfmoveClock]);
 
+  // Rebuild the whole timeline from a relayed move list — used when rejoining
+  // an online game after a reload. Entries are the server's history records:
+  // { type: 'move', from, to, enPassant } or { type: 'castle', piece1_from,
+  // piece2_from }. Returns the applied moves as { from, to, side } records
+  // (two per castle) so the caller can repopulate the move-list store.
+  const replayMoves = useCallback((entries) => {
+    let snap = makeInitialSnapshot();
+    const snaps = [snap];
+    const applied = [];
+
+    for (const e of Array.isArray(entries) ? entries : []) {
+      const prevPieces = snap.pieces;
+      const side = snap.sideToMove;
+      const cc = snap.captureCounter;
+      const occ = buildOccupancy(prevPieces);
+      let finalPieces = null;
+      let nextLastMove = null;
+      let nextCaptureCounter = cc;
+      let progress = false;
+
+      if (e && e.type === 'castle') {
+        const p1 = occ.get(e.piece1_from);
+        const p2 = occ.get(e.piece2_from);
+        if (!p1 || !p2) break;
+        const res = computeCastlePlanInPosition(prevPieces, side, p1.id, p2.id);
+        if (!res.canCastle || !res.plan) break;
+        const sim = simulateCastle(prevPieces, res.plan);
+        if (!sim.ok) break;
+        finalPieces = applyQuantumConstraints(sim.pieces);
+        nextLastMove = {
+          side,
+          pieceId: res.plan.piece1_id,
+          from: res.plan.piece1_from,
+          to: res.plan.piece1_to,
+          isDoubleStep: false,
+          crossedSquare: null,
+          measuredSquares: sim.measuredSquares || [],
+        };
+        progress = countPossibilities(finalPieces) < countPossibilities(prevPieces);
+        applied.push({ from: res.plan.piece1_from, to: res.plan.piece1_to, side, castle: true });
+        applied.push({ from: res.plan.piece2_from, to: res.plan.piece2_to, side, castle: true });
+      } else if (e && typeof e.from === 'string' && typeof e.to === 'string') {
+        const piece = occ.get(e.from);
+        if (!piece) break;
+        const wasFirstMove = (piece.moveCount || 0) === 0;
+        let sim = null;
+        let usedEnPassant = false;
+        if (e.enPassant) {
+          const ep = listEnPassantCaptures(prevPieces, side, snap.lastMove)
+            .find((x) => x.pieceId === piece.id && x.to === e.to);
+          if (ep) {
+            sim = simulateEnPassant(prevPieces, piece.id, e.to, ep.victimId, cc);
+            usedEnPassant = sim.ok;
+          }
+        }
+        if (!sim || !sim.ok) sim = simulateStandardMove(prevPieces, piece.id, e.to, cc);
+        if (!sim.ok) break;
+        finalPieces = sim.pieces;
+        nextCaptureCounter = sim.didCapture ? cc + 1 : cc;
+        nextLastMove = {
+          side,
+          pieceId: piece.id,
+          from: e.from,
+          to: e.to,
+          isDoubleStep: false,
+          crossedSquare: null,
+          measuredSquares: sim.measuredSquares || [],
+        };
+        const movedFinal = finalPieces.find((p) => p.id === piece.id && !p.captured) || null;
+        if (!usedEnPassant && wasFirstMove) {
+          const fromPos = fromAlgebraic(e.from);
+          const toPos = fromAlgebraic(e.to);
+          const dir = side === 'white' ? 1 : -1;
+          if (
+            fromPos && toPos && movedFinal &&
+            fromPos.fileIndex === toPos.fileIndex &&
+            toPos.rankIndex - fromPos.rankIndex === 2 * dir &&
+            movedFinal.possibleTypes.includes('p')
+          ) {
+            nextLastMove.isDoubleStep = true;
+            nextLastMove.crossedSquare = toAlgebraic(fromPos.fileIndex, fromPos.rankIndex + dir);
+          }
+        }
+        const definitePawnMove = Boolean(movedFinal && movedFinal.possibleTypes.length === 1 && movedFinal.possibleTypes[0] === 'p');
+        const promotedNow = Boolean(movedFinal && movedFinal.wasPromoted && !piece.wasPromoted);
+        progress = sim.didCapture || definitePawnMove || promotedNow ||
+          countPossibilities(finalPieces) < countPossibilities(prevPieces);
+        applied.push({ from: e.from, to: e.to, side, enPassant: usedEnPassant });
+      } else {
+        break;
+      }
+
+      const nextSide = side === 'white' ? 'black' : 'white';
+      const nextHalfmove = progress ? 0 : (snap.halfmoveClock || 0) + 1;
+      const terminal = evaluateTerminalAfterMove(finalPieces, side, nextCaptureCounter, nextLastMove);
+      let over = false;
+      let win = null;
+      let reason = null;
+      if (terminal === 'checkmate') { over = true; win = side; reason = 'checkmate'; }
+      else if (terminal === 'stalemate') { over = true; reason = 'stalemate'; }
+      else if (nextHalfmove >= FIFTY_MOVE_HALFMOVES) { over = true; reason = 'fifty-move rule'; }
+
+      const positionSig = computePositionSignature(finalPieces, nextSide, nextLastMove);
+      if (!over) {
+        let repeats = 1;
+        for (const s of snaps) if (s.positionSig === positionSig) repeats += 1;
+        if (repeats >= 3) { over = true; reason = 'threefold repetition'; }
+      }
+
+      snap = {
+        pieces: clonePieces(finalPieces),
+        sideToMove: nextSide,
+        captureCounter: nextCaptureCounter,
+        gameOver: over,
+        winner: win,
+        gameOverReason: reason,
+        lastMove: nextLastMove,
+        halfmoveClock: nextHalfmove,
+        positionSig,
+      };
+      snaps.push(snap);
+      if (over) break;
+    }
+
+    setHistory(snaps);
+    setViewIndexState(snaps.length - 1);
+    lastMoveSignatureRef.current = null;
+    return applied;
+  }, []);
+
   const canCastleBetween = useCallback((idA, idB) => {
     const result = computeCastlePlanInPosition(pieces, sideToMove, idA, idB);
     if (!result.canCastle) return result;
@@ -414,6 +544,7 @@ export default function useQuantumGameState(resetKey = 0) {
     movePiece,
     canCastleBetween,
     castlePieces,
+    replayMoves,
 
     // En passant
     getEnPassantMoves,

@@ -20,14 +20,19 @@ import ConfirmModal from './components/ConfirmModal.jsx';
 import ConsentBanner from './components/ConsentBanner.jsx';
 import { initAds, maybeShowGameEndAd } from './ads/adService.js';
 import useAuth from './account/useAuth.js';
+import { consumeCheckoutReturn, isAdFree } from './account/billing.js';
+import { resolveSaying, loadLocalSayings, saveLocalSayings } from './sayings/sayingsCatalog.js';
+import ReviewModal from './review/ReviewModal.jsx';
 import AccountModal from './account/AccountModal.jsx';
-import { recordFinishedGame } from './account/gameSync.js';
+import { recordFinishedGame, fetchGameMoves } from './account/gameSync.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
 import { prewarmAllPieceSvgs, invalidateSvgCaches, prewarmCapturedPieceSvgs } from './chessboard/svgPrewarm.js';
-import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs } from './tray/matchmakingClient.js';
+import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, getStatus, connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs, createPrivateRoom, joinPrivateRoom, buildInviteLink, readJoinCode, stripJoinCode } from './tray/matchmakingClient.js';
 import AppHeader from './components/AppHeader.jsx';
+import MobileBar from './components/MobileBar.jsx';
+import NewGamePanel from './tray/NewGamePanel.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
 import EnPassantChoiceModal from './components/EnPassantChoiceModal.jsx';
@@ -35,6 +40,19 @@ import useChessClock from './hooks/useChessClock.js';
 import { formatClock, clampMs } from './hooks/clockUtils.js';
 import useLocalAi from './ai/useLocalAi.js';
 import { getBotById, DEFAULT_BOT_ID, botInitials } from './ai/bots.js';
+
+// The active online game is remembered per-browser so a reload or dropped
+// connection can rejoin it (the server replays the move history on welcome).
+const ACTIVE_GAME_KEY = 'qcActiveOnlineGame';
+function saveActiveOnlineGame(roomId, side) {
+  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ roomId, side })); } catch (_) {}
+}
+function readActiveOnlineGame() {
+  try { return JSON.parse(localStorage.getItem(ACTIVE_GAME_KEY) || 'null'); } catch (_) { return null; }
+}
+function clearActiveOnlineGame() {
+  try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch (_) {}
+}
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -67,6 +85,8 @@ export default function App() {
     lastMove,
     // en passant
     getEnPassantMoves,
+    // rejoin support
+    replayMoves,
   } = useQuantumGameState(gameInstanceId);
 
   const [selectedId, setSelectedId] = useState(null);
@@ -189,14 +209,27 @@ export default function App() {
     hue: 145,
     imageUrl: '/bots/anonymous.png',
     name: 'Anonymous',
-    tagline: '',
+    tagline: 'Unobserved, unrated, undeterred.',
     hoverNote: { text: 'Not affiliated with chess.com. Yet.', linkText: 'say hi', href: 'mailto:jaspertaylor15@protonmail.com' },
   };
-  const strangerAvatar = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: '' };
+  const strangerAvatar = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: 'Wandered in from a parallel branch.' };
   const isOnlineBars = isOnlineGameRef.current;
   // Signed-in players appear under their unique account username and rating.
   const selfName = (auth.profile && auth.profile.username) || 'Anonymous';
   const selfRating = auth.profile && Number.isFinite(auth.profile.rating) ? auth.profile.rating : '????';
+  // Premium accounts get their uploaded avatar and tagline on their own bar;
+  // other signed-in players get username initials over the anonymous art.
+  // Signed-out players wear the Anonymous character's tagline.
+  const selfTagline = (auth.profile && auth.profile.tagline) || (auth.profile ? '' : anonymousAvatar.tagline);
+  const selfAvatar = auth.profile
+    ? {
+        initials: (selfName[0] || 'A').toUpperCase(),
+        hue: 145,
+        imageUrl: auth.profile.avatar_url || '/bots/anonymous.png',
+        name: selfName,
+        tagline: selfTagline,
+      }
+    : anonymousAvatar;
   const nameFor = (side) => {
     if (botSide === side) return aiBot.name;
     if (isOnlineBars) return side === 'white' ? 'White' : 'Black';
@@ -205,7 +238,7 @@ export default function App() {
   const avatarFor = (side) => {
     if (botSide === side) return botAvatar;
     if (isOnlineBars) return null;
-    return side === userTeam ? anonymousAvatar : strangerAvatar;
+    return side === userTeam ? selfAvatar : strangerAvatar;
   };
   const whitePlayer = nameFor('white');
   const blackPlayer = nameFor('black');
@@ -233,7 +266,9 @@ export default function App() {
     rating: whiteRating,
     onRatingClick: ratingClickFor('white'),
     avatar: whiteAvatar,
-    tagline: botSide === 'white' ? (aiBot.tagline || null) : null,
+    tagline: botSide === 'white' ? (aiBot.tagline || null)
+      : (isOnlineBars ? null : (userTeam === 'white' ? (selfTagline || null) : strangerAvatar.tagline)),
+    speech: speech.white,
     clockText: effectiveClock.whiteText,
     clockActive: effectiveClock.whiteActive,
     clockLow: effectiveClock.whiteLow,
@@ -245,7 +280,9 @@ export default function App() {
     rating: blackRating,
     onRatingClick: ratingClickFor('black'),
     avatar: blackAvatar,
-    tagline: botSide === 'black' ? (aiBot.tagline || null) : null,
+    tagline: botSide === 'black' ? (aiBot.tagline || null)
+      : (isOnlineBars ? null : (userTeam === 'black' ? (selfTagline || null) : strangerAvatar.tagline)),
+    speech: speech.black,
     clockText: effectiveClock.blackText,
     clockActive: effectiveClock.blackActive,
     clockLow: effectiveClock.blackLow,
@@ -341,6 +378,10 @@ export default function App() {
         reason: gameOverReason || 'rules',
       });
     }
+    if (isOnlineGameRef.current) {
+      clearActiveOnlineGame();
+      if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current).catch(() => {});
+    }
   }, [gameOver, winner, gameOverReason]);
 
   useEffect(() => {
@@ -353,14 +394,60 @@ export default function App() {
 
   // A genuine game end (winner popup) is the interstitial ad break point;
   // silent abandons never trigger it. The ad service applies frequency caps
-  // and is a complete no-op until a publisher id is configured.
+  // and is a complete no-op until a publisher id is configured. Premium
+  // accounts and tipped ad-free windows skip ads entirely.
   useEffect(() => {
-    if (showWinPopup) maybeShowGameEndAd();
-  }, [showWinPopup]);
+    if (showWinPopup && !isAdFree(auth.profile)) maybeShowGameEndAd();
+  }, [showWinPopup, auth.profile]);
 
   // Accounts (optional): save finished games for signed-in players and
   // apply Elo against rated bots. Saved exactly once per game end.
   const [accountOpen, setAccountOpen] = useState(false);
+
+  // Stripe Checkout returns to /?premium=success|cancelled. The webhook flips
+  // the tier server-side, so after a success poll the profile briefly until
+  // the upgrade shows up (or 30s passes).
+  const [billingReturn, setBillingReturn] = useState(null);
+  useEffect(() => {
+    const status = consumeCheckoutReturn();
+    if (status) {
+      setBillingReturn(status);
+      setAccountOpen(true);
+    }
+  }, []);
+  useEffect(() => {
+    if (billingReturn !== 'success' && billingReturn !== 'tip_thanks') return undefined;
+    // Stop polling once the webhook's write has landed: tier for the
+    // subscription, ad_free_until for a tip.
+    const landed = billingReturn === 'success'
+      ? Boolean(auth.profile && auth.profile.tier === 'paid')
+      : isAdFree(auth.profile);
+    if (landed) return undefined;
+    const timer = setInterval(() => { auth.refreshProfile(); }, 2500);
+    const stop = setTimeout(() => clearInterval(timer), 30000);
+    return () => { clearInterval(timer); clearTimeout(stop); };
+  }, [billingReturn, auth.profile, auth.refreshProfile]);
+
+  const isPaidUser = Boolean(auth.profile && auth.profile.tier === 'paid');
+
+  // Premium bots: picking one while free routes to the account panel, where
+  // the upgrade card lives.
+  const handleRequirePremium = useCallback(() => {
+    setMobileNewGameOpen(false);
+    setAccountOpen(true);
+  }, []);
+
+  // Premium game review: fetch the saved move list on demand, then open the
+  // review modal on top of the account panel. Returns whether it actually
+  // opened, so quota-limited access (the tipper's one-per-day review) is only
+  // charged on success.
+  const [reviewGame, setReviewGame] = useState(null); // { game, moves }
+  const handleReviewGame = useCallback(async (game) => {
+    if (!auth.user || !game) return false;
+    const savedMoves = await fetchGameMoves(auth.user, game.id);
+    setReviewGame({ game, moves: savedMoves || [] });
+    return true;
+  }, [auth.user]);
   const gameRecordedRef = useRef(false);
   useEffect(() => {
     if (!showWinPopup) {
@@ -426,7 +513,8 @@ export default function App() {
       justifyContent: 'flex-start',
       paddingTop: 'env(safe-area-inset-top)',
       paddingRight: 'env(safe-area-inset-right)',
-      paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+      // Narrow layout reserves room for the fixed bottom action bar.
+      paddingBottom: isNarrow ? 'calc(env(safe-area-inset-bottom) + 66px)' : 'calc(env(safe-area-inset-bottom) + 12px)',
       paddingLeft: 'env(safe-area-inset-left)',
       boxSizing: 'border-box',
       gap: '0.5rem',
@@ -524,7 +612,7 @@ export default function App() {
     const fromSquare = movingPiece.square || null;
     const result = movePiece(pieceId, toSquare, { enPassant });
     if (result.success && fromSquare) {
-      dispatch(addMove({ from: fromSquare, to: toSquare, side: movingPiece.side }));
+      dispatch(addMove({ from: fromSquare, to: toSquare, side: movingPiece.side, enPassant }));
       if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
         sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: toSquare, side: movingPiece.side, enPassant });
       }
@@ -588,8 +676,8 @@ export default function App() {
             if (canCastle) {
               const result = castlePieces(selectedId, piece.id);
               if (result.success) {
-                dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side }));
-                dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side }));
+                dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side, castle: true }));
+                dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side, castle: true }));
                 if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
                   sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
                 }
@@ -659,8 +747,8 @@ export default function App() {
           if (canCastle) {
             const result = castlePieces(selectedId, id);
             if (result.success) {
-              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side }));
-              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side }));
+              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side, castle: true }));
+              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side, castle: true }));
               if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
                 sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: clicked.side, plan });
               }
@@ -766,6 +854,97 @@ export default function App() {
       .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
   }, [pieces]);
 
+  // --- Sayings: transient speech bubbles on the player bars ---------------
+  // Bots speak their authored lines; the signed-in player speaks their
+  // profile picks (free: presets, premium: custom); the local Stranger and
+  // anonymous players use the defaults. Online opponents stay silent (the
+  // relay carries no profile data).
+  const [speech, setSpeech] = useState({ white: null, black: null });
+  const speechTimersRef = useRef({ white: null, black: null });
+  const captureSayAtRef = useRef({ white: 0, black: 0 });
+  const collapseSaidRef = useRef({ white: false, black: false });
+  const prevCapturedRef = useRef({ white: 0, black: 0 });
+
+  // Signed-out players' picks live in localStorage (free presets only).
+  const [localSayings, setLocalSayings] = useState(loadLocalSayings);
+  const handleSaveLocalSayings = useCallback((picks) => {
+    setLocalSayings(saveLocalSayings(picks));
+  }, []);
+
+  const sayingTextFor = (side, event) => {
+    if (botSide === side) return (aiBot && aiBot.sayings && aiBot.sayings[event]) || null;
+    if (isOnlineBars && side !== userTeam) return null;
+    if (side === userTeam) {
+      return resolveSaying(auth.profile ? auth.profile.sayings : localSayings, event);
+    }
+    return resolveSaying(null, event);
+  };
+
+  const sayNow = (side, event) => {
+    const text = sayingTextFor(side, event);
+    if (!text) return;
+    setSpeech((prev) => ({ ...prev, [side]: text }));
+    if (speechTimersRef.current[side]) clearTimeout(speechTimersRef.current[side]);
+    speechTimersRef.current[side] = setTimeout(() => {
+      setSpeech((prev) => ({ ...prev, [side]: null }));
+    }, 4200);
+  };
+
+  // New game: clear bubbles and one-shot flags.
+  useEffect(() => {
+    setSpeech({ white: null, black: null });
+    collapseSaidRef.current = { white: false, black: false };
+    prevCapturedRef.current = { white: 0, black: 0 };
+    captureSayAtRef.current = { white: 0, black: 0 };
+  }, [gameInstanceId]);
+
+  // Captures: exactly-one-piece increases only, so replays/rejoins and
+  // browsing history never trigger lines; rate-limited per side.
+  useEffect(() => {
+    const counts = {
+      white: whiteCapturedPawns.length + whiteCapturedOthers.length,
+      black: blackCapturedPawns.length + blackCapturedOthers.length,
+    };
+    const prev = prevCapturedRef.current;
+    for (const victim of ['white', 'black']) {
+      if (counts[victim] === prev[victim] + 1 && !gameOver) {
+        const capturer = victim === 'white' ? 'black' : 'white';
+        const now = Date.now();
+        if (now - captureSayAtRef.current[capturer] > 12000) {
+          captureSayAtRef.current[capturer] = now;
+          sayNow(capturer, 'capture');
+        }
+      }
+    }
+    prevCapturedRef.current = counts;
+  }, [whiteCapturedPawns, whiteCapturedOthers, blackCapturedPawns, blackCapturedOthers, gameOver]);
+
+  // Full-army collapse: every surviving piece of a side reduced to a single
+  // known type — the opponent gets to gloat, once per game per side.
+  useEffect(() => {
+    if (gameOver) return;
+    for (const side of ['white', 'black']) {
+      if (collapseSaidRef.current[side]) continue;
+      const alive = pieces.filter((p) => !p.captured && p.side === side);
+      if (alive.length > 0 && alive.every((p) => (p.possibleTypes || []).length === 1)) {
+        collapseSaidRef.current[side] = true;
+        sayNow(side === 'white' ? 'black' : 'white', 'collapse');
+      }
+    }
+  }, [pieces, gameOver]);
+
+  // Game end: winner/loser lines, or a draw line from both.
+  useEffect(() => {
+    if (!gameOver) return;
+    if (winner === 'white' || winner === 'black') {
+      sayNow(winner, 'win');
+      sayNow(winner === 'white' ? 'black' : 'white', 'loss');
+    } else {
+      sayNow('white', 'draw');
+      sayNow('black', 'draw');
+    }
+  }, [gameOver, winner]);
+
   const handleBoardResize = useCallback((px) => {
     setTrayHeight(px);
   }, []);
@@ -784,6 +963,26 @@ export default function App() {
   const handleOpenSettings = useCallback(() => { setSettingsOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenRules = useCallback(() => { setRulesOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenAccount = useCallback(() => { setAccountOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+  const handleOpenTutorial = useCallback(() => { setTutorialOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+
+  // Narrow layout: the New Game setup panel lives in a bottom sheet.
+  const [mobileNewGameOpen, setMobileNewGameOpen] = useState(false);
+
+  // Challenge a friend: while waiting in a private room, show the invite
+  // card. Cleared by the room_state broadcast when the friend connects.
+  const [friendWait, setFriendWait] = useState(null); // { code, link }
+  const friendWaitRef = useRef(null);
+  useEffect(() => { friendWaitRef.current = friendWait; }, [friendWait]);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  useEffect(() => { setInviteCopied(false); }, [friendWait]);
+  const handleCopyInvite = useCallback(async () => {
+    if (!friendWaitRef.current) return;
+    try {
+      await navigator.clipboard.writeText(friendWaitRef.current.link);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2500);
+    } catch (_) { /* input stays selectable for manual copy */ }
+  }, []);
 
   useEffect(() => {
     wsMessageHandlerRef.current = (msg) => {
@@ -801,11 +1000,26 @@ export default function App() {
       if (msg.type === 'welcome') {
         console.debug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
+        // Rejoin: the server replays the room's move history; rebuild the
+        // engine timeline from it when this client has no moves yet.
+        if (Array.isArray(msg.history) && msg.history.length > 0 && moves.length === 0) {
+          const applied = replayMoves(msg.history);
+          for (const mv of applied) dispatch(addMove(mv));
+          if (applied.length > 0) {
+            setGameStarted(true);
+            setInfoMessage('Rejoined your game in progress.');
+          }
+        }
         return;
       }
       if (msg.type === 'room_state') {
         console.debug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
+        // The invited friend just connected: the challenge is on.
+        if (friendWaitRef.current && Array.isArray(msg.connected) && msg.connected.length >= 2) {
+          setFriendWait(null);
+          setInfoMessage('Your friend joined — game on! You are White.');
+        }
         return;
       }
       if (msg.type === 'clock_update') {
@@ -825,12 +1039,24 @@ export default function App() {
         let text;
         if (reason === 'time') {
           text = winSide ? `${winSide[0].toUpperCase()}${winSide.slice(1)} wins on time.` : 'Game over on time.';
+        } else if (reason === 'first-move timeout') {
+          // Void, not a draw: nobody ever moved, so the game never counted.
+          text = 'Game voided — no first move was made.';
+        } else if (!winSide && reason === 'abandonment') {
+          text = 'Game voided — a player left before the game began.';
         } else if (!winSide) {
           text = `Draw by ${reason}.`;
         } else {
           text = `${winSide[0].toUpperCase()}${winSide.slice(1)} wins by ${reason}.`;
         }
-        setExternalGameOver({ over: true, text });
+        clearActiveOnlineGame();
+        // Detach from the finished room server-side, or the next Online
+        // search would re-match straight into the dead room.
+        if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current).catch(() => {});
+        // Voided games (no winner, never really played) skip the winner
+        // popup — and with it the game-record path — on purpose.
+        const voided = !winSide && (reason === 'first-move timeout' || reason === 'abandonment');
+        setExternalGameOver({ over: true, text, silent: voided });
         setInfoMessage(text);
         maybeApplyClock(msg.clock);
         return;
@@ -852,13 +1078,15 @@ export default function App() {
           return;
         }
         const wsEnPassant = Boolean(msg.enPassant);
+        let usedEnPassant = wsEnPassant;
         let result = movePiece(piece.id, to, { enPassant: wsEnPassant });
         if (!result || !result.success) {
           // Robustness for interpretation mismatches: try the other reading.
-          result = movePiece(piece.id, to, { enPassant: !wsEnPassant });
+          usedEnPassant = !wsEnPassant;
+          result = movePiece(piece.id, to, { enPassant: usedEnPassant });
         }
         if (result && result.success) {
-          dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side }));
+          dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side, enPassant: usedEnPassant }));
           setInfoMessage('Opponent moved.');
           setGameStarted(true);
           console.debug('[WS][client] applied opponent move', { from, to, side: sideMsg });
@@ -890,8 +1118,8 @@ export default function App() {
         }
         const result = castlePieces(p1.id, p2.id);
         if (result && result.success) {
-          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg }));
-          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg }));
+          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg, castle: true }));
+          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg, castle: true }));
           setInfoMessage('Opponent castled.');
           setGameStarted(true);
           console.debug('[WS][client] applied opponent castle', { plan, side: sideMsg });
@@ -904,7 +1132,7 @@ export default function App() {
 
       console.debug('[WS][client] unhandled message', msg);
     };
-  }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch]);
+  }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch, moves.length, replayMoves]);
 
   const attachWsHandlers = useCallback(() => {
     if (!wsApiRef.current) return;
@@ -941,8 +1169,105 @@ export default function App() {
     attachWsHandlers();
   }, [attachWsHandlers]);
 
+  // Challenge link: /?join=CODE seats this browser into a friend's private
+  // room as black. The read is pure (StrictMode double-invokes initializers);
+  // the URL param is stripped in the effect.
+  const [pendingJoinCode] = useState(readJoinCode);
+  const joinAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!pendingJoinCode || joinAttemptedRef.current) return;
+    joinAttemptedRef.current = true; // once per page load (StrictMode re-runs effects)
+    stripJoinCode();
+    const clientId = getOrCreateClientId();
+    (async () => {
+      try {
+        const res = await joinPrivateRoom({ clientId, code: pendingJoinCode });
+        if (res.status === 'matched' && res.roomId) {
+          const side = res.side === 'black' || res.side === 'white' ? res.side : 'black';
+          dispatch(setGameSettings({ gameMode: 'online' }));
+          dispatch(resetGame());
+          setGameInstanceId((n) => n + 1);
+          mmClientIdRef.current = clientId;
+          mmRoomIdRef.current = res.roomId;
+          isOnlineGameRef.current = true;
+          dispatch(setUserTeam(side));
+          saveActiveOnlineGame(res.roomId, side);
+          setGameStarted(true);
+          setExternalGameOver({ over: false, text: '' });
+          setInfoMessage(`Challenge accepted — you are ${side[0].toUpperCase()}${side.slice(1)}!`);
+          startWsConnection({ roomId: res.roomId, clientId, side });
+        } else if (res.status === 'room_full') {
+          setInfoMessage('That challenge room is already full.');
+        } else {
+          setInfoMessage('That challenge link has expired — ask your friend for a new one.');
+        }
+      } catch (_) {
+        setInfoMessage('Could not reach the game server to join the challenge.');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingJoinCode, startWsConnection]);
+
+  // Rejoin: if this browser has an active online game (reload, dropped
+  // connection), reattach to the room. The server keeps the seat warm for a
+  // minute after a disconnect before ruling the game abandoned. The effect
+  // is idempotent rather than run-once so StrictMode's dev double-mount
+  // (which cancels the first run) still rejoins on the second.
+  useEffect(() => {
+    if (pendingJoinCode) return; // the challenge-link flow owns this session
+    const saved = readActiveOnlineGame();
+    if (!saved || !saved.roomId) return;
+    let cancelled = false;
+    (async () => {
+      const clientId = getOrCreateClientId();
+      try {
+        const s = await getStatus(clientId);
+        if (cancelled || isOnlineGameRef.current) return;
+        if (s && s.status === 'matched' && s.roomId === saved.roomId) {
+          const side = s.side === 'black' ? 'black' : 'white';
+          mmClientIdRef.current = clientId;
+          mmRoomIdRef.current = s.roomId;
+          isOnlineGameRef.current = true;
+          dispatch(setUserTeam(side));
+          setGameStarted(true);
+          setInfoMessage('Reconnecting to your game...');
+          startWsConnection({ roomId: s.roomId, clientId, side });
+        } else {
+          clearActiveOnlineGame();
+        }
+      } catch (_) {
+        // Backend unreachable; leave the record for a later attempt.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [dispatch, startWsConnection]);
+
+  // Tear down a private challenge room while still waiting for the friend.
+  const handleCancelFriendWait = useCallback(() => {
+    setFriendWait(null);
+    setGameStarted(false);
+    isOnlineGameRef.current = false;
+    clearActiveOnlineGame();
+    try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
+    wsApiRef.current = null;
+    mmRoomIdRef.current = null;
+    if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current).catch(() => {});
+    setInfoMessage('Challenge cancelled.');
+  }, []);
+
+  // Abort an online matchmaking search from the queue.
+  const handleCancelSearch = useCallback(() => {
+    mmAbortRef.current = true;
+    setMmActive(false);
+    setGameStarted(false);
+    const id = mmClientIdRef.current;
+    if (id) leaveQueue(id).catch(() => {});
+    setInfoMessage('Search cancelled.');
+  }, []);
+
   const handleStartGame = useCallback((settings) => {
     mmAbortRef.current = true;
+    clearActiveOnlineGame();
 
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
@@ -964,6 +1289,37 @@ export default function App() {
     setGameStarted(true);
     setExternalGameOver({ over: false, text: '' });
 
+    if (settings && settings.gameMode === 'online' && settings.privateFriend) {
+      const clientId = getOrCreateClientId();
+      mmClientIdRef.current = clientId;
+      mmAbortRef.current = false;
+
+      (async () => {
+        try {
+          try { await leaveQueue(clientId); } catch (_) {}
+          const created = await createPrivateRoom({ clientId });
+          if (created.status !== 'waiting' || !created.roomId || !created.code) {
+            setGameStarted(false);
+            setInfoMessage('Could not open a private room. Please try again.');
+            return;
+          }
+          const link = buildInviteLink(created.code);
+          mmRoomIdRef.current = created.roomId;
+          isOnlineGameRef.current = true;
+          dispatch(setUserTeam('white'));
+          saveActiveOnlineGame(created.roomId, 'white');
+          setFriendWait({ code: created.code, link });
+          setInfoMessage('Waiting for your friend to join…');
+          try { await navigator.clipboard.writeText(link); } catch (_) { /* copy button remains */ }
+          startWsConnection({ roomId: created.roomId, clientId, side: 'white' });
+        } catch (e) {
+          setGameStarted(false);
+          setInfoMessage('Failed to contact matchmaking service.');
+        }
+      })();
+      return;
+    }
+
     if (settings && settings.gameMode === 'online') {
       const clientId = getOrCreateClientId();
       mmClientIdRef.current = clientId;
@@ -971,6 +1327,9 @@ export default function App() {
 
       (async () => {
         try {
+          // Detach from any previous room first: a finished game would
+          // otherwise "re-match" us straight back into its dead room.
+          try { await leaveQueue(clientId); } catch (_) {}
           const join = await joinQueue({ clientId });
           if (join.status === 'matched') {
             const side = (join.side === 'white' || join.side === 'black') ? join.side : 'white';
@@ -978,6 +1337,7 @@ export default function App() {
             mmRoomIdRef.current = roomId;
             isOnlineGameRef.current = true;
             dispatch(setUserTeam(side));
+            saveActiveOnlineGame(roomId, side);
             setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(join.roomId || '').slice(0, 6)}`);
             setMmActive(false);
             startWsConnection({ roomId, clientId, side });
@@ -997,11 +1357,16 @@ export default function App() {
               mmRoomIdRef.current = roomId;
               isOnlineGameRef.current = true;
               dispatch(setUserTeam(side));
+              saveActiveOnlineGame(roomId, side);
               setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(found.roomId || '').slice(0, 6)}`);
               setMmActive(false);
               startWsConnection({ roomId, clientId, side });
-            } else {
-              setInfoMessage('Still searching for an opponent...');
+            } else if (!mmAbortRef.current) {
+              // Timed out without a match: leave the queue cleanly.
+              setMmActive(false);
+              setGameStarted(false);
+              leaveQueue(clientId).catch(() => {});
+              setInfoMessage('No opponent found. Try again in a bit.');
             }
             return;
           }
@@ -1111,8 +1476,8 @@ export default function App() {
       if (canCastle) {
         const result = castlePieces(id, targetAtDest.id);
         if (result.success) {
-          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: movingPiece.side }));
-          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side }));
+          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: movingPiece.side, castle: true }));
+          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side, castle: true }));
           if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
             sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: movingPiece.side, plan });
           }
@@ -1247,7 +1612,7 @@ export default function App() {
       if (!piece) return;
       const res = movePiece(piece.id, mv.to, { enPassant: mv.type === 'enpassant' });
       if (res && res.success) {
-        dispatch(addMove({ from: mv.from, to: mv.to, side }));
+        dispatch(addMove({ from: mv.from, to: mv.to, side, enPassant: mv.type === 'enpassant' }));
         setInfoMessage('AI moved.');
         setGameStarted(true);
       }
@@ -1262,8 +1627,8 @@ export default function App() {
       if (!canCastle) return;
       const res = castlePieces(p1.id, p2.id);
       if (res && res.success) {
-        dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side }));
-        dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side }));
+        dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side, castle: true }));
+        dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side, castle: true }));
         setInfoMessage('AI castled.');
         setGameStarted(true);
       }
@@ -1343,6 +1708,17 @@ export default function App() {
       confirmLabel: 'Resign',
       danger: true,
       run: () => {
+        // Online, tell the server so the opponent hears about it too.
+        if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+          sendGameOverWs(wsApiRef.current, {
+            roomId: mmRoomIdRef.current,
+            clientId: mmClientIdRef.current,
+            winner: resigning === 'white' ? 'black' : 'white',
+            reason: 'resignation',
+          });
+          clearActiveOnlineGame();
+          leaveQueue(mmClientIdRef.current).catch(() => {});
+        }
         setExternalGameOver({ over: true, text: `${side} resigns. ${opp} wins.` });
         setInfoMessage(`${side} resigned.`);
       },
@@ -1356,6 +1732,16 @@ export default function App() {
       confirmLabel: 'Draw',
       danger: false,
       run: () => {
+        if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
+          sendGameOverWs(wsApiRef.current, {
+            roomId: mmRoomIdRef.current,
+            clientId: mmClientIdRef.current,
+            winner: null,
+            reason: 'agreement',
+          });
+          clearActiveOnlineGame();
+          leaveQueue(mmClientIdRef.current).catch(() => {});
+        }
         setExternalGameOver({ over: true, text: 'Draw by agreement.' });
         setInfoMessage('Draw agreed.');
       },
@@ -1373,6 +1759,7 @@ export default function App() {
         setExternalGameOver({ over: true, text: 'Game abandoned.', silent: true });
         setInfoMessage('Game ended. Set up your next game.');
         setNewGameSignal((s) => s + 1);
+        setMobileNewGameOpen(true); // no-op on desktop; opens the sheet on phones
       },
     });
   }, []);
@@ -1415,11 +1802,16 @@ export default function App() {
                   onResign={handleResign}
                   onOfferDraw={handleOfferDraw}
                   onRequestNewGame={handleRequestNewGame}
+                  isOnlineGame={isOnlineGameRef.current}
+                  searching={mmActive}
+                  onCancelSearch={handleCancelSearch}
                   newGameSignal={newGameSignal}
                   onOpenAccount={handleOpenAccount}
                   accountSignedIn={Boolean(auth.user)}
                   onboarding={onboarding}
                   onDismissOnboarding={dismissOnboarding}
+                  isPaid={isPaidUser}
+                  onRequirePremium={handleRequirePremium}
                 />
               );
               const whiteBarEl = (
@@ -1466,7 +1858,6 @@ export default function App() {
                   </div>
 
                   {whiteBarEl}
-                  {isNarrow ? trayEl : null}
                 </>
               );
             })()}
@@ -1487,9 +1878,73 @@ export default function App() {
         <a href="/about.html" style={{ color: theme.textSecondary, textDecoration: 'none', margin: '0 8px' }}>About</a>
         <span style={{ opacity: 0.4 }}>·</span>
         <a href="/privacy.html" style={{ color: theme.textSecondary, textDecoration: 'none', margin: '0 8px' }}>Privacy</a>
+        <span style={{ opacity: 0.4 }}>·</span>
+        <a href="/terms.html" style={{ color: theme.textSecondary, textDecoration: 'none', margin: '0 8px' }}>Terms</a>
       </footer>
 
       <ConsentBanner />
+
+      {isNarrow ? (
+        <>
+          <MobileBar
+            isPlaying={isPlaying}
+            searching={mmActive}
+            isOnlineGame={isOnlineGameRef.current}
+            infoMessage={infoMessage}
+            moveCount={moves.length}
+            currentMoveIndex={currentMoveIndex}
+            onSeek={handleSeekToIndex}
+            onNewGame={isPlaying
+              ? handleRequestNewGame
+              : () => { setMobileNewGameOpen(true); dismissOnboarding(); }}
+            onOpenAccount={handleOpenAccount}
+            accountSignedIn={Boolean(auth.user)}
+            onOpenTutorial={handleOpenTutorial}
+            onOpenSettings={handleOpenSettings}
+            onResign={handleResign}
+            onOfferDraw={handleOfferDraw}
+            onCancelSearch={handleCancelSearch}
+          />
+          {mobileNewGameOpen ? (
+            <div
+              className="qc-mobile-newgame-backdrop"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 95,
+                background: 'rgba(0,0,0,0.55)',
+                display: 'flex',
+                alignItems: 'flex-end',
+              }}
+              onClick={() => setMobileNewGameOpen(false)}
+            >
+              <div
+                className="qc-mobile-newgame-sheet"
+                style={{
+                  width: '100%',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                  background: theme.cardBackground,
+                  borderTop: `1px solid ${theme.border}`,
+                  borderRadius: '14px 14px 0 0',
+                  paddingBottom: 'env(safe-area-inset-bottom)',
+                  boxSizing: 'border-box',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <NewGamePanel
+                  onStartGame={(settings) => {
+                    setMobileNewGameOpen(false);
+                    handleStartGame(settings);
+                  }}
+                  isPaid={isPaidUser}
+                  onRequirePremium={handleRequirePremium}
+                />
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : null}
 
       <WinnerModal
         open={showWinPopup}
@@ -1529,6 +1984,9 @@ export default function App() {
         defaultPlayerBarColors={DEFAULT_PLAYER_BAR_COLORS}
         defaultMeasurementColors={DEFAULT_MEASUREMENT_COLORS}
         onAccept={handleAcceptSettings}
+        auth={auth}
+        localSayings={localSayings}
+        onSaveLocalSayings={handleSaveLocalSayings}
       />
 
       <RulesModal
@@ -1543,7 +2001,81 @@ export default function App() {
         }}
       />
 
-      <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} auth={auth} />
+      {friendWait ? (
+        <div
+          className="qc-friend-wait"
+          role="dialog"
+          aria-label="Challenge a friend"
+          style={{
+            position: 'fixed', top: 84, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 950, width: 'min(94vw, 440px)', boxSizing: 'border-box',
+            background: theme.cardBackground, border: `1px solid ${theme.border}`,
+            borderRadius: 12, boxShadow: `0 12px 32px ${theme.shadow}`,
+            color: theme.textPrimary, padding: '14px 16px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}
+        >
+          <div style={{ fontWeight: 900, letterSpacing: '0.04em' }}>⚔ Challenge a Friend</div>
+          <div style={{ fontSize: 13, color: theme.textSecondary, lineHeight: 1.5 }}>
+            Send this link — the game starts the moment they open it. You play White.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              className="qc-friend-wait-link" readOnly value={friendWait.link}
+              onFocus={(e) => e.target.select()}
+              style={{
+                flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '8px 10px',
+                borderRadius: 8, border: `1px solid ${theme.border}`,
+                background: 'rgba(255,255,255,0.05)', color: theme.textPrimary, fontSize: 13,
+              }}
+            />
+            <button
+              type="button" className="qc-friend-wait-copy" onClick={handleCopyInvite}
+              style={{
+                padding: '8px 14px', borderRadius: 8, border: 'none',
+                backgroundColor: theme.primary, color: theme.secondary,
+                fontWeight: 800, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              {inviteCopied ? 'Copied ✓' : 'Copy'}
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 12.5, color: theme.textSecondary }}>
+              Room code: <strong style={{ color: theme.textPrimary, letterSpacing: '0.12em' }}>{friendWait.code}</strong>
+              {' '}· waiting…
+            </span>
+            <button
+              type="button" className="qc-friend-wait-cancel" onClick={handleCancelFriendWait}
+              style={{
+                padding: '7px 12px', borderRadius: 8, border: `1px solid ${theme.border}`,
+                background: 'transparent', color: theme.textPrimary, fontWeight: 700,
+                fontSize: 12.5, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <AccountModal
+        open={accountOpen}
+        onClose={() => { setAccountOpen(false); setBillingReturn(null); }}
+        auth={auth}
+        billingReturn={billingReturn}
+        onReviewGame={handleReviewGame}
+      />
+      <ReviewModal
+        open={Boolean(reviewGame)}
+        onClose={() => setReviewGame(null)}
+        game={reviewGame ? reviewGame.game : null}
+        moves={reviewGame ? reviewGame.moves : null}
+        pieceSvgStyles={svgStyles}
+        indicators={indicators}
+        measurementColors={measurementColors}
+        squareColors={boardColors}
+      />
 
       <ConfirmModal
         open={Boolean(confirmState)}

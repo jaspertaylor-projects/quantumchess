@@ -24,12 +24,17 @@ export default function SideTray({
   isPlaying = false,
   onResign = () => {},
   onRequestNewGame = () => {},
+  isOnlineGame = false,
+  searching = false,
+  onCancelSearch = () => {},
   newGameSignal = 0,
   onOpenAccount = () => {},
   accountSignedIn = false,
   onOfferDraw = () => {},
   onboarding = false,
   onDismissOnboarding = () => {},
+  isPaid = false,
+  onRequirePremium = null,
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
   // Onboarding coach-sign shown on hover of a glowing button. Anchored to the
@@ -50,10 +55,6 @@ export default function SideTray({
 
   const handleStartGame = (settings) => {
     onStartGame(settings);
-    setView('history');
-  };
-
-  const handleCancelNewGame = () => {
     setView('history');
   };
 
@@ -133,7 +134,10 @@ export default function SideTray({
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
           <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
             {!isPlaying ? (
-              <>
+              // Home screen: the setup panel already dominates the tray with
+              // its own Start Game button, so no header New Game shortcut
+              // while it is visible. It returns after a finished game.
+              view === 'new-game' ? null : (
                 <IconButton
                   icon={PlusIcon}
                   size={18}
@@ -149,24 +153,28 @@ export default function SideTray({
                   hoverBg={theme.success}
                   hoverColor={'#ffffff'}
                 />
-              </>
-            ) : (
+              )
+            ) : searching ? null : (
               <>
-                <IconButton
-                  icon={PlusIcon}
-                  size={18}
-                  width={32}
-                  height={32}
-                  title="New Game"
-                  ariaLabel="End this game and start a new one"
-                  className="qc-side-tray-new-game-btn"
-                  onClick={onRequestNewGame}
-                  bg={'transparent'}
-                  color={theme.success}
-                  hoverInvert={true}
-                  hoverBg={theme.success}
-                  hoverColor={'#ffffff'}
-                />
+                {/* No abandoning into a fresh game while an online opponent
+                    is at the table — resign first. */}
+                {!isOnlineGame ? (
+                  <IconButton
+                    icon={PlusIcon}
+                    size={18}
+                    width={32}
+                    height={32}
+                    title="New Game"
+                    ariaLabel="End this game and start a new one"
+                    className="qc-side-tray-new-game-btn"
+                    onClick={onRequestNewGame}
+                    bg={'transparent'}
+                    color={theme.success}
+                    hoverInvert={true}
+                    hoverBg={theme.success}
+                    hoverColor={'#ffffff'}
+                  />
+                ) : null}
                 <IconButton
                   icon={FlagIcon}
                   size={18}
@@ -330,6 +338,46 @@ export default function SideTray({
       </div>
 
       <div className="qc-side-tray-content" style={styles.content}>
+        {searching ? (
+          <div
+            className="qc-side-tray-searching"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              margin: 10,
+              marginBottom: 0,
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: `1px solid ${theme.border}`,
+              background: 'rgba(97,218,251,0.06)',
+              fontSize: 13,
+              fontWeight: 700,
+              color: theme.textSecondary,
+            }}
+          >
+            <span>Searching for an opponent…</span>
+            <button
+              type="button"
+              className="qc-side-tray-cancel-search"
+              onClick={onCancelSearch}
+              style={{
+                flex: 'none',
+                padding: '6px 14px',
+                borderRadius: 7,
+                border: `1px solid ${theme.border}`,
+                background: theme.secondary,
+                color: theme.error,
+                fontWeight: 800,
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
         {view === 'history' || isPlaying ? (
           <MoveHistoryPanel
             infoMessage={infoMessage}
@@ -339,7 +387,7 @@ export default function SideTray({
             externalIndex={externalIndex}
           />
         ) : (
-          <NewGamePanel onStartGame={handleStartGame} onCancel={handleCancelNewGame} />
+          <NewGamePanel onStartGame={handleStartGame} isPaid={isPaid} onRequirePremium={onRequirePremium} />
         )}
       </div>
     </aside>

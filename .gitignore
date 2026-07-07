@@ -53,3 +53,6 @@ Thumbs.db
 logs/
 # Playwright MCP browser-test artifacts
 .playwright-mcp/
+
+# Supabase CLI scratch
+supabase/.temp/

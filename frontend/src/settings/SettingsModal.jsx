@@ -7,11 +7,15 @@ import React, { useState, useEffect } from 'react';
 import theme from '../theme.js';
 import { X, RotateCcw, ChevronDown } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
-import { DEFAULT_INDICATORS, INDICATOR_LABELS } from './useIndicatorSettings.js';
+import { DEFAULT_INDICATORS, INDICATOR_LABELS, INDICATOR_PRESETS, PRESET_LABELS, matchIndicatorPreset } from './useIndicatorSettings.js';
+import SayingsEditor from '../sayings/SayingsEditor.jsx';
 
 export default function SettingsModal({
   open = false,
   onClose = () => {},
+  auth = null, // sayings save to the profile when signed in
+  localSayings = {},
+  onSaveLocalSayings = () => {},
   whiteColors,
   blackColors,
   boardColors,
@@ -84,11 +88,18 @@ export default function SettingsModal({
     setLocalIndicators({ ...DEFAULT_INDICATORS });
   };
 
-  const allIndicatorsOn = Object.keys(DEFAULT_INDICATORS).every((k) => localIndicators && localIndicators[k]);
-  const setAllIndicators = (value) => {
-    const next = {};
-    for (const k of Object.keys(DEFAULT_INDICATORS)) next[k] = value;
-    setLocalIndicators(next);
+  const activePreset = matchIndicatorPreset(localIndicators);
+  const applyPreset = (name) => {
+    const preset = INDICATOR_PRESETS[name];
+    if (preset) setLocalIndicators({ ...preset });
+  };
+
+  const PRESET_HINTS = {
+    total: 'Every visual hint on.',
+    amateur: 'Hides check arrows. The default.',
+    master: 'Also hides red check rings and weak-measurement circles.',
+    grandmaster: 'Also hides decoherence dots and all insignia (promotion, entanglement, recoherence).',
+    goat: 'Also hides the piece icons inside 3+ possibility bands. Bands only.',
   };
 
   const styles = {
@@ -422,6 +433,10 @@ export default function SettingsModal({
             </div>
           </>)}
 
+          {renderSection('sayings', 'Sayings', (
+            <SayingsEditor auth={auth} localSayings={localSayings} onSaveLocalSayings={onSaveLocalSayings} />
+          ))}
+
           {renderSection('targeting', 'Targeting Colors', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-measure-white" style={styles.label}>White Targeting</label>
@@ -505,18 +520,58 @@ export default function SettingsModal({
           </>)}
 
           {renderSection('indicators', 'Visual Reminders', <>
-          <div className="qc-settings-row qc-settings-row--indicators-all" style={styles.row}>
-            <label htmlFor="qc-indicators-all-toggle" style={{ ...styles.label, fontWeight: 700 }}>All Indicators</label>
-            <input
-              id="qc-indicators-all-toggle"
-              type="checkbox"
-              className="qc-checkbox-input qc-checkbox-input--indicators-all"
-              style={styles.checkboxInput}
-              checked={allIndicatorsOn}
-              onChange={(e) => setAllIndicators(e.target.checked)}
-              aria-label="Toggle all board indicators"
-            />
+          <div className="qc-settings-preset-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {Object.keys(INDICATOR_PRESETS).map((name) => {
+              const selected = activePreset === name;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  className={`qc-settings-preset-btn qc-settings-preset-btn--${name}`}
+                  onClick={() => applyPreset(name)}
+                  aria-pressed={selected}
+                  title={PRESET_HINTS[name]}
+                  style={{
+                    flex: '1 1 auto',
+                    padding: '7px 10px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    border: `1px solid ${theme.border}`,
+                    background: selected ? theme.primary : 'transparent',
+                    color: selected ? theme.secondary : theme.textSecondary,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {PRESET_LABELS[name]}
+                </button>
+              );
+            })}
+            <span
+              className="qc-settings-preset-custom"
+              style={{
+                flex: '1 1 auto',
+                padding: '7px 10px',
+                fontSize: 12,
+                fontWeight: 700,
+                borderRadius: 8,
+                border: `1px dashed ${theme.border}`,
+                background: activePreset ? 'transparent' : theme.primary,
+                color: activePreset ? theme.textSecondary : theme.secondary,
+                textAlign: 'center',
+                opacity: activePreset ? 0.55 : 1,
+                whiteSpace: 'nowrap',
+              }}
+              title="Pick and choose below to build your own mix"
+            >
+              Custom
+            </span>
           </div>
+          <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.45, color: theme.textSecondary }}>
+            {activePreset ? PRESET_HINTS[activePreset] : 'Custom mix — toggle anything below.'}
+            {' '}Each level hides everything the previous one hides, plus more.
+          </p>
 
           {Object.keys(DEFAULT_INDICATORS).map((key) => (
             <div key={key} className={`qc-settings-row qc-settings-row--indicator-${key}`} style={styles.row}>

@@ -957,6 +957,37 @@ export function applyOwnerTurnEffects(pieces, moverSide, movedIds = []) {
   return current;
 }
 
+// A nearly-defined piece is SEALED when recoherence has nothing left to give
+// it: every identity it could regain is ruled out by promotion history, its
+// square, or global conservation. Its clock would cycle forever without
+// effect, so the UI replaces the dots with a solid line. Mirrors the gain
+// loop in applyOwnerTurnEffects exactly.
+export function canPieceRecohere(pieces, pieceId) {
+  const live = pieces.find((p) => p.id === pieceId && !p.captured && p.square);
+  if (!live) return false;
+  const len = (live.possibleTypes || []).length;
+  if (len === 0 || len > 2) return false;
+  if (live.entangledWith) return false;
+
+  const promoted = getPromoTypes(live).length > 0;
+  const pos = fromAlgebraic(live.square);
+  const promotionRank = live.side === 'white' ? 7 : 0;
+  const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
+  for (const t of RECOHERE_GAIN_ORDER) {
+    if (t === 'p' && (promoted || onPromotionRank)) continue;
+    if (live.possibleTypes.includes(t)) continue;
+    const trial = clonePieces(pieces);
+    const trialPiece = trial.find((x) => x.id === pieceId);
+    withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
+    const constrained = applyQuantumConstraints(trial);
+    const after = constrained.find((x) => x.id === pieceId);
+    if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // --- En passant (phantom capture) ---
 
 // A double-step first move by a piece that could still be a Pawn can be

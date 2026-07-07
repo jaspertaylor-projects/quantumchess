@@ -55,3 +55,16 @@ export async function fetchMyGames(user, limit = 1000) {
     .limit(limit);
   return data || [];
 }
+
+// Move list for one game, fetched on demand when a review opens (the list
+// view above deliberately skips the moves column to keep it light).
+export async function fetchGameMoves(user, gameId) {
+  if (!supabase || !user) return null;
+  const { data } = await supabase
+    .from('qc_games')
+    .select('moves')
+    .eq('user_id', user.id)
+    .eq('id', gameId)
+    .maybeSingle();
+  return data && Array.isArray(data.moves) ? data.moves : null;
+}

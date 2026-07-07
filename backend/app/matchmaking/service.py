@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import datetime
+import secrets
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -18,6 +19,12 @@ _MM_ROOMS: Dict[str, Dict[str, Any]] = {}
 _MM_CLIENT_ROOM: Dict[str, str] = {}
 _MM_CLIENT_LAST_SEEN: Dict[str, float] = {}
 _MM_TTL_SECONDS = 120.0
+
+# Private "challenge a friend" rooms: shareable code -> room id. Codes use an
+# unambiguous alphabet (no 0/O/1/I/L) so they survive being read aloud.
+_MM_INVITES: Dict[str, str] = {}
+_INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+_INVITE_CODE_LEN = 6
 
 
 def _now() -> float:
@@ -63,6 +70,18 @@ def _cleanup_stale() -> None:
     for c in list(_MM_CLIENT_LAST_SEEN.keys()):
         if c in stale_clients and c not in _MM_CLIENT_ROOM and c not in _MM_QUEUE:
             _MM_CLIENT_LAST_SEEN.pop(c, None)
+
+    # Drop invite codes whose room is gone
+    for code, rid in list(_MM_INVITES.items()):
+        if rid not in _MM_ROOMS:
+            _MM_INVITES.pop(code, None)
+
+
+def _new_invite_code() -> str:
+    while True:
+        code = "".join(secrets.choice(_INVITE_ALPHABET) for _ in range(_INVITE_CODE_LEN))
+        if code not in _MM_INVITES:
+            return code
 
 
 def _touch_client(client_id: str) -> None:
@@ -136,6 +155,90 @@ def join(client_id_raw: str) -> MatchResponse:
     _MM_ROOMS[room_id] = room
     for pid in players:
         _MM_CLIENT_ROOM[pid] = room_id
+
+    return _room_view_for(client_id, room)
+
+
+def create_private(client_id_raw: str) -> MatchResponse:
+    """Open a private room for the creator (white) and mint an invite code.
+
+    The creator waits in the room; a friend seats themselves with the code
+    via join_private. Idempotent: re-creating while already waiting in an
+    open private room returns the same room and code.
+    """
+    _cleanup_stale()
+    client_id = (client_id_raw or "").strip()
+    if not client_id:
+        return MatchResponse(status="error")
+
+    _touch_client(client_id)
+
+    existing_room_id = _MM_CLIENT_ROOM.get(client_id)
+    if existing_room_id:
+        room = _MM_ROOMS.get(existing_room_id)
+        if room and room.get("code") and room.get("players") == [client_id]:
+            return MatchResponse(
+                status="waiting", roomId=existing_room_id, side="white",
+                opponentPresent=False, code=room["code"],
+            )
+        # Detach from any other (or dead) room before opening a fresh one.
+        leave(client_id)
+
+    if client_id in _MM_QUEUE:
+        try:
+            _MM_QUEUE.remove(client_id)
+        except ValueError:
+            pass
+
+    room_id = uuid.uuid4().hex
+    code = _new_invite_code()
+    room = {
+        "id": room_id,
+        "players": [client_id],
+        "sides": {client_id: "white"},
+        "created_at": time.time(),
+        "last_heartbeat": {client_id: _now()},
+        "code": code,
+    }
+    _MM_ROOMS[room_id] = room
+    _MM_CLIENT_ROOM[client_id] = room_id
+    _MM_INVITES[code] = room_id
+
+    return MatchResponse(
+        status="waiting", roomId=room_id, side="white", opponentPresent=False, code=code
+    )
+
+
+def join_private(client_id_raw: str, code_raw: str) -> MatchResponse:
+    """Seat a friend (black) into the private room behind an invite code."""
+    _cleanup_stale()
+    client_id = (client_id_raw or "").strip()
+    code = (code_raw or "").strip().upper()
+    if not client_id or not code:
+        return MatchResponse(status="error")
+
+    _touch_client(client_id)
+
+    room_id = _MM_INVITES.get(code)
+    room = _MM_ROOMS.get(room_id) if room_id else None
+    if not room:
+        return MatchResponse(status="not_found")
+
+    players: List[str] = room.get("players", [])
+    if client_id in players:
+        return _room_view_for(client_id, room)  # idempotent rejoin
+    if len(players) >= 2:
+        return MatchResponse(status="room_full")
+
+    # Detach the joiner from any previous queue spot or room.
+    if _MM_CLIENT_ROOM.get(client_id) or client_id in _MM_QUEUE:
+        leave(client_id)
+
+    players.append(client_id)
+    room["players"] = players
+    room["sides"][client_id] = "black"
+    room.setdefault("last_heartbeat", {})[client_id] = _now()
+    _MM_CLIENT_ROOM[client_id] = room_id
 
     return _room_view_for(client_id, room)
 

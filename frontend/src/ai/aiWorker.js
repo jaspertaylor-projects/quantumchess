@@ -40,7 +40,7 @@ self.addEventListener('message', (e) => {
       onDepthComplete: (partial) => {
         if (!baselineSent) {
           baselineSent = true;
-          self.postMessage({ type: 'baseline', id, move: minifyMove(partial.move) });
+          self.postMessage({ type: 'baseline', id, move: minifyMove(partial.move), score: partial.score, depth: partial.depth });
         }
       },
     });
@@ -57,7 +57,7 @@ self.addEventListener('message', (e) => {
       });
     } catch (_) {}
 
-    self.postMessage({ type: 'best', id, move: minifyMove(result.move) });
+    self.postMessage({ type: 'best', id, move: minifyMove(result.move), score: result.score, depth: result.depth });
   } catch (err) {
     self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });
   }

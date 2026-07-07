@@ -10,7 +10,7 @@ import StyledSvgImg from '../chessboard/StyledSvgImg.jsx';
 // Bot avatar: uses /bots/<id>.png when the file exists (drop images into
 // frontend/public/bots/), rendered as a plain square. Falls back to a neon
 // initials tile in the bot's hue when no image is present.
-function BotAvatar({ avatar, size = 46 }) {
+function BotAvatar({ avatar, size = BAR_CONTENT_H }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const imageUrl = avatar ? avatar.imageUrl : null;
@@ -111,10 +111,42 @@ const TYPE_TO_SVG = {
   k: imgK,
 };
 
-// Fixed pixel size for captured icons to avoid layout shifts
-const CAP_ICON_PX = 22;
+// Captured icons are size-aware: they render as large as the captured area
+// allows and only shrink when a row genuinely needs the room. Icons overlap
+// (each after the first shows CAP_VISIBLE of its width) so long rows keep
+// big pieces instead of shrinking everyone.
+const CAP_ICON_MIN = 12;
+const CAP_ICON_MAX = 44;
+const CAP_ICON_GAP = 4; // used only between the two rows
+const CAP_VISIBLE = 0.55;
 
-function CapturedIcon({ piece, svgStyles }) {
+// The avatar sets the bar's visual rhythm: the two text lines and the
+// captured-pieces stack are all boxed to this height and centered with it.
+const BAR_CONTENT_H = 46;
+
+function useMeasuredRect() {
+  const ref = React.useRef(null);
+  const [rect, setRect] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cr = entry.contentRect;
+        setRect((prev) =>
+          Math.floor(cr.width) !== prev.width || Math.floor(cr.height) !== prev.height
+            ? { width: Math.floor(cr.width), height: Math.floor(cr.height) }
+            : prev
+        );
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, rect];
+}
+
+function CapturedIcon({ piece, svgStyles, sizePx = 22 }) {
   const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
   const order = ['p', 'n', 'b', 'r', 'q'];
   const pickType = order.find((x) => types.includes(x));
@@ -133,8 +165,8 @@ function CapturedIcon({ piece, svgStyles }) {
 
   const styles = {
     capturedIconWrap: {
-      width: `${CAP_ICON_PX}px`,
-      height: `${CAP_ICON_PX}px`,
+      width: `${sizePx}px`,
+      height: `${sizePx}px`,
       display: 'grid',
       placeItems: 'center',
       filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))',
@@ -154,7 +186,7 @@ function CapturedIcon({ piece, svgStyles }) {
         srcSvgUrl={srcSvg}
         cssVarMap={capturedSideVars}
         idPrefix={`cap-${piece.id}-${t}`}
-        size={CAP_ICON_PX}
+        size={sizePx}
         className="qc-captured-icon-img"
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         alt={`Captured ${t}`}
@@ -179,7 +211,23 @@ export default function PlayerBar({
   showClock = true,
   avatar = null,
   tagline = null,
+  speech = null, // transient saying shown as a speech bubble (string|null)
 }) {
+  // The captured area owns the right third of the bar; icon size adapts to
+  // the space and the longest row so pieces only shrink when they must.
+  // An empty row cedes its height to the other, and overlap means a row of
+  // n icons only needs 1 + (n-1) * CAP_VISIBLE icon-widths.
+  const [capRef, capRect] = useMeasuredRect();
+  const maxRowCount = Math.max(capturedPawns.length, capturedOthers.length, 1);
+  const rowsUsed = Math.max((capturedPawns.length ? 1 : 0) + (capturedOthers.length ? 1 : 0), 1);
+  const effectiveUnits = 1 + (maxRowCount - 1) * CAP_VISIBLE;
+  const widthFit = capRect.width > 0 ? Math.floor(capRect.width / effectiveUnits) : CAP_ICON_MAX;
+  const heightFit = capRect.height > 0
+    ? Math.floor((capRect.height - (rowsUsed - 1) * CAP_ICON_GAP) / rowsUsed)
+    : CAP_ICON_MAX;
+  const capIconPx = Math.max(CAP_ICON_MIN, Math.min(CAP_ICON_MAX, widthFit, heightFit));
+  const capOverlapPx = Math.round(capIconPx * (1 - CAP_VISIBLE));
+
   const styles = {
     playerBar: {
       width: '100%',
@@ -189,6 +237,7 @@ export default function PlayerBar({
       justifyContent: 'space-between',
       padding: '0 12px',
       boxSizing: 'border-box',
+      position: 'relative',
       border: `1px solid ${theme.border}`,
       borderRadius: 10,
       backgroundColor: playerBarColors.background,
@@ -197,21 +246,22 @@ export default function PlayerBar({
       userSelect: 'none',
     },
     playerInfo: {
-      display: 'grid',
-      gridTemplateRows: '1fr 1fr',
-      alignItems: 'stretch',
-      justifyItems: 'start',
-      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      // Two lines spread across the avatar's height; a lone name centers.
+      justifyContent: (showClock || tagline || speech) ? 'space-between' : 'center',
+      alignItems: 'flex-start',
+      alignSelf: 'center',
+      height: BAR_CONTENT_H,
       flex: '1 1 auto',
-      padding: '4px 6px',
+      padding: '2px 6px',
       boxSizing: 'border-box',
       minWidth: 0,
     },
     playerNameRow: {
       display: 'flex',
-      alignItems: 'flex-end',
+      alignItems: 'baseline',
       gap: '8px',
-      height: '100%',
       fontWeight: 800,
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
@@ -231,8 +281,7 @@ export default function PlayerBar({
     },
     playerRatingRow: {
       display: 'flex',
-      alignItems: 'flex-start',
-      height: '100%',
+      alignItems: 'center',
       fontWeight: 600,
       letterSpacing: '0.03em',
       fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
@@ -240,6 +289,8 @@ export default function PlayerBar({
       opacity: 0.92,
       lineHeight: 1,
       gap: 8,
+      minWidth: 0,
+      maxWidth: '100%',
     },
     taglineText: {
       fontStyle: 'italic',
@@ -275,20 +326,23 @@ export default function PlayerBar({
       gap: 2,
       opacity: 0.9,
       fontSize: '0.9rem',
-      flex: '0 1 auto',
-      height: '100%',
-      maxHeight: '100%',
+      flex: '0 0 33%',
+      width: '33%',
+      maxWidth: '33%',
+      alignSelf: 'center',
+      height: BAR_CONTENT_H,
+      maxHeight: BAR_CONTENT_H,
       overflow: 'hidden',
+      boxSizing: 'border-box',
     },
     capturedRow: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'flex-end',
-      gap: 4,
       width: '100%',
-      height: `${CAP_ICON_PX}px`,
-      minHeight: `${CAP_ICON_PX}px`,
-      maxHeight: `${CAP_ICON_PX}px`,
+      height: `${capIconPx}px`,
+      minHeight: `${capIconPx}px`,
+      maxHeight: `${capIconPx}px`,
       boxSizing: 'border-box',
       overflow: 'hidden',
       flex: '0 0 auto',
@@ -344,7 +398,28 @@ export default function PlayerBar({
               {clockText}
             </span>
           )}
-          {tagline ? (
+          {speech ? (
+            // A saying briefly takes over the tagline's spot as a bubble.
+            <span
+              className={`qc-player-speech qc-player-speech--${side}`}
+              role="status"
+              style={{
+                ...styles.taglineText,
+                fontStyle: 'italic',
+                opacity: 1,
+                color: '#fff',
+                background: 'rgba(20, 24, 32, 0.96)',
+                border: '1px solid rgba(126, 231, 135, 0.55)',
+                borderRadius: 10,
+                borderBottomLeftRadius: 3,
+                padding: '2px 10px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                animation: 'qc-speech-pop 180ms ease-out',
+              }}
+            >
+              💬 {speech}
+            </span>
+          ) : tagline ? (
             <span className={`qc-player-tagline qc-player-tagline--${side}`} style={styles.taglineText}>
               {tagline}
             </span>
@@ -355,17 +430,26 @@ export default function PlayerBar({
         className={`qc-captured-area qc-captured-area--${side}`}
         style={styles.capturedArea}
         aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
+        ref={capRef}
       >
-        <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
-          {capturedPawns.map((p) => (
-            <CapturedIcon key={`capicon-${p.id}`} piece={p} svgStyles={svgStyles} />
-          ))}
-        </div>
-        <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
-          {capturedOthers.map((p) => (
-            <CapturedIcon key={`capicon-${p.id}`} piece={p} svgStyles={svgStyles} />
-          ))}
-        </div>
+        {capturedPawns.length > 0 ? (
+          <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
+            {capturedPawns.map((p, i) => (
+              <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
+                <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {capturedOthers.length > 0 ? (
+          <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
+            {capturedOthers.map((p, i) => (
+              <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
+                <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

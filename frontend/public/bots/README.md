@@ -3,10 +3,15 @@
 Drop a square PNG named `<bot-id>.png` in this folder and it will be used as
 that bot's avatar automatically (procedural initials render otherwise).
 
-Bot ids:
+Free bot ids:
   isaac-steinitz, emmy-menchik, galileo-greco, wolfgang-nimzowitsch,
   boris-bohr, marie-polgar, enrico-capablanca, erwin-fischer,
   gary-oppenheimer, werner-karpov, nikola-tal, magnus-einstein
+
+Premium bot ids:
+  freeman-morphy, fabiano-feynman, nona-franklin, paul-penrose,
+  james-kramnik, hikaru-hawking, tigran-turing, max-alekhine,
+  vera-krush, mikhail-faraday, alexandra-payne, ernest-anand
 
 Human players use the same drop-in scheme:
   anonymous.png — you (vs AI, and the White seat in Local 2 Player)

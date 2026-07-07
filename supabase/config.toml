@@ -1,0 +1,15 @@
+# Minimal Supabase CLI config — used for `supabase functions deploy`.
+# The database schema itself is applied via the GitHub integration
+# (supabase/migrations/), not `supabase db push`.
+
+project_id = "QuantumChess"
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-portal]
+verify_jwt = true
+
+# Stripe authenticates with its webhook signature, not a Supabase JWT.
+[functions.stripe-webhook]
+verify_jwt = false

@@ -1,7 +1,9 @@
 // frontend/src/tutorial/InteractiveExercise.jsx
 // Purpose: A hands-on tutorial step: the player makes real moves on a small
 // position and the REAL game engine resolves them — collapses, pulses,
-// entanglement and check threats all behave exactly as in a live game.
+// entanglement, en passant, promotion and check threats all behave exactly
+// as in a live game. Supports scripted Black replies (autoReply) so lessons
+// can demonstrate deferred measurement damage and the Zeno lock.
 // Imports From: ./MiniBoard.jsx, ../theme.js, ../chessboard/quantumEngine.js
 // Exported To: ./TutorialModal.jsx
 
@@ -10,10 +12,13 @@ import theme from '../theme.js';
 import MiniBoard from './MiniBoard.jsx';
 import {
   simulateStandardMove,
+  simulateEnPassant,
   simulateCastle,
   computeCastlePlanInPosition,
   generateLegalReplies,
+  listEnPassantCaptures,
   listCheckThreats,
+  canPieceRecohere,
 } from '../chessboard/quantumEngine.js';
 
 function buildPieces(specs) {
@@ -22,21 +27,23 @@ function buildPieces(specs) {
     side: s.side,
     square: s.square,
     possibleTypes: s.types.split(''),
-    baseTypes: s.types.split(''),
-    promoTypes: [],
+    // A promoted piece carries its identities as pawn-funded branches.
+    baseTypes: s.promoted ? [] : s.types.split(''),
+    promoTypes: s.promoted ? s.types.split('') : [],
     captured: false,
     moveCount: s.moved ? 1 : 0,
-    wasPromoted: false,
-    coherence: 3,
-    recohere: 0,
-    entangledWith: null,
-    castled: false,
+    wasPromoted: Boolean(s.promoted),
+    coherence: Number.isFinite(s.pips) ? s.pips : 3,
+    recohere: Number.isFinite(s.regain) ? s.regain : 0,
+    entangledWith: s.entangledWith || null,
+    castled: Boolean(s.entangledWith),
     observed: false,
   }));
 }
 
 export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
   const [pieces, setPieces] = useState(() => buildPieces(spec.pieces));
+  const [lastMove, setLastMove] = useState(() => spec.lastMove || null);
   const [selectedId, setSelectedId] = useState(null);
   const [marks, setMarks] = useState([]);
   const [status, setStatus] = useState('ready'); // ready | wrong | done
@@ -48,12 +55,18 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
 
   const targets = useMemo(() => {
     if (!selected || status === 'done') return [];
-    const replies = generateLegalReplies(pieces, 'white', 0, null);
-    return replies.filter((r) => r.type === 'move' && r.from === selected.square).map((r) => r.to);
-  }, [pieces, selected, status]);
+    const replies = generateLegalReplies(pieces, 'white', 0, lastMove);
+    // A square can be both a quiet move and an en passant capture — dedupe.
+    return Array.from(new Set(
+      replies
+        .filter((r) => (r.type === 'move' || r.type === 'enpassant') && r.from === selected.square)
+        .map((r) => r.to)
+    ));
+  }, [pieces, selected, status, lastMove]);
 
   const reset = () => {
     setPieces(buildPieces(spec.pieces));
+    setLastMove(spec.lastMove || null);
     setSelectedId(null);
     setMarks([]);
     setStatus('ready');
@@ -80,6 +93,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
         }
         setPieces(sim.pieces);
         setMarks(sim.measuredSquares || []);
+        setLastMove(null);
         setSelectedId(null);
         setStatus('done');
         setMsg(spec.success);
@@ -91,16 +105,55 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
 
     if (!selected) return;
     const fromSq = selected.square;
-    const sim = simulateStandardMove(pieces, selected.id, sq, 0);
-    if (!sim.ok) {
+    const g = spec.goal;
+
+    // En passant first when the goal asks for it; otherwise a standard move,
+    // falling back to en passant if that is the only legal reading.
+    const ep = listEnPassantCaptures(pieces, 'white', lastMove)
+      .find((e) => e.pieceId === selected.id && e.to === sq);
+    let sim = null;
+    let usedEp = false;
+    if (ep && g.ep) {
+      sim = simulateEnPassant(pieces, selected.id, sq, ep.victimId, 0);
+      usedEp = sim.ok;
+    }
+    if (!sim || !sim.ok) {
+      sim = simulateStandardMove(pieces, selected.id, sq, 0);
+      usedEp = false;
+    }
+    if ((!sim || !sim.ok) && ep) {
+      sim = simulateEnPassant(pieces, selected.id, sq, ep.victimId, 0);
+      usedEp = sim.ok;
+    }
+    if (!sim || !sim.ok) {
       setMsg('Not a legal move for that piece — the dots show where it can go.');
       return;
     }
-    setPieces(sim.pieces);
-    setMarks(sim.measuredSquares || []);
+
+    const isGoal =
+      g.kind === 'any' ||
+      (g.kind === 'move' && g.from === fromSq && g.to === sq && (!g.ep || usedEp));
+
+    let finalPieces = sim.pieces;
+    let finalMarks = sim.measuredSquares || [];
+
+    // Scripted Black reply: lessons use it to land deferred measurement
+    // damage or a Zeno reset right before the player's eyes.
+    if (isGoal && spec.autoReply) {
+      const bp = finalPieces.find((p) => !p.captured && p.square === spec.autoReply.from && p.side === 'black');
+      if (bp) {
+        const sim2 = simulateStandardMove(finalPieces, bp.id, spec.autoReply.to, 0);
+        if (sim2.ok) {
+          finalPieces = sim2.pieces;
+          finalMarks = sim2.measuredSquares || [];
+        }
+      }
+    }
+
+    setPieces(finalPieces);
+    setMarks(finalMarks);
+    setLastMove(null);
     setSelectedId(null);
-    const g = spec.goal;
-    const isGoal = g.kind === 'any' || (g.kind === 'move' && g.from === fromSq && g.to === sq);
     if (isGoal) {
       setStatus('done');
       setMsg(spec.success);
@@ -118,6 +171,10 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     regain: Math.max(0, p.recohere || 0),
     chain: Boolean(p.entangledWith),
     chevrons: Boolean(p.wasPromoted),
+    sealed:
+      p.possibleTypes.length <= 2 &&
+      !p.entangledWith &&
+      !canPieceRecohere(pieces, p.id),
     mark: marks.includes(p.square),
     ring: threats.some((t) => t.to === p.square),
   }));
@@ -130,10 +187,18 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
       <MiniBoard
         files={spec.files || 8}
         ranks={spec.ranks || 8}
-        cell={spec.cell || 42}
+        cell={Math.max(
+          26,
+          Math.min(
+            spec.cell || 42,
+            // Fit the board inside the tutorial panel on narrow screens
+            // (94vw panel minus padding and the rank-label gutter).
+            Math.floor((window.innerWidth * 0.94 - 70) / (spec.files || 8))
+          )
+        )}
         pieces={mbPieces}
         arrows={arrows}
-        highlights={selected ? [selected.square] : []}
+        highlights={(selected ? [selected.square] : []).concat(spec.highlights || [])}
         targets={targets}
         onSquareClick={handleSquareClick}
         svgStyleBySide={svgStyleBySide}

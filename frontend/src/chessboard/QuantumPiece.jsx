@@ -100,6 +100,7 @@ export default function QuantumPiece({
   recohere = 0,
   entangled = false,
   promoted = false,
+  sealed = false,
   indicators = DEFAULT_INDICATORS,
   measurementColors = DEFAULT_MEASUREMENT_COLORS,
 }) {
@@ -183,16 +184,6 @@ export default function QuantumPiece({
       pointerEvents: 'none',
       zIndex: 20,
     },
-    promoBadge: {
-      position: 'absolute',
-      top: '3%',
-      left: 0,
-      right: 0,
-      display: 'flex',
-      justifyContent: 'center',
-      pointerEvents: 'none',
-      zIndex: 21,
-    },
     pipCenter: {
       position: 'absolute',
       left: '50%',
@@ -234,11 +225,51 @@ export default function QuantumPiece({
   const ownHex = colors[side] || '#4fc3f7';
   const effectiveCoherence = Number.isFinite(coherence) ? coherence : DEFAULT_COHERENCE;
   const TRIANGLE_ANGLES = [-90, 30, 150];
-  const pips = indicators.coherence && tCount > 2 ? (
+
+  // Promotion insignia: bra-ket braces in the owner's indicator color — the
+  // same fill as its dots — wrapped around whichever dot cluster the piece
+  // carries (bottom recoherence row, or the center triangle on 3+ pieces).
+  const showPromoBraces = promoted && indicators.promoted;
+  const brace = (open, h, key) => (
+    <svg
+      key={key}
+      width={Math.max(4, Math.ceil(h * 0.55))}
+      height={h}
+      viewBox="0 0 6 10"
+      style={{ display: 'block', flex: 'none', filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }}
+      aria-hidden="true"
+    >
+      <path
+        d={open ? 'M5 1 L1.6 5 L5 9' : 'M1 1 L4.4 5 L1 9'}
+        fill="none"
+        stroke={ownHex}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+
+  const dotD = Math.max(3, Math.round(size * 0.09));
+  const bottomBraceH = Math.max(6, Math.round(dotD * 1.9));
+
+  const pips = tCount > 2 && (indicators.coherence || showPromoBraces) ? (
     <div className="qc-coherence-pips qc-coherence-pips--triangle" style={baseStyles.pipCenter} aria-hidden="true">
-      {TRIANGLE_ANGLES.map((angle, i) => (
-        <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, attackerHex)} />
-      ))}
+      {indicators.coherence
+        ? TRIANGLE_ANGLES.map((angle, i) => (
+            <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, attackerHex)} />
+          ))
+        : null}
+      {showPromoBraces ? (
+        <>
+          <div style={{ position: 'absolute', left: -Math.round(size * 0.26), top: -Math.round(size * 0.15) }}>
+            {brace(true, Math.max(8, Math.round(size * 0.3)))}
+          </div>
+          <div style={{ position: 'absolute', left: Math.round(size * 0.26) - Math.ceil(Math.max(8, Math.round(size * 0.3)) * 0.55), top: -Math.round(size * 0.15) }}>
+            {brace(false, Math.max(8, Math.round(size * 0.3)))}
+          </div>
+        </>
+      ) : null}
     </div>
   ) : null;
 
@@ -247,10 +278,30 @@ export default function QuantumPiece({
   // <= 2 type pieces, empty until the clock starts (a fresh collapse sits at
   // zero for one full turn — recohere -1/0 both render as empty). Entangled
   // castle partners never recohere, so they carry a chain-link mark instead
-  // of a clock that would never fill.
+  // of a clock that would never fill. A SEALED piece (conservation leaves it
+  // nothing to regain — the position's piece set is final for it) shows a
+  // solid line instead of a clock that would cycle forever.
   const regainProgress = Math.max(0, Math.min(RECOHERE_THRESHOLD, recohere || 0));
   const nearlyDefined = tCount >= 1 && tCount <= 2;
   const linkWidth = Math.max(10, Math.round(size * 0.22));
+  const bottomDots = sealed ? (
+    <span
+      key="sealed-line"
+      className="qc-sealed-line"
+      style={{
+        width: dotD * 3 + 4,
+        height: Math.max(2, Math.round(dotD * 0.55)),
+        borderRadius: 999,
+        backgroundColor: ownHex,
+        border: '1px solid rgba(0,0,0,0.4)',
+        boxSizing: 'border-box',
+      }}
+    />
+  ) : (
+    Array.from({ length: RECOHERE_THRESHOLD }, (_, i) => (
+      <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ownHex)} />
+    ))
+  );
   const regainPips = nearlyDefined && entangled && indicators.entangled ? (
     <div className="qc-entangled-mark" style={baseStyles.ringRow} aria-hidden="true">
       <svg
@@ -265,31 +316,11 @@ export default function QuantumPiece({
         </g>
       </svg>
     </div>
-  ) : nearlyDefined && !entangled && indicators.recohere ? (
+  ) : nearlyDefined && !entangled && (indicators.recohere || showPromoBraces) ? (
     <div className="qc-recohere-pips" style={baseStyles.pipRow} aria-hidden="true">
-      {Array.from({ length: RECOHERE_THRESHOLD }, (_, i) => (
-        <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ownHex)} />
-      ))}
-    </div>
-  ) : null;
-
-  // Promotion badge: a piece that has already promoted wears chevrons in the
-  // owner's indicator color, top-center — the slot where Pawn would have been
-  // drawn in the overlay layout, which a promoted piece can never be again.
-  const chevronSize = Math.max(8, Math.round(size * 0.2));
-  const promoBadge = promoted && indicators.promoted ? (
-    <div className="qc-promoted-badge" style={baseStyles.promoBadge} aria-hidden="true">
-      <svg
-        width={chevronSize}
-        height={chevronSize}
-        viewBox="0 0 10 10"
-        style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }}
-      >
-        <g fill="none" stroke={ownHex} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M2 4.6 L5 2 L8 4.6" />
-          <path d="M2 8.2 L5 5.6 L8 8.2" />
-        </g>
-      </svg>
+      {showPromoBraces ? brace(true, bottomBraceH, 'brace-open') : null}
+      {indicators.recohere ? bottomDots : null}
+      {showPromoBraces ? brace(false, bottomBraceH, 'brace-close') : null}
     </div>
   ) : null;
 
@@ -336,7 +367,6 @@ export default function QuantumPiece({
           alt=""
         />
         {regainPips}
-        {promoBadge}
       </div>
     );
   }
@@ -367,13 +397,16 @@ export default function QuantumPiece({
             alt=""
           />
           {regainPips}
-          {promoBadge}
         </div>
       );
     }
   }
 
-  // 3+ types: overlay quantum rasterized PNGs
+  // 3+ types: overlay quantum rasterized PNGs. At the GOAT hint level the
+  // type glyphs inside the trapezoids are hidden — only the bands remain.
+  const overlayVars = indicators.typeIcons === false
+    ? { ...sideVars, ['--icon-color']: 'rgba(0,0,0,0)' }
+    : sideVars;
   const overlays = types.map((t, i) => {
     const src = quantumUrlMap[t];
     if (!src) return null;
@@ -381,7 +414,7 @@ export default function QuantumPiece({
       <StyledSvgImg
         key={`${id}-${t}`}
         srcSvgUrl={src}
-        cssVarMap={sideVars}
+        cssVarMap={overlayVars}
         idPrefix={`${id}-${t}`}
         size={size}
         renderHint={renderHint}
@@ -403,7 +436,6 @@ export default function QuantumPiece({
     >
       <div className="qc-quantum-overlay-stack" style={baseStyles.overlayStack}>{overlays}</div>
       {pips}
-      {promoBadge}
     </div>
   );
 }

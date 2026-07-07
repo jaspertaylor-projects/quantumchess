@@ -110,6 +110,24 @@ export function clearSvgCaches() {
   }
 }
 
+// Synchronous cache probe (memory first, then localStorage). Lets components
+// render a cache hit on the very first paint instead of flashing empty for a
+// frame while the async path resolves — the flash was visible whenever a
+// piece's asset changed mid-game (promotion, collapse to a new composite).
+export function getCachedSvgUrl({ srcUrl, cssVarMap }) {
+  if (!srcUrl) return '';
+  const sig = colorSignature(cssVarMap);
+  const key = `v3|${srcUrl}|${sig}`;
+  if (dataUrlCache.has(key)) return dataUrlCache.get(key);
+  const storageKey = `qcSvgCacheV1:${hashString(key)}`;
+  const persisted = storageGet(storageKey);
+  if (persisted) {
+    dataUrlCache.set(key, persisted);
+    return persisted;
+  }
+  return '';
+}
+
 export async function getStyledSvgUrl({ srcUrl, cssVarMap, idPrefix }) {
   if (!srcUrl) return '';
   const sig = colorSignature(cssVarMap);

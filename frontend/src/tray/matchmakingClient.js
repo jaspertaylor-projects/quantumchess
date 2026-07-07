@@ -78,6 +78,54 @@ export async function getMetrics() {
   return await res.json();
 }
 
+// --- Challenge a friend (private rooms) -----------------------------------
+
+// Opens a private room; the response carries the invite `code` to share.
+// The creator waits in the room as white.
+export async function createPrivateRoom({ clientId }) {
+  const res = await fetch('/api/matchmaking/create-private', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ clientId }),
+  });
+  if (!res.ok) throw new Error(`createPrivateRoom failed: ${res.status}`);
+  return await res.json();
+}
+
+// Seats this client (black) into the room behind an invite code.
+// status: 'matched' | 'not_found' | 'room_full' | 'error'.
+export async function joinPrivateRoom({ clientId, code }) {
+  const res = await fetch('/api/matchmaking/join-private', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ clientId, code }),
+  });
+  if (!res.ok) throw new Error(`joinPrivateRoom failed: ${res.status}`);
+  return await res.json();
+}
+
+// The shareable link is /?join=CODE. Reads and strips the param on load
+// (same pattern as the ?premium= checkout return marker).
+export function buildInviteLink(code) {
+  return `${window.location.origin}/?join=${encodeURIComponent(code)}`;
+}
+
+// Pure read — safe in a useState initializer (StrictMode double-invokes
+// initializers, so the read and the URL mutation must be separate).
+export function readJoinCode() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('join');
+  return code ? (code.trim().toUpperCase() || null) : null;
+}
+
+export function stripJoinCode() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('join')) return;
+  params.delete('join');
+  const rest = params.toString();
+  window.history.replaceState({}, '', window.location.pathname + (rest ? `?${rest}` : ''));
+}
+
 export async function waitForMatch(
   clientId,
   { intervalMs = 1200, timeoutMs = 60000, shouldStop = null } = {}

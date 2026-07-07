@@ -20,11 +20,17 @@ const gameSlice = createSlice({
   initialState,
   reducers: {
     addMove(state, action) {
-      const { from, to, side } = action.payload || {};
+      const { from, to, side, castle, enPassant } = action.payload || {};
       const validSquares = typeof from === 'string' && typeof to === 'string';
       const validSide = side === 'white' || side === 'black';
       if (validSquares && validSide) {
-        state.moves.push({ from, to, side });
+        // castle/enPassant flags make the record losslessly replayable for
+        // game review (a castle is stored as two flagged half-moves).
+        // enPassant is stored explicitly even when false: its presence marks
+        // the record as lossless, so replay never second-guesses it.
+        const move = { from, to, side, enPassant: Boolean(enPassant) };
+        if (castle) move.castle = true;
+        state.moves.push(move);
         state.turn = nextTurn(side);
       }
     },
