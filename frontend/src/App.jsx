@@ -1856,6 +1856,7 @@ export default function App() {
                   onDismissOnboarding={dismissOnboarding}
                   isPaid={isPaidUser}
                   onRequirePremium={handleRequirePremium}
+                  attentionSignal={startCtaPulse}
                   onOpenPuzzle={handleOpenPuzzle}
                   puzzleUnsolved={puzzleUnsolved}
                 />

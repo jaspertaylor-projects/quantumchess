@@ -247,7 +247,8 @@ Legend: [ ] not started · [~] in progress · [X] done
       for everyone once AWS grants production access.
 - [X] Security cleanup: temporary SES/Route53/IAM policies detached from
       `qc-deployer` (verified: SES + Route53 now denied, S3 deploy intact).
-- [ ] Optional: branded receiving inbox (e.g. contact@quantumchess.ninja) via
+- [ ] Branded receiving inbox contact@quantumchess.ninja — NO LONGER optional:
+      it is the published support/refund address (see Stripe gate above) — via
       Proton custom domain — separate DNS, coexists with SES sending.
 
 ### Ads (Google AdSense)

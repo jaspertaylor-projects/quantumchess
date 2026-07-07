@@ -37,11 +37,23 @@ export default function SideTray({
   onRequirePremium = null,
   onOpenPuzzle = () => {},
   puzzleUnsolved = false,
+  attentionSignal = 0, // bump to flash the tray (board Start CTA clicked)
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
   // Onboarding coach-sign shown on hover of a glowing button. Anchored to the
   // button-row's right edge (= tray content edge) so it never clips.
   const [coachHint, setCoachHint] = useState(null); // { text, color }
+  const [glowing, setGlowing] = useState(false);
+
+  // The board's "Start a Game" pill points players here: snap to the setup
+  // view and pulse a green ring around the tray so the eye lands on it.
+  useEffect(() => {
+    if (!attentionSignal) return undefined;
+    setView('new-game');
+    setGlowing(true);
+    const t = setTimeout(() => setGlowing(false), 1700);
+    return () => clearTimeout(t);
+  }, [attentionSignal]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -131,7 +143,11 @@ export default function SideTray({
   const titleText = !isPlaying ? 'New Game' : 'Game Actions';
 
   return (
-    <aside className="qc-side-tray-root" style={styles.root} aria-label="Move history and controls">
+    <aside
+      className="qc-side-tray-root"
+      style={{ ...styles.root, animation: glowing ? 'qc-panel-glow 0.85s ease-in-out 2' : 'none' }}
+      aria-label="Move history and controls"
+    >
       <div className="qc-side-tray-header" style={styles.header}>
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
           <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
