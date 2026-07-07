@@ -19,6 +19,7 @@ import TutorialModal from './tutorial/TutorialModal.jsx';
 import ConfirmModal from './components/ConfirmModal.jsx';
 import ConsentBanner from './components/ConsentBanner.jsx';
 import { initAds, maybeShowGameEndAd } from './ads/adService.js';
+import { initAnalytics, trackEvent } from './analytics/analytics.js';
 import useAuth from './account/useAuth.js';
 import { consumeCheckoutReturn, isAdFree } from './account/billing.js';
 import { resolveSaying, loadLocalSayings, saveLocalSayings } from './sayings/sayingsCatalog.js';
@@ -111,8 +112,10 @@ export default function App() {
   const [tutorialLessonId, setTutorialLessonId] = useState(null);
 
   // Ads: dormant until VITE_ADSENSE_CLIENT is configured (post-approval).
+  // Analytics: dormant until VITE_GA_MEASUREMENT_ID is configured.
   useEffect(() => {
     initAds();
+    initAnalytics();
   }, []);
 
   // First visit: instead of a modal wall, glow the Rules/tutorial and Sign-up
@@ -399,6 +402,7 @@ export default function App() {
   // and is a complete no-op until a publisher id is configured. Premium
   // accounts and tipped ad-free windows skip ads entirely.
   useEffect(() => {
+    if (showWinPopup) trackEvent('game_end');
     if (showWinPopup && !isAdFree(auth.profile)) maybeShowGameEndAd();
   }, [showWinPopup, auth.profile]);
 

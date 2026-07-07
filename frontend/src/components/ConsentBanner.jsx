@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import theme from '../theme.js';
 import { setAdConsent } from '../ads/adService.js';
+import { setAnalyticsConsent } from '../analytics/analytics.js';
 
 const STORAGE_KEY = 'qcConsent'; // 'granted' | 'denied'
 
@@ -19,6 +20,7 @@ export default function ConsentBanner() {
       const prior = localStorage.getItem(STORAGE_KEY);
       if (prior === 'granted' || prior === 'denied') {
         setAdConsent(prior === 'granted');
+        setAnalyticsConsent(prior === 'granted');
       } else {
         setVisible(true);
       }
@@ -34,6 +36,7 @@ export default function ConsentBanner() {
       // ignore storage errors
     }
     setAdConsent(granted);
+    setAnalyticsConsent(granted);
     setVisible(false);
   };
 

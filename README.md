@@ -372,6 +372,13 @@ Legend: [ ] not started · [~] in progress · [X] done
     Difficulty knobs live in the recipes: piece counts, decoys,
     `minChoices` (minimum legal moves so the find is a real search), and
     `TRIES_PER_RECIPE`.
+- [~] **Daily puzzle v2 — mined from real games** (see `dailypuzzle.md` for
+      the full plan + status). Bot self-play → only-move mining → theme
+      tagging → double-depth verification gate, in `tools/puzzle-miner.mjs`
+      (run in Docker — see Local development note). The composed generator
+      above stays live until mined puzzles pass the 95% agreement gate at
+      scale. End state: one-chance eval-bar daily (engine plays Black live),
+      emoji-bar share card, puzzles.json published to the CDN.
 - [ ] Achievements (~15–20, client-side): tutorial finished, first en
       passant, first quantum promotion, castle-resolve, beat each bot tier…
       surfaced at game end next to the winner modal.

@@ -17,7 +17,7 @@ function MenuButton({ icon: Icon, label, onClick, primary = false, accent = null
   return (
     <button
       type="button"
-      className={`qc-menu-btn ${className}`}
+      className={`qc-menu-btn ${primary ? 'qc-menu-btn--primary' : ''} ${className}`}
       onClick={onClick}
       style={{
         display: 'flex',
@@ -195,11 +195,12 @@ export default function SideTray({
       style={{ ...styles.root, animation: glowing ? 'qc-panel-glow 1.1s ease-in-out 1' : 'none' }}
       aria-label="Move history and controls"
     >
+      {(isPlaying || view !== 'menu' || onboarding) ? (
       <div className="qc-side-tray-header" style={styles.header}>
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
           {/* Pre-game the title sits inline with the lone X/menu row; the
               two-row split only earns its space in-game with many icons. */}
-          {!isPlaying ? (
+          {!isPlaying && view !== 'menu' ? (
             <span className="qc-side-tray-title" style={{ ...styles.headerTitle, flex: 1, alignSelf: 'center' }}>
               {titleText}
             </span>
@@ -367,6 +368,7 @@ export default function SideTray({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       <div className="qc-side-tray-content" style={styles.content}>
         {searching ? (
@@ -425,12 +427,18 @@ export default function SideTray({
             style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, overflowY: 'auto' }}
           >
             <MenuButton
+              icon={UserIcon} label={accountSignedIn ? 'Account' : 'Sign In'} primary
+              className="qc-menu-btn--account"
+              glow={onboarding && !accountSignedIn ? '#7ee787' : null}
+              onClick={() => { onOpenAccount(); }}
+            />
+            <MenuButton
               icon={PlayIcon} label="Play Game" primary
               className="qc-menu-btn--play"
               onClick={() => { setView('new-game'); onDismissOnboarding(); }}
             />
             <MenuButton
-              icon={PuzzleIcon} label="Daily Puzzle" accent="#f6c445" dot={puzzleUnsolved}
+              icon={PuzzleIcon} label="Daily Puzzle" primary dot={puzzleUnsolved}
               className="qc-menu-btn--puzzle"
               onClick={() => { onOpenPuzzle(); }}
             />
@@ -444,13 +452,6 @@ export default function SideTray({
               icon={BookOpenIcon} label="Rules" accent="#c792ea"
               className="qc-menu-btn--rules"
               onClick={() => { onOpenRules(); }}
-            />
-            <MenuButton
-              icon={UserIcon} label={accountSignedIn ? 'Account' : 'Sign In'}
-              accent={accountSignedIn ? theme.success : '#7ee787'}
-              className="qc-menu-btn--account"
-              glow={onboarding && !accountSignedIn ? '#7ee787' : null}
-              onClick={() => { onOpenAccount(); }}
             />
             <MenuButton
               icon={SettingsIcon} label="Settings"

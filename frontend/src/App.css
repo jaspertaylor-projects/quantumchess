@@ -104,3 +104,16 @@ button:hover {
 @media (prefers-reduced-motion: reduce) {
   .qc-side-tray-root, .qc-board-start-cta { animation: none !important; }
 }
+
+.qc-menu-btn--primary:hover {
+  background: #3fbf6f !important;
+  transform: translateX(3px) scale(1.01);
+}
+.qc-new-game-challenge {
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+.qc-new-game-challenge:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #4fc3f7 !important;
+  transform: translateX(2px);
+}

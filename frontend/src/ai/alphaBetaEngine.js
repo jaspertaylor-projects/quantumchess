@@ -5,7 +5,7 @@
 // material, king-holder distribution, hanging pieces, information, and
 // position. Deterministic except for an optional root noise knob (easy mode).
 // Imports From: ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js
-// Exported To: ./aiWorker.js
+// Exported To: ./aiWorker.js, ../../../tools/puzzle-miner.mjs
 
 import {
   buildOccupancy,
@@ -259,6 +259,38 @@ function negamax(pieces, side, depth, ply, alpha, beta, ctx) {
     if (alpha >= beta) break;
   }
   return best;
+}
+
+// Score EVERY legal root move at a fixed depth with a full alpha-beta window
+// per move, so the returned scores are comparable — the gap between best and
+// second-best is meaningful. Used by the puzzle miner (only-move detection)
+// and by eval-bar scoring; not on the play path.
+// Returns { moves: [{ move, score }...] sorted best-first, nodes, depth },
+// scores from the mover's perspective, or null if timeMs ran out mid-search.
+export function analyzeRootMoves({ pieces, sideToMove, lastMove = null, depth = 3, widths = [24, 12, 8, 6], weights = null, timeMs = Infinity }) {
+  const W = { ...DEFAULT_WEIGHTS, ...(weights || {}) };
+  const root = clonePieces(pieces);
+  const deadline = Number.isFinite(timeMs) ? performance.now() + timeMs : Infinity;
+  const ctx = { deadline, nodes: 0, widths, W };
+
+  const children = orderedChildren(root, sideToMove, ctx, lastMove);
+  const scored = [];
+  try {
+    for (const child of children) {
+      let s;
+      if (depth <= 1 || Math.abs(child.score) >= MATE - 100) {
+        s = child.score;
+      } else {
+        s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, Infinity, ctx);
+      }
+      scored.push({ move: child.mv, score: s });
+    }
+  } catch (err) {
+    if (err instanceof SearchTimeout) return null;
+    throw err;
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return { moves: scored, nodes: ctx.nodes, depth };
 }
 
 // Iterative-deepening search. Returns { move, score, depth, nodes } where
