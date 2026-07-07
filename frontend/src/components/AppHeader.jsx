@@ -71,7 +71,7 @@ export default function AppHeader({
     },
     topRight: {
       position: 'absolute',
-      right: 'clamp(10px, 1.5vw, 20px)',
+      right: 'clamp(22px, 3.5vw, 56px)',
       top: '50%',
       transform: 'translateY(-50%)',
       zIndex: 5,
@@ -82,13 +82,14 @@ export default function AppHeader({
     gearBtn: {
       display: 'grid',
       placeItems: 'center',
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       border: 'none',
       background: 'transparent',
-      color: '#93a1b5',
+      color: '#7fe7ff',
       cursor: 'pointer',
       padding: 0,
+      filter: 'drop-shadow(0 0 7px rgba(0,245,255,0.45))',
     },
   };
 
@@ -101,33 +102,26 @@ export default function AppHeader({
       <div className="qc-header-controls" style={styles.topRight}>
         <button
           type="button"
-          className="qc-header-settings"
-          onClick={onOpenSettings}
-          aria-label="Open settings"
-          title="Settings"
-          style={styles.gearBtn}
-        >
-          <SettingsIcon size={20} />
-        </button>
-        <button
-          type="button"
           className="qc-header-account"
           onClick={onOpenAccount}
           aria-label={accountSignedIn ? 'Open account panel' : 'Sign in'}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            padding: accountSignedIn ? '4px 12px 4px 4px' : '8px 16px',
-            borderRadius: 999,
-            border: accountSignedIn ? '1px solid rgba(79,195,247,0.45)' : 'none',
-            background: accountSignedIn ? 'rgba(12,14,22,0.85)' : '#4fc3f7',
-            color: accountSignedIn ? '#dfe6f2' : '#06121b',
-            fontWeight: 800,
-            fontSize: 13,
-            letterSpacing: '0.03em',
+            gap: 9,
+            padding: accountSignedIn ? '6px 16px 6px 6px' : '11px 24px',
+            borderRadius: 9,
+            border: '1.5px solid rgba(0,245,255,0.65)',
+            background: 'rgba(8,10,18,0.92)',
+            color: '#7fe7ff',
+            fontWeight: 900,
+            fontSize: 14,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
             cursor: 'pointer',
-            maxWidth: 'clamp(120px, 18vw, 220px)',
+            maxWidth: 'clamp(140px, 20vw, 240px)',
+            boxShadow: '0 0 10px rgba(0,245,255,0.35), 0 0 22px rgba(180,0,255,0.18), inset 0 0 8px rgba(0,245,255,0.08)',
+            textShadow: '0 0 8px rgba(0,245,255,0.5)',
           }}
         >
           {accountSignedIn ? (
@@ -135,7 +129,7 @@ export default function AppHeader({
               <span
                 aria-hidden
                 style={{
-                  width: 28, height: 28, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto',
+                  width: 28, height: 28, borderRadius: 6, overflow: 'hidden', flex: '0 0 auto',
                   display: 'grid', placeItems: 'center', background: 'rgba(79,195,247,0.18)',
                   color: '#4fc3f7', fontSize: 13, fontWeight: 900,
                 }}
@@ -156,6 +150,16 @@ export default function AppHeader({
               <span>Sign In</span>
             </>
           )}
+        </button>
+        <button
+          type="button"
+          className="qc-header-settings"
+          onClick={onOpenSettings}
+          aria-label="Open settings"
+          title="Settings"
+          style={styles.gearBtn}
+        >
+          <SettingsIcon size={28} strokeWidth={2.4} />
         </button>
       </div>
     </header>

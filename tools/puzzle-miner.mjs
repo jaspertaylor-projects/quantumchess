@@ -66,6 +66,7 @@ const CFG = {
   verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 120000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max only-move plies to re-verify
   minChoices: Number(argVal('minChoices', 6)), // fewer legal moves = not a real search
+  maxChain: Number(argVal('maxChain', 6)), // rollout-extension cap per chain
   holdEval: Number(argVal('holdEval', -0.5)), // best move must score at least this
   failEval: Number(argVal('failEval', -1.0)), // every alternative must score at most this (the gap does the anti-noise work)
   minGap: Number(argVal('minGap', 2.0)), // and trail the best by at least this
@@ -184,14 +185,19 @@ function applyReply(state, reply) {
   };
 }
 
-// A miner bot: roster personality (weights) + capped think time so a game
-// takes seconds, not hours. Tier keeps the roster's depth profile.
+// A miner bot: the roster bot as-is — tier, personality weights AND its
+// blunder noise — with only the think time capped so a game takes seconds.
+// Skill diversity is deliberate: weaker play creates the imbalanced
+// positions tactics live in (lichess mines amateur games for this reason),
+// and the deep-verification gate keeps quality independent of how a
+// position arose. Noise draws from the seeded rng, so runs stay
+// reproducible.
 function minerBot(rosterBot) {
   return {
     id: rosterBot.id,
-    tier: rosterBot.tier === 'easy' ? 'medium' : rosterBot.tier, // no root noise in mined games
+    tier: rosterBot.tier,
     weights: rosterBot.weights || {},
-    search: { ...(rosterBot.search || {}), noise: 0, timeMs: CFG.playMs },
+    search: { ...(rosterBot.search || {}), timeMs: CFG.playMs },
   };
 }
 
@@ -423,9 +429,117 @@ function prefilterOnlyMove(analysis) {
   return true;
 }
 
+// Full only-move detection for one white-to-move position (a game position
+// or an engine-rollout position): funnel prefilter → deep analysis →
+// classification → theme tags. Returns a step or null.
+function detectOnlyMoveStep(rec, stats) {
+  stats.scanned++;
+  const t0 = performance.now();
+  const shallow = analyzePosition(rec, Math.max(2, CFG.mineDepth - 1), PREFILTER_WIDTHS, CFG.prefilterMs);
+  if (!shallow) { stats.prefilterTimeouts++; stats.mineMsTotal += performance.now() - t0; return null; }
+  if (!prefilterOnlyMove(shallow)) { stats.mineMsTotal += performance.now() - t0; return null; }
+  stats.funnelSurvivors++;
+  const analysis = analyzePosition(rec, CFG.mineDepth, MINE_WIDTHS, CFG.mineMs);
+  stats.mineMsTotal += performance.now() - t0;
+  if (!analysis) { stats.timeouts++; return null; }
+  const only = classifyOnlyMove(analysis);
+  if (!only) return null;
+  stats.onlyMoves++;
+
+  const moveSim = simulateAnalysisMove(rec, only.best.move);
+  if (!moveSim) return null;
+  const themes = tagThemes(rec, moveSim);
+
+  // Rank of the solution under a static (depth-0) ordering: how buried it is.
+  const staticSorted = [...analysis.moves]
+    .map((m) => ({ key: moveKey(m.move), s: evaluatePosition(m.move.resultPieces) }))
+    .sort((a, b) => b.s - a.s);
+  const shallowRank = staticSorted.findIndex((m) => m.key === moveKey(only.best.move));
+
+  return {
+    ply: rec.ply,
+    rollout: Boolean(rec.rollout),
+    bestMove: { type: only.best.move.type, from: moveSim.from, to: moveSim.to, enPassant: moveSim.enPassant },
+    bestScore: Number(only.best.score.toFixed(2)),
+    secondScore: Number(only.second.score.toFixed(2)),
+    gap: only.gap,
+    numChoices: only.numChoices,
+    shallowRank,
+    themes,
+    played: rec.played ? playedKey(rec.played) === moveKey(only.best.move) : null,
+    analysisMove: only.best.move, // raw engine move, used to roll the chain forward (stripped on save)
+    position: rec, // pieces/lastMove/captureCounter snapshot (stripped on save)
+  };
+}
+
+// Extend a mined only-move into a chain by ENGINE ROLLOUT: play the best
+// move, let the engine answer with Black's best reply (exactly what the
+// one-chance eval-bar product does live), and re-analyze the new position
+// for another only-move. This deliberately does NOT follow the game line —
+// weak bots blunder INTO tactics but rarely walk the punishing line
+// afterwards, so game-line chains stall at length 1.
+function extendChain(firstStep, stats, covered) {
+  const steps = [firstStep];
+  const blackReplies = [];
+  let endsInMate = false;
+  let state = {
+    pieces: firstStep.position.pieces,
+    sideToMove: 'white',
+    captureCounter: firstStep.position.captureCounter,
+    lastMove: firstStep.position.lastMove,
+    halfmoveClock: 0,
+  };
+  while (steps.length < CFG.maxChain) {
+    const cur = steps[steps.length - 1];
+    const afterWhite = applyReply(state, cur.analysisMove);
+    if (!afterWhite) break;
+    if (afterWhite.gameOver) { endsInMate = afterWhite.reason === 'checkmate'; break; }
+    state = afterWhite.state;
+
+    const blackAnalysis = analyzeRootMoves({
+      pieces: state.pieces,
+      sideToMove: 'black',
+      lastMove: state.lastMove,
+      depth: CFG.mineDepth,
+      widths: MINE_WIDTHS,
+      timeMs: CFG.mineMs,
+    });
+    if (!blackAnalysis || blackAnalysis.moves.length === 0) break;
+    const replyMove = blackAnalysis.moves[0].move;
+    const afterBlack = applyReply(state, replyMove);
+    if (!afterBlack) break;
+    blackReplies.push({
+      type: replyMove.type,
+      from: replyMove.type === 'castle' ? replyMove.plan.piece1_from : replyMove.from,
+      to: replyMove.type === 'castle' ? replyMove.plan.piece1_to : replyMove.to,
+    });
+    if (afterBlack.gameOver) break;
+    state = afterBlack.state;
+
+    const rec = {
+      ply: cur.ply + 2,
+      rollout: true,
+      sideToMove: 'white',
+      pieces: clonePieces(state.pieces),
+      captureCounter: state.captureCounter,
+      lastMove: state.lastMove,
+      played: null,
+    };
+    if (!positionSane(rec.pieces) || !censusFixed(rec.pieces)) { stats.censusBug++; break; }
+    const next = detectOnlyMoveStep(rec, stats);
+    if (!next) break;
+    covered.add(computePositionSignature(rec.pieces, 'white', rec.lastMove));
+    stats.rolloutExtensions++;
+    steps.push(next);
+  }
+  return { steps, blackReplies, endsInMate };
+}
+
 function mineGame(game, stats) {
-  // Per-ply only-move analysis for every white position past the opening.
-  const steps = new Map(); // ply -> step
+  const chains = [];
+  const verifySteps = [];
+  const covered = new Set(); // positions already inside an earlier chain's engine line
+
   for (const rec of game.record) {
     if (rec.sideToMove !== 'white' || rec.ply < CFG.minPly) continue;
     if (!positionSane(rec.pieces)) { stats.insane++; continue; }
@@ -434,91 +548,33 @@ function mineGame(game, stats) {
       console.log(`  !! census fixed-point FAILED at game ${game.gameIdx} ply ${rec.ply} — engine bug candidate`);
       continue;
     }
-    stats.scanned++;
-    const t0 = performance.now();
-    const shallow = analyzePosition(rec, Math.max(2, CFG.mineDepth - 1), PREFILTER_WIDTHS, CFG.prefilterMs);
-    if (!shallow) { stats.prefilterTimeouts++; stats.mineMsTotal += performance.now() - t0; continue; }
-    if (!prefilterOnlyMove(shallow)) { stats.mineMsTotal += performance.now() - t0; continue; }
-    stats.funnelSurvivors++;
-    const analysis = analyzePosition(rec, CFG.mineDepth, MINE_WIDTHS, CFG.mineMs);
-    stats.mineMsTotal += performance.now() - t0;
-    if (!analysis) { stats.timeouts++; continue; }
-    const only = classifyOnlyMove(analysis);
-    if (!only) continue;
-    stats.onlyMoves++;
+    if (covered.has(computePositionSignature(rec.pieces, 'white', rec.lastMove))) continue;
 
-    const moveSim = simulateAnalysisMove(rec, only.best.move);
-    if (!moveSim) continue;
-    const themes = tagThemes(rec, moveSim);
-
-    // Rank of the solution under a static (depth-0) ordering: how buried it is.
-    const staticSorted = [...analysis.moves]
-      .map((m) => ({ key: moveKey(m.move), s: evaluatePosition(m.move.resultPieces) }))
-      .sort((a, b) => b.s - a.s);
-    const shallowRank = staticSorted.findIndex((m) => m.key === moveKey(only.best.move));
-
-    const played = playedKey(rec.played) === moveKey(only.best.move);
-    steps.set(rec.ply, {
-      ply: rec.ply,
-      bestMove: { type: only.best.move.type, from: moveSim.from, to: moveSim.to, enPassant: moveSim.enPassant },
-      bestScore: Number(only.best.score.toFixed(2)),
-      secondScore: Number(only.second.score.toFixed(2)),
-      gap: only.gap,
-      numChoices: only.numChoices,
-      shallowRank,
-      themes,
-      played,
-      position: rec, // pieces/lastMove/captureCounter snapshot
-    });
-  }
-
-  // Chain consecutive only-moves along the ACTUAL game line. A chain may end
-  // on an unplayed only-move (the game deviated after it), but can only pass
-  // THROUGH plies where the game played the mined best move — otherwise the
-  // recorded Black replies don't follow the solution line.
-  const chains = [];
-  const plies = [...steps.keys()].sort((a, b) => a - b);
-  let run = [];
-  const closeRun = () => {
-    if (run.length === 0) return;
-    const startPly = run[0].ply;
-    const blackReplies = run.slice(0, -1).map((s) => {
-      const reply = game.record.find((r) => r.ply === s.ply + 1);
-      return reply ? { type: reply.played.type, from: reply.played.from, to: reply.played.to } : null;
-    });
-    const trickiness = trickinessOf(run[run.length - 1], run.length);
+    const first = detectOnlyMoveStep(rec, stats);
+    if (!first) continue;
+    const { steps, blackReplies, endsInMate } = extendChain(first, stats, covered);
+    verifySteps.push(...steps);
     chains.push({
       game: game.gameIdx,
       white: game.white,
       black: game.black,
-      startPly,
-      length: run.length,
-      trickiness,
-      themes: [...new Set(run.flatMap((s) => s.themes))],
-      steps: run.map(({ position, ...s }) => s),
-      blackReplies,
+      startPly: rec.ply,
+      length: steps.length,
+      endsInMate,
+      trickiness: trickinessOf(steps[steps.length - 1], steps.length),
+      themes: [...new Set(steps.flatMap((s) => s.themes))],
+      steps: steps.map(({ position, analysisMove, ...s }) => s),
+      blackReplies, // engine-best replies, matching the live product
       start: {
-        pieces: run[0].position.pieces,
-        lastMove: run[0].position.lastMove,
-        captureCounter: run[0].position.captureCounter,
+        pieces: rec.pieces,
+        lastMove: rec.lastMove,
+        captureCounter: rec.captureCounter,
         sideToMove: 'white',
       },
     });
-    run = [];
-  };
-  for (const ply of plies) {
-    const step = steps.get(ply);
-    if (run.length > 0) {
-      const prev = run[run.length - 1];
-      const contiguous = ply === prev.ply + 2 && prev.played;
-      if (!contiguous) closeRun();
-    }
-    run.push(step);
-    if (!step.played) closeRun(); // game deviated; chain cannot extend
   }
-  closeRun();
 
-  return { chains, steps };
+  return { chains, verifySteps };
 }
 
 // -------------------------------------------------------------- verification
@@ -556,7 +612,7 @@ function verifyStep(step, position, stats) {
 console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
 console.log(`only-move bar: best>=${CFG.holdEval}, others<=${CFG.failEval}, gap>=${CFG.minGap}, choices>=${CFG.minChoices}\n`);
 
-const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, mineMsTotal: 0, verifyMsTotal: 0 };
+const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, rolloutExtensions: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
 const verifiable = []; // { step, position } for the gate
@@ -582,9 +638,9 @@ for (let g = 0; g < CFG.games; g++) {
   const mineSec = ((performance.now() - t1) / 1000).toFixed(1);
   for (const chain of mined.chains) {
     allChains.push(chain);
-    console.log(`  chain @ply ${chain.startPly}: len=${chain.length} gap=${chain.steps[0].gap} choices=${chain.steps[0].numChoices} trick=${chain.trickiness} themes=[${chain.themes.join(',')}]${chain.steps.every((s) => s.played) ? '' : ' (ends unplayed)'}`);
+    console.log(`  chain @ply ${chain.startPly}: len=${chain.length}${chain.endsInMate ? '+mate' : ''} gap=${chain.steps[0].gap} choices=${chain.steps[0].numChoices} trick=${chain.trickiness} themes=[${chain.themes.join(',')}]`);
   }
-  for (const [, step] of mined.steps) verifiable.push({ gameIdx: g, step, position: step.position });
+  for (const step of mined.verifySteps) verifiable.push({ gameIdx: g, step, position: step.position });
   console.log(`  mined ${mined.chains.length} chain(s) from ${game.record.filter((r) => r.sideToMove === 'white' && r.ply >= CFG.minPly).length} white positions [${mineSec}s]`);
 }
 
@@ -619,6 +675,7 @@ const report = {
     onlyMoveRate: stats.scanned ? Number((stats.onlyMoves / stats.scanned).toFixed(3)) : 0,
     chains: allChains.length,
     chainLengths: allChains.reduce((acc, c) => { acc[c.length] = (acc[c.length] || 0) + 1; return acc; }, {}),
+    rolloutExtensions: stats.rolloutExtensions,
     prefilterTimeouts: stats.prefilterTimeouts,
     deepAnalysisTimeouts: stats.timeouts,
     insanePositions: stats.insane,
@@ -644,7 +701,7 @@ fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
 console.log(`\n=== SUMMARY ===`);
 console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgMineMsPerPosition}ms each; funnel survivors: ${stats.funnelSurvivors}; timeouts: ${stats.prefilterTimeouts} shallow / ${stats.timeouts} deep)`);
 console.log(`only-moves found: ${stats.onlyMoves}  (${(100 * report.stats.onlyMoveRate).toFixed(1)}% of positions)`);
-console.log(`chains: ${allChains.length}  by length: ${JSON.stringify(report.stats.chainLengths)}`);
+console.log(`chains: ${allChains.length}  by length: ${JSON.stringify(report.stats.chainLengths)}  (${stats.rolloutExtensions} rollout extensions)`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
 console.log(`GATE — double-depth agreement: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);
 console.log(`report: ${outFile}`);

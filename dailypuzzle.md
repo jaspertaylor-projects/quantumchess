@@ -30,7 +30,7 @@ docker compose run --rm --no-deps -v "$PWD":/repo -w /repo frontend \
 Key knobs (defaults in the script): `--games`, `--seed` (fully reproducible),
 `--playMs` (per-move think time in simulated games), `--mineDepth` /
 `--verifyDepth` (the gate compares these), and the only-move bar:
-`--holdEval -0.5 --failEval -1.5 --minGap 2.0 --minChoices 6` — best move
+`--holdEval -0.5 --failEval -1.0 --minGap 2.0 --minChoices 6` — best move
 holds or wins, every alternative clearly fails, and there were enough legal
 moves that finding it was a real search.
 
@@ -42,16 +42,36 @@ Phantom, mate), a trickiness score (chain length × search-space ×
 how-buried-the-move-is-in-shallow-ordering × theme/quiet bonuses), and the
 gate verdicts.
 
+## First results (2026-07-06, 6 games, seed 2)
+
+305 white positions scanned → 12 funnel survivors → **1 certified only-move**
+(0.3%); census fixed-point assertions clean across every position; gate
+agreed 1/1 at depth 5 (meaningless n — need ~100 candidates for a real
+agreement rate). Lessons applied: shallow prefilter was timing out on 24% of
+positions (narrowed its beam to `PREFILTER_WIDTHS`), and `failEval` loosened
+−1.5 → −1.0 (the 2.0-pawn gap already does the anti-noise work). Yield needs
+scale — a 60-game run (seed 3) logs to `tools/mined/run-seed3.log`.
+
 ## Remaining to build (in order)
 
 1. [X] Miner + only-move chains + theme tags + double-depth gate (2026-07-06)
-2. [ ] Scale runs (overnight, hundreds of games), tune the only-move bar so
-       chains of length 2–4 show up at usable rates
-3. [ ] Curation/ranking step: pick a week's arc from the mined pool by
+2. [X] Engine-rollout chain extension (2026-07-06): chains no longer depend
+       on the game line cooperating — the miner plays the mined best move,
+       the engine answers with Black's best reply (exactly what the live
+       eval-bar product does), and the new position is re-analyzed for
+       another only-move, up to `--maxChain 6`. Necessary because weak bots
+       blunder INTO tactics but don't follow the punishing line afterwards.
+       Bot pairings also now keep their real tiers + blunder noise (skill
+       diversity creates tactics; the verification gate keeps quality
+       independent of how positions arose).
+3. [~] Scale runs (overnight, hundreds of games), tune the only-move bar so
+       chains of length 2–4 show up at usable rates — 60-game run (seed 3)
+       launched 2026-07-06, logs to `tools/mined/run-seed3.log`
+4. [ ] Curation/ranking step: pick a week's arc from the mined pool by
        length × trickiness; publish `puzzles.json` to the CDN
-4. [ ] Client: one-chance eval-bar puzzle mode (engine plays Black live,
+5. [ ] Client: one-chance eval-bar puzzle mode (engine plays Black live,
        reuses the review worker), emoji-bar share card
-5. [ ] Cut the daily over to mined puzzles once the gate holds at scale;
+6. [ ] Cut the daily over to mined puzzles once the gate holds at scale;
        keep the composed generator as fallback + tutorial-adjacent content
 
 ---
