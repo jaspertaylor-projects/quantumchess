@@ -127,12 +127,13 @@ const atkNear = (f, r, f2, r2) => Math.max(Math.abs(f - f2), Math.abs(r - r2)) <
 const atkBlackPawn = (f, r, f2, r2) => r === r2 - 1 && Math.abs(f - f2) === 1;
 
 
-function placeKingSafely(rng, b, pieces, side, fLo, fHi, rLo, rHi, tries = 40) {
+function placeKingSafely(rng, b, pieces, side, fLo, fHi, rLo, rHi, tries = 40, avoid = null) {
   const opp = side === 'white' ? 'black' : 'white';
   for (let i = 0; i < tries; i++) {
     const f = randInt(rng, fLo, fHi);
     const r = randInt(rng, rLo, rHi);
     if (!b.free(f, r)) continue;
+    if (avoid && avoid(f, r)) continue;
     const kp = P(side, sq(f, r), 'k');
     if (canSideCaptureSquare([...pieces, kp], opp, kp.square)) continue;
     b.take(f, r);
@@ -552,7 +553,7 @@ export function debugRecipe(dateStr, key) {
   if (!recipe) return null;
   const rng = mulberry32(hashString(`qc-puzzle-v${PUZZLE_VERSION}:${dateStr}:${recipe.key}`));
   const stats = { buildNull: 0, ok: 0 };
-  for (let i = 0; i < TRIES_PER_RECIPE; i++) {
+  for (let i = 0; i < (recipe.tries || TRIES_PER_RECIPE); i++) {
     PIECE_SEQ = 0;
     let cand = null;
     try { cand = recipe.build(rng); } catch (_) { cand = null; }
@@ -1013,8 +1014,7 @@ const R_LEDGER = {
     const T = P('black', tSquare, 'rq');
     pieces.push(T);
     // X1 = {n,r}: capture -> n, completing the knight census. The auditor
-    // knight lands here, so the square must be off every black reach — T's
-    // queen-lines included.
+    // knight lands here, so the square must be off T's queen-lines.
     const Xspot = b.findFree(rng, 1, 6, 2, 4, 30, (f, r) => atkQueenly(f, r, Tf, 0));
     if (!Xspot) return bfail('led-Xspot');
     const [Xf, Xr] = Xspot;
@@ -1042,20 +1042,6 @@ const R_LEDGER = {
       if (kinds.includes('k') && atkNear(lf, lr, f, r)) return true;
       return false;
     });
-    // the auditor: a white knight a hop away from X1 — but blind to T1 and
-    // the blur (their capture-collapse is 'n' too: taking either would be a
-    // second census solution)
-    let att = null;
-    for (let tries = 0; tries < 12 && !att; tries++) {
-      const [df, dr] = pick(rng, KNIGHT_OFFS);
-      const f = Xf + df;
-      const r = Xr + dr;
-      if (!b.free(f, r)) continue;
-      if (atkKnight(t1[0], t1[1], f, r)) continue;
-      att = P('white', b.take(f, r), 'n');
-    }
-    if (!att) return bfail('led-att');
-    pieces.push(att);
     // ply-1 cascade target: a maybe-queen, out of reach of both landings
     const t1 = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['n', 'q']));
     if (!t1) return bfail('led-t1');
@@ -1072,19 +1058,47 @@ const R_LEDGER = {
     // scripted-reply blur {n,b,r}: safe both where it stands and after its
     // push (its rook branch moves it straight down one)
     const blur = b.findFree(rng, 0, 7, 3, 5, 60, (f, r) =>
-      reaches(f, r, ['n', 'file', 'diag']) || reaches(f, r - 1, ['n', 'file', 'diag']));
+      reaches(f, r, ['n', 'line', 'diag']));
     if (!blur) return bfail('led-blur');
     pieces.push(P('black', b.take(blur[0], blur[1]), 'nbr'));
-
-    // decoy rook: off both X files/ranks so it can never be a second census
-    // capture (which would break uniqueness at either ply)
-    const dec = b.findFree(rng, 0, 7, 1, 2, 30, (f, r) => reaches(f, r, ['line']));
+    // scripted replies come from the confirmed knight: it is already
+    // definite, so its hop collapses nothing (an ambiguous replier's own
+    // collapse would cascade and seal T before the player's second move)
+    let cnHop = null;
+    for (const [df, dr] of KNIGHT_OFFS) {
+      const f = cn[0] + df;
+      const r = cn[1] + dr;
+      if (inBoard(f, r) && b.free(f, r) && r >= 4) { cnHop = [f, r]; break; }
+    }
+    if (!cnHop) return bfail('led-cnhop');
+    // the auditor: a white knight a hop from X1 — blind to T1 and the blur
+    // (both capture-collapse to 'n' pre-move, and the blur to 'b' after the
+    // reply: capturing either would be a second census solution)
+    let att = null;
+    for (let tries = 0; tries < 12 && !att; tries++) {
+      const [df, dr] = pick(rng, KNIGHT_OFFS);
+      const f = Xf + df;
+      const r = Xr + dr;
+      if (!b.free(f, r)) continue;
+      if (atkKnight(t1[0], t1[1], f, r)) continue;
+      if (atkKnight(blur[0], blur[1], f, r) || atkKnight(blur[0], blur[1] - 1, f, r)) continue;
+      att = P('white', b.take(f, r), 'n');
+    }
+    if (!att) return bfail('led-att');
+    pieces.push(att);
+    // decoy rook: off the landings' files/ranks AND off T1/blur files (a
+    // rook capture of an n-collapsing piece would be a second solution)
+    const dec = b.findFree(rng, 0, 7, 1, 2, 30, (f, r) =>
+      reaches(f, r, ['line']) || f === t1[0] || f === blur[0]);
     if (!dec) return bfail('led-dec');
     pieces.push(P('white', b.take(dec[0], dec[1]), 'r'));
-    // kings last, on provably safe squares
+    // kings last, on provably safe squares; the white king additionally
+    // keeps its hands off every n-collapsing piece (a king capture of one
+    // would be a second census solution)
     if (!placeKingSafely(rng, b, pieces, 'black', 0, 7, 6, 7)) return bfail('led-bk');
-    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 1)) return bfail('led-wk');
-
+    const noNCapture = (f, r) =>
+      atkNear(f, r, Xf, Xr) || atkNear(f, r, t1[0], t1[1]) || atkNear(f, r, blur[0], blur[1]);
+    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 3, 120, noNCapture)) return bfail('led-wk');
     return {
       pieces,
       plies: [
@@ -1092,7 +1106,7 @@ const R_LEDGER = {
           subgoal: 'censusCollapse',
           ctx: { targetId: T1.id, targetSquare: t1Square },
           goalText: `Step 1 of 2 — Complete the knight census: one capture, and the piece on ${t1Square} must confess what it is.`,
-          reply: { from: sq(blur[0], blur[1]), to: sq(blur[0], blur[1] - 1) },
+          reply: { from: sq(cn[0], cn[1]), to: sq(cnHop[0], cnHop[1]) },
         },
         {
           subgoal: 'seal',
@@ -1236,6 +1250,7 @@ const R_INVESTIGATION = {
   moves: 3,
   minChoices: 10,
   minChoicesLater: 8,
+  tries: 400,
   build(rng) {
     const b = boardCtx();
     const pieces = [];
@@ -1253,11 +1268,18 @@ const R_INVESTIGATION = {
       .sort((a, c) => spots[c][1] - spots[a][1])
       .slice(0, 2);
     if (spots[replierIdx[0]][1] < 2 || spots[replierIdx[1]][1] < 2) return bfail('inv2-spotrank');
+    for (const ri of replierIdx) {
+      const [rf2, rr2] = spots[ri];
+      if (!b.free(rf2, rr2 - 1)) return bfail('inv2c-replyblocked');
+      b.take(rf2, rr2 - 1); // reserve the push square
+    }
     const fourth = b.findFree(rng, 0, 7, 6, 7, 20, (f, r) =>
       Math.abs(f - Lf) <= 1 || spots.some(([f2]) => f === f2));
     if (!fourth) return bfail('inv2b-fourth');
-    pieces.push(P('black', b.take(fourth[0], fourth[1]), 'pnr'));
-    spots.push([fourth[0], fourth[1], 'pnr']); // participates in risk checks
+    // {p,n}: closes the group over {p,p,n,r} without being pulse-markable
+    // (2 types), so alternate probe landings can't count it toward three
+    pieces.push(P('black', b.take(fourth[0], fourth[1]), 'pn'));
+    spots.push([fourth[0], fourth[1], 'pnb']); // knight/pawn risk only (no lines)
     // the probe: a white queen sliding onto L
     const Q = placeProbeMover(rng, b, Lf, Lr);
     if (!Q) return bfail('inv3-Q');
@@ -1318,7 +1340,8 @@ const R_INVESTIGATION = {
     pieces.push(P('white', b.take(Tspot[0], rr), 'r'));
     // kings last, on provably safe squares
     if (!placeKingSafely(rng, b, pieces, 'black', 0, 7, 6, 7)) return bfail('inv7-bk');
-    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 1)) return bfail('inv8-wk');
+    const noXCapture = (f, r) => atkNear(f, r, Xspot[0], Xspot[1]);
+    if (!placeKingSafely(rng, b, pieces, 'white', 0, 7, 0, 2, 80, noXCapture)) return bfail('inv8-wk');
 
     const [b1f, b1r] = spots[replierIdx[0]];
     const [b2f, b2r] = spots[replierIdx[1]];
@@ -1389,7 +1412,8 @@ export function puzzleNumber(dateStr) {
 
 function tryRecipe(recipe, dateStr) {
   const rng = mulberry32(hashString(`qc-puzzle-v${PUZZLE_VERSION}:${dateStr}:${recipe.key}`));
-  for (let i = 0; i < TRIES_PER_RECIPE; i++) {
+  const tries = recipe.tries || TRIES_PER_RECIPE;
+  for (let i = 0; i < tries; i++) {
     PIECE_SEQ = 0;
     let cand = null;
     try { cand = recipe.build(rng); } catch (_) { cand = null; }

@@ -319,10 +319,17 @@ Legend: [ ] not started · [~] in progress · [X] done
       step's goal; scripted Black replies between steps. Soundness rule: no
       legal Black reply may capture the piece that just made the solution
       move (no "the king just takes back" refutations) — enforced by the
-      verifier at every ply. 3 attempts, streak, Wordle-style share card. Code: `frontend/src/puzzle/` (generator,
-      progress/streak/share, modal); entry buttons with an "unplayed" dot in
-      the side tray + mobile bar. Validated by harness over 180 consecutive
-      days: 0 failures, avg 26ms, max 268ms generation.
+      verifier at every ply. Puzzles are FULL GAME STATES: both sides are
+      padded to all 16 pieces with an explicit captured list (definite,
+      non-king types, shown above the board), so the engine's conservation
+      behaves exactly as in a live game — a lone king-carrier is forced to
+      be the king by the census itself, and ambiguity exists only as CLOSED
+      GROUPS (N pieces sharing exactly N open slots), the real game's
+      structure. 3 attempts, streak, Wordle-style share card. Code:
+      `frontend/src/puzzle/` (generator, progress/streak/share, modal);
+      entry buttons with an "unplayed" dot in the side tray + mobile bar.
+      Validated by harness over 180 consecutive days: 0 failures, avg
+      137ms, max ~3.2s generation (cached per device after first open).
   - [ ] BEFORE LAUNCH: set `PUZZLE_EPOCH` in
         `frontend/src/puzzle/puzzleGenerator.js` to launch day (puzzle #1).
   - Dev preview: `http://localhost:5175/?puzzleDate=YYYY-MM-DD` opens any

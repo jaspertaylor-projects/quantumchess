@@ -96,7 +96,7 @@ export default function SideTray({
     if (!attentionSignal) return undefined;
     setView('new-game');
     setGlowing(true);
-    const t = setTimeout(() => setGlowing(false), 1700);
+    const t = setTimeout(() => setGlowing(false), 1150);
     return () => clearTimeout(t);
   }, [attentionSignal]);
 
@@ -194,7 +194,7 @@ export default function SideTray({
   return (
     <aside
       className="qc-side-tray-root"
-      style={{ ...styles.root, animation: glowing ? 'qc-panel-glow 0.85s ease-in-out 2' : 'none' }}
+      style={{ ...styles.root, animation: glowing ? 'qc-panel-glow 1.1s ease-in-out 1' : 'none' }}
       aria-label="Move history and controls"
     >
       <div className="qc-side-tray-header" style={styles.header}>

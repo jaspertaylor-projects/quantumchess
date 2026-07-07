@@ -88,6 +88,21 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
 
   const ply = puzzle && puzzle.plies[plyIdx];
   const live = useMemo(() => (display || []).filter((p) => !p.captured && p.square), [display]);
+  // Captured pieces are part of the game state — the census that powers the
+  // collapse/seal goals counts them, so the player must be able to read them.
+  const capturedGlyphs = useMemo(() => {
+    const glyph = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
+    const order = { p: 0, n: 1, b: 2, r: 3, q: 4, k: 5 };
+    const bySide = { white: [], black: [] };
+    for (const p of (display || [])) {
+      if (p.captured) bySide[p.side].push(p.possibleTypes[0]);
+    }
+    for (const s of ['white', 'black']) bySide[s].sort((a, b2) => order[a] - order[b2]);
+    return {
+      white: bySide.white.map((t) => glyph[t]).join(''),
+      black: bySide.black.map((t) => glyph[t]).join(''),
+    };
+  }, [display]);
   // Threat arrows/rings are shown only on move RESULTS — drawing them on the
   // rest position would literally point at the solution.
   const atRest = Boolean(ply && display === ply.pieces && phase === 'playing');
@@ -267,6 +282,20 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
               </div>
             ) : null}
 
+            <div
+              className="qc-puzzle-captured"
+              style={{
+                display: 'flex', justifyContent: 'space-between', width: '100%', maxWidth: 480,
+                fontSize: 12, color: theme.textSecondary, lineHeight: 1.4, gap: 12,
+              }}
+            >
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                White lost: <span style={{ fontSize: 14, letterSpacing: 1 }}>{capturedGlyphs.white || '—'}</span>
+              </span>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>
+                Black lost: <span style={{ fontSize: 14, letterSpacing: 1 }}>{capturedGlyphs.black || '—'}</span>
+              </span>
+            </div>
             <MiniBoard
               files={8}
               ranks={8}
