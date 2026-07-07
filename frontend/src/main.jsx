@@ -5,6 +5,9 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+// Imported (not <script>-injected) so the build bundles it — a raw /src
+// path in index.html 404s in production.
+import './errors/clientErrorReporter.js';
 import ErrorBoundary from './errors/ErrorBoundary.jsx';
 import App from './App.jsx';
 import './App.css';

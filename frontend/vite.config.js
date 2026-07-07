@@ -71,23 +71,11 @@ function fullReloadOnBackendPy() {
   };
 }
 
-function injectClientReporter() {
-  return {
-    name: 'inject-client-error-reporter',
-    transformIndexHtml() {
-      return [
-        {
-          tag: 'script',
-          attrs: { type: 'module', src: '/src/errors/clientErrorReporter.js' },
-          injectTo: 'head',
-        },
-      ];
-    },
-  };
-}
+// The client error reporter is imported by src/main.jsx so it gets bundled;
+// injecting a raw /src script tag here broke on production builds.
 
 export default defineConfig({
-  plugins: [errorFileLogger(), svgr(), react(), fullReloadOnBackendPy(), injectClientReporter()],
+  plugins: [errorFileLogger(), svgr(), react(), fullReloadOnBackendPy()],
   server: {
     host: true,
     port: 5173,
