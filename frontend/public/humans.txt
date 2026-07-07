@@ -1,6 +1,6 @@
 /* TEAM */
 Builder: Jasper Taylor
-Contact: jaspertaylor15@protonmail.com
+Contact: contact@quantumchess.ninja
 Role: all of them — rules design, quantum engine, conservation solver,
       bots, UI, the works.
 

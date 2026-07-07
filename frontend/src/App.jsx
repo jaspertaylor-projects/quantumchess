@@ -210,7 +210,7 @@ export default function App() {
     imageUrl: '/bots/anonymous.png',
     name: 'Anonymous',
     tagline: 'Unobserved, unrated, undeterred.',
-    hoverNote: { text: 'Not affiliated with chess.com. Yet.', linkText: 'say hi', href: 'mailto:jaspertaylor15@protonmail.com' },
+    hoverNote: { text: 'Not affiliated with chess.com. Yet.', linkText: 'say hi', href: 'mailto:contact@quantumchess.ninja' },
   };
   const strangerAvatar = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: 'Wandered in from a parallel branch.' };
   const isOnlineBars = isOnlineGameRef.current;

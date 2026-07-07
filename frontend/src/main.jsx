@@ -25,7 +25,7 @@ try {
     'color:#9aa7b8; font-size:12px;'
   );
   console.log(
-    '%cBuilt solo, engine and all, by someone who would absolutely take that call → jaspertaylor15@protonmail.com',
+    '%cBuilt solo, engine and all, by someone who would absolutely take that call → contact@quantumchess.ninja',
     'color:#9aa7b8; font-size:12px;'
   );
 } catch (_) {
