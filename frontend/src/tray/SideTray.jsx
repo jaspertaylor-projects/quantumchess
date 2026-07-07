@@ -451,11 +451,6 @@ export default function SideTray({
               className="qc-menu-btn--rules"
               onClick={() => { onOpenRules(); }}
             />
-            <MenuButton
-              icon={SettingsIcon} label="Settings"
-              className="qc-menu-btn--settings"
-              onClick={() => { onOpenSettings(); }}
-            />
           </div>
         )}
       </div>

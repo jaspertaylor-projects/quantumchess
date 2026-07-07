@@ -1828,11 +1828,11 @@ export default function App() {
       {/* Phones skip the banner — every vertical pixel goes to the board. */}
       {!isNarrow ? (
         <AppHeader
-          svgStyles={svgStyles}
           accountSignedIn={Boolean(auth.user)}
           accountName={(auth.profile && auth.profile.username) || ''}
           accountAvatarUrl={(auth.profile && auth.profile.avatar_url) || null}
           onOpenAccount={handleOpenAccount}
+          onOpenSettings={handleOpenSettings}
         />
       ) : null}
 

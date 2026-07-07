@@ -1,136 +1,19 @@
 // frontend/src/components/AppHeader.jsx
-// Purpose: Render the application header with stylish PNG piece icons as primary and SVG rasterized fallback.
-// Imports From: ../chessboard/RasterizedSvgImg.jsx
+// Purpose: Desktop banner — the glowing wordmark plus the persistent
+// top-right controls: settings gear and the account chip (Sign In pill when
+// signed out, avatar + username when signed in).
+// Imports From: None
 // Exported To: ../App.jsx
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { User as UserIcon } from 'lucide-react';
-import StyledSvgImg from '../chessboard/StyledSvgImg.jsx';
-
-import imgP from '../assets/p.svg?url';
-import imgN from '../assets/n.svg?url';
-import imgB from '../assets/b.svg?url';
-import imgR from '../assets/r.svg?url';
-import imgQ from '../assets/q.svg?url';
-import imgK from '../assets/k.svg?url';
-
-// Stylish PNGs served via Vite asset pipeline
-import pngPawn from '../public/stylish_pawn.png?url';
-import pngKnight from '../public/stylish_knight.png?url';
-import pngBishop from '../public/stylish_bishop.png?url';
-import pngRook from '../public/stylish_rook.png?url';
-import pngQueen from '../public/stylish_queen.png?url';
-import pngKing from '../public/stylish_king.png?url';
-
-const TYPE_TO_SVG = {
-  p: imgP,
-  n: imgN,
-  b: imgB,
-  r: imgR,
-  q: imgQ,
-  k: imgK,
-};
-
-const TYPE_TO_STYLISH_PNG = {
-  p: pngPawn,
-  n: pngKnight,
-  b: pngBishop,
-  r: pngRook,
-  q: pngQueen,
-  k: pngKing,
-};
-
-function HeaderPieceIcon({ t, sideCssVars }) {
-  const [useFallback, setUseFallback] = useState(false);
-  const [pxSize, setPxSize] = useState(32);
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cr = entry.contentRect;
-        const raw = Math.min(cr.width, cr.height);
-        const snapped = Math.max(16, Math.floor(raw));
-        if (snapped !== pxSize) setPxSize(snapped);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [pxSize]);
-
-  const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
-  const pngSrc = TYPE_TO_STYLISH_PNG[t] || TYPE_TO_STYLISH_PNG.p;
-
-  const sizeScale = useMemo(() => {
-    if (t === 'q' || t === 'k') return 1.0;
-    if (t === 'p') return 0.8;
-    return 0.9;
-  }, [t]);
-
-  const innerStyle = useMemo(
-    () => ({
-      width: `${Math.round(sizeScale * 100)}%`,
-      height: `${Math.round(sizeScale * 100)}%`,
-      objectFit: 'contain',
-      objectPosition: 'bottom center',
-      display: 'block',
-      alignSelf: 'flex-end',
-    }),
-    [sizeScale]
-  );
-
-  const renderSize = Math.max(16, Math.floor(pxSize * sizeScale));
-
-  const styles = {
-    titleIconWrap: {
-      height: '100%',
-      aspectRatio: '1 / 1',
-      display: 'flex',
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      pointerEvents: 'none',
-    },
-  };
-
-  return (
-    <div ref={wrapRef} className="qc-title-icon-wrap" style={styles.titleIconWrap} aria-hidden>
-      {!useFallback ? (
-        <img
-          className="qc-title-icon-img"
-          src={pngSrc}
-          alt=""
-          decoding="async"
-          fetchpriority="high"
-          style={innerStyle}
-          onError={() => setUseFallback(true)}
-        />
-      ) : (
-        <StyledSvgImg
-          srcSvgUrl={srcSvg}
-          cssVarMap={sideCssVars}
-          idPrefix={`hdr-${t}`}
-          size={renderSize}
-          className="qc-title-icon-fallback"
-          style={innerStyle}
-          alt=""
-        />
-      )}
-    </div>
-  );
-}
+import React from 'react';
+import { User as UserIcon, Settings as SettingsIcon } from 'lucide-react';
 
 export default function AppHeader({
-  svgStyles,
-  // Account chip in the universal top-right spot: a Sign In pill when
-  // signed out, avatar + username when signed in. Clicking opens the
-  // account panel either way.
   accountSignedIn = false,
   accountName = '',
   accountAvatarUrl = null,
   onOpenAccount = () => {},
+  onOpenSettings = () => {},
 }) {
   const TITLE_SIZE_CSS = 'clamp(1.6rem, 5vw, 3.2rem)';
 
@@ -139,7 +22,6 @@ export default function AppHeader({
       position: 'relative',
       backgroundColor: '#000',
       padding: '0 clamp(8px, 1.5vw, 16px)',
-      borderRadius: 0,
       textAlign: 'center',
       width: '100%',
       boxSizing: 'border-box',
@@ -155,51 +37,6 @@ export default function AppHeader({
       maxHeight: 'calc(var(--qc-title-size) * 1.5)',
       flex: '0 0 auto',
     },
-    appTitleWrap: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '100%',
-      height: '100%',
-      boxSizing: 'border-box',
-      padding: 0,
-      flex: '1 1 auto',
-      overflow: 'hidden',
-    },
-    appTitleRow: {
-      display: 'grid',
-      gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)',
-      alignItems: 'center',
-      gap: 'clamp(8px, 1.2vw, 16px)',
-      padding: 0,
-      borderRadius: 0,
-      backgroundColor: 'transparent',
-      width: '100%',
-      margin: 0,
-      height: '100%',
-    },
-    appTitleCenterGroup: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 'clamp(6px, 1vw, 10px)',
-      flex: '0 1 auto',
-      minWidth: 0,
-      backgroundColor: 'transparent',
-      padding: 0,
-      borderRadius: 0,
-      height: '100%',
-    },
-    titleStrip: (side) => ({
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: side === 'left' ? 'flex-start' : 'flex-end',
-      gap: 'clamp(6px, 1vw, 12px)',
-      width: '100%',
-      minWidth: 0,
-      height: '100%',
-      overflow: 'hidden',
-    }),
     appTitleText: {
       margin: 0,
       fontSize: 'var(--qc-title-size)',
@@ -219,7 +56,6 @@ export default function AppHeader({
       ].join(', '),
       lineHeight: 1,
       display: 'inline-block',
-      alignSelf: 'center',
       whiteSpace: 'nowrap',
     },
     appTitleUnderline: {
@@ -233,91 +69,95 @@ export default function AppHeader({
       alignSelf: 'center',
       flex: '0 0 auto',
     },
+    topRight: {
+      position: 'absolute',
+      right: 'clamp(10px, 1.5vw, 20px)',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      zIndex: 5,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+    },
+    gearBtn: {
+      display: 'grid',
+      placeItems: 'center',
+      width: 36,
+      height: 36,
+      borderRadius: 999,
+      border: '1px solid rgba(255,255,255,0.18)',
+      background: 'rgba(12,14,22,0.85)',
+      color: '#9db4ff',
+      cursor: 'pointer',
+    },
   };
 
   return (
     <header className="qc-app-header" style={styles.appHeader}>
-      <div className="qc-app-title-wrap" style={styles.appTitleWrap}>
-        <div className="qc-app-title-row" style={styles.appTitleRow}>
-          <div
-            className="qc-title-strip qc-title-strip--left"
-            style={styles.titleStrip('left')}
-            aria-hidden
-          >
-            <HeaderPieceIcon t="q" sideCssVars={svgStyles.white || {}} />
-            <HeaderPieceIcon t="b" sideCssVars={svgStyles.white || {}} />
-            <HeaderPieceIcon t="n" sideCssVars={svgStyles.white || {}} />
-          </div>
-          <div className="qc-app-title-center-group" style={styles.appTitleCenterGroup}>
-            <h1 className="qc-app-title-text" style={styles.appTitleText}>
-              Quantum Chess
-            </h1>
-          </div>
-          <div
-            className="qc-title-strip qc-title-strip--right"
-            style={styles.titleStrip('right')}
-            aria-hidden
-          >
-            <HeaderPieceIcon t="p" sideCssVars={svgStyles.white || {}} />
-            <HeaderPieceIcon t="r" sideCssVars={svgStyles.white || {}} />
-            <HeaderPieceIcon t="k" sideCssVars={svgStyles.white || {}} />
-          </div>
-        </div>
-      </div>
+      <h1 className="qc-app-title-text" style={styles.appTitleText}>
+        Quantum Chess
+      </h1>
       <div className="qc-app-title-underline" style={styles.appTitleUnderline} />
-      <button
-        type="button"
-        className="qc-header-account"
-        onClick={onOpenAccount}
-        aria-label={accountSignedIn ? 'Open account panel' : 'Sign in'}
-        style={{
-          position: 'absolute',
-          right: 'clamp(10px, 1.5vw, 20px)',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 5,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: accountSignedIn ? '4px 12px 4px 4px' : '8px 16px',
-          borderRadius: 999,
-          border: accountSignedIn ? '1px solid rgba(79,195,247,0.45)' : 'none',
-          background: accountSignedIn ? 'rgba(12,14,22,0.85)' : '#4fc3f7',
-          color: accountSignedIn ? '#dfe6f2' : '#06121b',
-          fontWeight: 800,
-          fontSize: 13,
-          letterSpacing: '0.03em',
-          cursor: 'pointer',
-          maxWidth: 'clamp(120px, 18vw, 220px)',
-        }}
-      >
-        {accountSignedIn ? (
-          <>
-            <span
-              aria-hidden
-              style={{
-                width: 28, height: 28, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto',
-                display: 'grid', placeItems: 'center', background: 'rgba(79,195,247,0.18)',
-                color: '#4fc3f7', fontSize: 13, fontWeight: 900,
-              }}
-            >
-              {accountAvatarUrl ? (
-                <img src={accountAvatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                (accountName[0] || '?').toUpperCase()
-              )}
-            </span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {accountName || 'Account'}
-            </span>
-          </>
-        ) : (
-          <>
-            <UserIcon size={15} />
-            <span>Sign In</span>
-          </>
-        )}
-      </button>
+      <div className="qc-header-controls" style={styles.topRight}>
+        <button
+          type="button"
+          className="qc-header-settings"
+          onClick={onOpenSettings}
+          aria-label="Open settings"
+          title="Settings"
+          style={styles.gearBtn}
+        >
+          <SettingsIcon size={18} />
+        </button>
+        <button
+          type="button"
+          className="qc-header-account"
+          onClick={onOpenAccount}
+          aria-label={accountSignedIn ? 'Open account panel' : 'Sign in'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: accountSignedIn ? '4px 12px 4px 4px' : '8px 16px',
+            borderRadius: 999,
+            border: accountSignedIn ? '1px solid rgba(79,195,247,0.45)' : 'none',
+            background: accountSignedIn ? 'rgba(12,14,22,0.85)' : '#4fc3f7',
+            color: accountSignedIn ? '#dfe6f2' : '#06121b',
+            fontWeight: 800,
+            fontSize: 13,
+            letterSpacing: '0.03em',
+            cursor: 'pointer',
+            maxWidth: 'clamp(120px, 18vw, 220px)',
+          }}
+        >
+          {accountSignedIn ? (
+            <>
+              <span
+                aria-hidden
+                style={{
+                  width: 28, height: 28, borderRadius: 999, overflow: 'hidden', flex: '0 0 auto',
+                  display: 'grid', placeItems: 'center', background: 'rgba(79,195,247,0.18)',
+                  color: '#4fc3f7', fontSize: 13, fontWeight: 900,
+                }}
+              >
+                {accountAvatarUrl ? (
+                  <img src={accountAvatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  (accountName[0] || '?').toUpperCase()
+                )}
+              </span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {accountName || 'Account'}
+              </span>
+            </>
+          ) : (
+            <>
+              <UserIcon size={15} />
+              <span>Sign In</span>
+            </>
+          )}
+        </button>
+      </div>
     </header>
   );
 }

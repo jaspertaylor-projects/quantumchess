@@ -5,7 +5,8 @@
       "Bash(git commit -q -m 'style\\(tray\\): slim in-game header to resign/draw/rules/settings, drop title row *)",
       "Bash(git commit -q -m 'style\\(tray\\): menu v2 — Sign In/Play/Puzzle as primary buttons, no tray title, challenge-button hover *)",
       "Bash(git commit -q -m 'style\\(tray\\): per-color primary menu buttons — cyan Sign In, green Play, gold Puzzle *)",
-      "Bash(git commit -q -m 'feat\\(header\\): account chip top-right \\(Sign In pill / avatar+username\\); fix signed-in account panel crash *)"
+      "Bash(git commit -q -m 'feat\\(header\\): account chip top-right \\(Sign In pill / avatar+username\\); fix signed-in account panel crash *)",
+      "Bash(git commit -q -m 'style\\(header\\): drop decorative piece strips, add settings gear to top-right controls *)"
     ]
   }
 }
