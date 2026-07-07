@@ -142,6 +142,17 @@ Legend: [ ] not started · [~] in progress · [X] done
         to live mode (live product/price/webhook + `supabase secrets set`
         with live keys) — the current sandbox checkout cannot take real
         cards. Sandbox secrets: `~/.config/quantumchess-stripe-deploy.env`.
+  - [ ] **GATE (also before live)**: set up the contact@quantumchess.ninja
+        inbox (Proton custom domain — see Auth email section). It is now the
+        published support address on /terms.html, /privacy.html, /about.html
+        and where refund requests go; mail must actually arrive before real
+        cards are charged.
+  - [X] Terms of service + refund policy (2026-07-06): `/terms.html` —
+        recurring-billing disclosure, 14-day no-questions refund (covers
+        subscription AND tip), one-time tip terms, Hawaii governing law.
+        Linked from all static-page footers + the app footer; renewal/terms/
+        refund text sits under the upgrade button in `AccountModal.jsx`.
+        Public contact email switched to contact@quantumchess.ninja.
   - [ ] **One-time $5 tip → a year ad-free + one engine review/day** (code
         done, 2026-07-06; wiring pending). The AccountModal pitch now leads
         with the human ("built and run by one person…") and offers "Tip $5"
@@ -293,6 +304,58 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [X] Every tutorial step now has an interactive move-based exercise on the
       real engine (en passant, promotion, Zeno lock, checkmate included —
       some with scripted Black replies).
+
+#### Retention (pre-launch)
+- [X] **Daily puzzle** (2026-07-07) — one seeded quantum puzzle per local
+      day, deterministic and backend-free (same puzzle for everyone; cached
+      per device). Weekly difficulty arc: Mon/Tue 1-movers, Wed/Thu 2-move
+      chains, Fri/Sat 3-move chains, Sun a 4-move hunt. Quantum-native goals:
+      The Instrument (measure 3 at once), The Census (collapse a piece you
+      never touch), The Seal, The Snap, The Phantom (en passant discovered
+      check), Collapse Mate, plus chains (Snap Trap, Ledger = census→seal,
+      The Hunt / Long Hunt rook ladders, The Investigation). Every player
+      move is verified by the engine to be the UNIQUE move achieving that
+      step's goal; scripted Black replies between steps. Soundness rule: no
+      legal Black reply may capture the piece that just made the solution
+      move (no "the king just takes back" refutations) — enforced by the
+      verifier at every ply. 3 attempts, streak, Wordle-style share card. Code: `frontend/src/puzzle/` (generator,
+      progress/streak/share, modal); entry buttons with an "unplayed" dot in
+      the side tray + mobile bar. Validated by harness over 180 consecutive
+      days: 0 failures, avg 26ms, max 268ms generation.
+  - [ ] BEFORE LAUNCH: set `PUZZLE_EPOCH` in
+        `frontend/src/puzzle/puzzleGenerator.js` to launch day (puzzle #1).
+  - Dev preview: `http://localhost:5175/?puzzleDate=YYYY-MM-DD` opens any
+    date's puzzle in practice mode (nothing recorded, streak untouched).
+    Dev builds only. Weekday map: Mon 1-move Instrument, Tue 1-move
+    wildcard, Wed Snap Trap (2), Thu Ledger (2), Fri Hunt (3), Sat
+    Investigation (3), Sun Long Hunt (4).
+  - **Tuning workflow — how to fix a bad puzzle.** When a day's puzzle feels
+    wrong (a refutation, a giveaway, too cluttered), don't patch that one
+    day — codify the complaint as a VERIFIER rule so it can never ship
+    again (e.g. the soundness rule above started as "their king could just
+    take back my bishop"). Then re-certify:
+    1. `node tools/puzzle-harness.mjs 180 2026-07-10` — generates 180
+       consecutive days and independently re-verifies every ply (uniqueness,
+       reply legality, weekly arc, timing). Must end `fails: 0`; drift days
+       (a chain falling back to a 1-mover) show as `*`.
+    2. If a weekday stops converging, `debugRecipe(dateStr, recipeKey)`
+       (exported from `puzzleGenerator.js`) reports exactly where all 150
+       candidates died — `p0:unsound`, `p0:multiHit`, or build-stage
+       counters (`BUILD_FAIL`) for the recipe's placement filters. Loosen
+       construction or tighten placement until `ok > 0` on the worst dates.
+    3. Bump `PUZZLE_VERSION` — this invalidates every device's cached
+       puzzle so the fixed generator takes effect everywhere, same day.
+    Difficulty knobs live in the recipes: piece counts, decoys,
+    `minChoices` (minimum legal moves so the find is a real search), and
+    `TRIES_PER_RECIPE`.
+- [ ] Achievements (~15–20, client-side): tutorial finished, first en
+      passant, first quantum promotion, castle-resolve, beat each bot tier…
+      surfaced at game end next to the winner modal.
+- [ ] Bot ladder: visible 12-bot progression (beat one to light up the
+      next), persistent progress — turns vs-AI (the majority behavior) into
+      a multi-session arc.
+- [ ] Daily-puzzle leaderboard (today's fastest solves — resets daily so it
+      never looks dead; needs a small Supabase table + rate limiting).
 
 #### Later
 - [ ] Replay saved games from stored move lists (moves are already saved;

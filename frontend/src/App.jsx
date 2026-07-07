@@ -32,6 +32,8 @@ import { prewarmAllPieceSvgs, invalidateSvgCaches, prewarmCapturedPieceSvgs } fr
 import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, getStatus, connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs, createPrivateRoom, joinPrivateRoom, buildInviteLink, readJoinCode, stripJoinCode } from './tray/matchmakingClient.js';
 import AppHeader from './components/AppHeader.jsx';
 import MobileBar from './components/MobileBar.jsx';
+import DailyPuzzleModal from './puzzle/DailyPuzzleModal.jsx';
+import { getDayResult, todayStr } from './puzzle/puzzleProgress.js';
 import NewGamePanel from './tray/NewGamePanel.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import WinnerModal from './components/WinnerModal.jsx';
@@ -568,6 +570,7 @@ export default function App() {
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
+      position: 'relative', // anchors the pre-game start CTA overlay
     },
   };
 
@@ -647,7 +650,21 @@ export default function App() {
     return false;
   }, [getLegalMoves, getEnPassantMoves, performMove]);
 
+  // Pre-game the board is a preview, not a sandbox: interacting nudges the
+  // player to game setup instead of silently starting a hotseat session
+  // (which disoriented new players and, on mobile, swapped the home action
+  // bar — with the Puzzle/Tutorial buttons — for in-game controls).
+  // Mobile opens the setup sheet; desktop pulses the on-board CTA (the
+  // setup panel is already visible in the tray).
+  const [startCtaPulse, setStartCtaPulse] = useState(0);
+  const promptStartGame = useCallback(() => {
+    if (isNarrow) setMobileNewGameOpen(true);
+    else setStartCtaPulse((n) => n + 1);
+    dismissOnboarding();
+  }, [isNarrow, dismissOnboarding]);
+
   const handleSquareClick = (data) => {
+    if (!gameStarted) { promptStartGame(); return; }
     if (guardExternalOver()) return;
 
     if (!canMakeMove) {
@@ -721,6 +738,7 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
+    if (!gameStarted) { promptStartGame(); return; }
     if (guardExternalOver()) return;
 
     if (!canMakeMove) {
@@ -964,6 +982,29 @@ export default function App() {
   const handleOpenRules = useCallback(() => { setRulesOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenAccount = useCallback(() => { setAccountOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenTutorial = useCallback(() => { setTutorialOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+
+  // Daily puzzle: the buttons wear a dot until today's is played. The bump
+  // counter re-reads localStorage after the modal closes.
+  const [dailyPuzzleOpen, setDailyPuzzleOpen] = useState(false);
+  const [puzzleStateBump, setPuzzleStateBump] = useState(0);
+  const puzzleUnsolved = useMemo(() => {
+    void puzzleStateBump;
+    try { return !getDayResult(todayStr()); } catch (_) { return false; }
+  }, [puzzleStateBump]);
+  const handleOpenPuzzle = useCallback(() => { setDailyPuzzleOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+  const handleClosePuzzle = useCallback(() => { setDailyPuzzleOpen(false); setPuzzleStateBump((n) => n + 1); }, []);
+
+  // Dev tool: ?puzzleDate=YYYY-MM-DD previews any date's puzzle in practice
+  // mode (nothing recorded). Dev builds only.
+  const [puzzlePreviewDate, setPuzzlePreviewDate] = useState(null);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const d = new URLSearchParams(window.location.search).get('puzzleDate');
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      setPuzzlePreviewDate(d);
+      setDailyPuzzleOpen(true);
+    }
+  }, []);
 
   // Narrow layout: the New Game setup panel lives in a bottom sheet.
   const [mobileNewGameOpen, setMobileNewGameOpen] = useState(false);
@@ -1402,6 +1443,7 @@ export default function App() {
 
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
+    if (!gameStarted) { promptStartGame(); return false; }
     if (guardExternalOver()) return false;
     if (!canMakeMove) return false;
     if (isOnlineGameRef.current) {
@@ -1419,12 +1461,13 @@ export default function App() {
     setSelectedId(piece.id);
     setTrayHighlights([]);
     return true;
-  }, [sideToMove, canMakeMove, userTeam, guardExternalOver]);
+  }, [sideToMove, canMakeMove, userTeam, guardExternalOver, gameStarted, promptStartGame]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
-    if (guardExternalOver()) { 
-      setSelectedId(null); 
-      return; 
+    if (!gameStarted) { promptStartGame(); setSelectedId(null); return; }
+    if (guardExternalOver()) {
+      setSelectedId(null);
+      return;
     }
     if (!canMakeMove) { 
       setInfoMessage(gameOver ? `Game over. ${winner ? `${winner[0].toUpperCase()}${winner.slice(1)} wins.` : ''}` : 'Cannot make moves while viewing history.');
@@ -1497,7 +1540,7 @@ export default function App() {
       setInfoMessage('Illegal move.');
       setSelectedId(null);
     }
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame]);
 
   const handleDragHover = useCallback(() => {}, []);
 
@@ -1770,7 +1813,8 @@ export default function App() {
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
-      <AppHeader svgStyles={svgStyles} />
+      {/* Phones skip the banner — every vertical pixel goes to the board. */}
+      {!isNarrow ? <AppHeader svgStyles={svgStyles} /> : null}
 
       <div className="qc-board-area" style={styles.boardArea}>
         <div className="qc-board-stack" style={styles.boardStack}>
@@ -1812,6 +1856,8 @@ export default function App() {
                   onDismissOnboarding={dismissOnboarding}
                   isPaid={isPaidUser}
                   onRequirePremium={handleRequirePremium}
+                  onOpenPuzzle={handleOpenPuzzle}
+                  puzzleUnsolved={puzzleUnsolved}
                 />
               );
               const whiteBarEl = (
@@ -1853,6 +1899,35 @@ export default function App() {
                         onResize={handleBoardResize}
                         squareColors={boardColors}
                       />
+                      {!gameStarted ? (
+                        <button
+                          type="button"
+                          className="qc-board-start-cta"
+                          key={`start-cta-${startCtaPulse}`}
+                          onClick={promptStartGame}
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 20,
+                            padding: '12px 26px',
+                            borderRadius: 999,
+                            border: `1px solid ${theme.border}`,
+                            background: 'rgba(12, 14, 22, 0.88)',
+                            color: theme.textPrimary,
+                            fontWeight: 900,
+                            fontSize: 'clamp(14px, 2.4vw, 17px)',
+                            letterSpacing: '0.05em',
+                            cursor: 'pointer',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                            backdropFilter: 'blur(2px)',
+                            animation: startCtaPulse > 0 ? 'qc-cta-pulse 500ms ease-out' : 'none',
+                          }}
+                        >
+                          ▶ Start a Game
+                        </button>
+                      ) : null}
                     </div>
                     {!isNarrow ? trayEl : null}
                   </div>
@@ -1904,6 +1979,8 @@ export default function App() {
             onResign={handleResign}
             onOfferDraw={handleOfferDraw}
             onCancelSearch={handleCancelSearch}
+            onOpenPuzzle={handleOpenPuzzle}
+            puzzleUnsolved={puzzleUnsolved}
           />
           {mobileNewGameOpen ? (
             <div
@@ -2101,6 +2178,13 @@ export default function App() {
           setRulesInitialPage(pageTitle);
           setRulesOpen(true);
         }}
+      />
+
+      <DailyPuzzleModal
+        open={dailyPuzzleOpen}
+        onClose={handleClosePuzzle}
+        svgStyleBySide={svgStyles}
+        previewDate={puzzlePreviewDate}
       />
     </div>
   );

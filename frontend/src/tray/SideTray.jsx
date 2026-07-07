@@ -8,7 +8,7 @@ import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon } from 'lucide-react';
 
 export default function SideTray({
   height = 0,
@@ -35,6 +35,8 @@ export default function SideTray({
   onDismissOnboarding = () => {},
   isPaid = false,
   onRequirePremium = null,
+  onOpenPuzzle = () => {},
+  puzzleUnsolved = false,
 }) {
   const [view, setView] = useState('new-game'); // 'history' or 'new-game'
   // Onboarding coach-sign shown on hover of a glowing button. Anchored to the
@@ -204,6 +206,31 @@ export default function SideTray({
               </>
             )}
 
+            <span style={{ position: 'relative', display: 'inline-flex' }}>
+              <IconButton
+                icon={PuzzleIcon}
+                size={16}
+                width={32}
+                height={32}
+                title="Daily Puzzle"
+                ariaLabel="Open the daily puzzle"
+                className="qc-side-tray-puzzle-btn"
+                onClick={onOpenPuzzle}
+                bg={theme.secondary}
+                color={'#f6c445'}
+                hoverInvert={true}
+              />
+              {puzzleUnsolved ? (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute', top: -2, right: -2, width: 9, height: 9,
+                    borderRadius: 999, background: '#f6c445',
+                    border: '1.5px solid rgba(10,12,20,0.9)', pointerEvents: 'none',
+                  }}
+                />
+              ) : null}
+            </span>
             <IconButton
               icon={UserIcon}
               size={16}

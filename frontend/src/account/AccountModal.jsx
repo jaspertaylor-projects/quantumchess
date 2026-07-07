@@ -423,7 +423,11 @@ export default function AccountModal({
                   </button>
                 </div>
                 <div style={{ fontSize: 11, color: theme.textSecondary }}>
-                  Secure payment via Stripe. Cancel the subscription anytime; the tip is a one-time thing.
+                  The subscription renews automatically at {PREMIUM_PRICE_LABEL} until cancelled —
+                  cancel anytime from this panel. The tip is a one-time payment. Secure payment via Stripe.{' '}
+                  <a href="/terms.html" target="_blank" rel="noopener" style={{ color: 'inherit' }}>Terms</a>
+                  {' · '}
+                  <a href="/terms.html#refunds" target="_blank" rel="noopener" style={{ color: 'inherit' }}>Refund policy</a>
                 </div>
               </div>
             )}

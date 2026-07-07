@@ -19,6 +19,7 @@ import {
   canPieceRecohere,
   canSideCaptureSquare,
   evaluateTerminalAfterMove,
+  generateLegalReplies,
   listCheckThreats,
   listEnPassantCaptures,
   movesForType,
@@ -27,10 +28,10 @@ import {
 } from '../chessboard/quantumEngine.js';
 
 // Bump to invalidate cached puzzles after generator changes.
-export const PUZZLE_VERSION = 2;
+export const PUZZLE_VERSION = 3;
 
-// Puzzle #1 — set to the public launch day.
-export const PUZZLE_EPOCH = '2026-07-10';
+// Puzzle #1 — update to the public launch day before launch.
+export const PUZZLE_EPOCH = '2026-07-06';
 
 // A date whose generation is verified by the harness; used only if a day's
 // whole recipe rotation somehow fails (it shouldn't).
@@ -105,9 +106,23 @@ function boardCtx() {
   };
 }
 
+// A lone king-carrier must BE the king: in a real game (all 16 slots seated,
+// captured pieces never holding k) conservation forces it, and players
+// correctly apply that rule. Puzzle boards are sparse, so the solver alone
+// wouldn't collapse it — we honor the invariant by construction instead.
+// Ambiguous kings appear only where a side has 2+ carriers (pairs,
+// pretenders).
 function whiteKingHolder(cornerFile) {
-  return P('white', sq(cornerFile, 0), 'nk');
+  return P('white', sq(cornerFile, 0), 'k');
 }
+
+// Attack-shape helpers shared by the recipes' placement filters.
+const atkKnight = (f, r, f2, r2) => KNIGHT_OFFS.some(([df, dr]) => f2 + df === f && r2 + dr === r);
+const atkLine = (f, r, f2, r2) => f === f2 || r === r2;
+const atkDiag = (f, r, f2, r2) => Math.abs(f - f2) === Math.abs(r - r2);
+const atkQueenly = (f, r, f2, r2) => atkLine(f, r, f2, r2) || atkDiag(f, r, f2, r2);
+const atkNear = (f, r, f2, r2) => Math.max(Math.abs(f - f2), Math.abs(r - r2)) <= 1;
+const atkBlackPawn = (f, r, f2, r2) => r === r2 - 1 && Math.abs(f - f2) === 1;
 
 const KNIGHT_OFFS = [[-1, -2], [1, -2], [-2, -1], [2, -1], [-2, 1], [2, 1], [-1, 2], [1, 2]];
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
@@ -297,7 +312,7 @@ function typesSig(pieces) {
   return pieces.map((p) => `${p.id}:${p.captured ? 'x' : p.square}:${(p.possibleTypes || []).join('')}`).sort().join('|');
 }
 
-function positionSane(pieces, { allowHangingKing = false } = {}) {
+function positionSane(pieces) {
   const seen = new Set();
   for (const p of pieces) {
     if (p.captured) continue;
@@ -309,12 +324,14 @@ function positionSane(pieces, { allowHangingKing = false } = {}) {
   const holders = (side) => pieces.filter((p) => !p.captured && p.side === side && p.possibleTypes.includes('k'));
   if (holders('white').length === 0 || holders('black').length === 0) return false;
 
-  // A lone, already-known black king hanging to an immediate capture makes
-  // every goal degenerate except mate day (where it IS the point).
-  if (!allowHangingKing) {
-    const bh = holders('black');
-    if (bh.length === 1 && bh[0].possibleTypes.length === 1 && canSideCaptureSquare(pieces, 'white', bh[0].square)) {
-      return false;
+  // No definite king may be capturable at rest: for Black that's a
+  // degenerate "take the free king" puzzle; for White it would make every
+  // move that doesn't resolve the attack illegal.
+  for (const p of pieces) {
+    if (p.captured || !p.square) continue;
+    if (p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k') {
+      const opp = p.side === 'white' ? 'black' : 'white';
+      if (canSideCaptureSquare(pieces, opp, p.square)) return false;
     }
   }
   return true;
@@ -325,12 +342,16 @@ function positionSane(pieces, { allowHangingKing = false } = {}) {
 // Candidate shape from recipes:
 // { pieces, lastMove?, plies: [{ subgoal, ctx?, goalText, preCheck?, reply? }] }
 // reply = scripted Black move played AFTER this ply's solution ({from,to}).
-function verifyCandidate(cand, recipe) {
+function verifyCandidate(cand, recipe, stats = null) {
+  const why = (reason) => {
+    if (stats) stats[reason] = (stats[reason] || 0) + 1;
+    return null;
+  };
   const constrained = applyQuantumConstraints(cand.pieces);
   // Construction must already be a fixed point — if the solver reshapes it,
   // the recipe's census math was wrong for this seed.
-  if (typesSig(constrained) !== typesSig(cand.pieces)) return null;
-  if (!positionSane(constrained, { allowHangingKing: Boolean(recipe.allowHangingKing) })) return null;
+  if (typesSig(constrained) !== typesSig(cand.pieces)) return why('fixedpoint');
+  if (!positionSane(constrained)) return why('sanity');
 
   let position = constrained;
   let lastMove = cand.lastMove || null;
@@ -339,21 +360,31 @@ function verifyCandidate(cand, recipe) {
   for (let k = 0; k < cand.plies.length; k++) {
     const ply = cand.plies[k];
     const predicate = SUBGOALS[ply.subgoal];
-    if (!predicate) return null;
-    if (ply.preCheck && !ply.preCheck(position)) return null;
+    if (!predicate) return why(`p${k}:badSubgoal`);
+    if (ply.preCheck && !ply.preCheck(position)) return why(`p${k}:preCheck`);
 
     const moves = enumerateWhiteMoves(position, lastMove);
     const minChoices = k === 0 ? (recipe.minChoices || 8) : (recipe.minChoicesLater || 6);
-    if (moves.length < minChoices) return null;
+    if (moves.length < minChoices) return why(`p${k}:minChoices`);
 
     let hit = null;
     for (const m of moves) {
       if (predicate(position, m, ply.ctx || {})) {
-        if (hit) return null; // not unique — reject
+        if (hit) return why(`p${k}:multiHit`); // not unique — reject
         hit = m;
       }
     }
-    if (!hit) return null;
+    if (!hit) return why(`p${k}:noHit`);
+
+    // Soundness: after the solution, no legal Black reply may capture the
+    // piece that just moved. A "solved" position where the obvious recapture
+    // refutes the star move reads as broken, even when the trade would be
+    // objectively fine. Mate plies pass vacuously (no legal replies).
+    const blackReplies = generateLegalReplies(hit.after, 'black', hit.nextCC, hit.nextLastMove);
+    for (const r of blackReplies) {
+      const moved = r.resultPieces.find((p) => p.id === hit.pieceId);
+      if (moved && moved.captured) return why(`p${k}:unsound`);
+    }
 
     const record = {
       pieces: position,
@@ -369,9 +400,9 @@ function verifyCandidate(cand, recipe) {
     };
 
     if (k < cand.plies.length - 1) {
-      if (!ply.reply) return null;
+      if (!ply.reply) return why(`p${k}:noReply`);
       const applied = applyBlackReply(hit.after, ply.reply);
-      if (!applied) return null;
+      if (!applied) return why(`p${k}:replyIllegal`);
       record.reply = { from: ply.reply.from, to: ply.reply.to };
       position = applied.pieces;
       lastMove = applied.lastMove;
@@ -381,6 +412,25 @@ function verifyCandidate(cand, recipe) {
   }
 
   return { pieces: constrained, lastMove: cand.lastMove || null, plies: outPlies };
+}
+
+// Harness/debug helper: run one recipe for a date and report where every
+// candidate died. Deterministic, read-only.
+export function debugRecipe(dateStr, key) {
+  const recipe = recipeByKey(key);
+  if (!recipe) return null;
+  const rng = mulberry32(hashString(`qc-puzzle-v${PUZZLE_VERSION}:${dateStr}:${recipe.key}`));
+  const stats = { buildNull: 0, ok: 0 };
+  for (let i = 0; i < TRIES_PER_RECIPE; i++) {
+    PIECE_SEQ = 0;
+    let cand = null;
+    try { cand = recipe.build(rng); } catch (_) { cand = null; }
+    if (!cand) { stats.buildNull += 1; continue; }
+    let verified = null;
+    try { verified = verifyCandidate(cand, recipe, stats); } catch (e) { stats[`throw:${e.message}`] = (stats[`throw:${e.message}`] || 0) + 1; }
+    if (verified) stats.ok += 1;
+  }
+  return stats;
 }
 
 // ------------------------------------------------------------------ recipes
@@ -399,47 +449,14 @@ const R_INSTRUMENT = {
     const Lf = randInt(rng, 2, 5);
     const Lr = randInt(rng, 2, 5);
     b.take(Lf, Lr); // reserve the landing square
-    const dirs = [...DIRS];
-    for (let k = 0; k < 3; k++) {
-      let placed = false;
-      for (let tries = 0; tries < 12 && !placed; tries++) {
-        const di = randInt(rng, 0, dirs.length - 1);
-        const [df, dr] = dirs[di];
-        const dist = randInt(rng, 1, 3);
-        const f = Lf + df * dist;
-        const r = Lr + dr * dist;
-        if (!b.free(f, r)) continue;
-        let clear = true;
-        for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
-        if (!clear) continue;
-        dirs.splice(di, 1);
-        for (let s = 1; s < dist; s++) b.take(Lf + df * s, Lr + dr * s);
-        pieces.push(P('black', b.take(f, r), 'pnbrq'));
-        placed = true;
-      }
-      if (!placed) return null;
-    }
-    const moverTypes = pick(rng, ['q', 'q', 'rq', 'bq']);
-    let mover = null;
-    for (let tries = 0; tries < 12 && !mover; tries++) {
-      const [df, dr] = pick(rng, dirs);
-      if (moverTypes === 'rq' && df !== 0 && dr !== 0) continue;
-      if (moverTypes === 'bq' && (df === 0 || dr === 0)) continue;
-      const dist = randInt(rng, 2, 4);
-      const f = Lf + df * dist;
-      const r = Lr + dr * dist;
-      if (!b.free(f, r)) continue;
-      let clear = true;
-      for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
-      if (!clear) continue;
-      mover = P('white', b.take(f, r), moverTypes);
-    }
+    if (!placeProbeTargets(rng, b, pieces, Lf, Lr, 3)) return null;
+    const mover = placeProbeMover(rng, b, Lf, Lr);
     if (!mover) return null;
     b.used.delete(`${Lf},${Lr}`); // landing square stays empty
     pieces.push(mover);
     const bk = b.findFree(rng, Lf < 4 ? 6 : 0, Lf < 4 ? 7 : 1, 6, 7);
     if (!bk) return null;
-    pieces.push(P('black', b.take(bk[0], bk[1]), 'pnbrqk'));
+    pieces.push(P('black', b.take(bk[0], bk[1]), 'k')); // lone carrier = the king
     if (!b.free(Lf < 4 ? 7 : 0, 0)) return null;
     pieces.push(whiteKingHolder(Lf < 4 ? 7 : 0));
     return {
@@ -451,6 +468,54 @@ const R_INSTRUMENT = {
     };
   },
 };
+
+// Probe targets are partial collapses chosen so they CANNOT strike back
+// along the ray they sit on ({p,n,b} on straight rays, {p,n,r} on diagonals
+// at distance 2+): the probe measures them safely, which keeps the solution
+// sound under the no-immediate-recapture rule.
+function placeProbeTargets(rng, b, pieces, Lf, Lr, count) {
+  const dirs = [...DIRS];
+  const spots = [];
+  for (let k = 0; k < count; k++) {
+    let placed = false;
+    for (let tries = 0; tries < 14 && !placed; tries++) {
+      const di = randInt(rng, 0, dirs.length - 1);
+      const [df, dr] = dirs[di];
+      const diagonal = df !== 0 && dr !== 0;
+      const dist = diagonal ? randInt(rng, 2, 3) : randInt(rng, 1, 3);
+      const f = Lf + df * dist;
+      const r = Lr + dr * dist;
+      if (!b.free(f, r)) continue;
+      let clear = true;
+      for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
+      if (!clear) continue;
+      dirs.splice(di, 1);
+      for (let s = 1; s < dist; s++) b.take(Lf + df * s, Lr + dr * s);
+      pieces.push(P('black', b.take(f, r), diagonal ? 'pnr' : 'pnb'));
+      spots.push([f, r, diagonal ? 'pnr' : 'pnb']);
+      placed = true;
+    }
+    if (!placed) return null;
+  }
+  b._probeDirs = dirs; // leftover rays for the mover
+  return spots;
+}
+
+function placeProbeMover(rng, b, Lf, Lr) {
+  const dirs = b._probeDirs || [...DIRS];
+  for (let tries = 0; tries < 14; tries++) {
+    const [df, dr] = pick(rng, dirs);
+    const dist = randInt(rng, 2, 4);
+    const f = Lf + df * dist;
+    const r = Lr + dr * dist;
+    if (!b.free(f, r)) continue;
+    let clear = true;
+    for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
+    if (!clear) continue;
+    return P('white', b.take(f, r), 'q');
+  }
+  return null;
+}
 
 const R_CENSUS = {
   key: 'census',
@@ -487,7 +552,7 @@ const R_CENSUS = {
     if (!cf) return null;
     pieces.push(P('black', b.take(cf[0], cf[1]), t));
     if (!b.free(4, 7)) return null;
-    pieces.push(P('black', b.take(4, 7), 'pnbrqk'));
+    pieces.push(P('black', b.take(4, 7), 'k')); // lone carrier = the king
     const blur = b.findFree(rng, 0, 7, 4, 6, 10);
     if (blur) pieces.push(P('black', b.take(blur[0], blur[1]), 'pnbrq'));
     const wkf = Xf < 4 ? 7 : 0;
@@ -537,11 +602,9 @@ const R_SEAL = {
       if (!spot) return null;
       pieces.push(P('black', b.take(spot[0], spot[1]), tp));
     }
-    // holder without 'n' — both knight slots are confirmed, so a 6-type
-    // holder would be pruned by the solver and fail the fixed point
     const kh = b.findFree(rng, 2, 5, 6, 7, 10);
     if (!kh) return null;
-    pieces.push(P('black', b.take(kh[0], kh[1]), 'pbrqk'));
+    pieces.push(P('black', b.take(kh[0], kh[1]), 'k')); // lone carrier = the king
     const wkf = Xf < 4 ? 7 : 0;
     if (!b.free(wkf, 0)) return null;
     pieces.push(whiteKingHolder(wkf));
@@ -659,7 +722,6 @@ const R_MATE1 = {
   emoji: '♚',
   moves: 1,
   minChoices: 8,
-  allowHangingKing: true,
   build(rng) {
     const b = boardCtx();
     const pieces = [];
@@ -708,32 +770,34 @@ const R_SNAP_TRAP = {
   build(rng) {
     const b = boardCtx();
     const pieces = [];
-    const pf = randInt(rng, 1, 4);
-    // pair on the 8th rank; E2 (right) becomes the king
+    const pf = randInt(rng, 2, 3);
+    // pair on the 8th rank, TWO apart: the revealed king (E2) is never
+    // adjacent to the capture square, so no refuting recapture exists
     const e1 = P('black', b.take(pf, 7), 'rk', { entangledWith: 'TBD' });
-    const e2 = P('black', b.take(pf + 1, 7), 'rk', { entangledWith: 'TBD' });
+    const e2 = P('black', b.take(pf + 2, 7), 'rk', { entangledWith: 'TBD' });
     e1.entangledWith = e2.id;
     e2.entangledWith = e1.id;
     pieces.push(e1, e2);
     // shields box the king in on rank 7
-    for (const f of [pf, pf + 1, pf + 2]) {
+    for (const f of [pf + 1, pf + 2, pf + 3]) {
       if (!b.free(f, 6)) return null;
       pieces.push(P('black', b.take(f, 6), 'p'));
     }
-    // white bishop takes E1 (clear diagonal from below)
-    const dd = pick(rng, [[-1, -1], [1, -1]]);
-    const dist = randInt(rng, 2, 3);
-    const bf = pf + dd[0] * dist;
-    const br = 7 + dd[1] * dist;
-    if (!b.free(bf, br)) return null;
-    for (let s = 1; s < dist; s++) if (!b.free(pf + dd[0] * s, 7 + dd[1] * s)) return null;
-    pieces.push(P('white', b.take(bf, br), 'b'));
+    // white bishop takes E1 (clear diagonal from below-left)
+    const dist = pf; // pf 2 or 3 -> bishop starts on file 0
+    if (!b.free(0, 7 - dist)) return null;
+    for (let s = 1; s < dist; s++) if (!b.free(pf - s, 7 - s)) return null;
+    pieces.push(P('white', b.take(0, 7 - dist), 'b'));
+    // a knight covers the king's one open flight square (pf+1, 8th rank)
+    // WITHOUT attacking E1 itself (that would be a second snap solution)
+    if (!b.free(pf, 5)) return null;
+    pieces.push(P('white', b.take(pf, 5), 'n'));
     // white rook on an open file right of the king, clear route to rank 8
-    const rf = randInt(rng, pf + 3, 7);
+    const rf = randInt(rng, pf + 4, 7);
     const rr = randInt(rng, 0, 2);
     if (!b.free(rf, rr)) return null;
     for (let r = rr + 1; r < 8; r++) if (!b.free(rf, r)) return null;
-    for (let f = pf + 2; f < rf; f++) if (!b.free(f, 7)) return null;
+    for (let f = pf + 3; f < rf; f++) if (!b.free(f, 7)) return null;
     pieces.push(P('white', b.take(rf, rr), 'r'));
     // scripted-reply blur, far from the mating geometry
     const blur = b.findFree(rng, 0, 7, 3, 4, 14, (f) => f === rf || f === pf || Math.abs(f - pf) <= 2);
@@ -776,51 +840,71 @@ const R_LEDGER = {
     const tSquare = b.take(Tf, 0);
     const T = P('black', tSquare, 'rq');
     pieces.push(T);
-    // ply-1 cascade target: a maybe-queen elsewhere
-    const t1 = b.findFree(rng, 0, 7, 5, 7);
-    if (!t1) return null;
-    const t1Square = sq(t1[0], t1[1]);
-    const T1 = P('black', b.take(t1[0], t1[1]), 'nq');
-    pieces.push(T1);
-    // X1 = {n,r}: capture -> n, completing the knight census
-    const Xf = randInt(rng, 2, 5);
-    const Xr = randInt(rng, 2, 4);
-    if (!b.free(Xf, Xr)) return null;
+    // X1 = {n,r}: capture -> n, completing the knight census. The auditor
+    // knight lands here, so the square must be off every black reach — T's
+    // queen-lines included.
+    const Xspot = b.findFree(rng, 1, 6, 2, 4, 30, (f, r) => atkQueenly(f, r, Tf, 0));
+    if (!Xspot) return null;
+    const [Xf, Xr] = Xspot;
     pieces.push(P('black', b.take(Xf, Xr), 'nr'));
-    // X2 = {b,r}: a knight-hop from X1's square; capture -> b
+    // X2 = {b,r}: a knight-hop from X1's square (so the auditor chains);
+    // also a landing square, so also off T's lines
     let X2spot = null;
-    for (let tries = 0; tries < 10 && !X2spot; tries++) {
+    for (let tries = 0; tries < 12 && !X2spot; tries++) {
       const [df, dr] = pick(rng, KNIGHT_OFFS);
-      if (b.free(Xf + df, Xr + dr) && Xr + dr >= 1) X2spot = [Xf + df, Xr + dr];
+      const f = Xf + df;
+      const r = Xr + dr;
+      if (b.free(f, r) && r >= 1 && !atkQueenly(f, r, Tf, 0)) X2spot = [f, r];
     }
     if (!X2spot) return null;
     pieces.push(P('black', b.take(X2spot[0], X2spot[1]), 'br'));
+    // landings the rest of Black's army must not reach
+    const landings = [[Xf, Xr], X2spot];
+    const reaches = (f, r, kinds) => landings.some(([lf, lr]) => {
+      if (kinds.includes('n') && atkKnight(lf, lr, f, r)) return true;
+      if (kinds.includes('q') && atkQueenly(lf, lr, f, r)) return true;
+      if (kinds.includes('line') && atkLine(lf, lr, f, r)) return true;
+      if (kinds.includes('diag') && atkDiag(lf, lr, f, r)) return true;
+      if (kinds.includes('p') && atkBlackPawn(lf, lr, f, r)) return true;
+      if (kinds.includes('k') && atkNear(lf, lr, f, r)) return true;
+      return false;
+    });
     // the auditor: a white knight a hop away from X1
     let att = null;
-    for (let tries = 0; tries < 10 && !att; tries++) {
+    for (let tries = 0; tries < 12 && !att; tries++) {
       const [df, dr] = pick(rng, KNIGHT_OFFS);
       if (b.free(Xf + df, Xr + dr)) att = P('white', b.take(Xf + df, Xr + dr), 'n');
     }
     if (!att) return null;
     pieces.push(att);
+    // ply-1 cascade target: a maybe-queen, out of reach of both landings
+    const t1 = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['n', 'q']));
+    if (!t1) return null;
+    const t1Square = sq(t1[0], t1[1]);
+    const T1 = P('black', b.take(t1[0], t1[1]), 'nq');
+    pieces.push(T1);
     // confirmed census pieces: one knight, one bishop
-    for (const tp of ['n', 'b']) {
-      const spot = b.findFree(rng, 0, 7, 5, 7);
-      if (!spot) return null;
-      pieces.push(P('black', b.take(spot[0], spot[1]), tp));
-    }
-    // black king-holder (full blur is fine: n census is only 1 deep pre-move)
-    const kh = b.findFree(rng, 2, 5, 6, 7, 10);
+    const cn = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['n']));
+    if (!cn) return null;
+    pieces.push(P('black', b.take(cn[0], cn[1]), 'n'));
+    const cb = b.findFree(rng, 0, 7, 5, 7, 30, (f, r) => reaches(f, r, ['diag']));
+    if (!cb) return null;
+    pieces.push(P('black', b.take(cb[0], cb[1]), 'b'));
+    // black king — the lone carrier, so definite; only its step-reach matters
+    const kh = b.findFree(rng, 0, 7, 6, 7, 40, (f, r) => reaches(f, r, ['k']));
     if (!kh) return null;
-    pieces.push(P('black', b.take(kh[0], kh[1]), 'pnbrqk'));
-    // scripted-reply blur
-    const blur = b.findFree(rng, 0, 7, 4, 5, 14);
+    pieces.push(P('black', b.take(kh[0], kh[1]), 'k'));
+    // scripted-reply blur {p,n,b,r}: safe both where it stands and after its push
+    const blur = b.findFree(rng, 0, 7, 4, 5, 40, (f, r) =>
+      reaches(f, r, ['n', 'line', 'diag', 'p']) || reaches(f, r - 1, ['n', 'line', 'diag', 'p']));
     if (!blur) return null;
     pieces.push(P('black', b.take(blur[0], blur[1]), 'pnbr'));
     const wkf = Xf < 4 ? 7 : 0;
     if (!b.free(wkf, 0)) return null;
     pieces.push(whiteKingHolder(wkf));
-    const dec = b.findFree(rng, 0, 7, 1, 2, 10);
+    // decoy rook: off both X files/ranks so it can never be a second census
+    // capture (which would break uniqueness at either ply)
+    const dec = b.findFree(rng, 0, 7, 1, 2, 30, (f, r) => reaches(f, r, ['line']));
     if (!dec) return null;
     pieces.push(P('white', b.take(dec[0], dec[1]), 'r'));
 
@@ -956,6 +1040,13 @@ const R_HUNT4 = {
 // ==================== Sat: three-move investigation =========================
 
 // Probe (measure 3) -> the census names the queen -> take her.
+// Temporary build-stage counters for the harness (cheap, module-level).
+export const BUILD_FAIL = {};
+function bfail(label) {
+  BUILD_FAIL[label] = (BUILD_FAIL[label] || 0) + 1;
+  return null;
+}
+
 const R_INVESTIGATION = {
   key: 'investigation',
   title: 'The Investigation',
@@ -969,70 +1060,62 @@ const R_INVESTIGATION = {
     const Lf = randInt(rng, 2, 5);
     const Lr = randInt(rng, 2, 4);
     b.take(Lf, Lr);
-    const dirs = [...DIRS];
-    // X: the census piece — 3 types so the probe marks it too
-    let X = null;
-    let Xsq = null;
-    for (let tries = 0; tries < 12 && !X; tries++) {
-      const di = randInt(rng, 0, dirs.length - 1);
-      const [df, dr] = dirs[di];
-      const dist = randInt(rng, 1, 2);
-      const f = Lf + df * dist;
-      const r = Lr + dr * dist;
-      if (!b.free(f, r)) continue;
-      let clear = true;
-      for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
-      if (!clear) continue;
-      dirs.splice(di, 1);
-      for (let s = 1; s < dist; s++) b.take(Lf + df * s, Lr + dr * s);
-      Xsq = b.take(f, r);
-      X = P('black', Xsq, 'nbq');
-    }
-    if (!X) return null;
-    pieces.push(X);
-    // two 5-type blurs on other rays; the first one is the scripted replier
-    const blurs = [];
-    for (let k = 0; k < 2; k++) {
-      let placed = null;
-      for (let tries = 0; tries < 12 && !placed; tries++) {
-        const di = randInt(rng, 0, dirs.length - 1);
-        const [df, dr] = dirs[di];
-        const dist = randInt(rng, 1, 3);
-        const f = Lf + df * dist;
-        const r = Lr + dr * dist;
-        if (!b.free(f, r) || r < 2) continue;
-        let clear = true;
-        for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
-        if (!clear) continue;
-        dirs.splice(di, 1);
-        for (let s = 1; s < dist; s++) b.take(Lf + df * s, Lr + dr * s);
-        placed = [f, r];
-      }
-      if (!placed) return null;
-      b.take(placed[0], placed[1]);
-      blurs.push(placed);
-      pieces.push(P('black', sq(placed[0], placed[1]), 'pnbrq'));
-    }
+    // three reach-safe probe targets; the two HIGHEST double as the
+    // scripted repliers (they need room for a one-step push)
+    const spots = placeProbeTargets(rng, b, pieces, Lf, Lr, 3);
+    if (!spots) return bfail('inv1-spots');
+    const replierIdx = spots
+      .map((s, i) => i)
+      .sort((a, c) => spots[c][1] - spots[a][1])
+      .slice(0, 2);
+    if (spots[replierIdx[0]][1] < 2 || spots[replierIdx[1]][1] < 2) return bfail('inv2-spotrank');
     // the probe: a white queen sliding onto L
-    let Q = null;
-    for (let tries = 0; tries < 12 && !Q; tries++) {
-      const [df, dr] = pick(rng, dirs);
-      const dist = randInt(rng, 2, 4);
-      const f = Lf + df * dist;
-      const r = Lr + dr * dist;
-      if (!b.free(f, r)) continue;
-      let clear = true;
-      for (let s = 1; s < dist; s++) if (!b.free(Lf + df * s, Lr + dr * s)) { clear = false; break; }
-      if (!clear) continue;
-      Q = P('white', b.take(f, r), 'q');
-    }
-    if (!Q) return null;
+    const Q = placeProbeMover(rng, b, Lf, Lr);
+    if (!Q) return bfail('inv3-Q');
     b.used.delete(`${Lf},${Lr}`);
     pieces.push(Q);
+    // Placement discipline: every white landing square (L for the queen,
+    // X for the knight, T for the rook) must be out of reach of every loose
+    // black piece, or the soundness rule rejects the whole candidate.
+    const knightOff = (f, r, f2, r2) => KNIGHT_OFFS.some(([df, dr]) => f + df === f2 && r + dr === r2);
+    const aligned = (f, r, f2, r2) => f === f2 || r === r2 || Math.abs(f - f2) === Math.abs(r - r2);
+    const near = (f, r, f2, r2) => Math.max(Math.abs(f - f2), Math.abs(r - r2)) <= 1;
+    // Risk from the probe targets — matched to their ACTUAL attack patterns
+    // ({p,n,r} strikes files/ranks, {p,n,b} strikes diagonals, both jump and
+    // pawn-hit), both where they stand and where the two scripted repliers
+    // will stand after their one-step push.
+    const pawnHit = (f, r, f2, r2) => r === r2 - 1 && Math.abs(f - f2) === 1;
+    const spotAttacks = (f, r, f2, r2, kind) => {
+      if (knightOff(f, r, f2, r2) || pawnHit(f, r, f2, r2)) return true;
+      if (kind === 'pnr') return f === f2 || r === r2;
+      return Math.abs(f - f2) === Math.abs(r - r2); // pnb: diagonals
+    };
+    const spotRisk = (f, r) => spots.some(([f2, r2, kind], i) =>
+      spotAttacks(f, r, f2, r2, kind) ||
+      (replierIdx.includes(i) && spotAttacks(f, r, f2, r2 - 1, kind)));
+
+    // X = {n,r}: the census piece, captured by a white knight on ply 2
+    // (2 types, so the probe never marks it — the census is its own clue).
+    // Off ALL of L's lines: X must not see L, and the queen parked on L
+    // must not see X (a queen capture would be a second census solution).
+    const Xspot = b.findFree(rng, 0, 7, 2, 5, 50, (f, r) =>
+      aligned(f, r, Lf, Lr) || knightOff(f, r, Lf, Lr) || spotRisk(f, r));
+    if (!Xspot) return bfail('inv4-X');
+    pieces.push(P('black', b.take(Xspot[0], Xspot[1]), 'nr'));
+    let N = null;
+    for (let tries = 0; tries < 10 && !N; tries++) {
+      const [df, dr] = pick(rng, KNIGHT_OFFS);
+      if (b.free(Xspot[0] + df, Xspot[1] + dr)) N = P('white', b.take(Xspot[0] + df, Xspot[1] + dr), 'n');
+    }
+    if (!N) return bfail('inv5-N');
+    pieces.push(N);
     // T: the maybe-queen the census will name, with exactly one white
-    // attacker (a rook) aimed at it
-    const Tspot = b.findFree(rng, 0, 7, 6, 7, 14, (f, r) => Math.abs(f - Lf) < 2 && Math.abs(r - Lr) < 2);
-    if (!Tspot) return null;
+    // attacker (a rook) aimed at it. Kept off X's lines and jumps.
+    const Tspot = b.findFree(rng, 0, 7, 5, 7, 60, (f, r) =>
+      aligned(f, r, Lf, Lr) || knightOff(f, r, Lf, Lr) ||
+      aligned(f, r, Xspot[0], Xspot[1]) || knightOff(f, r, Xspot[0], Xspot[1]) ||
+      spotRisk(f, r) || r <= Xspot[1]);
+    if (!Tspot) return bfail('inv6-T');
     const tSquare = sq(Tspot[0], Tspot[1]);
     const T = P('black', b.take(Tspot[0], Tspot[1]), 'nq');
     pieces.push(T);
@@ -1040,19 +1123,21 @@ const R_INVESTIGATION = {
     if (!b.free(Tspot[0], rr)) return null;
     for (let r = rr + 1; r < Tspot[1]; r++) if (!b.free(Tspot[0], r)) return null;
     pieces.push(P('white', b.take(Tspot[0], rr), 'r'));
-    // confirmed knight for the census
-    const cn = b.findFree(rng, 0, 7, 5, 7);
-    if (!cn) return null;
+    // confirmed knight for the census — no jumps onto X or T
+    const cn = b.findFree(rng, 0, 7, 5, 7, 20, (f, r) =>
+      knightOff(f, r, Xspot[0], Xspot[1]) || knightOff(f, r, Tspot[0], Tspot[1]));
+    if (!cn) return bfail('inv7-cn');
     pieces.push(P('black', b.take(cn[0], cn[1]), 'n'));
-    // black king-holder
-    const kh = b.findFree(rng, 0, 7, 6, 7, 12);
-    if (!kh) return null;
-    pieces.push(P('black', b.take(kh[0], kh[1]), 'pnbrqk'));
+    // black king — the lone carrier, so definite; only its step-reach matters
+    const kh = b.findFree(rng, 0, 7, 6, 7, 30, (f, r) =>
+      near(f, r, Xspot[0], Xspot[1]) || near(f, r, Tspot[0], Tspot[1]));
+    if (!kh) return bfail('inv7-kh');
+    pieces.push(P('black', b.take(kh[0], kh[1]), 'k'));
     if (!b.free(0, 0) && !b.free(7, 0)) return null;
     pieces.push(whiteKingHolder(b.free(0, 0) ? 0 : 7));
 
-    const [b1f, b1r] = blurs[0];
-    const [b2f, b2r] = blurs[1];
+    const [b1f, b1r] = spots[replierIdx[0]];
+    const [b2f, b2r] = spots[replierIdx[1]];
     return {
       pieces,
       plies: [
@@ -1103,7 +1188,7 @@ function primaryKeyFor(dateStr) {
 // one-movers — deterministically, so every device drifts identically.
 const SAFETY_CHAIN = ['census', 'snap', 'instrument', 'seal', 'phantom', 'mate'];
 
-const TRIES_PER_RECIPE = 80;
+const TRIES_PER_RECIPE = 150;
 
 function recipeByKey(key) { return RECIPES.find((a) => a.key === key); }
 
