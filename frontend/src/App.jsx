@@ -34,6 +34,7 @@ import { getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, getStatus, co
 import AppHeader from './components/AppHeader.jsx';
 import MobileBar from './components/MobileBar.jsx';
 import DailyPuzzleModal from './puzzle/DailyPuzzleModal.jsx';
+import MinedPuzzleModal from './puzzle/MinedPuzzleModal.jsx';
 import { getDayResult, todayStr } from './puzzle/puzzleProgress.js';
 import NewGamePanel from './tray/NewGamePanel.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
@@ -306,7 +307,8 @@ export default function App() {
 
       const topH = topBarRef.current ? Math.ceil(topBarRef.current.getBoundingClientRect().height) : 0;
       const bottomH = bottomBarRef.current ? Math.ceil(bottomBarRef.current.getBoundingClientRect().height) : 0;
-      const verticalGaps = 16;
+      // Matches boardStage's gap on each side of the board row.
+      const verticalGaps = isNarrow ? 8 : 16;
       const availableHeight = Math.max(0, rawHeight - topH - bottomH - verticalGaps);
 
       // In the side-by-side layout the tray sits next to the board, so its
@@ -554,8 +556,10 @@ export default function App() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: isNarrow ? 'flex-start' : 'center',
-      gap: 8,
+      // Centering (instead of letting the board row flex-grow) keeps the
+      // player bars hugging the board on phones; spare space goes outside.
+      justifyContent: 'center',
+      gap: isNarrow ? 4 : 8,
       boxSizing: 'border-box',
       overflow: 'hidden',
     },
@@ -566,7 +570,6 @@ export default function App() {
       alignItems: isNarrow ? 'stretch' : 'center',
       justifyContent: 'center',
       gap: isNarrow ? 8 : 12,
-      flex: isNarrow ? 1 : undefined,
       minHeight: 0,
     },
     boardHolder: {
@@ -1001,9 +1004,12 @@ export default function App() {
   // Share deep-link: /?puzzle opens today's daily puzzle directly — it's the
   // URL on the share card, so a friend following it lands on the puzzle, not
   // the home screen. Works in production builds.
-  // Dev tool: ?puzzleDate=YYYY-MM-DD previews any date's puzzle in practice
-  // mode (nothing recorded). Dev builds only.
+  // Dev tools: ?puzzleDate=YYYY-MM-DD previews any date's puzzle, and
+  // ?mined=N previews chain N of the mined-puzzle fixture
+  // (puzzle/minedPreviewData.json) — both practice mode (nothing recorded).
+  // Dev builds only.
   const [puzzlePreviewDate, setPuzzlePreviewDate] = useState(null);
+  const [minedPreviewPuzzle, setMinedPreviewPuzzle] = useState(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('puzzle') !== null) {
@@ -1015,6 +1021,14 @@ export default function App() {
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
       setPuzzlePreviewDate(d);
       setDailyPuzzleOpen(true);
+      return;
+    }
+    const m = params.get('mined');
+    if (m !== null) {
+      import('./puzzle/minedPreview.js').then(async (mod) => {
+        const p = await mod.loadMinedPreview(Number(m) || 0);
+        if (p) setMinedPreviewPuzzle(p);
+      });
     }
   }, []);
 
@@ -1846,6 +1860,7 @@ export default function App() {
                 svgStyles={svgStyles}
                 barRef={topBarRef}
                 showClock={showClockUI}
+                capturedPosition={isNarrow ? 'above' : 'inline'}
               />
             </div>
 
@@ -1890,6 +1905,7 @@ export default function App() {
                     svgStyles={svgStyles}
                     barRef={bottomBarRef}
                     showClock={showClockUI}
+                    capturedPosition={isNarrow ? 'below' : 'inline'}
                   />
                 </div>
               );
@@ -2207,6 +2223,18 @@ export default function App() {
         onClose={handleClosePuzzle}
         svgStyleBySide={svgStyles}
         previewDate={puzzlePreviewDate}
+      />
+
+      <MinedPuzzleModal
+        open={Boolean(minedPreviewPuzzle)}
+        onClose={() => setMinedPreviewPuzzle(null)}
+        puzzle={minedPreviewPuzzle}
+        svgStyleBySide={svgStyles}
+        boardColors={boardColors}
+        playerBarColors={playerBarColors}
+        selfAvatar={selfAvatar}
+        selfRating={selfRating}
+        strangerAvatar={strangerAvatar}
       />
     </div>
   );

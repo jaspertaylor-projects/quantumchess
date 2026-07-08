@@ -1,5 +1,5 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a compact captured pieces area; captured pieces render at a fixed pixel size to prevent bar growth.
+// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a captured pieces area; captures render inline (right third of the bar) or, via capturedPosition, as a fixed-height strip above/below the bar (mobile).
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
@@ -120,6 +120,11 @@ const CAP_ICON_MAX = 44;
 const CAP_ICON_GAP = 4; // used only between the two rows
 const CAP_VISIBLE = 0.55;
 
+// When captured pieces render outside the bar (mobile), they form one
+// fixed-height strip so the board doesn't re-fit on every capture.
+const STRIP_H = 26;
+const STRIP_ICON_MAX = 24;
+
 // The avatar sets the bar's visual rhythm: the two text lines and the
 // captured-pieces stack are all boxed to this height and centered with it.
 const BAR_CONTENT_H = 46;
@@ -212,7 +217,11 @@ export default function PlayerBar({
   avatar = null,
   tagline = null,
   speech = null, // transient saying shown as a speech bubble (string|null)
+  // 'inline' keeps captures in the bar's right third; 'above'/'below' moves
+  // them to a full-width strip outside the bar so the text can use the width.
+  capturedPosition = 'inline',
 }) {
+  const capturedOutside = capturedPosition === 'above' || capturedPosition === 'below';
   // The captured area owns the right third of the bar; icon size adapts to
   // the space and the longest row so pieces only shrink when they must.
   // An empty row cedes its height to the other, and overlap means a row of
@@ -227,6 +236,17 @@ export default function PlayerBar({
     : CAP_ICON_MAX;
   const capIconPx = Math.max(CAP_ICON_MIN, Math.min(CAP_ICON_MAX, widthFit, heightFit));
   const capOverlapPx = Math.round(capIconPx * (1 - CAP_VISIBLE));
+
+  // Outside strip: pawns then others in a single row, same overlap trick.
+  const pawnUnits = capturedPawns.length ? 1 + (capturedPawns.length - 1) * CAP_VISIBLE : 0;
+  const otherUnits = capturedOthers.length ? 1 + (capturedOthers.length - 1) * CAP_VISIBLE : 0;
+  const stripGroupGap = pawnUnits && otherUnits ? 10 : 0;
+  const stripUnits = Math.max(pawnUnits + otherUnits, 1);
+  const stripFit = capRect.width > 0
+    ? Math.floor((capRect.width - stripGroupGap) / stripUnits)
+    : STRIP_ICON_MAX;
+  const stripIconPx = Math.max(CAP_ICON_MIN, Math.min(STRIP_ICON_MAX, stripFit));
+  const stripOverlapPx = Math.round(stripIconPx * (1 - CAP_VISIBLE));
 
   const styles = {
     playerBar: {
@@ -347,14 +367,27 @@ export default function PlayerBar({
       overflow: 'hidden',
       flex: '0 0 auto',
     },
+    capturedStrip: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      width: '100%',
+      height: STRIP_H,
+      minHeight: STRIP_H,
+      maxHeight: STRIP_H,
+      padding: '0 6px',
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      opacity: 0.9,
+    },
   };
 
-  return (
+  const barEl = (
     <div
       className={`qc-player-bar qc-player-bar--${side}`}
       style={styles.playerBar}
       data-side={side}
-      ref={barRef}
+      ref={capturedOutside ? null : barRef}
     >
       {avatar ? <BotAvatar avatar={avatar} /> : null}
       <div className={`qc-player-info qc-player-info--${side}`} style={styles.playerInfo}>
@@ -426,31 +459,76 @@ export default function PlayerBar({
           ) : null}
         </div>
       </div>
-      <div
-        className={`qc-captured-area qc-captured-area--${side}`}
-        style={styles.capturedArea}
-        aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
-        ref={capRef}
-      >
-        {capturedPawns.length > 0 ? (
-          <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
-            {capturedPawns.map((p, i) => (
-              <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
-                <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {capturedOthers.length > 0 ? (
-          <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
-            {capturedOthers.map((p, i) => (
-              <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
-                <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      {!capturedOutside ? (
+        <div
+          className={`qc-captured-area qc-captured-area--${side}`}
+          style={styles.capturedArea}
+          aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
+          ref={capRef}
+        >
+          {capturedPawns.length > 0 ? (
+            <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
+              {capturedPawns.map((p, i) => (
+                <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
+                  <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {capturedOthers.length > 0 ? (
+            <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
+              {capturedOthers.map((p, i) => (
+                <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
+                  <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (!capturedOutside) return barEl;
+
+  const capturedStrip = (
+    <div
+      className={`qc-captured-strip qc-captured-strip--${side}`}
+      style={styles.capturedStrip}
+      aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
+      ref={capRef}
+    >
+      {capturedPawns.map((p, i) => (
+        <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -stripOverlapPx : 0, flex: '0 0 auto' }}>
+          <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={stripIconPx} />
+        </div>
+      ))}
+      {capturedOthers.map((p, i) => (
+        <div
+          key={`capicon-${p.id}`}
+          style={{
+            marginLeft: i > 0 ? -stripOverlapPx : capturedPawns.length ? stripGroupGap : 0,
+            flex: '0 0 auto',
+          }}
+        >
+          <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={stripIconPx} />
+        </div>
+      ))}
+    </div>
+  );
+
+  // The strip keeps a fixed height even when empty so the board doesn't
+  // re-fit on the first capture. barRef wraps strip + bar so the board
+  // measurement accounts for both.
+  return (
+    <div
+      className={`qc-player-bar-stack qc-player-bar-stack--${side}`}
+      ref={barRef}
+      style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2, boxSizing: 'border-box' }}
+    >
+      {capturedPosition === 'above' ? capturedStrip : null}
+      {barEl}
+      {capturedPosition === 'below' ? capturedStrip : null}
     </div>
   );
 }
