@@ -116,6 +116,43 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
 - Fires an interstitial when the winner modal opens.
 - `frontend/public/ads.txt` holds the AdSense verification line.
 
+### Analytics (Google Analytics 4)
+
+- Logic: `frontend/src/analytics/analytics.js` — dormant until
+  `VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX` is set in `frontend/.env.production`
+  (create the property at analytics.google.com, ~5 min). Consent-Mode-aware:
+  analytics cookies default to denied; the consent banner's choice flips both
+  ad and analytics consent. Custom events via `trackEvent()` (game_end wired).
+
+### Error alerts + uptime monitoring
+
+- **Backend error emails**: ERROR-level logs (backend exceptions AND shipped
+  frontend errors) email the operator via SES SMTP, throttled to one email
+  per 15 min with a suppressed-count summary
+  (`ThrottledEmailAlertHandler` in `backend/app/main.py`). Off until
+  `QC_ALERT_SMTP_USER` / `QC_ALERT_SMTP_PASS` (the qc-ses-smtp credentials)
+  and `QC_ALERT_TO` are set — put them in `deploy/api/.env` on the API box
+  (compose reads it automatically; never commit it), then
+  `docker compose -f docker-compose.prod.yml up -d`.
+- **Uptime**: `.github/workflows/uptime.yml` probes the site + API every
+  30 min; a failed probe fails the workflow and GitHub emails you. (Cron
+  budget: ~1440 Actions-minutes/month of the 2000 free for private repos —
+  don't tighten it casually.)
+
+### Tests
+
+```bash
+docker exec -u 1000:1000 -w /app quantumchess-frontend-1 pnpm test
+```
+
+`frontend/tests/engineReplay.test.js` replays 13 recorded pseudo-random games
+(`tests/fixtures/engine-games.json`) through the engine + `replayCore` and
+asserts every position signature, terminal result, and rule invariants — the
+regression net under saved games and premium game review. CI runs it on every
+push (`.github/workflows/ci.yml`). If an intentional rules change breaks it,
+regenerate fixtures with `node tests/generate-engine-fixtures.mjs` (same
+docker exec prefix) and say so in the commit.
+
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
@@ -249,6 +286,56 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] **Deploy the backend** for this to work in production (ssh + compose
       rebuild per "Backend" runbook above) — frontend-only deploys will show
       the button but fail to create rooms until the API box is updated.
+
+### Tests, monitoring, analytics (added 2026-07-06)
+- [X] Engine replay regression tests: vitest + 13 fixture games
+      (`frontend/tests/`, see "Tests" above); CI on every push
+      (`.github/workflows/ci.yml`). Found + pinned a real semantic: a side
+      can over-collapse until NO piece can be its king; the engine declares
+      that loss only after the opponent's next move.
+- [X] Uptime probe every 30 min (`.github/workflows/uptime.yml`) — GitHub
+      emails on failure. Live as soon as the workflows are pushed.
+- [X] GA4 analytics scaffold, consent-mode aware (`src/analytics/`), and
+      SES error-alert emails from the backend (throttled) — code done.
+  - [ ] ACTIVATE analytics — click-by-click (~5 min):
+    1. Go to https://analytics.google.com → sign in with the same Google
+       account as AdSense → Admin (gear, bottom-left) → **Create → Property**.
+    2. Property name `Quantum Chess`, your timezone, currency USD → Next →
+       pick any industry/size → Create, accept terms.
+    3. Choose platform **Web** → Website URL `https://quantumchess.ninja`,
+       stream name `quantumchess.ninja` → Create stream.
+    4. The stream page shows **Measurement ID** `G-XXXXXXXXXX` — copy it.
+    5. Add to `frontend/.env.production`:
+       `VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX`
+    6. Deploy:
+       `QC_CF_DISTRIBUTION_ID=E3G9M8CYMWWNUF ./deploy/deploy-frontend.sh`
+    7. Verify: open quantumchess.ninja, accept the consent banner, then GA4
+       → Reports → Realtime should show 1 user within ~60s. Finish a bot
+       game and `game_end` appears under Realtime → Event count.
+  - [ ] ACTIVATE error alerts — click-by-click (~5 min):
+    1. Have the `qc-ses-smtp` SMTP credentials ready (same user/pass pair
+       destined for the Supabase SMTP paste; SMTP username looks like
+       `AKIA...`).
+    2. `ssh -i /home/anonymous/qc_pem/qc-api-key.pem ubuntu@api.quantumchess.ninja`
+    3. `cd quantumchess/deploy/api && nano .env` and add (no quotes):
+       ```
+       QC_ALERT_SMTP_USER=AKIA...
+       QC_ALERT_SMTP_PASS=BC...
+       QC_ALERT_TO=jaspertaylor15@protonmail.com
+       ```
+    4. `git pull && docker compose -f docker-compose.prod.yml up -d --build`
+       (pull so the box has the alert-handler code; .env is gitignored and
+       stays put).
+    5. Test from your laptop — this logs a fake frontend error at ERROR
+       level, which should email you within ~30s:
+       `curl -X POST https://api.quantumchess.ninja/api/logs/frontend -H 'content-type: application/json' -d '{"message":"alert-pipeline test"}'`
+    6. No email? Until AWS grants SES production access, only VERIFIED
+       addresses can receive — check the recipient is verified in SES
+       (us-east-1 → Verified identities) or wait for prod access. Also
+       `docker compose -f docker-compose.prod.yml logs backend | grep alerts`
+       shows send failures.
+    7. Delivery throttle is one email per 15 min (extra errors are counted
+       and summarized in the next one) — a quiet inbox is normal.
 
 ### Auth email (Amazon SES → noreply@quantumchess.ninja)
 - [X] Domain verified in SES (Easy DKIM CNAMEs into Route 53)
