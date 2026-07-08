@@ -16,6 +16,7 @@ import {
   tipReviewAvailable, markTipReviewUsed,
 } from './billing.js';
 import { uploadAvatar } from './avatarUpload.js';
+import { taglineOptions } from '../sayings/sayingsCatalog.js';
 
 export default function AccountModal({
   open = false,
@@ -220,9 +221,12 @@ export default function AccountModal({
 
   const isPaid = Boolean(profile && profile.tier === 'paid');
 
+  // Taglines are picked from the character roster, never typed — the draft
+  // must be one of the unlocked characters' taglines (or empty to clear).
   const handleSaveTagline = async () => {
     if (!supabase || !user) return;
-    const tagline = taglineDraft.trim().slice(0, 80);
+    const options = taglineOptions({ isPaid });
+    const tagline = options.some((o) => o.tagline === taglineDraft) ? taglineDraft : '';
     setBusy(true);
     const { error } = await supabase.from('qc_profiles').update({ tagline: tagline || null }).eq('id', user.id);
     setBusy(false);
@@ -371,11 +375,16 @@ export default function AccountModal({
                   </div>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <input
+                      <select
                         className="qc-account-tagline" style={{ ...styles.input, flex: 1 }} value={taglineDraft}
-                        onChange={(e) => setTaglineDraft(e.target.value)} maxLength={80}
-                        placeholder="Your tagline — shown on your player bar"
-                      />
+                        onChange={(e) => setTaglineDraft(e.target.value)}
+                        aria-label="Pick a tagline from your characters"
+                      >
+                        <option value="">No tagline</option>
+                        {taglineOptions({ isPaid }).map((o) => (
+                          <option key={o.id} value={o.tagline}>{`${o.name} — “${o.tagline}”`}</option>
+                        ))}
+                      </select>
                       <button type="button" style={styles.ghostBtn} disabled={busy} onClick={handleSaveTagline}>Save</button>
                     </div>
                     <div>

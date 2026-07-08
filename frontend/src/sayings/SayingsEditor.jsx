@@ -1,7 +1,8 @@
 // frontend/src/sayings/SayingsEditor.jsx
 // Purpose: The per-event sayings picker, shown as a Settings section for
-// everyone. Signed-out picks persist in localStorage (via App); signed-in
-// picks save to the profile. Premium unlocks the full catalog + custom text.
+// everyone. Each option is a character's line for that event — players pick
+// from the roster they've unlocked, never free text. Signed-out picks
+// persist in localStorage (via App); signed-in picks save to the profile.
 // Imports From: ../theme.js, ./sayingsCatalog.js, ../account/supabaseClient.js
 // Exported To: ../settings/SettingsModal.jsx
 
@@ -9,7 +10,7 @@ import React, { useEffect, useState } from 'react';
 import theme from '../theme.js';
 import { supabase } from '../account/supabaseClient.js';
 import {
-  SAYING_EVENTS, presetsForEvent, DEFAULT_SAYINGS, MAX_CUSTOM_SAYING_LENGTH,
+  SAYING_EVENTS, sayingOptionsForEvent, DEFAULT_SAYINGS, DEFAULT_CHARACTER_ID,
 } from './sayingsCatalog.js';
 
 export default function SayingsEditor({ auth, localSayings = {}, onSaveLocalSayings = () => {} }) {
@@ -27,9 +28,10 @@ export default function SayingsEditor({ auth, localSayings = {}, onSaveLocalSayi
     const next = {};
     for (const ev of SAYING_EVENTS) {
       const value = saved[ev.key] || DEFAULT_SAYINGS[ev.key];
-      next[ev.key] = /^p\d{1,2}$/.test(value)
-        ? { choice: value, custom: '' }
-        : { choice: 'custom', custom: value };
+      // Old saves may hold retired preset ids or custom text — the select
+      // can't show those, so they display as the default character.
+      const options = sayingOptionsForEvent(ev.key, { isPaid });
+      next[ev.key] = options.some((o) => o.id === value) ? value : DEFAULT_CHARACTER_ID;
     }
     setDraft(next);
     setNotice(null);
@@ -40,14 +42,7 @@ export default function SayingsEditor({ auth, localSayings = {}, onSaveLocalSayi
   const handleSave = async () => {
     const sayings = {};
     for (const ev of SAYING_EVENTS) {
-      const d = draft[ev.key];
-      if (!d) continue;
-      if (d.choice === 'custom') {
-        const text = (d.custom || '').trim().slice(0, MAX_CUSTOM_SAYING_LENGTH);
-        sayings[ev.key] = text || DEFAULT_SAYINGS[ev.key];
-      } else {
-        sayings[ev.key] = d.choice;
-      }
+      sayings[ev.key] = draft[ev.key] || DEFAULT_SAYINGS[ev.key];
     }
     if (!user) {
       onSaveLocalSayings(sayings);
@@ -71,15 +66,37 @@ export default function SayingsEditor({ auth, localSayings = {}, onSaveLocalSayi
     color: theme.textPrimary, fontSize: 13,
   };
 
+  const renderOptions = (options) => {
+    const starters = options.filter((o) => o.tier !== 'premium');
+    const premium = options.filter((o) => o.tier === 'premium');
+    return (
+      <>
+        <optgroup label="Starter roster">
+          {starters.map((o) => (
+            <option key={o.id} value={o.id}>{`${o.name}: “${o.text}”`}</option>
+          ))}
+        </optgroup>
+        {premium.length > 0 ? (
+          <optgroup label="★ Premium roster">
+            {premium.map((o) => (
+              <option key={o.id} value={o.id}>{`${o.name}: “${o.text}”`}</option>
+            ))}
+          </optgroup>
+        ) : null}
+      </>
+    );
+  };
+
   return (
     <div className="qc-sayings-editor" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.5 }}>
-        Shown in a speech bubble on your player bar when it happens.
-        {isPaid ? ' Premium: full catalog + write your own.' : ''}
+        Shown in a speech bubble on your player bar when it happens. Every line
+        belongs to a character — unlock more characters, get more lines.
+        {isPaid ? '' : ' ★ Premium unlocks the full roster.'}
       </div>
       {SAYING_EVENTS.map((ev) => {
-        const d = draft[ev.key] || { choice: DEFAULT_SAYINGS[ev.key], custom: '' };
-        const presets = presetsForEvent(ev.key, isPaid);
+        const options = sayingOptionsForEvent(ev.key, { isPaid });
+        const value = draft[ev.key] || DEFAULT_CHARACTER_ID;
         return (
           <div key={ev.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 11.5, color: theme.textSecondary, fontWeight: 700 }}>
@@ -88,31 +105,17 @@ export default function SayingsEditor({ auth, localSayings = {}, onSaveLocalSayi
             <select
               className={`qc-saying-select-${ev.key}`}
               style={inputStyle}
-              value={d.choice}
+              value={value}
               disabled={busy}
-              onChange={(e) => setDraft((prev) => ({ ...prev, [ev.key]: { ...d, choice: e.target.value } }))}
+              onChange={(e) => setDraft((prev) => ({ ...prev, [ev.key]: e.target.value }))}
             >
-              {presets.map((p) => (
-                <option key={p.id} value={p.id}>{p.text}</option>
-              ))}
-              {isPaid ? (
-                <option value="custom">✏️ Write your own…</option>
-              ) : (
-                <option value={d.choice === 'custom' ? 'custom' : '__locked'} disabled>
-                  ★ More options + custom with Premium
+              {renderOptions(options)}
+              {!isPaid ? (
+                <option value="__locked" disabled>
+                  ★ 32 more characters with Premium
                 </option>
-              )}
+              ) : null}
             </select>
-            {d.choice === 'custom' && isPaid ? (
-              <input
-                className={`qc-saying-custom-${ev.key}`}
-                style={inputStyle}
-                value={d.custom}
-                maxLength={MAX_CUSTOM_SAYING_LENGTH}
-                placeholder="Your saying…"
-                onChange={(e) => setDraft((prev) => ({ ...prev, [ev.key]: { ...d, custom: e.target.value } }))}
-              />
-            ) : null}
           </div>
         );
       })}

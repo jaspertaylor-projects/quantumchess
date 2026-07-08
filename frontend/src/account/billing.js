@@ -25,7 +25,7 @@ export const PREMIUM_FEATURES = [
   'Unlimited saved games',
   'Premium bots to battle',
   'Custom profile pic & tagline',
-  'Custom sayings + full sayings catalog',
+  'The full character roster — 32 more taglines & sayings',
 ];
 
 // Ads are off for premium subscribers and for anyone inside a tipped
