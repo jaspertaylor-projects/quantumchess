@@ -117,6 +117,42 @@ button:hover {
 .qc-header-account { transition: filter 0.15s ease, background 0.15s ease; }
 .qc-header-account:hover { filter: brightness(1.15); }
 
+/* Signed-out Sign In pill: hovering floods the interior with the wordmark's
+   neon gradient — it sweeps in from the left, then keeps slowly flowing —
+   while the text flips dark to sit on top of it. */
+.qc-header-account--signin {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  transition: color 0.25s ease, text-shadow 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease, transform 0.25s ease, filter 0.15s ease;
+}
+.qc-header-account--signin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, #00f5ff, #b400ff, #ff3b7f, #00f5ff);
+  background-size: 300% 100%;
+  transform: translateX(-101%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.qc-header-account--signin:hover {
+  color: #0b0e16 !important;
+  text-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 0 16px rgba(180, 0, 255, 0.55), 0 0 30px rgba(0, 245, 255, 0.35) !important;
+  transform: translateY(-1px);
+}
+.qc-header-account--signin:hover::before {
+  transform: translateX(0);
+  animation: qc-signin-flow 2.4s linear infinite;
+}
+@keyframes qc-signin-flow {
+  from { background-position: 0% 50%; }
+  to   { background-position: 300% 50%; }
+}
+
 .qc-header-settings { transition: color 0.3s ease, filter 0.3s ease; }
 .qc-header-settings:hover {
   animation: qc-gear-spin 0.8s ease-in-out forwards;

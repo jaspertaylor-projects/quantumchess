@@ -102,7 +102,7 @@ export default function AppHeader({
       <div className="qc-header-controls" style={styles.topRight}>
         <button
           type="button"
-          className="qc-header-account"
+          className={`qc-header-account${accountSignedIn ? '' : ' qc-header-account--signin'}`}
           onClick={onOpenAccount}
           aria-label={accountSignedIn ? 'Open account panel' : 'Sign in'}
           style={{
