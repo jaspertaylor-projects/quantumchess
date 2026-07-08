@@ -278,8 +278,10 @@ export default function App() {
     clockText: effectiveClock.whiteText,
     clockActive: effectiveClock.whiteActive,
     clockLow: effectiveClock.whiteLow,
-    capturedPawns: whiteCapturedPawns,
-    capturedOthers: whiteCapturedOthers,
+    // Your bin holds the opponent pieces YOU captured, so each bar gets the
+    // other side's losses (whiteCaptured* = white pieces that were captured).
+    capturedPawns: blackCapturedPawns,
+    capturedOthers: blackCapturedOthers,
   } : {
     side: 'black',
     playerName: blackPlayer,
@@ -292,8 +294,8 @@ export default function App() {
     clockText: effectiveClock.blackText,
     clockActive: effectiveClock.blackActive,
     clockLow: effectiveClock.blackLow,
-    capturedPawns: blackCapturedPawns,
-    capturedOthers: blackCapturedOthers,
+    capturedPawns: whiteCapturedPawns,
+    capturedOthers: whiteCapturedOthers,
   });
 
   useEffect(() => {

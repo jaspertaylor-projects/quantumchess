@@ -118,7 +118,18 @@ const TYPE_TO_SVG = {
 const CAP_ICON_MIN = 12;
 const CAP_ICON_MAX = 44;
 const CAP_ICON_GAP = 4; // used only between the two rows
-const CAP_VISIBLE = 0.55;
+const CAP_VISIBLE = 0.72;
+
+// Which glyph a captured piece renders as (lowest-value possible type).
+const CAP_DISPLAY_ORDER = ['p', 'n', 'b', 'r', 'q'];
+function capDisplayType(piece) {
+  const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
+  return CAP_DISPLAY_ORDER.find((x) => types.includes(x)) || 'p';
+}
+
+// Display order for the non-pawn row: group identical glyphs, highest value
+// first (queens, rooks, bishops, knights) — capture order stays within a group.
+const CAP_TYPE_RANK = { q: 0, r: 1, b: 2, n: 3, p: 4 };
 
 // When captured pieces render outside the bar (mobile), they form one
 // fixed-height strip so the board doesn't re-fit on every capture.
@@ -152,10 +163,7 @@ function useMeasuredRect() {
 }
 
 function CapturedIcon({ piece, svgStyles, sizePx = 22 }) {
-  const types = Array.isArray(piece.possibleTypes) ? piece.possibleTypes : [];
-  const order = ['p', 'n', 'b', 'r', 'q'];
-  const pickType = order.find((x) => types.includes(x));
-  const t = pickType || (types.includes('k') ? 'p' : 'p');
+  const t = capDisplayType(piece);
 
   const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
   const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
@@ -227,6 +235,12 @@ export default function PlayerBar({
   // An empty row cedes its height to the other, and overlap means a row of
   // n icons only needs 1 + (n-1) * CAP_VISIBLE icon-widths.
   const [capRef, capRect] = useMeasuredRect();
+  const othersSorted = useMemo(
+    () => [...capturedOthers].sort(
+      (a, b) => (CAP_TYPE_RANK[capDisplayType(a)] ?? 9) - (CAP_TYPE_RANK[capDisplayType(b)] ?? 9)
+    ),
+    [capturedOthers]
+  );
   const maxRowCount = Math.max(capturedPawns.length, capturedOthers.length, 1);
   const rowsUsed = Math.max((capturedPawns.length ? 1 : 0) + (capturedOthers.length ? 1 : 0), 1);
   const effectiveUnits = 1 + (maxRowCount - 1) * CAP_VISIBLE;
@@ -475,9 +489,9 @@ export default function PlayerBar({
               ))}
             </div>
           ) : null}
-          {capturedOthers.length > 0 ? (
+          {othersSorted.length > 0 ? (
             <div className="qc-captured-row qc-captured-row--others" style={styles.capturedRow}>
-              {capturedOthers.map((p, i) => (
+              {othersSorted.map((p, i) => (
                 <div key={`capicon-${p.id}`} style={{ marginLeft: i > 0 ? -capOverlapPx : 0, flex: '0 0 auto' }}>
                   <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={capIconPx} />
                 </div>
@@ -503,7 +517,7 @@ export default function PlayerBar({
           <CapturedIcon piece={p} svgStyles={svgStyles} sizePx={stripIconPx} />
         </div>
       ))}
-      {capturedOthers.map((p, i) => (
+      {othersSorted.map((p, i) => (
         <div
           key={`capicon-${p.id}`}
           style={{
