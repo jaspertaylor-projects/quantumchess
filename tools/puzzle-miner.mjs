@@ -60,8 +60,9 @@ const CFG = {
   playMs: Number(argVal('playMs', QUICK ? 250 : 600)), // per-move time for game simulation
   minPly: Number(argVal('minPly', 6)), // skip the noisy opening plies
   mineDepth: Number(argVal('mineDepth', 3)),
-  prefilterMs: Number(argVal('prefilterMs', 4000)), // depth-(mineDepth-1) funnel budget
+  prefilterMs: Number(argVal('prefilterMs', 5000)), // depth-(mineDepth-1) funnel budget
   mineMs: Number(argVal('mineMs', QUICK ? 10000 : 20000)), // deep budget, only for funnel survivors
+  confirmMs: Number(argVal('confirmMs', QUICK ? 30000 : 120000)), // depth-stability confirm; runs on ~7 candidates per 60 games, so generous
   verifyDepth: Number(argVal('verifyDepth', 5)),
   verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 120000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max only-move plies to re-verify
@@ -75,6 +76,7 @@ const CFG = {
 
 const PREFILTER_WIDTHS = [64, 10, 8]; // narrow: 24% of positions timed out at [64,14,10]
 const MINE_WIDTHS = [64, 14, 10, 8, 6];
+const CONFIRM_WIDTHS = [48, 10, 8, 6, 6]; // depth+1 stability check: narrower or it times out
 const VERIFY_WIDTHS = [64, 16, 12, 10, 8, 6];
 
 // ------------------------------------------------- determinism (seeded rng)
@@ -444,7 +446,31 @@ function detectOnlyMoveStep(rec, stats) {
   if (!analysis) { stats.timeouts++; return null; }
   const only = classifyOnlyMove(analysis);
   if (!only) return null;
+
+  // Depth-stability confirmation: the seed-3 run's one gate failure was a
+  // candidate whose eval flipped between depths (same best move, +3.3 at
+  // depth 3 vs -0.9 at depth 5). Kill those at mine time: one depth deeper
+  // must still call it an only-move (slightly relaxed gap — the strict bar
+  // already passed at mineDepth).
+  const confirm = analyzePosition(rec, CFG.mineDepth + 1, CONFIRM_WIDTHS, CFG.confirmMs);
+  let confirmStatus = 'ok';
+  if (!confirm) {
+    // A timeout is NOT evidence of instability — keep the candidate flagged;
+    // the depth-5 gate still rules on it. (v1 rejected here and a whole
+    // 51-game run yielded zero.)
+    stats.confirmTimeouts++;
+    confirmStatus = 'timeout';
+  } else {
+    const cBest = confirm.moves[0];
+    const cSecond = confirm.moves[1];
+    const confirmed = cSecond
+      && moveKey(cBest.move) === moveKey(only.best.move)
+      && cBest.score >= CFG.holdEval
+      && cBest.score - cSecond.score >= CFG.minGap * 0.75;
+    if (!confirmed) { stats.confirmRejects++; return null; }
+  }
   stats.onlyMoves++;
+  console.log(`  only-move @ply ${rec.ply}${rec.rollout ? ' (rollout)' : ''}: ${only.best.move.from || 'castle'}->${only.best.move.to || ''} gap=${only.gap} confirm=${confirmStatus}`);
 
   const moveSim = simulateAnalysisMove(rec, only.best.move);
   if (!moveSim) return null;
@@ -459,6 +485,7 @@ function detectOnlyMoveStep(rec, stats) {
   return {
     ply: rec.ply,
     rollout: Boolean(rec.rollout),
+    confirm: confirmStatus,
     bestMove: { type: only.best.move.type, from: moveSim.from, to: moveSim.to, enPassant: moveSim.enPassant },
     bestScore: Number(only.best.score.toFixed(2)),
     secondScore: Number(only.second.score.toFixed(2)),
@@ -612,20 +639,24 @@ function verifyStep(step, position, stats) {
 console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
 console.log(`only-move bar: best>=${CFG.holdEval}, others<=${CFG.failEval}, gap>=${CFG.minGap}, choices>=${CFG.minChoices}\n`);
 
-const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, rolloutExtensions: 0, mineMsTotal: 0, verifyMsTotal: 0 };
+const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, rolloutExtensions: 0, confirmRejects: 0, confirmTimeouts: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
 const verifiable = []; // { step, position } for the gate
 
 for (let g = 0; g < CFG.games; g++) {
-  // Vary personalities: any two distinct roster bots (weights matter, tiers
-  // are normalized to medium+ so play is honest).
+  // Vary personalities AND strength: any two distinct roster bots, but seat
+  // the higher-rated one as White — we mine White-side puzzles only, and a
+  // weak White getting crushed yields nothing, while a weak Black blunders
+  // into exactly the positions a strong White gets to punish.
   const pool = BOTS;
-  const wIdx = Math.floor(rng() * pool.length);
-  let bIdx = Math.floor(rng() * pool.length);
-  if (bIdx === wIdx) bIdx = (bIdx + 1) % pool.length;
-  const botW = minerBot(pool[wIdx]);
-  const botB = minerBot(pool[bIdx]);
+  const aIdx = Math.floor(rng() * pool.length);
+  let bIdx2 = Math.floor(rng() * pool.length);
+  if (bIdx2 === aIdx) bIdx2 = (bIdx2 + 1) % pool.length;
+  const [hi, lo] = (pool[aIdx].rating || 0) >= (pool[bIdx2].rating || 0)
+    ? [pool[aIdx], pool[bIdx2]] : [pool[bIdx2], pool[aIdx]];
+  const botW = minerBot(hi);
+  const botB = minerBot(lo);
 
   const t0 = performance.now();
   const game = playGame(g, botW, botB);
@@ -676,6 +707,8 @@ const report = {
     chains: allChains.length,
     chainLengths: allChains.reduce((acc, c) => { acc[c.length] = (acc[c.length] || 0) + 1; return acc; }, {}),
     rolloutExtensions: stats.rolloutExtensions,
+    depthConfirmRejects: stats.confirmRejects,
+    depthConfirmTimeouts: stats.confirmTimeouts,
     prefilterTimeouts: stats.prefilterTimeouts,
     deepAnalysisTimeouts: stats.timeouts,
     insanePositions: stats.insane,
@@ -700,7 +733,7 @@ fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
 
 console.log(`\n=== SUMMARY ===`);
 console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgMineMsPerPosition}ms each; funnel survivors: ${stats.funnelSurvivors}; timeouts: ${stats.prefilterTimeouts} shallow / ${stats.timeouts} deep)`);
-console.log(`only-moves found: ${stats.onlyMoves}  (${(100 * report.stats.onlyMoveRate).toFixed(1)}% of positions)`);
+console.log(`only-moves found: ${stats.onlyMoves}  (${(100 * report.stats.onlyMoveRate).toFixed(1)}% of positions; confirm killed ${stats.confirmRejects}, timed out on ${stats.confirmTimeouts})`);
 console.log(`chains: ${allChains.length}  by length: ${JSON.stringify(report.stats.chainLengths)}  (${stats.rolloutExtensions} rollout extensions)`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
 console.log(`GATE — double-depth agreement: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);

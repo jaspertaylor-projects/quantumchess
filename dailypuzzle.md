@@ -42,15 +42,55 @@ Phantom, mate), a trickiness score (chain length × search-space ×
 how-buried-the-move-is-in-shallow-ordering × theme/quiet bonuses), and the
 gate verdicts.
 
-## First results (2026-07-06, 6 games, seed 2)
+## First results
 
-305 white positions scanned → 12 funnel survivors → **1 certified only-move**
-(0.3%); census fixed-point assertions clean across every position; gate
-agreed 1/1 at depth 5 (meaningless n — need ~100 candidates for a real
-agreement rate). Lessons applied: shallow prefilter was timing out on 24% of
-positions (narrowed its beam to `PREFILTER_WIDTHS`), and `failEval` loosened
-−1.5 → −1.0 (the 2.0-pawn gap already does the anti-noise work). Yield needs
-scale — a 60-game run (seed 3) logs to `tools/mined/run-seed3.log`.
+**Pilot (2026-07-06, 6 games, seed 2):** 305 positions → 1 certified
+only-move; census assertions clean; gate 1/1. Lessons applied: prefilter beam
+narrowed (24% were timing out), `failEval` loosened −1.5 → −1.0.
+
+**Scale run (2026-07-06, 60 games, seed 3, ~2h):** 2,888 positions → 66
+funnel survivors → **7 only-moves** (0.2%), all length-1, 0 rollout
+extensions. Census assertions clean across all 2,888. Highlight: a mined
+**en-passant discovered check** (The Phantom) with 66 legal alternatives.
+**Gate: 5/6 = 83.3%** — below the 95% bar. The one failure was
+depth-instability (same best move, +3.28 at depth 3 vs −0.89 at depth 5),
+exactly the predicted engine-as-referee risk. Fixes applied for the next run:
+1. **Depth-stability confirm at mine time** — a candidate must be an
+   only-move at depth 3 AND depth 4 (cheap: runs only on the ~7/60-games
+   that pass the strict bar). The gate at depth 5 then measures real
+   stability, not noise.
+2. **Stronger bot seats as White** — White-side-only mining made every
+   weak-White blowout a dead game; now weak Black blunders into positions
+   strong White gets to punish.
+3. Prefilter budget 4s → 5s (449/2888 shallow timeouts were skipping the
+   richest middlegames).
+
+Multi-move chains stayed rare even with rollout because after the first
+punishing move White is usually just winning — many moves hold. If length
+2–4 stays scarce, relax the *extension* bar (later steps keep, say, gap ≥
+1.5 relative to best rather than the full only-move bar) — with eval-bar
+scoring, later steps don't need strict uniqueness, just precision-worth-
+testing. Another lever: color-mirror Black-side only-moves into White
+puzzles (doubles usable positions; needs a board-flip utility).
+
+**Second scale run (2026-07-07, 100 games, seed 4, ~4.5h) — GATE PASSED:**
+4,298 positions → 85 funnel survivors → 11 passed the strict bar → the new
+depth-stability confirm killed 3 (0 timeouts) → **8 certified only-moves**,
+and the depth-5 gate agreed **8/8 = 100%** (vs 83% without the confirm
+stage). Census assertions clean across all 4,298. Also in this run: bots
+keep real tiers + blunder noise, stronger bot seats as White, and both
+sides play their first two moves as random quiet own-half moves (wired into
+`searchBestMove`, so app bots get the same opening variety).
+
+Yield: ~8 per 100 games ≈ 2 puzzles/compute-hour — already enough to feed a
+daily rotation of 1-movers with one overnight run a week. Composition is
+the next problem: 6/8 are collapsed-queen recaptures with shallowRank 0
+(statically obvious); the gems are the two quiet pawn moves and a recapture
+of a queen-OR-KING carrier that census-collapses an untouched piece and
+unmasks the king. Curation should filter/deprioritize rank-0 bare
+recaptures (tag exists in the data: capture-of-collapsed-piece with
+shallowRank 0) rather than the miner rejecting them — they're still fine
+easy-Monday fodder.
 
 ## Remaining to build (in order)
 

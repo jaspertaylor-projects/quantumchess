@@ -181,6 +181,19 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
   const handleShare = async () => {
     if (!puzzle || !result) return;
     const text = buildShareText(puzzle, result, getStreak());
+    // Native share sheet where available (mobile): the OS hands the text to
+    // the target app itself, which keeps the URL tappable on the receiving
+    // end. Single text payload (URL inside) — passing a separate `url` field
+    // makes some Android targets print it twice.
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return; // user closed the sheet
+        // else fall through to clipboard
+      }
+    }
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
