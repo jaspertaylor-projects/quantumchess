@@ -43,7 +43,6 @@ export default function ReviewModal({
   moves = null, // stored qc_games.moves array
   pieceSvgStyles,
   indicators,
-  measurementColors,
   squareColors,
 }) {
   const timeline = useMemo(
@@ -247,7 +246,6 @@ export default function ReviewModal({
                   highlights={highlights}
                   pieces={snap.pieces}
                   indicators={indicators}
-                  measurementColors={measurementColors}
                   maxVisualSize="min(60vmin, 440px)"
                   borderColor="transparent"
                   shadow="rgba(0, 0, 0, 0.15)"

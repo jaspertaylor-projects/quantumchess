@@ -14,7 +14,7 @@ import {
 } from './boardUtils.js';
 import theme from '../theme.js';
 import QuantumPiece from './QuantumPiece.jsx';
-import { DEFAULT_MEASUREMENT_COLORS, hexToRgbString } from '../settings/useMeasurementColors.js';
+import { hexToRgbString } from '../settings/useMeasurementColors.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 import { listCheckThreats, canPieceRecohere } from './quantumEngine.js';
 
@@ -31,7 +31,6 @@ export default function Board({
   pieces = [], // [{ id, side, square, possibleTypes }]
   selectedId = null,
   measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
-  measurementColors = DEFAULT_MEASUREMENT_COLORS, // per-side targeting colors for piece pips
   indicators = DEFAULT_INDICATORS, // visibility toggles for the visual reminders
   legalMoves = [], // legal moves for the currently-selected piece id
   squareColors = { light: '#f0d9b5', dark: '#b58863' },
@@ -398,7 +397,6 @@ export default function Board({
                   promoted={Boolean(piece.wasPromoted)}
                   sealed={sealedIds.has(piece.id)}
                   indicators={indicators}
-                  measurementColors={measurementColors}
                   size={pieceSize}
                   isSelected={selectedId === piece.id}
                   onClick={onPieceClick}
@@ -519,7 +517,6 @@ export default function Board({
                 promoted={Boolean(draggingPiece.wasPromoted)}
                 sealed={sealedIds.has(draggingPiece.id)}
                 indicators={indicators}
-                measurementColors={measurementColors}
                 size={pieceSize}
                 isSelected={true}
                 onClick={null}

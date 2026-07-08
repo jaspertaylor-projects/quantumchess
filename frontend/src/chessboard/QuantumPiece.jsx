@@ -7,7 +7,6 @@ import React, { useMemo } from 'react';
 import theme from '../theme.js';
 import StyledSvgImg from './StyledSvgImg.jsx';
 import { DEFAULT_COHERENCE, RECOHERE_THRESHOLD } from './gameConstants.js';
-import { DEFAULT_MEASUREMENT_COLORS } from '../settings/useMeasurementColors.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 
 // Single-type assets
@@ -102,7 +101,6 @@ export default function QuantumPiece({
   promoted = false,
   sealed = false,
   indicators = DEFAULT_INDICATORS,
-  measurementColors = DEFAULT_MEASUREMENT_COLORS,
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
   const tCount = types.length;
@@ -193,23 +191,23 @@ export default function QuantumPiece({
       pointerEvents: 'none',
       zIndex: 20,
     },
-    pip: (filled, attackerHex) => {
+    pip: (filled, inkHex) => {
       const d = Math.max(3, Math.round(size * 0.09));
       return {
         width: d,
         height: d,
         borderRadius: 999,
-        backgroundColor: filled ? attackerHex : 'rgba(255,255,255,0.28)',
+        backgroundColor: filled ? inkHex : 'rgba(255,255,255,0.28)',
         border: '1px solid rgba(0,0,0,0.4)',
         boxSizing: 'border-box',
       };
     },
-    pipAtAngle: (angleDeg, filled, attackerHex) => {
+    pipAtAngle: (angleDeg, filled, inkHex) => {
       const d = Math.max(3, Math.round(size * 0.09));
       const radius = Math.max(4, Math.round(size * 0.13));
       const rad = (angleDeg * Math.PI) / 180;
       return {
-        ...baseStyles.pip(filled, attackerHex),
+        ...baseStyles.pip(filled, inkHex),
         position: 'absolute',
         left: Math.round(Math.cos(rad) * radius) - d / 2,
         top: Math.round(Math.sin(rad) * radius) - d / 2,
@@ -217,12 +215,12 @@ export default function QuantumPiece({
     },
   };
 
-  // Coherence pips, drawn in the attacking side's color (filled = remaining).
-  // The triangle gauge lives in the center of measurable (3+ type) pieces
-  // only — nearly-defined pieces carry the bottom recoherence row instead.
-  const colors = measurementColors || DEFAULT_MEASUREMENT_COLORS;
-  const attackerHex = colors[side === 'white' ? 'black' : 'white'] || '#ba55d1';
-  const ownHex = colors[side] || '#4fc3f7';
+  // Every insignia and dot on a piece — coherence pips, recoherence row,
+  // promo braces, castle link, sealed line — draws in ONE ink: the piece's
+  // own border (band stroke) color, so the marks always read as part of the
+  // piece and follow any custom piece colors automatically.
+  const sideVars = (svgStyleBySide && svgStyleBySide[side]) || {};
+  const ink = sideVars['--band-stroke'] || (side === 'white' ? '#111827' : '#f2f2f2');
   const effectiveCoherence = Number.isFinite(coherence) ? coherence : DEFAULT_COHERENCE;
   const TRIANGLE_ANGLES = [-90, 30, 150];
 
@@ -242,7 +240,7 @@ export default function QuantumPiece({
       <path
         d={open ? 'M5 1 L1.6 5 L5 9' : 'M1 1 L4.4 5 L1 9'}
         fill="none"
-        stroke={ownHex}
+        stroke={ink}
         strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -257,7 +255,7 @@ export default function QuantumPiece({
     <div className="qc-coherence-pips qc-coherence-pips--triangle" style={baseStyles.pipCenter} aria-hidden="true">
       {indicators.coherence
         ? TRIANGLE_ANGLES.map((angle, i) => (
-            <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, attackerHex)} />
+            <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, ink)} />
           ))
         : null}
       {showPromoBraces ? (
@@ -292,14 +290,14 @@ export default function QuantumPiece({
         width: dotD * 3 + 4,
         height: Math.max(2, Math.round(dotD * 0.55)),
         borderRadius: 999,
-        backgroundColor: ownHex,
+        backgroundColor: ink,
         border: '1px solid rgba(0,0,0,0.4)',
         boxSizing: 'border-box',
       }}
     />
   ) : (
     Array.from({ length: RECOHERE_THRESHOLD }, (_, i) => (
-      <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ownHex)} />
+      <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ink)} />
     ))
   );
   const regainPips = nearlyDefined && entangled && indicators.entangled ? (
@@ -310,7 +308,7 @@ export default function QuantumPiece({
         viewBox="0 0 24 12"
         style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.7))' }}
       >
-        <g fill="none" stroke={ownHex} strokeWidth="2.2">
+        <g fill="none" stroke={ink} strokeWidth="2.2">
           <rect x="1.4" y="2.6" width="11.6" height="6.8" rx="3.4" />
           <rect x="11" y="2.6" width="11.6" height="6.8" rx="3.4" />
         </g>
@@ -334,7 +332,6 @@ export default function QuantumPiece({
     if (onPointerDown) onPointerDown(e);
   };
 
-  const sideVars = side === 'white' ? (svgStyleBySide.white || {}) : (svgStyleBySide.black || {});
   const renderHint = isSmall ? 'crisp' : 'precision';
 
   const transformParts = [];

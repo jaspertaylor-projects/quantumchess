@@ -20,7 +20,6 @@ export default function SettingsModal({
   blackColors,
   boardColors,
   playerBarColors,
-  measurementColors,
   indicators,
   showCoordinates,
   showCheckOverlay,
@@ -28,14 +27,12 @@ export default function SettingsModal({
   defaultBlackColors,
   defaultBoardColors,
   defaultPlayerBarColors,
-  defaultMeasurementColors,
   onAccept = async () => {},
 }) {
   const [localWhite, setLocalWhite] = useState(whiteColors);
   const [localBlack, setLocalBlack] = useState(blackColors);
   const [localBoard, setLocalBoard] = useState(boardColors);
   const [localPlayerBar, setLocalPlayerBar] = useState(playerBarColors);
-  const [localMeasurement, setLocalMeasurement] = useState(measurementColors);
   const [localIndicators, setLocalIndicators] = useState(indicators || DEFAULT_INDICATORS);
   const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
   const [localShowCheckOverlay, setLocalShowCheckOverlay] = useState(showCheckOverlay);
@@ -49,12 +46,11 @@ export default function SettingsModal({
       setLocalBlack(blackColors);
       setLocalBoard(boardColors);
       setLocalPlayerBar(playerBarColors);
-      setLocalMeasurement(measurementColors);
       setLocalIndicators(indicators || DEFAULT_INDICATORS);
       setLocalShowCoordinates(showCoordinates);
       setLocalShowCheckOverlay(showCheckOverlay);
     }
-  }, [open, whiteColors, blackColors, boardColors, playerBarColors, measurementColors, indicators, showCoordinates, showCheckOverlay]);
+  }, [open, whiteColors, blackColors, boardColors, playerBarColors, indicators, showCoordinates, showCheckOverlay]);
 
   if (!open) return null;
 
@@ -66,7 +62,6 @@ export default function SettingsModal({
         black: localBlack,
         board: localBoard,
         playerBar: localPlayerBar,
-        measurement: localMeasurement,
         indicators: localIndicators,
         coordinates: localShowCoordinates,
         checkOverlay: localShowCheckOverlay,
@@ -84,7 +79,6 @@ export default function SettingsModal({
     if (defaultBlackColors) setLocalBlack(defaultBlackColors);
     if (defaultBoardColors) setLocalBoard(defaultBoardColors);
     if (defaultPlayerBarColors) setLocalPlayerBar(defaultPlayerBarColors);
-    if (defaultMeasurementColors) setLocalMeasurement(defaultMeasurementColors);
     setLocalIndicators({ ...DEFAULT_INDICATORS });
   };
 
@@ -263,7 +257,6 @@ export default function SettingsModal({
   const handleBlack = (key) => (e) => setLocalBlack((p) => ({ ...p, [key]: e.target.value }));
   const handleBoard = (key) => (e) => setLocalBoard((p) => ({ ...p, [key]: e.target.value }));
   const handlePlayerBar = (key) => (e) => setLocalPlayerBar((p) => ({ ...p, [key]: e.target.value }));
-  const handleMeasurement = (key) => (e) => setLocalMeasurement((p) => ({ ...p, [key]: e.target.value }));
 
   // Accordion drawer: one section open at a time keeps the panel short.
   const renderSection = (id, title, body) => {
@@ -436,34 +429,6 @@ export default function SettingsModal({
           {renderSection('sayings', 'Sayings', (
             <SayingsEditor auth={auth} localSayings={localSayings} onSaveLocalSayings={onSaveLocalSayings} />
           ))}
-
-          {renderSection('targeting', 'Targeting Colors', <>
-            <div className="qc-settings-row" style={styles.row}>
-              <label htmlFor="qc-measure-white" style={styles.label}>White Targeting</label>
-              <input
-                id="qc-measure-white"
-                type="color"
-                className="qc-color-input qc-color-input--measure-white"
-                style={styles.colorInput}
-                value={(localMeasurement && localMeasurement.white) || '#111827'}
-                onChange={handleMeasurement('white')}
-                aria-label="White targeting color"
-              />
-            </div>
-
-            <div className="qc-settings-row" style={styles.row}>
-              <label htmlFor="qc-measure-black" style={styles.label}>Black Targeting</label>
-              <input
-                id="qc-measure-black"
-                type="color"
-                className="qc-color-input qc-color-input--measure-black"
-                style={styles.colorInput}
-                value={(localMeasurement && localMeasurement.black) || '#4fc3f7'}
-                onChange={handleMeasurement('black')}
-                aria-label="Black targeting color"
-              />
-            </div>
-          </>)}
 
           {renderSection('board', 'Board Squares', <>
             <div className="qc-settings-row" style={styles.row}>

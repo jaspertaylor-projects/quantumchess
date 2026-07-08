@@ -7,7 +7,7 @@ import './App.css';
 import theme from './theme.js';
 import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
-import useMeasurementColors, { DEFAULT_MEASUREMENT_COLORS, hexToRgbString } from './settings/useMeasurementColors.js';
+import { hexToRgbString } from './settings/useMeasurementColors.js';
 import useIndicatorSettings from './settings/useIndicatorSettings.js';
 import SettingsModal from './settings/SettingsModal.jsx';
 import usePieceColors, { DEFAULT_WHITE, DEFAULT_BLACK } from './settings/usePieceColors.js';
@@ -172,7 +172,6 @@ export default function App() {
   const { whiteColors, blackColors, setWhiteColors, setBlackColors, svgStyles } = usePieceColors();
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
-  const { measurementColors, setMeasurementColors } = useMeasurementColors();
   const { indicators, setIndicators } = useIndicatorSettings();
   const auth = useAuth();
 
@@ -198,13 +197,14 @@ export default function App() {
   }, [selectedId, pieces]);
 
   // Rings on every piece the last move's measurement pulse touched, in the
-  // measuring side's color. Cleared naturally when the next move lands.
+  // measuring side's piece-border color (same ink as that side's insignia).
+  // Cleared naturally when the next move lands.
   const measuredMarks = useMemo(() => {
     if (!lastMove || !Array.isArray(lastMove.measuredSquares) || lastMove.measuredSquares.length === 0) return [];
-    const colors = measurementColors || DEFAULT_MEASUREMENT_COLORS;
-    const rgb = hexToRgbString(colors[lastMove.side] || colors.white);
+    const sideColors = lastMove.side === 'black' ? blackColors : whiteColors;
+    const rgb = hexToRgbString(sideColors.bandStroke);
     return lastMove.measuredSquares.map((sq) => ({ square: sq, rgb }));
-  }, [lastMove, measurementColors]);
+  }, [lastMove, whiteColors, blackColors]);
 
   // Player identities: the human is "Anonymous"; a bot shows its name,
   // rating, and avatar; the second local player is "Stranger". Online games
@@ -1598,7 +1598,6 @@ export default function App() {
 
     setBoardColors(settings.board);
     setPlayerBarColors(settings.playerBar);
-    if (settings.measurement) setMeasurementColors(settings.measurement);
     if (settings.indicators) setIndicators(settings.indicators);
     setShowCoordinates(settings.coordinates);
     setShowCheckOverlay(settings.checkOverlay);
@@ -1630,7 +1629,7 @@ export default function App() {
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
     await prewarmCapturedPieceSvgs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
-  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setMeasurementColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
+  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setShowCoordinates, setShowCheckOverlay, currentPieceSize]);
 
   const winnerText = useMemo(() => {
     if (!gameOver) return '';
@@ -1930,7 +1929,6 @@ export default function App() {
                         selectedId={selectedId}
                         measureTargetMarks={measuredMarks}
                         indicators={indicators}
-                        measurementColors={measurementColors}
                         legalMoves={selectedMoves}
                         maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
                         borderColor="transparent"
@@ -2091,7 +2089,6 @@ export default function App() {
         blackColors={blackColors}
         boardColors={boardColors}
         playerBarColors={playerBarColors}
-        measurementColors={measurementColors}
         indicators={indicators}
         showCoordinates={showCoordinates}
         showCheckOverlay={showCheckOverlay}
@@ -2099,7 +2096,6 @@ export default function App() {
         defaultBlackColors={DEFAULT_BLACK}
         defaultBoardColors={DEFAULT_BOARD}
         defaultPlayerBarColors={DEFAULT_PLAYER_BAR_COLORS}
-        defaultMeasurementColors={DEFAULT_MEASUREMENT_COLORS}
         onAccept={handleAcceptSettings}
         auth={auth}
         localSayings={localSayings}
@@ -2190,7 +2186,6 @@ export default function App() {
         moves={reviewGame ? reviewGame.moves : null}
         pieceSvgStyles={svgStyles}
         indicators={indicators}
-        measurementColors={measurementColors}
         squareColors={boardColors}
       />
 
