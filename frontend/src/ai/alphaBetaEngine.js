@@ -302,15 +302,15 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
   const W = { ...DEFAULT_WEIGHTS, ...((bot && bot.weights) || {}) };
   const root = clonePieces(pieces);
 
-  // Opening variety: a bot's very first move of the game is a uniformly
-  // random quiet move (never a capture), at every difficulty — restricted
+  // Opening variety: a bot's first TWO moves of the game are uniformly
+  // random quiet moves (never a capture), at every difficulty — restricted
   // to its own half of the board so it never collapses a piece deep into
-  // enemy territory and hangs it on move one. Exception: if the opponent's
-  // opener already captured one of our pieces, skip the script and search
-  // for real — the bot is allowed to take back.
-  const sideHasMoved = root.some((p) => p.side === sideToMove && (p.moveCount || 0) > 0);
-  const sideHasLosses = root.some((p) => p.side === sideToMove && p.captured);
-  if (!sideHasMoved && !sideHasLosses) {
+  // enemy territory and hangs it early. Exception: the moment any capture
+  // has happened, drop the script and search for real — the bot is allowed
+  // to take back (and to punish).
+  const sideMoveCount = root.reduce((n, p) => (p.side === sideToMove ? n + (p.moveCount || 0) : n), 0);
+  const anyCaptures = root.some((p) => p.captured);
+  if (sideMoveCount < 2 && !anyCaptures) {
     const replies = generateLegalReplies(root, sideToMove, 0, lastMove);
     const occupied = new Set(root.filter((p) => !p.captured && p.square).map((p) => p.square));
     const quiet = replies.filter((mv) => {
