@@ -41,6 +41,7 @@ import WinnerModal from './components/WinnerModal.jsx';
 import EnPassantChoiceModal from './components/EnPassantChoiceModal.jsx';
 import useChessClock from './hooks/useChessClock.js';
 import { formatClock, clampMs } from './hooks/clockUtils.js';
+import { devDebug } from './devlog.js';
 import useLocalAi from './ai/useLocalAi.js';
 import { getBotById, DEFAULT_BOT_ID, botInitials } from './ai/bots.js';
 
@@ -1050,7 +1051,7 @@ export default function App() {
       };
 
       if (msg.type === 'welcome') {
-        console.debug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
+        devDebug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
         // Rejoin: the server replays the room's move history; rebuild the
         // engine timeline from it when this client has no moves yet.
@@ -1065,7 +1066,7 @@ export default function App() {
         return;
       }
       if (msg.type === 'room_state') {
-        console.debug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
+        devDebug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
         // The invited friend just connected: the challenge is on.
         if (friendWaitRef.current && Array.isArray(msg.connected) && msg.connected.length >= 2) {
@@ -1141,7 +1142,7 @@ export default function App() {
           dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side, enPassant: usedEnPassant }));
           setInfoMessage('Opponent moved.');
           setGameStarted(true);
-          console.debug('[WS][client] applied opponent move', { from, to, side: sideMsg });
+          devDebug('[WS][client] applied opponent move', { from, to, side: sideMsg });
         } else {
           console.warn('[WS][client] failed to apply opponent move', { from, to, sideMsg });
         }
@@ -1174,7 +1175,7 @@ export default function App() {
           dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg, castle: true }));
           setInfoMessage('Opponent castled.');
           setGameStarted(true);
-          console.debug('[WS][client] applied opponent castle', { plan, side: sideMsg });
+          devDebug('[WS][client] applied opponent castle', { plan, side: sideMsg });
         } else {
           console.warn('[WS][client] failed to apply opponent castle', { plan, side: sideMsg });
         }
@@ -1182,7 +1183,7 @@ export default function App() {
         return;
       }
 
-      console.debug('[WS][client] unhandled message', msg);
+      devDebug('[WS][client] unhandled message', msg);
     };
   }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch, moves.length, replayMoves]);
 
@@ -1202,11 +1203,11 @@ export default function App() {
       clientId,
       onOpen: () => {
         setInfoMessage(`Connected to room ${String(roomId).slice(0, 6)}`);
-        console.debug('[WS][client] open', { roomId, clientId, side });
+        devDebug('[WS][client] open', { roomId, clientId, side });
       },
       onClose: () => {
         setInfoMessage('Disconnected from game server.');
-        console.debug('[WS][client] close', { roomId, clientId });
+        devDebug('[WS][client] close', { roomId, clientId });
         setServerClock({ active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 });
       },
       onMessage: (msg) => {

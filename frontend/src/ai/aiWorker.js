@@ -2,11 +2,12 @@
 // Purpose: Web Worker shell around the quantum AI engine. Posts an instant
 // depth-1 baseline, then runs iterative-deepening search within the
 // difficulty's time budget and posts progressively better results.
-// Imports From: ./alphaBetaEngine.js
+// Imports From: ./alphaBetaEngine.js, ../devlog.js
 // Exported To: ./useLocalAi.js
 
 import { searchBestMove } from './alphaBetaEngine.js';
 import { getBotById } from './bots.js';
+import { devDebug } from '../devlog.js';
 
 function minifyMove(mv) {
   if (!mv || typeof mv !== 'object') return null;
@@ -46,7 +47,7 @@ self.addEventListener('message', (e) => {
     });
 
     try {
-      console.debug('[AI]', {
+      devDebug('[AI]', {
         side: sideToMove,
         bot: bot ? bot.name : null,
         difficulty: (bot && bot.tier) || difficulty,

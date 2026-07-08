@@ -1,7 +1,9 @@
 // frontend/src/chessboard/svgStyler.js
 // Purpose: Fetch SVG assets, inject CSS variables and unique ID prefixes, and return a pure SVG data URL. Caches results in-memory and in localStorage keyed by colors.
-// Imports From: None
+// Imports From: ../devlog.js
 // Exported To: ./StyledSvgImg.jsx, ./QuantumPiece.jsx, ./rasterPrewarm.js
+
+import { devLog } from '../devlog.js';
 
 // In-memory caches to avoid duplicate work during a session
 const dataUrlCache = new Map(); // key -> dataURL
@@ -94,7 +96,7 @@ function storageSet(key, value) {
 }
 
 export function clearSvgCaches() {
-  console.log('[SvgStyler] Clearing in-memory and persisted SVG caches');
+  devLog('[SvgStyler] Clearing in-memory and persisted SVG caches');
   dataUrlCache.clear();
   promiseCache.clear();
   try {
@@ -155,7 +157,7 @@ export async function getStyledSvgUrl({ srcUrl, cssVarMap, idPrefix }) {
       if (dataUrl) {
         dataUrlCache.set(key, dataUrl);
         storageSet(storageKey, dataUrl);
-        console.log(`[SvgStyler] Cached SVG -> key:${storageKey}`);
+        devLog(`[SvgStyler] Cached SVG -> key:${storageKey}`);
       } else {
         console.warn('[SvgStyler] Empty data URL generated for', { srcUrl });
       }
