@@ -55,9 +55,10 @@ function restrictTypes(piece, allowedTypes) {
 // during a move's resolution (its own collapse, solver pruning, check
 // pruning, sheds, entanglement), its coherence resets to full. If the shrink
 // leaves the piece nearly defined (<= 2 possibilities), its recoherence
-// restarts with a one-turn grace: recohere = -1 means the piece must sit one
-// full owner-turn displayed at zero before the clock ticks (-1 -> 0 on the
-// owner's next move, then 0 -> 1 -> 2 -> 3). Mutates finalPieces in place.
+// clock restarts empty: the dots show zero the moment it collapses, and each
+// of the owner's subsequent moves ticks the clock (0 -> 1 -> 2 -> 3). This
+// runs AFTER applyOwnerTurnEffects, so a piece never earns a dot on the very
+// move that collapsed it. Mutates finalPieces in place.
 function resetCoherenceOnCollapse(prevPieces, finalPieces) {
   const before = new Map(prevPieces.map((p) => [p.id, (p.possibleTypes || []).length]));
   for (const p of finalPieces) {
@@ -65,7 +66,7 @@ function resetCoherenceOnCollapse(prevPieces, finalPieces) {
     const prevLen = before.get(p.id);
     if (prevLen !== undefined && (p.possibleTypes || []).length < prevLen) {
       p.coherence = DEFAULT_COHERENCE;
-      if ((p.possibleTypes || []).length <= 2) p.recohere = -1;
+      if ((p.possibleTypes || []).length <= 2) p.recohere = 0;
     }
   }
 }
@@ -823,11 +824,11 @@ export function applyMeasurementPulse(pieces, moverIds) {
       if (!Array.isArray(target.possibleTypes)) continue;
       if (target.possibleTypes.length <= 2) {
         // Quantum Zeno: observing a nearly-defined piece cannot narrow it
-        // further, but it freezes any recoherence in progress. The reset
-        // carries the same one-turn grace as a fresh collapse (-1): the
-        // clock only restarts after a full turn displayed at zero.
+        // further, but it freezes any recoherence in progress — the clock
+        // resets to empty, exactly like a fresh collapse, and restarts on
+        // the owner's next move.
         if ((target.recohere || 0) > 0) {
-          target.recohere = -1;
+          target.recohere = 0;
           measured.add(sq);
         }
         continue;

@@ -201,8 +201,23 @@ export default function MinedPuzzleModal({
     const pc = live.find((p) => p.square === alg);
     if (pc && pc.side === 'white') { setSelectedSq(alg); return; }
     if (!selected) return;
+    attemptMove(selected.square, alg);
+  };
 
-    const { correct, move } = checkPuzzleMove(puzzle, plyIdx, selected.square, alg);
+  // Drag-to-move: picking a piece up selects it (showing its targets), and
+  // releasing over another square plays the same move a click pair would.
+  const canDragFrom = (alg) => phase === 'playing'
+    && live.some((p) => p.square === alg && p.side === 'white');
+  const handleDragStart = (alg) => { setSelectedSq(alg); };
+  const handleDrop = (from, to) => {
+    if (phase !== 'playing' || !ply) return;
+    const pc = live.find((p) => p.square === to);
+    if (pc && pc.side === 'white') { setSelectedSq(to); return; }
+    attemptMove(from, to);
+  };
+
+  const attemptMove = (fromSq, toSq) => {
+    const { correct, move } = checkPuzzleMove(puzzle, plyIdx, fromSq, toSq);
     setSelectedSq(null);
     if (!move) return; // not a legal destination
 
@@ -318,6 +333,9 @@ export default function MinedPuzzleModal({
             highlights={selectedSq ? [selectedSq] : []}
             targets={targets}
             onSquareClick={handleSquareClick}
+            canDrag={phase === 'playing' ? canDragFrom : null}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
             svgStyleBySide={svgStyleBySide}
           />
         </div>

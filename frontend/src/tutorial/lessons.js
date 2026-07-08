@@ -304,9 +304,9 @@ export const LESSONS = [
         title: 'The bottom dots',
         text: [
           'A piece with two or fewer possibilities starts diffusing back toward superposition. Its clock is the row of dots beneath it, in its own side\'s color.',
-          'The dots appear empty the moment it collapses — and the clock only starts after the piece sits one full turn at zero.',
+          'The dots appear empty the moment it collapses — and every one of your moves after that fills one dot.',
         ],
-        physics: "An unmonitored open system relaxes back toward superposition: recoherence. The empty clock is the relaxation delay before amplitude begins to rebuild.",
+        physics: "An unmonitored open system relaxes back toward superposition: recoherence. Each tick of the clock is amplitude rebuilding while the environment forgets its record.",
         interactive: {
           prompt: 'Your collapsed Knight on b3 wants its mystery back. Move your OTHER piece (d1 → d2) and watch the Knight’s clock.',
           pieces: [
@@ -352,7 +352,7 @@ export const LESSONS = [
       {
         title: 'The Zeno lock',
         text: [
-          'Any pulse that touches a nearly-defined piece freezes its recoherence back to zero — including the fresh grace turn. A watched piece never re-blurs.',
+          'Any pulse that touches a nearly-defined piece freezes its recoherence back to zero. A watched piece never re-blurs.',
           'Keep your attackers trained on their collapsed pieces to lock them classical; slip your own out of sight to let them recover.',
         ],
         physics: "The quantum Zeno effect: sufficiently frequent observation freezes evolution. A watched wavefunction never re-spreads.",
@@ -365,7 +365,7 @@ export const LESSONS = [
           ],
           goal: { kind: 'move', from: 'd1', to: 'd2' },
           autoReply: { from: 'h8', to: 'h5' },
-          success: 'The Zeno lock: the Rook’s landing pulse touched your Knight and froze its recoherence back to zero, grace turn included. A watched piece never re-blurs.',
+          success: 'The Zeno lock: the Rook’s landing pulse touched your Knight and froze its recoherence back to zero. A watched piece never re-blurs.',
         },
         board: {
           files: 5,

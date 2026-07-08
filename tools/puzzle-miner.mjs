@@ -434,6 +434,8 @@ function analyzePosition(position, depth, widths, timeMs) {
   });
 }
 
+const MATE_SCALE = 900; // scores this high are ply-adjusted mates (MATE=1000)
+
 function classifyOnlyMove(analysis, gapMin) {
   const { moves } = analysis;
   if (moves.length < CFG.minChoices) return null;
@@ -442,7 +444,13 @@ function classifyOnlyMove(analysis, gapMin) {
   if (!second) return null; // a forced single move is not a findable puzzle
   if (best.score < CFG.holdEval) return null;
   if (best.score - second.score < gapMin) return null;
-  return { best, second, gap: Number((best.score - second.score).toFixed(2)), numChoices: moves.length };
+  // "Fastest mate": the runner-up ALSO mates, so the gap is just
+  // mate-distance in plies — not a true only-move. Under landing-spot
+  // scoring any mate lands the needle at max, so these are a different
+  // genre ("find a mate among N moves"), kept and TAGGED for curation
+  // rather than rejected. They were half the early seed-5 haul.
+  const findMate = best.score >= MATE_SCALE && second.score >= MATE_SCALE;
+  return { best, second, gap: Number((best.score - second.score).toFixed(2)), numChoices: moves.length, findMate };
 }
 
 // A cheap shallow pass rejects the ~98% of positions that are obviously not
@@ -490,6 +498,12 @@ function detectOnlyMoveStep(rec, stats, gapMin = CFG.minGap) {
     // 51-game run yielded zero.)
     stats.confirmTimeouts++;
     confirmStatus = 'timeout';
+  } else if (only.findMate) {
+    // findMate genre: equally-fast mates can swap ranks between depths, so
+    // demanding the same best move would reject spuriously. Stability here
+    // means: one depth deeper, the best move still mates.
+    const cBest = confirm.moves[0];
+    if (!cBest || cBest.score < MATE_SCALE) { stats.confirmRejects++; return null; }
   } else {
     const cBest = confirm.moves[0];
     const cSecond = confirm.moves[1];
@@ -515,6 +529,7 @@ function detectOnlyMoveStep(rec, stats, gapMin = CFG.minGap) {
   return {
     ply: rec.ply,
     rollout: Boolean(rec.rollout),
+    genre: only.findMate ? 'findMate' : 'onlyMove',
     confirm: confirmStatus,
     // Quantum activity of the solution move itself: possibilities destroyed
     // (collapse/decoherence). Chains with zero activity anywhere are culled.
@@ -646,6 +661,7 @@ function mineGame(game, stats) {
       black: game.black,
       startPly: rec.ply,
       length: steps.length,
+      genre: first.genre, // 'onlyMove' | 'findMate' (find any mate among N)
       endsInMate,
       // Scored from the FIRST step — the position the player actually faces.
       trickiness: trickinessOf(steps[0], steps.length),
@@ -678,6 +694,19 @@ function verifyStep(step, position, stats) {
   }
   stats.verifyMsTotal += performance.now() - t0;
   if (!analysis) return { verdict: 'timeout' };
+  // findMate genre: the deep truth to verify is "the best move still mates",
+  // not "the same move is still uniquely best" — equal mates swap ranks.
+  if (step.genre === 'findMate') {
+    const b = analysis.moves[0];
+    return {
+      verdict: b && b.score >= MATE_SCALE ? 'agree' : 'disagree',
+      depth: usedDepth,
+      deepBest: b ? `${b.move.type}:${b.move.from || ''}->${b.move.to || ''}` : null,
+      deepBestScore: b ? Number(b.score.toFixed(2)) : null,
+      deepSecondScore: analysis.moves[1] ? Number(analysis.moves[1].score.toFixed(2)) : null,
+      genre: 'findMate',
+    };
+  }
   const best = analysis.moves[0];
   const second = analysis.moves[1];
   const sameBest = moveKey(best.move) === `${step.bestMove.type}:${step.bestMove.from}->${step.bestMove.to}`
@@ -736,7 +765,7 @@ for (let g = 0; g < CFG.games; g++) {
   for (const chain of mined.chains) {
     allChains.push(chain);
     fs.appendFileSync(chainStream, JSON.stringify(chain) + '\n');
-    console.log(`  chain @ply ${chain.startPly}: len=${chain.length}${chain.endsInMate ? '+mate' : ''} gap=${chain.steps[0].gap} choices=${chain.steps[0].numChoices} trick=${chain.trickiness} themes=[${chain.themes.join(',')}]`);
+    console.log(`  chain @ply ${chain.startPly}: len=${chain.length}${chain.endsInMate ? '+mate' : ''}${chain.genre === 'findMate' ? ' [findMate]' : ''} gap=${chain.steps[0].gap} choices=${chain.steps[0].numChoices} trick=${chain.trickiness} themes=[${chain.themes.join(',')}]`);
   }
   for (const step of mined.verifySteps) verifiable.push({ gameIdx: g, step, position: step.position });
   console.log(`  mined ${mined.chains.length} chain(s) from ${game.record.filter((r) => r.sideToMove === 'white' && r.ply >= CFG.minPly).length} white positions [${mineSec}s]`);

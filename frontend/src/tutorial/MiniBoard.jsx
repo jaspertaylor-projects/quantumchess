@@ -2,11 +2,13 @@
 // Purpose: Small static board diagrams for the tutorial, rendered with the
 // REAL QuantumPiece art (trapezoid-band composites and indicators) so the
 // tutorial teaches exactly what the board shows. Adds arrows, check rings,
-// pulse marks, and square highlights on top.
+// pulse marks, and square highlights on top. Optionally interactive: click
+// squares, and (when canDrag/onDrop are provided) drag pieces to move them.
 // Imports From: ../chessboard/QuantumPiece.jsx, ../settings/usePieceColors.js
-// Exported To: ./TutorialModal.jsx
+// Exported To: ./TutorialModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
+//   ../puzzle/MinedPuzzleModal.jsx
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 
@@ -33,11 +35,64 @@ export default function MiniBoard({
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
   onSquareClick = null, // enables interaction: called with the algebraic square
+  canDrag = null, // (alg) => boolean; with onDrop, enables piece dragging
+  onDragStart = null, // (alg) => void, when a drag begins (e.g. select the piece)
+  onDrop = null, // (from, to) => void, when a dragged piece lands on another square
   svgStyleBySide = null, // live piece colors from the app; defaults otherwise
   squareColors = null, // { light, dark } from user settings; classic defaults otherwise
 }) {
   const lightSq = (squareColors && squareColors.light) || LIGHT;
   const darkSq = (squareColors && squareColors.dark) || DARK;
+  const boardRef = useRef(null);
+  const [drag, setDrag] = useState(null); // { from, x, y, over } local px coords
+  const dragRef = useRef(null);
+  dragRef.current = drag;
+  // Handlers live in a ref so the window-level listeners installed for the
+  // duration of a drag never act on stale closures.
+  const handlersRef = useRef({});
+  handlersRef.current = { onDrop };
+  const dragEnabled = Boolean(onDrop && canDrag);
+
+  useEffect(() => {
+    if (!drag) return undefined;
+    const localPoint = (e) => {
+      const el = boardRef.current;
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      let over = null;
+      if (x >= 0 && y >= 0 && x < rect.width && y < rect.height) {
+        const col = Math.floor((x / rect.width) * files);
+        const row = Math.floor((y / rect.height) * ranks);
+        over = `${String.fromCharCode(97 + col)}${ranks - row}`;
+      }
+      return { x, y, over };
+    };
+    const handleMove = (e) => {
+      const pt = localPoint(e);
+      if (!pt) return;
+      setDrag((d) => (d ? { ...d, ...pt } : d));
+    };
+    const handleUp = () => {
+      const d = dragRef.current;
+      setDrag(null);
+      if (d && d.over && d.over !== d.from) {
+        const { onDrop: drop } = handlersRef.current;
+        if (drop) drop(d.from, d.over);
+      }
+    };
+    window.addEventListener('pointermove', handleMove, { passive: true });
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleUp);
+    };
+  }, [Boolean(drag), files, ranks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dragPiece = drag ? pieces.find((p) => p.sq === drag.from) : null;
   const W = files * cell;
   const H = ranks * cell;
   const center = (sq) => {
@@ -74,6 +129,7 @@ export default function MiniBoard({
       </div>
     <div
       className="qc-tutorial-miniboard"
+      ref={boardRef}
       style={{
         position: 'relative',
         width: W,
@@ -109,6 +165,7 @@ export default function MiniBoard({
       })}
 
       {pieces.map((p) => {
+        if (drag && p.sq === drag.from) return null; // the floating layer draws it
         const { col, row } = sqToRC(p.sq, ranks);
         return (
           <div
@@ -205,20 +262,75 @@ export default function MiniBoard({
         })}
       </svg>
 
-      {onSquareClick
+      {onSquareClick || dragEnabled
         ? Array.from({ length: files * ranks }, (_, i) => {
             const col = i % files;
             const row = Math.floor(i / files);
             const alg = `${String.fromCharCode(97 + col)}${ranks - row}`;
+            const draggable = dragEnabled && canDrag(alg);
             return (
               <div
                 key={`click-${i}`}
-                onClick={() => onSquareClick(alg)}
-                style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, cursor: 'pointer', zIndex: 40 }}
+                onClick={onSquareClick ? () => onSquareClick(alg) : undefined}
+                onPointerDown={draggable ? (e) => {
+                  e.preventDefault();
+                  const rect = boardRef.current ? boardRef.current.getBoundingClientRect() : null;
+                  const x = rect ? e.clientX - rect.left : (col + 0.5) * cell;
+                  const y = rect ? e.clientY - rect.top : (row + 0.5) * cell;
+                  setDrag({ from: alg, x, y, over: alg });
+                  if (onDragStart) onDragStart(alg);
+                } : undefined}
+                style={{
+                  position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, zIndex: 40,
+                  cursor: drag ? 'grabbing' : draggable ? 'grab' : 'pointer',
+                  touchAction: draggable ? 'none' : undefined,
+                }}
               />
             );
           })
         : null}
+
+      {drag && drag.over && drag.over !== drag.from ? (() => {
+        const { col, row } = sqToRC(drag.over, ranks);
+        return (
+          <div
+            className="qc-miniboard-drop-target"
+            style={{
+              position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell,
+              backgroundColor: 'rgba(97, 218, 251, 0.28)', border: '2px dashed rgba(97,218,251,0.55)',
+              borderRadius: 2, boxSizing: 'border-box', pointerEvents: 'none', zIndex: 45,
+            }}
+          />
+        );
+      })() : null}
+
+      {drag && dragPiece ? (
+        <div
+          className="qc-miniboard-floating-piece"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: Math.max(0, Math.min(W - cell, drag.x - cell / 2)),
+            top: Math.max(0, Math.min(H - cell, drag.y - cell / 2)),
+            width: cell, height: cell, pointerEvents: 'none', zIndex: 50,
+            filter: 'drop-shadow(0 6px 16px rgba(0,0,0,0.3))',
+          }}
+        >
+          <QuantumPiece
+            id={`drag-${dragPiece.sq}-${dragPiece.types}`}
+            side={dragPiece.side}
+            possibleTypes={(dragPiece.types || '').split('')}
+            size={cell}
+            coherence={Number.isFinite(dragPiece.pips) ? dragPiece.pips : 3}
+            recohere={Number.isFinite(dragPiece.regain) ? dragPiece.regain : 0}
+            entangled={Boolean(dragPiece.chain)}
+            promoted={Boolean(dragPiece.chevrons)}
+            sealed={Boolean(dragPiece.sealed)}
+            svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}
+            ariaLabel={`Dragging piece from ${drag.from}`}
+          />
+        </div>
+      ) : null}
     </div>
 
       <div />

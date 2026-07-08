@@ -149,26 +149,26 @@
     "enPassant": false
    },
    {
-    "from": "a5",
-    "to": "d5",
+    "from": "h2",
+    "to": "g1",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e1",
-    "to": "e3",
+    "from": "f1",
+    "to": "f2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d5",
-    "to": "g5",
+    "from": "g1",
+    "to": "e2",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "g1",
-    "to": "h2",
+    "from": "h1",
+    "to": "h3",
     "side": "white",
     "enPassant": false
    },
@@ -179,14 +179,14 @@
     "enPassant": false
    },
    {
-    "from": "g2",
-    "to": "f2",
+    "from": "d5",
+    "to": "d6",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "e6",
-    "to": "e5",
+    "to": "c8",
     "side": "black",
     "enPassant": false
    },
@@ -198,127 +198,91 @@
    },
    {
     "from": "d8",
-    "to": "d7",
+    "to": "d6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "a1",
-    "to": "b3",
+    "from": "d1",
+    "to": "e2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e5",
+    "from": "c8",
     "to": "e6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "g3",
-    "to": "b8",
+    "to": "h2",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "c6",
-    "to": "d8",
+    "to": "e7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e3",
-    "to": "d5",
+    "from": "f2",
+    "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "e4",
-    "to": "d5",
+    "to": "g6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "b8",
+    "from": "d4",
     "to": "d6",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "g4",
-    "to": "h6",
+    "to": "h4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d4",
-    "to": "c4",
+    "from": "g2",
+    "to": "g3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h6",
-    "to": "f5",
+    "from": "h4",
+    "to": "h3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d1",
-    "to": "e3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d5",
-    "to": "e4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d2",
+    "from": "e2",
     "to": "c1",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "a7",
-    "to": "a3",
+    "from": "g6",
+    "to": "h5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "f2",
-    "to": "c2",
+    "from": "d6",
+    "to": "d4",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "e6",
-    "to": "d6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c2",
-    "to": "d2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a3",
-    "to": "a2",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e3",
-    "to": "g2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d8",
-    "to": "c6",
+    "to": "e3",
     "side": "black",
     "enPassant": false
    },
@@ -329,44 +293,80 @@
     "enPassant": false
    },
    {
-    "from": "g5",
-    "to": "h5",
+    "from": "g8",
+    "to": "g6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "c4",
-    "to": "b4",
+    "from": "g3",
+    "to": "g4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f5",
-    "to": "h4",
+    "from": "e3",
+    "to": "g1",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "g6",
-    "to": "g7",
+    "from": "c1",
+    "to": "a2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e8",
+    "from": "e7",
     "to": "e6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d1",
-    "to": "e1",
+    "from": "d4",
+    "to": "d2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h4",
-    "to": "g6",
+    "from": "a5",
+    "to": "c4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h2",
+    "to": "g3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b4",
+    "to": "a5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "h2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e8",
+    "to": "g7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g4",
+    "to": "g5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h3",
+    "to": "g3",
     "side": "black",
     "enPassant": false
    }
@@ -375,66 +375,66 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "7e233153",
-    "7b63467b",
-    "9de2ef6b",
-    "a737a789",
-    "022864d0",
-    "bccb81d1",
-    "2a8788ca",
-    "695b62e0",
-    "6b4ad04c",
-    "12a782f8",
-    "cfcb6441",
-    "88e8a415",
-    "9cf6d5f9",
-    "f36345bb",
-    "1eaa687c",
-    "c17d9f2c",
-    "e986940f",
-    "e60cef15",
-    "9b8b65ac",
-    "43bd4186",
-    "2ea53d85",
-    "559a12f6",
-    "6f54cb01",
-    "4c8727d9",
-    "56f052da",
-    "ee8bbff8",
-    "0fb62ca0",
-    "a0310a29",
-    "5e6d5070",
-    "a74ebf99",
-    "2e183ccd",
-    "271abeef",
-    "98f3ebbf",
-    "24184651",
-    "79ff7fa6",
-    "af5810fd",
-    "69cb0d4d",
-    "9aaadd34",
-    "7c68f328",
-    "024c4151",
-    "263dd8bc",
-    "2cb83a6f",
-    "7f302032",
-    "7cfb55ea",
-    "dceb1519",
-    "239e645d",
-    "1b263f90",
-    "fa704cbb",
-    "e1f8f4dc",
-    "e9fdb9d1",
-    "5294d028",
-    "016cf825",
-    "83f9c5f0",
-    "1bc4f6ba",
-    "0ad50d39",
-    "619d1383",
-    "ffb4202c",
-    "cca18316",
-    "babe964c",
-    "7bb1dd6e"
+    "ecb4946f",
+    "b88c6471",
+    "50318624",
+    "7472ab7a",
+    "8d52ecd5",
+    "f5e797a3",
+    "499b615c",
+    "ec11bdfc",
+    "cfa03c91",
+    "dfcef69f",
+    "09be1cff",
+    "ff74877a",
+    "1c022e0c",
+    "3f9fb6a6",
+    "64c69a9f",
+    "0b1aca0f",
+    "579beab1",
+    "45b98d47",
+    "5121c394",
+    "e66d5fc5",
+    "c8772302",
+    "2363511c",
+    "cce15c0f",
+    "cf7fe486",
+    "2f69ad4f",
+    "70ebde53",
+    "273417b5",
+    "37578472",
+    "fc1e34ef",
+    "3bc65174",
+    "d0fdd481",
+    "9300f1db",
+    "c382c366",
+    "4448e062",
+    "a25f12c9",
+    "8bdc37e2",
+    "43606aa4",
+    "c2566249",
+    "42c5eded",
+    "446f7c28",
+    "7434318e",
+    "013a5b65",
+    "d0179fa5",
+    "3f75f914",
+    "c22e2a4a",
+    "efb3e212",
+    "e49ed9ce",
+    "fd968503",
+    "c868df74",
+    "9664ff3b",
+    "fb6fc5ac",
+    "943d7a96",
+    "d88f0aac",
+    "24053a4d",
+    "fae26d59",
+    "77d75b2d",
+    "5ece4b52",
+    "07227213",
+    "1f412624",
+    "184e81c1"
    ],
    "captureCounter": 10,
    "gameOver": false,
@@ -515,238 +515,78 @@
    },
    {
     "from": "a2",
-    "to": "b3",
+    "to": "c4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h8",
+    "from": "g8",
     "to": "g7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "f3",
-    "to": "d4",
+    "from": "f1",
+    "to": "e3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d3",
-    "to": "g3",
+    "from": "f8",
+    "to": "g8",
     "side": "black",
-    "enPassant": false
+    "enPassant": false,
+    "castle": true
    },
    {
-    "from": "a1",
-    "to": "c2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f7",
-    "to": "f4",
+    "from": "h8",
+    "to": "f8",
     "side": "black",
-    "enPassant": false
+    "enPassant": false,
+    "castle": true
    },
    {
     "from": "e4",
-    "to": "f3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a5",
-    "to": "b3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f3",
-    "to": "g4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b6",
-    "to": "a5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c2",
-    "to": "e1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e8",
-    "to": "f7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g4",
-    "to": "g3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g7",
-    "to": "g6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g3",
     "to": "f4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c8",
-    "to": "a7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e2",
-    "to": "e4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
     "from": "f7",
-    "to": "e8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f2",
-    "to": "f3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e8",
-    "to": "d7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f1",
-    "to": "e2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d7",
-    "to": "f5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f4",
-    "to": "h2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a5",
-    "to": "d2",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g2",
     "to": "g6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d2",
-    "to": "e3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e2",
-    "to": "d3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a7",
-    "to": "c8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h2",
-    "to": "d6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "h3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d4",
-    "to": "c6",
+    "from": "b2",
+    "to": "c2",
     "side": "white",
     "enPassant": false
    }
   ],
   "expected": {
-   "snapshotCount": 42,
+   "snapshotCount": 18,
    "sigHashes": [
     "554f69e3",
-    "d6727ba0",
-    "4fc97b5d",
-    "633ecd73",
-    "48b5658c",
-    "3af34a7b",
-    "4f5a8af5",
-    "1504ced0",
-    "4d141c22",
-    "ca9140cb",
-    "3dcc8e0d",
-    "87911f52",
-    "288de127",
-    "b3789659",
-    "80efbd73",
-    "0ea28b93",
-    "c39f2f3b",
-    "d993f2c3",
-    "fbe3d0a2",
-    "b399ae2b",
-    "2c74ca0f",
-    "596f0be9",
-    "b1bc5c4c",
-    "e4108aa0",
-    "0c13a47f",
-    "418f523e",
-    "0dfeda5e",
-    "057288fc",
-    "760f3f12",
-    "b3c82383",
-    "1b2708b4",
-    "3a363c2d",
-    "105d9374",
-    "0deb2714",
-    "12c61be9",
-    "4d07bdf1",
-    "eb6fa120",
-    "97e7cd4e",
-    "13d6fabc",
-    "fce89958",
-    "c861e3fc",
-    "87aacdd0"
+    "8ede4268",
+    "9daf0591",
+    "07300c5a",
+    "912ac50e",
+    "cee44af8",
+    "83fbf0a1",
+    "4c9128fb",
+    "db38803f",
+    "4e3fc592",
+    "83bb9807",
+    "2e543ab8",
+    "ef785283",
+    "f2248ab3",
+    "5ef2c268",
+    "6aa130d6",
+    "71cb340f",
+    "c20c1d97"
    ],
-   "captureCounter": 9,
+   "captureCounter": 4,
    "gameOver": true,
    "winner": "white",
    "gameOverReason": "checkmate"
@@ -855,79 +695,79 @@
    },
    {
     "from": "f8",
-    "to": "g7",
+    "to": "h6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "f6",
-    "to": "e5",
+    "to": "h4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e7",
-    "to": "f5",
+    "from": "c7",
+    "to": "d7",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "f2",
-    "to": "e2",
+    "to": "d2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "g7",
-    "to": "h6",
+    "from": "h6",
+    "to": "g5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e5",
-    "to": "d6",
+    "from": "g3",
+    "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d5",
-    "to": "d6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e3",
-    "to": "h6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b6",
-    "to": "e3",
+    "from": "h8",
+    "to": "g7",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "c3",
-    "to": "e4",
+    "to": "a4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
+    "to": "c5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "d6",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "c8",
-    "to": "a7",
+    "to": "d6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e4",
-    "to": "g5",
+    "from": "a4",
+    "to": "c3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f7",
-    "to": "f6",
+    "from": "e7",
+    "to": "c8",
     "side": "black",
     "enPassant": false
    },
@@ -944,38 +784,38 @@
     "enPassant": false
    },
    {
-    "from": "h2",
-    "to": "h3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a7",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a3",
-    "to": "e3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "g7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g3",
+    "from": "g2",
     "to": "g4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c4",
-    "to": "d4",
+    "from": "d6",
+    "to": "b5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a3",
+    "to": "b3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "e7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "f5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "f6",
     "side": "black",
     "enPassant": false
    },
@@ -986,80 +826,32 @@
     "enPassant": false
    },
    {
-    "from": "d4",
-    "to": "c4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g4",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c6",
-    "to": "a5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h1",
-    "to": "h2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
     "from": "c4",
-    "to": "c1",
+    "to": "e4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "h3",
-    "to": "h4",
+    "from": "f5",
+    "to": "g5",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d6",
-    "to": "c6",
+    "from": "b5",
+    "to": "c7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e3",
-    "to": "e6",
+    "from": "e1",
+    "to": "d2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c1",
-    "to": "c3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d4",
-    "to": "d6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c7",
-    "to": "b7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g2",
-    "to": "h1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c3",
-    "to": "b3",
+    "from": "h7",
+    "to": "h5",
     "side": "black",
     "enPassant": false
    },
@@ -1070,56 +862,104 @@
     "enPassant": false
    },
    {
-    "from": "b7",
-    "to": "a6",
+    "from": "c5",
+    "to": "f5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e2",
-    "to": "h2",
+    "from": "b3",
+    "to": "b4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "b3",
-    "to": "c3",
+    "from": "e4",
+    "to": "e5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b4",
+    "to": "b3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e7",
+    "to": "f8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "f2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e5",
+    "to": "e6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "g2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "c5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "e2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c5",
+    "to": "c2",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "a3",
-    "to": "b5",
+    "to": "c2",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "b8",
-    "to": "b6",
+    "to": "b7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d6",
-    "to": "e5",
+    "from": "g5",
+    "to": "g6",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c3",
-    "to": "h3",
+    "from": "e6",
+    "to": "e5",
     "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g6",
+    "to": "e8",
+    "side": "white",
     "enPassant": false
    },
    {
     "from": "e5",
-    "to": "c7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h3",
-    "to": "c3",
+    "to": "e8",
     "side": "black",
     "enPassant": false
    }
@@ -1128,66 +968,66 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "bfecb6c8",
-    "b0681b5d",
-    "22f92aa6",
-    "8f024fc8",
-    "c709c3ed",
-    "1aae639a",
-    "3dd45d23",
-    "ff420b54",
-    "958b1729",
-    "23583f3f",
-    "a9e9c779",
-    "8136e163",
-    "851850c6",
-    "ad2b728e",
-    "c3f45d80",
-    "a3cf673f",
-    "2d4bd538",
-    "4961148f",
-    "9b39b869",
-    "237a0580",
-    "4a937323",
-    "3919df0b",
-    "0860c68f",
-    "c8522f4e",
-    "616a94e3",
-    "8b0dd4e8",
-    "3a16253e",
-    "be3a78f7",
-    "69b2d6f0",
-    "fcecbd3e",
-    "b910d58f",
-    "17392615",
-    "52559fd8",
-    "337c7088",
-    "08df148f",
-    "42c6d251",
-    "45d041db",
-    "6af291fa",
-    "c7cecc40",
-    "4f168298",
-    "0357eca6",
-    "9961f39e",
-    "384d6a6e",
-    "816a3741",
-    "8ff22c8c",
-    "879b593a",
-    "59c5c991",
-    "e80f8157",
-    "ea6eb2c8",
-    "0d897340",
-    "0f5406c6",
-    "b16657b3",
-    "4963831c",
-    "148994b2",
-    "68f8a959",
-    "452d45a5",
-    "20b7faae",
-    "5ef2a516",
-    "64df82d0",
-    "93ecf465"
+    "77a46f96",
+    "1111103d",
+    "fef2b563",
+    "5b30e344",
+    "ebfd275c",
+    "58adb230",
+    "8f6b51f1",
+    "cffec157",
+    "d005d019",
+    "22a7c4b8",
+    "a861fee8",
+    "bd0ac395",
+    "b06df209",
+    "9659db9f",
+    "c0b12832",
+    "ef8c7baf",
+    "a2f394b4",
+    "a2a95666",
+    "87a6bf9c",
+    "4cb898d5",
+    "003ae430",
+    "1b80845b",
+    "3be2250f",
+    "8be57dd9",
+    "34327b24",
+    "a0f8c1c1",
+    "4f1ede8a",
+    "a71bf40c",
+    "a0a08f2f",
+    "44c84ef1",
+    "46aec844",
+    "f35abdee",
+    "1cfbbc7f",
+    "e43bed72",
+    "8dbd5b57",
+    "25c314f4",
+    "03ac461c",
+    "183fd3c5",
+    "21efe831",
+    "251d1d38",
+    "706689bb",
+    "eec77d0f",
+    "1ca7ff85",
+    "ebfded6d",
+    "86a7d70a",
+    "bfef367b",
+    "31ba2c3c",
+    "58588d7f",
+    "d987f6c3",
+    "8b5538bd",
+    "63b32c77",
+    "460af7d9",
+    "9a4e8be9",
+    "3ff29110",
+    "d6bf8131",
+    "72854da8",
+    "51e23629",
+    "9d0743a9",
+    "e751c577",
+    "77c8fc73"
    ],
    "captureCounter": 6,
    "gameOver": false,
@@ -1271,194 +1111,166 @@
     "enPassant": false
    },
    {
-    "from": "c2",
-    "to": "e3",
+    "from": "e1",
+    "to": "f1",
     "side": "white",
-    "enPassant": false
+    "enPassant": false,
+    "castle": true
    },
    {
-    "from": "e5",
+    "from": "g1",
+    "to": "e1",
+    "side": "white",
+    "enPassant": false,
+    "castle": true
+   },
+   {
+    "from": "g8",
     "to": "e7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e4",
-    "to": "c2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f4",
-    "to": "f6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g3",
-    "to": "e4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d7",
-    "to": "h3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e4",
-    "to": "c3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f6",
-    "to": "b6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c2",
-    "to": "a4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "f7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g1",
-    "to": "h2",
+    "from": "h7",
+    "to": "h5",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "c8",
-    "to": "c5",
+    "to": "c7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a7",
+    "to": "b5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a8",
+    "to": "a4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e4",
+    "to": "f3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "g3",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "g5",
-    "to": "f5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b6",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h7",
     "to": "g8",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e7",
-    "to": "f8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a7",
-    "to": "c5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h3",
-    "to": "g4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g8",
-    "to": "g4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d5",
-    "to": "e6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e2",
-    "to": "g2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c6",
-    "to": "a6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d2",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "c5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d4",
-    "to": "e4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c5",
-    "to": "a7",
+    "from": "b8",
+    "to": "a8",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "d1",
-    "to": "d3",
+    "to": "c3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d8",
-    "to": "d6",
+    "from": "a8",
+    "to": "a5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h5",
+    "to": "f5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "g5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "d1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e7",
+    "to": "c8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "f4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g5",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f1",
+    "to": "f2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "c6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "f5",
-    "to": "f6",
+    "to": "h5",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e8",
+    "from": "c6",
     "to": "d7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "f6",
+    "from": "b5",
     "to": "d4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "a7",
-    "to": "d4",
+    "from": "c8",
+    "to": "b6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "b3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a4",
+    "to": "c4",
     "side": "black",
     "enPassant": false
    },
@@ -1469,165 +1281,173 @@
     "enPassant": false
    },
    {
-    "from": "d4",
-    "to": "c4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e3",
-    "to": "d1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b7",
-    "to": "b6",
+    "from": "a5",
+    "to": "a8",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "d5",
-    "to": "f4",
+    "to": "f6",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "a6",
-    "to": "a5",
+    "from": "e8",
+    "to": "e7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "f4",
-    "to": "g6",
+    "from": "d1",
+    "to": "e2",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "c4",
-    "to": "c1",
+    "to": "c3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "g6",
-    "to": "f4",
+    "from": "g8",
+    "to": "g7",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c1",
-    "to": "c4",
+    "from": "f8",
+    "to": "f7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d3",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e6",
+    "from": "h5",
     "to": "f5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g2",
-    "to": "c2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a5",
-    "to": "a6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e4",
-    "to": "e5",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "a8",
-    "to": "a7",
+    "to": "b8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "e5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e7",
+    "to": "d6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d4",
+    "to": "c6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "f3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f2",
+    "to": "g2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "g3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g2",
+    "to": "h2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "h4",
     "side": "black",
     "enPassant": false
    }
   ],
   "expected": {
-   "snapshotCount": 61,
+   "snapshotCount": 57,
    "sigHashes": [
     "554f69e3",
-    "6dfe5955",
-    "66b1f7ad",
-    "499c3932",
-    "de14f064",
-    "c018f4a3",
-    "b3627095",
-    "77199066",
-    "438405ba",
-    "a7f6f941",
-    "77864188",
-    "c9448111",
-    "154e915c",
-    "8a8fb6ab",
-    "60cfa911",
-    "e7f84048",
-    "509d6162",
-    "f6a5ee5b",
-    "dce3f2d0",
-    "e2f8dd12",
-    "62e9b755",
-    "ce41d6e9",
-    "a727ef75",
-    "363fe460",
-    "e6cd30a2",
-    "0d5ece72",
-    "5d1e1f37",
-    "b191ac4d",
-    "9f25f919",
-    "aad933d5",
-    "f5f18b8c",
-    "87be8690",
-    "048d94a6",
-    "ac2936e3",
-    "b3f0a5a3",
-    "8cd8639e",
-    "2cebf4e5",
-    "4536fea9",
-    "6c0a37a2",
-    "61acfc65",
-    "ad61045c",
-    "f93b51f7",
-    "c5316968",
-    "9e073808",
-    "4c09f7c2",
-    "04d6afef",
-    "ded2dd58",
-    "dc4a8af2",
-    "caa6d550",
-    "a8ecedda",
-    "300b2eb3",
-    "1ba16b5a",
-    "434edcdf",
-    "ff0999ae",
-    "5f9c0475",
-    "9d72fb92",
-    "ec060c3a",
-    "e2f4c198",
-    "8655cf9a",
-    "603f1343",
-    "436d9316"
+    "42591b8d",
+    "21acf8dd",
+    "cb99722b",
+    "3d274d1c",
+    "d0f34655",
+    "73725b00",
+    "e8571da3",
+    "9a58b872",
+    "b15c4442",
+    "186a7bb6",
+    "98bc7832",
+    "63796317",
+    "31ce212a",
+    "c83d28fc",
+    "b3abd348",
+    "4bf24d93",
+    "12573114",
+    "fcd2f41a",
+    "0ae6be1f",
+    "e97243b1",
+    "47dee20f",
+    "21a5a63a",
+    "96546860",
+    "b491e390",
+    "ed11587d",
+    "c6f2d69f",
+    "0939ceb4",
+    "96757472",
+    "67927982",
+    "93110ac7",
+    "162c9c55",
+    "a1eb95e0",
+    "b5220209",
+    "b9cd2140",
+    "31b5d3de",
+    "a10a1b06",
+    "8a4facf7",
+    "8f298056",
+    "092d7ce1",
+    "9b4173b5",
+    "b267dbec",
+    "a4a7dda8",
+    "9269093a",
+    "d0bf00fb",
+    "2903b576",
+    "90143a4e",
+    "18928f27",
+    "a42fd8b8",
+    "c539e634",
+    "6873fd55",
+    "15eb5412",
+    "5511acdb",
+    "dd98e5df",
+    "60deb8c4",
+    "7454c90c",
+    "b8436bb7"
    ],
    "captureCounter": 9,
-   "gameOver": false,
-   "winner": null,
-   "gameOverReason": null
+   "gameOver": true,
+   "winner": "black",
+   "gameOverReason": "checkmate"
   }
  },
  {
@@ -1760,25 +1580,25 @@
    "snapshotCount": 20,
    "sigHashes": [
     "554f69e3",
-    "07847836",
-    "37befd17",
-    "3cae513e",
-    "765d9a75",
-    "2a7e0ea2",
-    "026eb99b",
-    "ca7c4f86",
-    "ba124ac8",
-    "d4f8186a",
-    "cd712f35",
-    "e5cb4f3f",
-    "7069d905",
-    "ea31fbc9",
-    "eedb398c",
-    "305d6c36",
-    "1f0d9d87",
-    "8a9c944a",
-    "b7e1e3f2",
-    "58d84dd4"
+    "d6bda248",
+    "d3b559ab",
+    "94c1472f",
+    "c083e4e1",
+    "817ac033",
+    "de1ada2f",
+    "605ff0c3",
+    "e00b5243",
+    "fceb86b0",
+    "c58ecc4e",
+    "6d19d266",
+    "3ed09daf",
+    "b2813802",
+    "c0441d77",
+    "5acb09fa",
+    "a265974a",
+    "bcbf8f1f",
+    "fc11e977",
+    "d18ce9f1"
    ],
    "captureCounter": 4,
    "gameOver": true,
@@ -1879,79 +1699,67 @@
    },
    {
     "from": "e1",
-    "to": "b4",
+    "to": "c3",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "a7",
-    "to": "c5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a6",
-    "to": "d3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d7",
     "to": "d4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "h2",
-    "to": "h3",
+    "from": "b2",
+    "to": "d1",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d4",
+    "from": "d7",
     "to": "g4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d3",
-    "to": "d5",
+    "from": "h2",
+    "to": "e5",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f7",
-    "to": "h5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b1",
-    "to": "a3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g4",
-    "to": "g7",
+    "from": "c8",
+    "to": "e6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "h1",
-    "to": "h2",
+    "to": "h7",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c6",
-    "to": "e5",
+    "from": "d4",
+    "to": "c3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "a3",
-    "to": "b1",
+    "from": "b1",
+    "to": "b4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "b4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f1",
+    "to": "h2",
     "side": "white",
     "enPassant": false
    },
@@ -1962,68 +1770,68 @@
     "enPassant": false
    },
    {
-    "from": "b4",
-    "to": "c3",
+    "from": "a1",
+    "to": "b2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h5",
-    "to": "g6",
+    "from": "c6",
+    "to": "a5",
     "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h3",
-    "to": "g5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g6",
-    "to": "h5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b1",
-    "to": "a3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b7",
-    "to": "b6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h2",
-    "to": "h4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g7",
-    "to": "g5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h4",
-    "to": "a4",
-    "side": "white",
     "enPassant": false
    },
    {
     "from": "h7",
-    "to": "c2",
+    "to": "g7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h8",
+    "to": "h7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "c3",
-    "to": "d2",
+    "from": "e5",
+    "to": "g3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g4",
+    "to": "h3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c1",
+    "to": "a2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h3",
+    "to": "f5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g7",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e8",
+    "to": "f7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "h3",
     "side": "white",
     "enPassant": false
    },
@@ -2034,62 +1842,134 @@
     "enPassant": false
    },
    {
-    "from": "a3",
-    "to": "b5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c5",
-    "to": "d6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f1",
-    "to": "f2",
+    "from": "e3",
+    "to": "d5",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "e7",
-    "to": "d8",
+    "to": "e8",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d5",
-    "to": "d6",
+    "from": "b2",
+    "to": "g7",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e5",
-    "to": "d7",
+    "from": "f5",
+    "to": "c2",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d6",
-    "to": "e5",
+    "from": "d1",
+    "to": "d2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "g8",
-    "to": "g6",
+    "from": "c2",
+    "to": "a4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "f3",
-    "to": "e4",
+    "from": "h3",
+    "to": "f2",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "g4",
+    "to": "e5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f2",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a4",
+    "to": "d7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "f4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e5",
+    "to": "c6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "d6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c6",
+    "to": "e5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
     "to": "f6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e8",
+    "to": "d8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e4",
+    "to": "c5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "c7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "f1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c7",
+    "to": "d7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f6",
+    "to": "h7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "e8",
     "side": "black",
     "enPassant": false
    },
@@ -2100,68 +1980,8 @@
     "enPassant": false
    },
    {
-    "from": "f6",
-    "to": "e4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a4",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c8",
-    "to": "c7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
     "from": "e5",
-    "to": "f5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h8",
-    "to": "h6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "f3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "f6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g1",
-    "to": "g3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d8",
-    "to": "e7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b2",
-    "to": "b3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e4",
-    "to": "f2",
+    "to": "c4",
     "side": "black",
     "enPassant": false
    }
@@ -2170,68 +1990,68 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "77cbc0bd",
-    "0294ab26",
-    "c473d831",
-    "0c985585",
-    "0a634be1",
-    "bc0b98ee",
-    "e919b316",
-    "4b497b69",
-    "00a51a9c",
-    "e25e59db",
-    "c57bb544",
-    "58dff32e",
-    "a2a8c27b",
-    "d5992b5b",
-    "245a735b",
-    "831fd6e6",
-    "07f32842",
-    "6e60cd91",
-    "0129457e",
-    "2dd39dbb",
-    "a0720737",
-    "dd96465a",
-    "77f97c95",
-    "6a3dd5df",
-    "c0422e2e",
-    "20af332e",
-    "589d4d19",
-    "00ba4e95",
-    "cb8f641a",
-    "a4ae1aad",
-    "63b4885e",
-    "d551d668",
-    "25fc6d1c",
-    "97ce89b3",
-    "968566ba",
-    "7336b2d0",
-    "9619c5a8",
-    "74d79c87",
-    "c89bd59f",
-    "60fef2ab",
-    "5efce704",
-    "c22f96c1",
-    "c9eabe7a",
-    "50b6ed6c",
-    "e4eb9721",
-    "400bfa32",
-    "54e9aa33",
-    "d8e2ff87",
-    "5a9bda90",
-    "683977ca",
-    "64a75c81",
-    "3db69be7",
-    "a0ea69ba",
-    "fec1ba71",
-    "67a89adf",
-    "b99e591f",
-    "97adba5a",
-    "6c95e2a1",
-    "f9c3845c",
-    "03c06c2d"
+    "95628a15",
+    "672cf374",
+    "bc897a5e",
+    "3dfde228",
+    "d8d0f70c",
+    "1f700a55",
+    "394dda0f",
+    "d424c7b3",
+    "76f416a5",
+    "11149e37",
+    "d9b05da3",
+    "01930200",
+    "f4395d85",
+    "ed20516c",
+    "d2567128",
+    "8eef28c7",
+    "2e278107",
+    "e57b10cc",
+    "aab795ec",
+    "5a6376ac",
+    "0bb0a278",
+    "16898e81",
+    "8dd39e86",
+    "5b7c06e8",
+    "c85eb801",
+    "f6f749b8",
+    "fccd9f86",
+    "41bc3398",
+    "d784a6e2",
+    "75b8d3cf",
+    "2069e35a",
+    "81b65a59",
+    "ef7fb036",
+    "858225f9",
+    "31804d02",
+    "cf5d6aad",
+    "0cac4166",
+    "6cd35ef8",
+    "15568261",
+    "61755079",
+    "e28e7754",
+    "39fbec6d",
+    "cc561a6e",
+    "8299bb69",
+    "a859d185",
+    "d5731837",
+    "f60cc408",
+    "dddebbe5",
+    "cb77e552",
+    "b65ee7b6",
+    "3814d4d7",
+    "051e0a90",
+    "fd9b9d73",
+    "d5b74619",
+    "d31526b2",
+    "5fd95766",
+    "c443a5fd",
+    "13210b2d",
+    "98f27539",
+    "b1a8c8bd"
    ],
-   "captureCounter": 8,
+   "captureCounter": 10,
    "gameOver": false,
    "winner": null,
    "gameOverReason": null
@@ -2318,38 +2138,374 @@
    },
    {
     "from": "b2",
-    "to": "a3",
+    "to": "a4",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "c4",
-    "to": "a3",
+    "to": "e3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
+    "to": "b1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "g4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h5",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c7",
+    "to": "e6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b1",
+    "to": "c2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "a4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "g6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "c6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g2",
+    "to": "h2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g4",
+    "to": "c4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h2",
+    "to": "h6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a8",
+    "to": "a7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h6",
+    "to": "h5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e6",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a2",
+    "to": "c4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c6",
+    "to": "f3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g6",
+    "to": "h7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "f5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f1",
+    "to": "g2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a3",
+    "to": "b3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "d4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "d3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e1",
+    "to": "d2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b3",
+    "to": "b1",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "f1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "h6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b6",
+    "to": "d8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "d8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h5",
+    "to": "c5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f8",
+    "to": "f7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c5",
+    "to": "c8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d8",
+    "to": "d7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "a4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e7",
+    "to": "e6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h7",
+    "to": "h8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h6",
+    "to": "g4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f2",
+    "to": "e2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "e2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "c3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g7",
+    "to": "g6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "c6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "f1",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d4",
+    "to": "d5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b1",
+    "to": "b2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "d4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "b7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d4",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d3",
+    "to": "e1",
     "side": "black",
     "enPassant": false
    }
   ],
   "expected": {
-   "snapshotCount": 13,
+   "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "9596d944",
-    "62f2309d",
-    "9aa54e5d",
-    "da863d94",
-    "0422e180",
-    "b7e7cc76",
-    "a4d4d421",
-    "825e4e77",
-    "c789b0b0",
-    "cde95b6b",
-    "562b15a2",
-    "25e8953c"
+    "8ce4f47c",
+    "f0220e47",
+    "8937804a",
+    "6c6d05ae",
+    "c0c67f04",
+    "1058592e",
+    "af9b8e59",
+    "de918ee8",
+    "dd9c7425",
+    "e312ad9d",
+    "1a571cfd",
+    "1485ea45",
+    "c3994ab2",
+    "0d91d37a",
+    "44752563",
+    "e046338d",
+    "4928571b",
+    "605c3dc1",
+    "5a47f57f",
+    "370d0b41",
+    "cf8f339a",
+    "a3c106cb",
+    "a65a384e",
+    "a6eecc12",
+    "143d633e",
+    "df30083a",
+    "bd304a7e",
+    "5177df92",
+    "04199c5b",
+    "7592f257",
+    "f6cb4438",
+    "691617cf",
+    "263c066f",
+    "77c58c45",
+    "a162c0ae",
+    "2d620283",
+    "e736d65b",
+    "a6b1acc7",
+    "4d4b76e2",
+    "94158d4c",
+    "3a7d693d",
+    "41ebe3ef",
+    "2024c3ab",
+    "6ff398a5",
+    "6157b8ae",
+    "93a04a3a",
+    "59de84df",
+    "eded6546",
+    "64eab4e2",
+    "b7666133",
+    "9d83cc84",
+    "f4de76a5",
+    "bd56cf15",
+    "51ad09ca",
+    "15d48a3e",
+    "e6161ff4",
+    "5ae01531",
+    "9db6a37f",
+    "03ea831f",
+    "1318fd3a"
    ],
-   "captureCounter": 2,
-   "gameOver": true,
-   "winner": "black",
-   "gameOverReason": "checkmate"
+   "captureCounter": 9,
+   "gameOver": false,
+   "winner": null,
+   "gameOverReason": null
   }
  },
  {
@@ -2413,13 +2569,13 @@
    },
    {
     "from": "b2",
-    "to": "b6",
+    "to": "b7",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "f7",
-    "to": "h6",
+    "to": "e6",
     "side": "black",
     "enPassant": false
    },
@@ -2430,92 +2586,92 @@
     "enPassant": false
    },
    {
-    "from": "e7",
-    "to": "g7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b3",
-    "to": "c1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "d6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g1",
-    "to": "e3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
     "from": "c6",
-    "to": "c4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a1",
-    "to": "b3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c4",
-    "to": "e6",
+    "to": "a4",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "b1",
+    "to": "c1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h8",
+    "to": "g6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "h3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "e3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a1",
     "to": "b2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d7",
-    "to": "c7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a2",
-    "to": "a3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
     "from": "e6",
-    "to": "e4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b3",
-    "to": "a5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d6",
-    "to": "e5",
+    "to": "d6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "b2",
-    "to": "a2",
+    "to": "g7",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e4",
-    "to": "d4",
+    "from": "e3",
+    "to": "c2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h3",
+    "to": "g1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d6",
+    "to": "d5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g7",
+    "to": "h6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f8",
+    "to": "f7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b3",
+    "to": "a1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
+    "to": "f5",
     "side": "black",
     "enPassant": false
    },
@@ -2526,176 +2682,140 @@
     "enPassant": false
    },
    {
-    "from": "g7",
-    "to": "g5",
+    "from": "g6",
+    "to": "h8",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "b6",
-    "to": "b4",
+    "from": "a7",
+    "to": "a5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "f6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h2",
+    "to": "e5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "c7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "a7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g8",
+    "to": "g6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h6",
+    "to": "g7",
+    "side": "white",
+    "enPassant": true
+   },
+   {
+    "from": "h7",
+    "to": "h6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "f4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h6",
+    "to": "h7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a2",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "e5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g4",
+    "to": "f3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h7",
+    "to": "h5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a5",
+    "to": "c7",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "e5",
+    "to": "e3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "g6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h5",
     "to": "h2",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "a7",
-    "to": "d4",
+    "to": "a5",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d8",
-    "to": "d6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b4",
-    "to": "c4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c7",
-    "to": "d7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c1",
-    "to": "b3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "e7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a2",
-    "to": "b1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e7",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e3",
-    "to": "g5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g8",
-    "to": "f8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d4",
-    "to": "b6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c6",
-    "to": "a7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b6",
-    "to": "c6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d7",
-    "to": "e6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c6",
-    "to": "d7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e8",
-    "to": "d7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f3",
-    "to": "b7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a7",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g5",
-    "to": "h6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c6",
-    "to": "e7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b1",
-    "to": "c1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "e8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c4",
-    "to": "b4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e7",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b3",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e6",
-    "to": "f6",
+    "from": "h2",
+    "to": "h7",
     "side": "black",
     "enPassant": false
    },
@@ -2706,20 +2826,56 @@
     "enPassant": false
    },
    {
-    "from": "e8",
-    "to": "e1",
+    "from": "f4",
+    "to": "f3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d1",
-    "to": "e1",
+    "from": "e4",
+    "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f6",
-    "to": "e7",
+    "from": "h7",
+    "to": "h4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g6",
+    "to": "h7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a4",
+    "to": "c6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a1",
+    "to": "b3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
+    "to": "b4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a5",
+    "to": "d5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b4",
+    "to": "d3",
     "side": "black",
     "enPassant": false
    }
@@ -2728,68 +2884,68 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "2109f7b4",
-    "4bbfbce9",
-    "85d2050f",
-    "1ef269ba",
-    "fbd4a29c",
-    "23639c26",
-    "af5a8211",
-    "586ea5fd",
-    "1a636ca4",
-    "5d547f9d",
-    "0472383d",
-    "dac7b1dd",
-    "c034d11b",
-    "d3775cb6",
-    "b0d351d4",
-    "b8ae18ab",
-    "403e59b5",
-    "d57c364a",
-    "172a04fa",
-    "fe45cbc3",
-    "ead020db",
-    "41ac8ab0",
-    "8385eadd",
-    "1b6f5c9b",
-    "52452d57",
-    "24d4ce75",
-    "b139ba01",
-    "2d572ea3",
-    "ab63b572",
-    "31511233",
-    "9e6e71bc",
-    "0470d427",
-    "c53730ea",
-    "1bd66d7c",
-    "d3babdce",
-    "df933734",
-    "8a430097",
-    "78edf6c2",
-    "69fc0418",
-    "6f05c05c",
-    "48d4cc4b",
-    "401df9f6",
-    "8991e06c",
-    "8d65f396",
-    "4e94076f",
-    "60915912",
-    "6117402d",
-    "5d603cfa",
-    "9dc419b3",
-    "e8745fee",
-    "23e60c44",
-    "b2a68880",
-    "c8596ca3",
-    "6b05d5b4",
-    "0fda70cc",
-    "ecfa3a6c",
-    "f563b1eb",
-    "1db72dfc",
-    "9f856c6b",
-    "2fce17d6"
+    "3f37b43a",
+    "3bf45f4d",
+    "6f773280",
+    "34c8e937",
+    "537107cf",
+    "ffd40b25",
+    "7bb048d9",
+    "7982c31d",
+    "7637fae3",
+    "9c32e2d2",
+    "4836c2e8",
+    "537b8a2a",
+    "4f90d73b",
+    "194fdcfe",
+    "8b9b4df7",
+    "0111fc4a",
+    "4ee49c9e",
+    "34a3e610",
+    "0b727052",
+    "b465b406",
+    "92f5de7b",
+    "a3b31064",
+    "3dcd9ca0",
+    "347b3cee",
+    "d1141625",
+    "a97dd319",
+    "ca84abac",
+    "da772a6a",
+    "16d6bbad",
+    "35966cab",
+    "4557ac6e",
+    "04c0f843",
+    "569033a5",
+    "59cefecf",
+    "d58d0ad0",
+    "2586d08f",
+    "4c1a7c6c",
+    "163aab01",
+    "188ebe80",
+    "79dcc9e8",
+    "66a8d584",
+    "c0093434",
+    "952d3fc8",
+    "5c759352",
+    "b4c06622",
+    "b7c46844",
+    "75e6661e",
+    "2f648f7c",
+    "2eb406f6",
+    "f0ef4783",
+    "b8b6e48d",
+    "9958b0d0",
+    "3a1a441c",
+    "96e609d3",
+    "2ed7f196",
+    "0249cd46",
+    "fd7b3ae1",
+    "7b90cee1",
+    "c632f20a",
+    "8b0a062a"
    ],
-   "captureCounter": 10,
+   "captureCounter": 9,
    "gameOver": false,
    "winner": null,
    "gameOverReason": null
@@ -2934,7 +3090,7 @@
    },
    {
     "from": "h6",
-    "to": "h4",
+    "to": "g7",
     "side": "black",
     "enPassant": false
    },
@@ -2946,31 +3102,7 @@
    },
    {
     "from": "b5",
-    "to": "d3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e1",
-    "to": "d3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f7",
-    "to": "g5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "e7",
-    "to": "h7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b7",
-    "to": "b5",
+    "to": "d7",
     "side": "black",
     "enPassant": false
    },
@@ -2981,50 +3113,74 @@
     "enPassant": false
    },
    {
-    "from": "g5",
-    "to": "e4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g2",
-    "to": "h4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "g7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f2",
-    "to": "f5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b8",
-    "to": "b7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "d5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e4",
+    "from": "f7",
     "to": "d6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "b1",
-    "to": "b2",
+    "from": "e7",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "b3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c5",
+    "to": "d4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d6",
+    "to": "c8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "h4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c7",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
+    "to": "e3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "b6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "f4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b3",
+    "to": "b4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a1",
+    "to": "c2",
     "side": "white",
     "enPassant": false
    },
@@ -3035,134 +3191,134 @@
     "enPassant": false
    },
    {
-    "from": "h7",
-    "to": "h6",
+    "from": "h1",
+    "to": "g3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "g7",
-    "to": "h6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c5",
-    "to": "c6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b7",
-    "to": "c6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d5",
+    "from": "b4",
     "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a6",
-    "to": "c8",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "b2",
-    "to": "b3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h6",
-    "to": "f4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h4",
-    "to": "g6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c8",
-    "to": "e6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d3",
+    "from": "c2",
     "to": "b4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c6",
-    "to": "c5",
+    "from": "b6",
+    "to": "a8",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e2",
+    "from": "f2",
+    "to": "f1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "g4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f1",
     "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "d6",
-    "to": "c4",
+    "from": "d4",
+    "to": "d5",
     "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "e3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g4",
+    "to": "f3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "d2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h8",
+    "to": "g8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "b7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a6",
+    "to": "a5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a5",
+    "to": "a4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "h5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
+    "to": "d8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c1",
+    "to": "c2",
+    "side": "white",
     "enPassant": false
    },
    {
     "from": "f3",
-    "to": "g2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c4",
-    "to": "d2",
+    "to": "e3",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d4",
-    "to": "d7",
+    "from": "d2",
+    "to": "d1",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f4",
-    "to": "e5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h1",
-    "to": "h2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e5",
-    "to": "g3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b4",
-    "to": "c6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e6",
-    "to": "b3",
+    "from": "g7",
+    "to": "b2",
     "side": "black",
     "enPassant": false
    }
@@ -3171,68 +3327,68 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "9bac8dce",
-    "2c6f9189",
-    "2a1c5117",
-    "7572c882",
-    "c6c0f476",
-    "aff9a6b3",
-    "38e9ae59",
-    "32f2ef6d",
-    "3b394cef",
-    "4f5f5e42",
-    "2155f729",
-    "15cec6d5",
-    "2f5aef3e",
-    "edc848bc",
-    "dfd066be",
-    "9d2de62c",
-    "e3be05eb",
-    "526fcae4",
-    "c775ce1e",
-    "f778e1e8",
-    "bfdca464",
-    "61c96b51",
-    "b854f74a",
-    "43a4cd8d",
-    "6767e6cf",
-    "49562687",
-    "a232b16f",
-    "378ad153",
-    "ce9de50d",
-    "8a33f9e2",
-    "c7595329",
-    "9ef2eb2c",
-    "9c8813dc",
-    "a5af75c1",
-    "21ffd0f5",
-    "1e54fc03",
-    "b4e3da96",
-    "bbc68ba8",
-    "b37095b1",
-    "1cff3dc8",
-    "1af5696f",
-    "7e771644",
-    "c101696b",
-    "9d9d2d34",
-    "6562642e",
-    "c41121e2",
-    "f8457073",
-    "bc0bb3ce",
-    "c160197e",
-    "ec42f6d7",
-    "90152cf8",
-    "02372650",
-    "b761bc7c",
-    "60d940f0",
-    "6b68d207",
-    "ef585e7c",
-    "c95596d1",
-    "afddf386",
-    "b4cdc8cb",
-    "7baf3400"
+    "900f126a",
+    "57c84ad7",
+    "e5453ed4",
+    "156524a2",
+    "1b7bbe74",
+    "ad2dc6e2",
+    "ecd8e742",
+    "839eb388",
+    "bdfd5855",
+    "d5c5d604",
+    "c412b110",
+    "6c57aae5",
+    "c90f6dc5",
+    "15813c42",
+    "6bf3d32f",
+    "c82f9e68",
+    "ed27b271",
+    "93ae2790",
+    "00304756",
+    "0cd76f4e",
+    "eba9f007",
+    "218b83e9",
+    "0c5d65f1",
+    "785d533b",
+    "f0e2ea6a",
+    "9b47c36f",
+    "d8a54352",
+    "17ac58c8",
+    "13c9f5fe",
+    "50388624",
+    "8763e66a",
+    "6af83d75",
+    "e0556604",
+    "209aada4",
+    "feafc5bc",
+    "638919ec",
+    "60e4610b",
+    "dbc41762",
+    "12cfd996",
+    "d517057a",
+    "f20387b1",
+    "6f3b89e5",
+    "57b4733e",
+    "1688853f",
+    "8933177c",
+    "4b1bb4ba",
+    "5ac922bb",
+    "7705fcf2",
+    "c9b01325",
+    "c0668643",
+    "ede97c09",
+    "040bcdb7",
+    "2d4f2a8b",
+    "f473a2a9",
+    "b2fb83a8",
+    "27b0e0ce",
+    "a9433772",
+    "d398ff75",
+    "90bc0c35",
+    "41ef8753"
    ],
-   "captureCounter": 15,
+   "captureCounter": 10,
    "gameOver": false,
    "winner": null,
    "gameOverReason": null
@@ -3352,33 +3508,341 @@
     "side": "black",
     "enPassant": false,
     "castle": true
+   },
+   {
+    "from": "b2",
+    "to": "a4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d8",
+    "to": "c8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d6",
+    "to": "e7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f8",
+    "to": "f6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
+    "to": "d4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c5",
+    "to": "c4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a1",
+    "to": "b2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g6",
+    "to": "e4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d4",
+    "to": "b5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e8",
+    "to": "f7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g3",
+    "to": "e5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e4",
+    "to": "d5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a4",
+    "to": "b6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "g8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "g3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "e4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b5",
+    "to": "c3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e4",
+    "to": "e3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f2",
+    "to": "f6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "e7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "d2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "h6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h6",
+    "to": "d2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "a1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g8",
+    "to": "g7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f6",
+    "to": "f7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e7",
+    "to": "d8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e5",
+    "to": "f4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "e6",
+    "to": "c5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f1",
+    "to": "g1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e1",
+    "to": "e3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "f5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e4",
+    "to": "d2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g7",
+    "to": "g8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b6",
+    "to": "d5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "c2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f7",
+    "to": "f1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
+    "to": "d1",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a1",
+    "to": "f6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d8",
+    "to": "e8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
+    "to": "b6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "h8",
+    "to": "h6",
+    "side": "black",
+    "enPassant": false
    }
   ],
   "expected": {
-   "snapshotCount": 17,
+   "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "6dfe5955",
-    "52bac5c8",
-    "42be12a5",
-    "8f20c812",
-    "4e76aeeb",
-    "187a0c20",
-    "7b1ae5a9",
-    "25e13bdf",
-    "c2d23ea4",
-    "cfc8be35",
-    "610d2ee1",
-    "b64c1168",
-    "42b4f229",
-    "01eed6b3",
-    "e7ebe80b",
-    "33770aaa"
+    "42591b8d",
+    "62cdddee",
+    "5d934770",
+    "d5cf67e4",
+    "ccba307b",
+    "f6fd0ccb",
+    "c657ab2b",
+    "99dc5274",
+    "d9e9c9f5",
+    "4a14dae6",
+    "30704fda",
+    "125f1424",
+    "b10655fe",
+    "fa95eb8c",
+    "c21a02e6",
+    "63953127",
+    "9ab2bc9d",
+    "e1395c0b",
+    "9e16f927",
+    "6f6aee4d",
+    "72743d6e",
+    "4b1e1a23",
+    "d866d930",
+    "2ac584d7",
+    "da19b69d",
+    "1579ea9a",
+    "aeca62ce",
+    "775347fd",
+    "cba5fe72",
+    "b9ec443b",
+    "fd153ab0",
+    "688b02f8",
+    "c628083d",
+    "86cbe169",
+    "378c64d6",
+    "b4b18539",
+    "98be3263",
+    "02609036",
+    "80320d50",
+    "dcfb2627",
+    "d5097d2d",
+    "533cd55c",
+    "2361f272",
+    "e970e00c",
+    "0977819e",
+    "0ebd8e41",
+    "01bdf6b4",
+    "bb5eac18",
+    "0b3c148b",
+    "15d36d78",
+    "bf7c9c19",
+    "e01e1837",
+    "ac2f60a9",
+    "8821b7b6",
+    "85e9fa0d",
+    "827e7e5c",
+    "eb0aa942",
+    "0ff1aa07",
+    "751c79ef",
+    "3b843f3c"
    ],
-   "captureCounter": 4,
-   "gameOver": true,
-   "winner": "black",
-   "gameOverReason": "checkmate"
+   "captureCounter": 12,
+   "gameOver": false,
+   "winner": null,
+   "gameOverReason": null
   }
  },
  {
@@ -3480,157 +3944,73 @@
    },
    {
     "from": "g7",
-    "to": "e5",
+    "to": "f6",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "f2",
-    "to": "g3",
+    "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h8",
-    "to": "g6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "d2",
-    "to": "b4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e7",
+    "from": "b5",
     "to": "f5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d8",
-    "to": "f6",
+    "from": "d2",
+    "to": "e2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c6",
-    "to": "e6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "f6",
-    "to": "h8",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e5",
-    "to": "d4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h8",
-    "to": "d4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f5",
-    "to": "g7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c2",
-    "to": "c3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e6",
-    "to": "e5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g4",
-    "to": "e4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a7",
-    "to": "b7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b4",
-    "to": "e7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b7",
-    "to": "a7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c4",
-    "to": "a3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e5",
+    "from": "c7",
     "to": "d5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "d4",
-    "to": "g7",
+    "from": "d8",
+    "to": "c8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b8",
+    "to": "c8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f6",
+    "to": "c3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e1",
+    "to": "c3",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "d5",
-    "to": "h5",
+    "to": "f6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "c3",
-    "to": "b4",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h5",
-    "to": "h6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "b2",
-    "to": "h2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "e7",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g7",
-    "to": "h7",
+    "from": "f1",
+    "to": "f2",
     "side": "white",
     "enPassant": false
    },
@@ -3642,31 +4022,127 @@
    },
    {
     "from": "e4",
-    "to": "e7",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b8",
-    "to": "c8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g3",
-    "to": "d6",
+    "to": "e5",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "a7",
+    "to": "b5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e5",
+    "to": "b5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f5",
+    "to": "c5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c3",
+    "to": "e1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c6",
+    "to": "d7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "a8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d7",
+    "to": "d5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e1",
+    "to": "d2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d5",
     "to": "b7",
     "side": "black",
     "enPassant": false
    },
    {
+    "from": "d2",
+    "to": "e1",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c5",
+    "to": "c6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b5",
+    "to": "h5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a6",
+    "to": "a5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h5",
+    "to": "e5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f8",
+    "to": "g6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e5",
+    "to": "e7",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f6",
+    "to": "h5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
     "from": "b3",
-    "to": "c5",
+    "to": "a5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c6",
+    "to": "c8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "b3",
     "side": "white",
     "enPassant": false
    },
@@ -3677,74 +4153,50 @@
     "enPassant": false
    },
    {
-    "from": "b4",
+    "from": "g4",
+    "to": "g5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "e4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c2",
     "to": "c3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "h6",
-    "to": "f4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h7",
-    "to": "g6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f4",
-    "to": "f8",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h2",
-    "to": "f2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f8",
-    "to": "h6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g1",
-    "to": "g3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "h6",
-    "to": "g5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c5",
-    "to": "a6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d8",
-    "to": "e8",
+    "from": "e4",
+    "to": "d3",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "c3",
+    "to": "b2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "d3",
+    "to": "e2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c1",
     "to": "c2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "g5",
-    "to": "g4",
+    "from": "d8",
+    "to": "c7",
     "side": "black",
     "enPassant": false
    },
@@ -3755,8 +4207,20 @@
     "enPassant": false
    },
    {
-    "from": "g4",
-    "to": "g5",
+    "from": "e2",
+    "to": "f3",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "g2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f3",
+    "to": "f2",
     "side": "black",
     "enPassant": false
    }
@@ -3767,66 +4231,66 @@
     "554f69e3",
     "7b856369",
     "6bad09fa",
-    "06380548",
-    "d17f0a9a",
-    "5546165d",
-    "acb630f6",
-    "b98d1251",
-    "2593d7d8",
-    "ead86138",
-    "22c0cc6b",
-    "f01e0416",
-    "350e1c98",
-    "c840ba5d",
-    "2f37e195",
-    "4dc8102d",
-    "bb8126de",
-    "69c4fd66",
-    "bf9ceb95",
-    "50bbd351",
-    "a66ddacb",
-    "9c3b6dac",
-    "66a8f947",
-    "3b0adcc3",
-    "58371f66",
-    "979b3fae",
-    "212be0c5",
-    "68ca9fef",
-    "611395db",
-    "b17604c4",
-    "a5ab0567",
-    "4a291c07",
-    "6ef18dd6",
-    "b0612b37",
-    "31cac1f3",
-    "f8407133",
-    "d4e58f90",
-    "e6406842",
-    "429255e0",
-    "c4ab95c3",
-    "724699de",
-    "079e5352",
-    "71a9b776",
-    "72f5e2cc",
-    "17eae87c",
-    "b0b31b18",
-    "4a1f3503",
-    "ea81a0d7",
-    "0229493f",
-    "96663762",
-    "c539efb7",
-    "ba83100c",
-    "75616bf0",
-    "4c5aee33",
-    "70ae467d",
-    "feb5c023",
-    "69c681b5",
-    "d9ee740c",
-    "61d5691e",
-    "b58050b2",
-    "9ab22795"
+    "cbba81ec",
+    "dfc52e5a",
+    "8fb08e6e",
+    "7b138d7f",
+    "7c1be28f",
+    "863d678f",
+    "0b0a3497",
+    "4f5d3ea6",
+    "cc41f5b2",
+    "76ae7532",
+    "a6d61533",
+    "2fb1ec71",
+    "e4e53678",
+    "da8e38d2",
+    "56d0bea2",
+    "bf8c6bb5",
+    "b43aa732",
+    "45f5990e",
+    "fae95b05",
+    "af3e2143",
+    "f8429009",
+    "7c423ad5",
+    "5f50aac8",
+    "eab945e2",
+    "1e03b8f9",
+    "6e604a72",
+    "7f606449",
+    "312d72a7",
+    "bee1ded4",
+    "414ef99f",
+    "194181f9",
+    "2d79e975",
+    "42cf8e3e",
+    "1f67f4ea",
+    "ccab8927",
+    "28e86e40",
+    "34efc84a",
+    "1b11f095",
+    "5c7da2bd",
+    "92baa5b2",
+    "895a646c",
+    "456ae171",
+    "ea651233",
+    "95d05643",
+    "d6b7ba14",
+    "cce3383a",
+    "ef0ad64d",
+    "78ac3b37",
+    "4f89f37a",
+    "db30ce03",
+    "8e871ad7",
+    "d515a741",
+    "26164acd",
+    "08340cac",
+    "0989a6ee",
+    "19bb7f23",
+    "b94f5721",
+    "3db62a21"
    ],
-   "captureCounter": 10,
+   "captureCounter": 11,
    "gameOver": false,
    "winner": null,
    "gameOverReason": null
@@ -4208,66 +4672,66 @@
    "snapshotCount": 61,
    "sigHashes": [
     "554f69e3",
-    "5007ea52",
-    "88027ac0",
-    "f89dc1eb",
-    "37ab6217",
-    "aba97445",
-    "bb5321f4",
-    "72433f3a",
-    "21a936a7",
-    "b62c610c",
-    "bef9b8e0",
-    "370524ac",
-    "196e612d",
-    "5f8f267d",
-    "b43bbb55",
-    "caa1084c",
-    "9a2409a5",
-    "1609f929",
-    "c95b94fa",
-    "526d4de9",
-    "7d21bdcb",
-    "e8dcd5d2",
-    "cc9b2419",
-    "4796194c",
-    "f6ecc14e",
-    "79867c60",
-    "95000dfd",
-    "633979e2",
-    "d44b11c1",
-    "32012e45",
-    "22a4cd6b",
-    "b487b63e",
-    "5b42b34e",
-    "d5e2e6c5",
-    "06885362",
-    "07e8a520",
-    "0c1bf51f",
-    "7cfd9b97",
-    "942c8190",
-    "b853f09f",
-    "61ce9ff5",
-    "5d81cc24",
-    "ba1d74ab",
-    "5d2a8758",
-    "5f6d80d8",
-    "ab0e613c",
-    "49b4a407",
-    "630f9c5d",
-    "1dd07e5a",
-    "881ea53d",
-    "686feb41",
-    "3f712913",
-    "81269259",
-    "4cc8f6f7",
-    "48704801",
-    "f0277374",
-    "23cbbf5d",
-    "3e2b7e65",
-    "40a45930",
-    "ae2e5d2a",
-    "86c8a958"
+    "7806a774",
+    "2af1c686",
+    "39656ee4",
+    "0b192ff9",
+    "5700e09b",
+    "c22885fd",
+    "539653fb",
+    "bbbbecdb",
+    "c92b8fb5",
+    "210f474d",
+    "2ae17756",
+    "816ad903",
+    "cfeee3e5",
+    "9ab311c0",
+    "40e553dc",
+    "216b6c0b",
+    "1c58b469",
+    "a79b188a",
+    "03cc7187",
+    "b66b2ca9",
+    "a3a37300",
+    "d57f0045",
+    "f17836b8",
+    "41a6659a",
+    "494ef05e",
+    "83f6cffd",
+    "b4acbc6c",
+    "f76f5218",
+    "1fcae763",
+    "c53c9ec2",
+    "99cc352b",
+    "6b216d9d",
+    "290188da",
+    "65bcc899",
+    "1d880188",
+    "f964b48b",
+    "c48bf11c",
+    "7082a612",
+    "455f1dee",
+    "a969265f",
+    "51c7f20a",
+    "529ec4c2",
+    "0c67faf8",
+    "dc96f1f5",
+    "7f026c54",
+    "25a0721d",
+    "c79419af",
+    "215a5130",
+    "52922968",
+    "ffeb6458",
+    "1b6380cb",
+    "9871ca84",
+    "eb61e8aa",
+    "42071341",
+    "7ab293b5",
+    "4630334b",
+    "9fd25f3d",
+    "3fce13da",
+    "5d1ca147",
+    "f04e3e8a"
    ],
    "captureCounter": 9,
    "gameOver": false,
@@ -4368,7 +4832,7 @@
    },
    {
     "from": "b2",
-    "to": "e5",
+    "to": "f6",
     "side": "white",
     "enPassant": false
    },
@@ -4379,8 +4843,8 @@
     "enPassant": false
    },
    {
-    "from": "e2",
-    "to": "e4",
+    "from": "d2",
+    "to": "d3",
     "side": "white",
     "enPassant": false
    },
@@ -4391,26 +4855,14 @@
     "enPassant": false
    },
    {
-    "from": "e5",
-    "to": "f6",
+    "from": "f6",
+    "to": "g7",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "a4",
-    "to": "a5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a2",
-    "to": "c3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c7",
-    "to": "c6",
+    "from": "f8",
+    "to": "g7",
     "side": "black",
     "enPassant": false
    },
@@ -4421,50 +4873,62 @@
     "enPassant": false
    },
    {
-    "from": "f7",
-    "to": "e6",
+    "from": "c7",
+    "to": "c6",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "e4",
+    "from": "h4",
     "to": "d4",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "g8",
-    "to": "g7",
+    "from": "c6",
+    "to": "b5",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "c2",
-    "to": "a3",
+    "to": "e3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "a5",
-    "to": "a3",
+    "from": "g6",
+    "to": "h8",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "h1",
+    "to": "d5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "a4",
+    "to": "b3",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "a1",
-    "to": "b2",
+    "to": "b3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e6",
-    "to": "d5",
+    "from": "e7",
+    "to": "g5",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "c3",
-    "to": "a4",
+    "from": "d4",
+    "to": "b2",
     "side": "white",
     "enPassant": false
    },
@@ -4475,128 +4939,44 @@
     "enPassant": false
    },
    {
-    "from": "b2",
-    "to": "a1",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a6",
-    "to": "a5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h2",
-    "to": "g3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "d5",
-    "to": "g2",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g3",
-    "to": "f2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "a3",
-    "to": "b4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a1",
-    "to": "c3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "b4",
-    "to": "b5",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "a4",
-    "to": "c5",
+    "from": "b3",
+    "to": "d2",
     "side": "white",
     "enPassant": false
    },
    {
     "from": "b5",
-    "to": "d3",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "c5",
-    "to": "d3",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "e7",
-    "to": "f6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "g5",
-    "to": "h6",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "g6",
-    "to": "f4",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h6",
-    "to": "h5",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "f4",
-    "to": "e6",
-    "side": "black",
-    "enPassant": false
-   },
-   {
-    "from": "h1",
-    "to": "h2",
-    "side": "white",
-    "enPassant": false
-   },
-   {
-    "from": "c8",
-    "to": "c7",
+    "to": "b2",
     "side": "black",
     "enPassant": false
    },
    {
     "from": "d3",
-    "to": "c5",
+    "to": "a3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e6",
-    "to": "g5",
+    "from": "g5",
+    "to": "h4",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "h5",
-    "to": "h8",
+    "from": "a3",
+    "to": "a6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "c2",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g1",
+    "to": "g2",
     "side": "white",
     "enPassant": false
    },
@@ -4607,20 +4987,104 @@
     "enPassant": false
    },
    {
-    "from": "e1",
-    "to": "e3",
+    "from": "d5",
+    "to": "f3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "f6",
-    "to": "g7",
+    "from": "c2",
+    "to": "b2",
     "side": "black",
     "enPassant": false
    },
    {
+    "from": "f3",
+    "to": "h5",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b2",
+    "to": "d4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a6",
+    "to": "a8",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "g6",
+    "to": "h5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "a8",
+    "to": "a6",
+    "side": "white",
+    "enPassant": false
+   },
+   {
     "from": "d4",
-    "to": "b4",
+    "to": "f4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "c1",
+    "to": "c2",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c8",
+    "to": "c7",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "g2",
+    "to": "h3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "f4",
+    "to": "c4",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e2",
+    "to": "f3",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "b7",
+    "to": "a6",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "d2",
+    "to": "e4",
+    "side": "white",
+    "enPassant": false
+   },
+   {
+    "from": "c4",
+    "to": "d5",
+    "side": "black",
+    "enPassant": false
+   },
+   {
+    "from": "e3",
+    "to": "g4",
     "side": "white",
     "enPassant": false
    },
@@ -4631,26 +5095,26 @@
     "enPassant": false
    },
    {
-    "from": "h8",
-    "to": "g8",
+    "from": "f3",
+    "to": "g2",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "c7",
+    "from": "d8",
     "to": "e7",
     "side": "black",
     "enPassant": false
    },
    {
-    "from": "c5",
-    "to": "d3",
+    "from": "e1",
+    "to": "e3",
     "side": "white",
     "enPassant": false
    },
    {
-    "from": "e7",
-    "to": "d7",
+    "from": "b8",
+    "to": "b2",
     "side": "black",
     "enPassant": false
    }
@@ -4663,64 +5127,64 @@
     "0e791ab6",
     "b17730ba",
     "c06d3d03",
-    "1c5c1624",
-    "19312e29",
-    "6578fc21",
-    "9a2087c8",
-    "70e14956",
-    "64067d93",
-    "eb0c12d9",
-    "ff16ad68",
-    "5aff77a0",
-    "444424a1",
-    "24e2ce3d",
-    "45eb8a54",
-    "c10bfd95",
-    "5ecbc993",
-    "7bc7c5e5",
-    "951ce282",
-    "3b42da28",
-    "4126566c",
-    "5f9b136f",
-    "86ed2f9a",
-    "ba9d8505",
-    "426dd220",
-    "00fa5592",
-    "2023580f",
-    "68a999b7",
-    "1d79da57",
-    "297004cb",
-    "b0964c2d",
-    "4ec956c8",
-    "df9c8af3",
-    "bbce057f",
-    "ca016afc",
-    "460a9edf",
-    "598a3a62",
-    "bcdf54c8",
-    "3438fe8c",
-    "3bdbd87f",
-    "6d7322f2",
-    "332846a2",
-    "32ea5625",
-    "172247f3",
-    "e51d1d52",
-    "01c234cc",
-    "7dd5fbd5",
-    "0e6f844c",
-    "b25e1bc8",
-    "eca8ea94",
-    "1f893022",
-    "4343efc9",
-    "bca4b976",
-    "cc67b792",
-    "10e3889a",
-    "53d2ee3c",
-    "f1502bc5",
-    "6a97fde0",
-    "1d926733"
+    "e6743460",
+    "ce065729",
+    "c56095a8",
+    "df8b62b9",
+    "593ebfd7",
+    "3c91b9f8",
+    "5e26d221",
+    "8e207014",
+    "cc81b890",
+    "fb6323f9",
+    "b48f821d",
+    "a4351e2c",
+    "e0412c70",
+    "a50f6374",
+    "fc0927ee",
+    "4e2cd538",
+    "04f5a2dc",
+    "278548ad",
+    "37fa8aef",
+    "0acf77c8",
+    "a0115486",
+    "eb5b8c78",
+    "793492c4",
+    "859e341b",
+    "b96797a2",
+    "3670f323",
+    "e3543479",
+    "65f18059",
+    "751bed71",
+    "65e6fcce",
+    "35de6199",
+    "5ed22aa1",
+    "692fd575",
+    "b8b8f121",
+    "539a99bb",
+    "57bd05d4",
+    "291e0098",
+    "2d97aedc",
+    "41adf56f",
+    "34b5d39f",
+    "a9e4dc33",
+    "3e9b8740",
+    "c1cfca70",
+    "e89f98c6",
+    "f811c631",
+    "4aa6d57f",
+    "4a3afd25",
+    "16b202f7",
+    "e1dbe644",
+    "298f51bf",
+    "9e4229bf",
+    "f0f93a28",
+    "7bec2706",
+    "7d51a00a",
+    "a85fe192",
+    "c28ca2d6"
    ],
-   "captureCounter": 6,
+   "captureCounter": 10,
    "gameOver": false,
    "winner": null,
    "gameOverReason": null

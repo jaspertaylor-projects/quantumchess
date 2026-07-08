@@ -45,8 +45,17 @@ Key knobs (defaults in the script): `--games`, `--seed` (fully reproducible),
 --minGap 2.0 --minChoices 10`, steps 2+ relaxed to `--extendGap 1.2`.
 NO failEval — alternatives may still win (mate-in-3 style); they just land
 the needle lower. Hard filters: no plain recaptures of a collapsed piece
-(statically-obvious take-backs), no purely classical positions, and no
-chains where nothing collapses/decoheres at any ply. The eval gained
+(statically-obvious take-backs), no purely classical positions, no chains
+where nothing collapses/decoheres at any ply. "Fastest mate" candidates
+(runner-up also mates — the gap is just mate-distance, half the early
+seed-5 haul) are kept but tagged `genre: 'findMate'` — under landing-spot
+scoring any mate lands the needle at max, so they play as "find a mate
+among N moves"; a separate genre for the curation queue (their confirm/gate
+checks verify "best move still mates" rather than same-move uniqueness,
+since equal mates swap ranks between depths). True only-moves carry
+`genre: 'onlyMove'`. Decision (2026-07-08): findMate is NOT used anywhere
+for now — it doesn't fit the eval-bar format. Banked as future inventory
+for a possible second daily, a puzzle-solver mode, or side-by-side puzzles. The eval gained
 `promoImminent`/`promoNear` terms (a definite pawn 1–2 steps from promoting
 is most of a queen) — before that, winning promotion races read as fine for
 the defender and the f6→f7→f8 2-mover (seed-4 game 98) was invisible.
