@@ -2,10 +2,10 @@
 // Purpose: Manage visibility toggles for the board's visual reminders
 // (decoherence gauge, recoherence dots, entanglement link, promotion
 // chevrons, check glow, pulse rings), persisted to localStorage.
-// Imports From: None
+// Imports From: ./usePersistentSetting.js
 // Exported To: ../App.jsx, ./SettingsModal.jsx, ../chessboard/Board.jsx
 
-import { useCallback, useState } from 'react';
+import usePersistentSetting from './usePersistentSetting.js';
 
 const STORAGE_KEY = 'qcIndicatorSettings';
 
@@ -70,47 +70,8 @@ export function matchIndicatorPreset(indicators) {
   return null;
 }
 
-function readStorage(fallback) {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...fallback };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return { ...fallback };
-    const out = { ...fallback };
-    for (const key of Object.keys(fallback)) {
-      if (typeof parsed[key] === 'boolean') out[key] = parsed[key];
-    }
-    return out;
-  } catch {
-    return { ...fallback };
-  }
-}
-
-function writeStorage(obj) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-  } catch {
-    // ignore storage errors
-  }
-}
-
 export default function useIndicatorSettings() {
-  const [indicators, setIndicatorsState] = useState(() => readStorage(DEFAULT_INDICATORS));
-
-  const setIndicators = useCallback((partial) => {
-    setIndicatorsState((prev) => {
-      const next = { ...prev, ...partial };
-      writeStorage(next);
-      return next;
-    });
-  }, []);
-
-  const resetIndicators = useCallback(() => {
-    setIndicatorsState(() => {
-      writeStorage(DEFAULT_INDICATORS);
-      return { ...DEFAULT_INDICATORS };
-    });
-  }, []);
+  const [indicators, setIndicators, resetIndicators] = usePersistentSetting(STORAGE_KEY, DEFAULT_INDICATORS);
 
   return { indicators, setIndicators, resetIndicators };
 }

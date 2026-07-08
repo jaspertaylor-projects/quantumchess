@@ -1316,10 +1316,6 @@ export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter
   return 'checkmate';
 }
 
-export function isCheckmateAfterPositionResolved(finalPieces, moverSide, captureCounter, lastMove = null) {
-  return evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove) === 'checkmate';
-}
-
 // Canonical signature of a position for repetition detection. Includes
 // everything the rules can depend on: occupancy, tagged possibility sets,
 // first-move rights, coherence, castling/entanglement state, the side to

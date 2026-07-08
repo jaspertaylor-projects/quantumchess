@@ -51,6 +51,7 @@ Thumbs.db
 #Pura Viba
 .puraviba/
 logs/
+.logs/
 # Playwright MCP browser-test artifacts
 .playwright-mcp/
 

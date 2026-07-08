@@ -1,12 +1,14 @@
 // frontend/src/account/AccountModal.jsx
 // Purpose: Sign in / sign up and, once signed in, the player's profile:
 // username, tier badge, rating, and recent saved games.
-// Imports From: ../theme.js, ../components/IconButton.jsx, ./gameSync.js, ./supabaseClient.js
+// Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx,
+//   ./gameSync.js, ./supabaseClient.js
 // Exported To: ../App.jsx
 
 import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { X as XIcon, User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
@@ -68,10 +70,6 @@ export default function AccountModal({
   if (!open) return null;
 
   const styles = {
-    backdrop: {
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001,
-    },
     panel: {
       width: 'min(94vw, 460px)', maxHeight: '88vh', overflowY: 'auto',
       borderRadius: 12, border: `1px solid ${theme.border}`, backgroundColor: theme.cardBackground,
@@ -259,15 +257,15 @@ export default function AccountModal({
   };
 
   return (
-    <div className="qc-account-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div
-        className="qc-account-panel"
-        style={styles.panel}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-account-title"
-      >
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={1001}
+      ariaLabelledBy="qc-account-title"
+      backdropClassName="qc-account-backdrop"
+      panelClassName="qc-account-panel"
+      panelStyle={styles.panel}
+    >
         <div style={styles.header}>
           <h2 id="qc-account-title" style={styles.title}><UserIcon size={18} color={theme.primary} /> {user ? 'Your Account' : 'Sign In'}</h2>
           <IconButton
@@ -529,7 +527,6 @@ export default function AccountModal({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

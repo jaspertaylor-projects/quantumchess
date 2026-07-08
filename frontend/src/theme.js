@@ -1,7 +1,7 @@
 // frontend/src/theme.js
 // Purpose: Defines the application's color theme as a simple JS object.
 // Imports From: None
-// Exported To: frontend/src/App.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx, frontend/src/tray/NewGamePanel.jsx, frontend/src/tray/SideTray.jsx
+// Exported To: frontend/src/App.jsx, frontend/src/chessboard/Board.jsx, frontend/src/errors/ErrorBoundary.jsx, frontend/src/main.jsx, frontend/src/settings/useBoardColors.js, frontend/src/tray/NewGamePanel.jsx, frontend/src/tray/SideTray.jsx, frontend/src/tutorial/MiniBoard.jsx
 
 const theme = {
   primary: '#61dafb', // React Blue
@@ -18,6 +18,14 @@ const theme = {
   error: '#ff6b6b',
   border: '#444444',
   shadow: 'rgba(0, 0, 0, 0.2)',
+  // Status colors shared by the puzzle/review UIs
+  good: '#7ee787', // "correct/solved" green
+  warn: '#f6c445', // "careful/partial" amber
+  // Modal backdrop — every modal overlay uses the same scrim
+  scrim: 'rgba(0, 0, 0, 0.55)',
+  // Default board squares (the user can override via Settings → Board Colors)
+  boardLight: '#f0d9b5',
+  boardDark: '#b58863',
   globalBackground: '#242424',
   globalText: 'rgba(255, 255, 255, 0.87)',
   // Board area background surrounding the chessboard

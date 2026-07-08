@@ -1,11 +1,12 @@
 // frontend/src/components/ConfirmModal.jsx
 // Purpose: In-app confirmation dialog (resign, draw offers, ending a game)
 // replacing native browser confirm() popups.
-// Imports From: ../theme.js
+// Imports From: ../theme.js, ./ModalShell.jsx
 // Exported To: ../App.jsx
 
 import React from 'react';
 import theme from '../theme.js';
+import ModalShell from './ModalShell.jsx';
 
 export default function ConfirmModal({
   open = false,
@@ -20,15 +21,6 @@ export default function ConfirmModal({
   if (!open) return null;
 
   const styles = {
-    backdrop: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.55)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1002,
-    },
     panel: {
       width: 'min(92vw, 380px)',
       borderRadius: 12,
@@ -83,26 +75,26 @@ export default function ConfirmModal({
   };
 
   return (
-    <div className="qc-confirm-backdrop" style={styles.backdrop} onClick={onCancel}>
-      <div
-        className="qc-confirm-panel"
-        style={styles.panel}
-        onClick={(e) => e.stopPropagation()}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="qc-confirm-title"
-      >
-        <h2 id="qc-confirm-title" style={styles.title}>{title}</h2>
-        {message ? <p style={styles.message}>{message}</p> : null}
-        <div style={styles.buttons}>
-          <button type="button" className="qc-confirm-cancel" style={styles.cancelBtn} onClick={onCancel}>
-            {cancelLabel}
-          </button>
-          <button type="button" className="qc-confirm-accept" style={styles.confirmBtn} onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
+    <ModalShell
+      onClose={onCancel}
+      closeOnBackdrop
+      zIndex={1002}
+      role="alertdialog"
+      ariaLabelledBy="qc-confirm-title"
+      backdropClassName="qc-confirm-backdrop"
+      panelClassName="qc-confirm-panel"
+      panelStyle={styles.panel}
+    >
+      <h2 id="qc-confirm-title" style={styles.title}>{title}</h2>
+      {message ? <p style={styles.message}>{message}</p> : null}
+      <div style={styles.buttons}>
+        <button type="button" className="qc-confirm-cancel" style={styles.cancelBtn} onClick={onCancel}>
+          {cancelLabel}
+        </button>
+        <button type="button" className="qc-confirm-accept" style={styles.confirmBtn} onClick={onConfirm}>
+          {confirmLabel}
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

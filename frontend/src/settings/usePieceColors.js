@@ -1,9 +1,10 @@
 // frontend/src/settings/usePieceColors.js
 // Purpose: Manage per-side inline-SVG theming colors (icon, band fill, band stroke), persist them to localStorage, and expose a reset-to-defaults action.
-// Imports From: None
+// Imports From: ./usePersistentSetting.js
 // Exported To: ../App.jsx, ./SettingsModal.jsx
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import usePersistentSetting from './usePersistentSetting.js';
 
 const STORAGE_KEYS = {
   white: 'qcWhiteSvgColors',
@@ -22,60 +23,14 @@ export const DEFAULT_BLACK = {
   bandStroke: '#f2f2f2',
 };
 
-function readStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return fallback;
-    return {
-      icon: typeof parsed.icon === 'string' ? parsed.icon : fallback.icon,
-      bandFill: typeof parsed.bandFill === 'string' ? parsed.bandFill : fallback.bandFill,
-      bandStroke: typeof parsed.bandStroke === 'string' ? parsed.bandStroke : fallback.bandStroke,
-    };
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStorage(key, obj) {
-  try {
-    localStorage.setItem(key, JSON.stringify(obj));
-  } catch {
-    // ignore
-  }
-}
-
 export default function usePieceColors() {
-  const [whiteColors, setWhiteColorsState] = useState(() => readStorage(STORAGE_KEYS.white, DEFAULT_WHITE));
-  const [blackColors, setBlackColorsState] = useState(() => readStorage(STORAGE_KEYS.black, DEFAULT_BLACK));
-
-  const setWhiteColors = useCallback((partial) => {
-    setWhiteColorsState((prev) => {
-      const next = { ...prev, ...partial };
-      writeStorage(STORAGE_KEYS.white, next);
-      return next;
-    });
-  }, []);
-
-  const setBlackColors = useCallback((partial) => {
-    setBlackColorsState((prev) => {
-      const next = { ...prev, ...partial };
-      writeStorage(STORAGE_KEYS.black, next);
-      return next;
-    });
-  }, []);
+  const [whiteColors, setWhiteColors, resetWhiteColors] = usePersistentSetting(STORAGE_KEYS.white, DEFAULT_WHITE);
+  const [blackColors, setBlackColors, resetBlackColors] = usePersistentSetting(STORAGE_KEYS.black, DEFAULT_BLACK);
 
   const resetColors = useCallback(() => {
-    setWhiteColorsState(() => {
-      writeStorage(STORAGE_KEYS.white, DEFAULT_WHITE);
-      return { ...DEFAULT_WHITE };
-    });
-    setBlackColorsState(() => {
-      writeStorage(STORAGE_KEYS.black, DEFAULT_BLACK);
-      return { ...DEFAULT_BLACK };
-    });
-  }, []);
+    resetWhiteColors();
+    resetBlackColors();
+  }, [resetWhiteColors, resetBlackColors]);
 
   const svgStyles = useMemo(() => ({
     white: {

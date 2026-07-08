@@ -1,22 +1,14 @@
 // frontend/src/components/WinnerModal.jsx
 // Purpose: Modal overlay to display end-of-game result with a single primary dismissal action.
-// Imports From: ../theme.js
+// Imports From: ../theme.js, ./ModalShell.jsx
 // Exported To: ../App.jsx
 
 import React from 'react';
 import theme from '../theme.js';
+import ModalShell from './ModalShell.jsx';
 
 export default function WinnerModal({ open = false, winnerText = '', title = 'Game Over', onClose = () => {} }) {
   const styles = {
-    winnerOverlay: {
-      position: 'fixed',
-      inset: 0,
-      display: open ? 'flex' : 'none',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      zIndex: 9999,
-    },
     winnerModal: {
       backgroundColor: '#111',
       color: '#fff',
@@ -59,16 +51,23 @@ export default function WinnerModal({ open = false, winnerText = '', title = 'Ga
   };
 
   return (
-    <div className="qc-winner-overlay" style={styles.winnerOverlay} role="dialog" aria-modal={open} aria-hidden={!open}>
-      <div className="qc-winner-modal" style={styles.winnerModal}>
-        <h2 className="qc-winner-title" style={styles.winnerTitle}>{title}</h2>
-        <p className="qc-winner-sub" style={styles.winnerSub}>{winnerText || 'Game over.'}</p>
-        <div className="qc-winner-button-row" style={styles.winnerButtonRow}>
-          <button className="qc-winner-button" style={styles.primaryBtn} onClick={onClose} autoFocus>
-            OK
-          </button>
-        </div>
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      closeOnBackdrop={false}
+      zIndex={9999}
+      ariaLabelledBy="qc-winner-title"
+      backdropClassName="qc-winner-overlay"
+      panelClassName="qc-winner-modal"
+      panelStyle={styles.winnerModal}
+    >
+      <h2 id="qc-winner-title" className="qc-winner-title" style={styles.winnerTitle}>{title}</h2>
+      <p className="qc-winner-sub" style={styles.winnerSub}>{winnerText || 'Game over.'}</p>
+      <div className="qc-winner-button-row" style={styles.winnerButtonRow}>
+        <button className="qc-winner-button" style={styles.primaryBtn} onClick={onClose} autoFocus>
+          OK
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

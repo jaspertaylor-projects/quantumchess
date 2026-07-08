@@ -1,11 +1,12 @@
 // frontend/src/tray/RulesModal.jsx
 // Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Describes check threats overlay, king removal after each move, quantum castling with entanglement, quantum promotion, en passant phantom captures, measurement/decoherence, and checkmate.
-// Imports From: ../theme.js, ../components/IconButton.jsx
+// Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, BookOpen as BookOpenIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon } from 'lucide-react';
 import { LESSONS } from '../tutorial/lessons.js';
 
@@ -162,15 +163,6 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
   };
 
   const styles = {
-    backdrop: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    },
     panel: {
       width: 'min(92vw, 720px)',
       maxWidth: '720px',
@@ -341,15 +333,15 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
   const handleDot = (idx) => setPage(idx);
 
   return (
-    <div className="qc-rules-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div
-        className="qc-rules-panel"
-        style={styles.panel}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-rules-title"
-      >
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={1000}
+      ariaLabelledBy="qc-rules-title"
+      backdropClassName="qc-rules-backdrop"
+      panelClassName="qc-rules-panel"
+      panelStyle={styles.panel}
+    >
         <div className="qc-rules-header" style={styles.header}>
           <div className="qc-rules-header-title-wrap" style={styles.headerTitleWrap}>
             <BookOpenIcon size={20} color={theme.primary} />
@@ -493,7 +485,6 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
             />
           ))}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

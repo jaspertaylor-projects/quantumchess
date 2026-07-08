@@ -5,18 +5,19 @@
 // what buildReviewTimeline produces for them today. The paired test replays
 // the fixtures and fails if any future engine change alters the outcome.
 //
-// Generation advances state incrementally (like live play does) and only the
-// final buildReviewTimeline call defines the expected values — so the pinned
-// expectations are exactly the replay path's output, and generation stays
-// O(n) per game. Run inside the dev container (no host node install here):
+// Generation advances state incrementally (like live play does) through the
+// shared advanceCore, and only the final buildReviewTimeline call defines
+// the expected values — so the pinned expectations are exactly the replay
+// path's output, and generation stays O(n) per game. Run inside the dev
+// container (no host node install here):
 //   docker exec -u 1000:1000 -w /app quantumchess-frontend-1 \
 //     node tests/generate-engine-fixtures.mjs
 //
 // Regenerating REPLACES the pinned behavior — only do that when an engine
 // rules change is intentional, and say so in the commit message.
 //
-// Imports From: ../src/review/replayCore.js, ../src/chessboard/quantumEngine.js,
-//   ../src/chessboard/gameConstants.js, ../src/chessboard/boardUtils.js, ./fixtureUtil.mjs
+// Imports From: ../src/review/replayCore.js, ../src/chessboard/advanceCore.js,
+//   ../src/chessboard/quantumEngine.js, ./fixtureUtil.mjs
 // Exported To: None (writes ./fixtures/engine-games.json)
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -24,14 +25,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildReviewTimeline } from '../src/review/replayCore.js';
-import {
-  applyQuantumConstraints,
-  buildOccupancy,
-  evaluateTerminalAfterMove,
-  generateLegalReplies,
-} from '../src/chessboard/quantumEngine.js';
-import { createStartingPieces } from '../src/chessboard/gameConstants.js';
-import { fromAlgebraic, toAlgebraic } from '../src/chessboard/boardUtils.js';
+import { advanceEntry, makeInitialSnapshot } from '../src/chessboard/advanceCore.js';
+import { generateLegalReplies } from '../src/chessboard/quantumEngine.js';
 import { hashSig, mulberry32 } from './fixtureUtil.mjs';
 
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'engine-games.json');
@@ -75,66 +70,15 @@ function recordsFor(reply, side) {
   return [{ from: reply.from, to: reply.to, side, enPassant: reply.type === 'enpassant' }];
 }
 
-// Advance generation state by one chosen reply. Only what move generation
-// consumes needs to be right here (pieces, capture count, the en passant
-// window on lastMove); the authoritative snapshots come from the final
-// buildReviewTimeline over the recorded moves.
-function advance(state, reply) {
-  const { pieces, side } = state;
-  let nextPieces;
-  let lastMove;
-
+// The stored/relayed entry shape advanceCore replays — generation advances
+// through the exact same path the review replay uses, so a mismatch is
+// impossible by construction (the buildReviewTimeline check below is now a
+// belt-and-braces assertion).
+function entryFor(reply) {
   if (reply.type === 'castle') {
-    nextPieces = applyQuantumConstraints(reply.resultPieces);
-    lastMove = {
-      side,
-      pieceId: reply.plan.piece1_id,
-      from: reply.plan.piece1_from,
-      to: reply.plan.piece1_to,
-      isDoubleStep: false,
-      crossedSquare: null,
-      measuredSquares: [],
-    };
-  } else {
-    nextPieces = reply.resultPieces;
-    const mover = buildOccupancy(pieces).get(reply.from);
-    lastMove = {
-      side,
-      pieceId: mover ? mover.id : null,
-      from: reply.from,
-      to: reply.to,
-      isDoubleStep: false,
-      crossedSquare: null,
-      measuredSquares: [],
-    };
-    // Double-step detection (mirrors replayCore) so en passant windows open
-    // during generation just like they do on replay.
-    if (reply.type === 'move' && mover && (mover.moveCount || 0) === 0) {
-      const fromPos = fromAlgebraic(reply.from);
-      const toPos = fromAlgebraic(reply.to);
-      const dir = side === 'white' ? 1 : -1;
-      const movedFinal = nextPieces.find((p) => p.id === mover.id && !p.captured) || null;
-      if (
-        fromPos && toPos && movedFinal &&
-        fromPos.fileIndex === toPos.fileIndex &&
-        toPos.rankIndex - fromPos.rankIndex === 2 * dir &&
-        movedFinal.possibleTypes.includes('p')
-      ) {
-        lastMove.isDoubleStep = true;
-        lastMove.crossedSquare = toAlgebraic(fromPos.fileIndex, fromPos.rankIndex + dir);
-      }
-    }
+    return { type: 'castle', piece1_from: reply.plan.piece1_from, piece2_from: reply.plan.piece2_from };
   }
-
-  const captureCounter = nextPieces.filter((p) => p.captured).length;
-  const terminal = evaluateTerminalAfterMove(nextPieces, side, captureCounter, lastMove);
-  return {
-    pieces: nextPieces,
-    side: side === 'white' ? 'black' : 'white',
-    captureCounter,
-    lastMove,
-    terminal,
-  };
+  return { type: 'move', from: reply.from, to: reply.to, enPassant: reply.type === 'enpassant' };
 }
 
 const fixtures = [];
@@ -144,18 +88,13 @@ let totalCastles = 0;
 for (const seed of SEEDS) {
   const rng = mulberry32(seed * 2654435761);
   const moves = [];
-  let state = {
-    pieces: createStartingPieces(),
-    side: 'white',
-    captureCounter: 0,
-    lastMove: null,
-    terminal: null,
-  };
+  let snap = makeInitialSnapshot();
+  const snaps = [snap];
 
   const script = SCRIPTED_OPENINGS[seed] || [];
 
-  for (let halfmoves = 0; halfmoves < MAX_HALFMOVES && !state.terminal; halfmoves += 1) {
-    const replies = generateLegalReplies(state.pieces, state.side, state.captureCounter, state.lastMove);
+  for (let halfmoves = 0; halfmoves < MAX_HALFMOVES && !snap.gameOver; halfmoves += 1) {
+    const replies = generateLegalReplies(snap.pieces, snap.sideToMove, snap.captureCounter, snap.lastMove);
     if (replies.length === 0) break;
     let reply;
     if (halfmoves < script.length) {
@@ -165,8 +104,16 @@ for (const seed of SEEDS) {
     } else {
       reply = pickReply(replies, rng);
     }
-    moves.push(...recordsFor(reply, state.side));
-    state = advance(state, reply);
+    moves.push(...recordsFor(reply, snap.sideToMove));
+    const adv = advanceEntry(snap, entryFor(reply), snaps);
+    if (!adv.ok) {
+      throw new Error(
+        `seed ${seed}: an engine-legal move did not replay — ` +
+        'generateLegalReplies and advanceCore disagree; fix that before generating fixtures',
+      );
+    }
+    snap = adv.snap;
+    snaps.push(snap);
   }
 
   // The replay path is the single source of truth for the expectations.

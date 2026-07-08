@@ -33,15 +33,15 @@ import {
   clonePieces,
   computePositionSignature,
   evaluateTerminalAfterMove,
-  generateLegalReplies,
   listCheckThreats,
   simulateCastle,
   simulateEnPassant,
   simulateStandardMove,
 } from '../frontend/src/chessboard/quantumEngine.js';
-import { fromAlgebraic, toAlgebraic } from '../frontend/src/chessboard/boardUtils.js';
+import { buildLastMoveRecord, countPossibilities, moveOutcome } from '../frontend/src/chessboard/advanceCore.js';
 import { analyzeRootMoves, evaluatePosition, searchBestMove } from '../frontend/src/ai/alphaBetaEngine.js';
 import { BOTS } from '../frontend/src/ai/bots.js';
+import { mulberry32 } from '../frontend/tests/fixtureUtil.mjs';
 
 // ------------------------------------------------------------------- config
 
@@ -85,17 +85,9 @@ const VERIFY_WIDTHS = [64, 16, 12, 10, 8, 6];
 
 // ------------------------------------------------- determinism (seeded rng)
 
-// searchBestMove uses Math.random for opening variety; patch it so a run is
-// fully reproducible from --seed.
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function rng() {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// searchBestMove uses Math.random for opening variety; patch it (with the
+// shared seeded rng from tests/fixtureUtil.mjs) so a run is fully
+// reproducible from --seed.
 const rng = mulberry32(CFG.seed * 2654435761);
 Math.random = rng;
 
@@ -103,34 +95,9 @@ Math.random = rng;
 
 function otherSide(side) { return side === 'white' ? 'black' : 'white'; }
 
-function countPossibilities(pieces) {
-  let sum = 0;
-  for (const p of pieces) sum += (p.possibleTypes || []).length;
-  return sum;
-}
-
-function buildLastMove(afterPieces, moverId, from, to, enPassant, measuredSquares, side, wasFirstMove) {
-  const lastMove = {
-    side, pieceId: moverId, from, to,
-    isDoubleStep: false, crossedSquare: null,
-    measuredSquares: measuredSquares || [],
-  };
-  if (!enPassant && wasFirstMove) {
-    const fp = fromAlgebraic(from);
-    const tp = fromAlgebraic(to);
-    const dir = side === 'white' ? 1 : -1;
-    const moved = afterPieces.find((p) => p.id === moverId && !p.captured);
-    if (fp && tp && moved && fp.fileIndex === tp.fileIndex && tp.rankIndex - fp.rankIndex === 2 * dir && moved.possibleTypes.includes('p')) {
-      lastMove.isDoubleStep = true;
-      lastMove.crossedSquare = toAlgebraic(fp.fileIndex, fp.rankIndex + dir);
-    }
-  }
-  return lastMove;
-}
-
 // Re-simulate a reply from generateLegalReplies so we recover didCapture and
-// measuredSquares (the reply list drops them), and build the next state the
-// same way useQuantumGameState.movePiece/castlePieces do.
+// measuredSquares (the reply list drops them), then advance through the
+// shared moveOutcome — the same tail live play and review replay use.
 function applyReply(state, reply) {
   const { pieces, sideToMove, captureCounter, halfmoveClock } = state;
 
@@ -139,6 +106,7 @@ function applyReply(state, reply) {
   let from;
   let to;
   let wasFirstMove = false;
+  let moverWasPromoted = false;
   if (reply.type === 'castle') {
     sim = simulateCastle(pieces, reply.plan);
     if (!sim.ok) return null;
@@ -152,42 +120,33 @@ function applyReply(state, reply) {
     from = reply.from;
     to = reply.to;
     wasFirstMove = (mover.moveCount || 0) === 0;
+    moverWasPromoted = Boolean(mover.wasPromoted);
     sim = reply.type === 'enpassant'
       ? simulateEnPassant(pieces, mover.id, reply.to, reply.victimId, captureCounter)
       : simulateStandardMove(pieces, mover.id, reply.to, captureCounter);
     if (!sim.ok) return null;
   }
 
-  const finalPieces = reply.type === 'castle' ? applyQuantumConstraints(sim.pieces) : sim.pieces;
-  const didCapture = Boolean(sim.didCapture);
-  const nextCC = didCapture ? captureCounter + 1 : captureCounter;
-  const nextLastMove = buildLastMove(finalPieces, moverId, from, to, reply.type === 'enpassant', sim.measuredSquares, sideToMove, wasFirstMove);
-
-  const movedFinal = finalPieces.find((p) => p.id === moverId && !p.captured) || null;
-  const definitePawnMove = Boolean(movedFinal && movedFinal.possibleTypes.length === 1 && movedFinal.possibleTypes[0] === 'p');
-  const promotedNow = Boolean(movedFinal && movedFinal.wasPromoted && !pieces.find((p) => p.id === moverId)?.wasPromoted);
-  const informationGained = countPossibilities(finalPieces) < countPossibilities(pieces);
-  const progress = didCapture || definitePawnMove || promotedNow || informationGained;
-  const nextHalfmove = progress ? 0 : halfmoveClock + 1;
-
-  const terminal = evaluateTerminalAfterMove(finalPieces, sideToMove, nextCC, nextLastMove);
-  let gameOver = false;
-  let winner = null;
-  let reason = null;
-  if (terminal === 'checkmate') { gameOver = true; winner = sideToMove; reason = 'checkmate'; }
-  else if (terminal === 'stalemate') { gameOver = true; reason = 'stalemate'; }
-  else if (nextHalfmove >= 100) { gameOver = true; reason = 'fifty-move rule'; }
+  const outcome = moveOutcome({ pieces, sideToMove, captureCounter, halfmoveClock }, sim, {
+    moverId,
+    from,
+    to,
+    isCastle: reply.type === 'castle',
+    usedEnPassant: reply.type === 'enpassant',
+    wasFirstMove,
+    moverWasPromoted,
+  });
 
   return {
     state: {
-      pieces: finalPieces,
+      pieces: outcome.finalPieces,
       sideToMove: otherSide(sideToMove),
-      captureCounter: nextCC,
-      lastMove: nextLastMove,
-      halfmoveClock: nextHalfmove,
+      captureCounter: outcome.nextCaptureCounter,
+      lastMove: outcome.nextLastMove,
+      halfmoveClock: outcome.nextHalfmoveClock,
     },
-    moveRec: { type: reply.type, from, to, didCapture, measuredSquares: sim.measuredSquares || [] },
-    gameOver, winner, reason,
+    moveRec: { type: reply.type, from, to, didCapture: outcome.didCapture, measuredSquares: outcome.nextLastMove.measuredSquares },
+    gameOver: outcome.gameOver, winner: outcome.winner, reason: outcome.gameOverReason,
   };
 }
 
@@ -346,8 +305,16 @@ function tagThemes(position, moveSim) {
   if (moveSim.enPassant && givesCheck) themes.push('epCheck'); // The Phantom
   if (givesCheck) themes.push('check');
 
-  const lastMove = buildLastMove(after, moveSim.moverId, moveSim.from, moveSim.to, moveSim.enPassant, measuredSquares, 'white',
-    (before.find((p) => p.id === moveSim.moverId)?.moveCount || 0) === 0);
+  const lastMove = buildLastMoveRecord({
+    finalPieces: after,
+    moverId: moveSim.moverId,
+    from: moveSim.from,
+    to: moveSim.to,
+    side: 'white',
+    usedEnPassant: moveSim.enPassant,
+    wasFirstMove: (before.find((p) => p.id === moveSim.moverId)?.moveCount || 0) === 0,
+    measuredSquares,
+  });
   if (givesCheck && evaluateTerminalAfterMove(after, 'white', moveSim.nextCC, lastMove) === 'checkmate') {
     themes.push('mate'); // Collapse Mate
   }

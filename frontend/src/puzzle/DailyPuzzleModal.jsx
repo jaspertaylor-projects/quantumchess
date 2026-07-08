@@ -3,17 +3,18 @@
 // on a mini board with three attempts. Multi-move puzzles walk a chain of
 // sub-goals with scripted Black replies between steps. Solving (or failing)
 // records the day, feeds the streak, and offers a Wordle-style share card.
-// Imports From: ../theme.js, ../tutorial/MiniBoard.jsx, ./puzzleGenerator.js,
-//   ./puzzleProgress.js, ../chessboard/quantumEngine.js
+// Imports From: ../theme.js, ../components/ModalShell.jsx, ../tutorial/MiniBoard.jsx,
+//   ./usePuzzleBoard.js, ./puzzleGenerator.js, ./puzzleProgress.js
 // Exported To: ../App.jsx
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { X as XIcon, Share2 as ShareIcon, Puzzle as PuzzleIcon } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
-import { canPieceRecohere, listCheckThreats } from '../chessboard/quantumEngine.js';
-import { enumerateWhiteMoves, checkPuzzleMove } from './puzzleGenerator.js';
+import usePuzzleBoard from './usePuzzleBoard.js';
+import { checkPuzzleMove } from './puzzleGenerator.js';
 import {
   MAX_ATTEMPTS, todayStr, msUntilTomorrow, loadOrGeneratePuzzle,
   getDayResult, recordDayResult, getStreak, buildShareText,
@@ -37,17 +38,28 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
   const [phase, setPhase] = useState('loading'); // loading | playing | done
   const [plyIdx, setPlyIdx] = useState(0);
   const [attempts, setAttempts] = useState(0);
-  const [display, setDisplay] = useState(null); // pieces currently shown
-  const [marks, setMarks] = useState([]);
-  const [selectedSq, setSelectedSq] = useState(null);
   const [banner, setBanner] = useState(null); // { kind: 'bad'|'good'|'info', text }
   const [result, setResult] = useState(null); // { solved, tries }
   const [revealArrow, setRevealArrow] = useState(null);
   const [copied, setCopied] = useState(false);
-  const timersRef = useRef([]);
   const countdown = useCountdown();
 
-  const later = (fn, ms) => { timersRef.current.push(setTimeout(fn, ms)); };
+  const ply = puzzle && puzzle.plies[plyIdx];
+
+  // Shared board wiring: display/marks/selection state, memos, handlers, the
+  // MiniBoard piece list, and timers. attemptMove is defined below — it only
+  // runs from user events, well after render.
+  const {
+    display, setDisplay, setMarks, setSelectedSq,
+    threats, selected, targets, boardPieces,
+    handleSquareClick, canDragFrom, handleDragStart, handleDrop,
+    later, clearTimers,
+  } = usePuzzleBoard({
+    ply,
+    playing: phase === 'playing',
+    onMove: (from, to) => attemptMove(from, to),
+    onSelect: () => setBanner(null),
+  });
 
   // Load / generate on open.
   useEffect(() => {
@@ -81,13 +93,10 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
     }, 30);
     return () => {
       clearTimeout(t);
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
+      clearTimers();
     };
   }, [open]);
 
-  const ply = puzzle && puzzle.plies[plyIdx];
-  const live = useMemo(() => (display || []).filter((p) => !p.captured && p.square), [display]);
   // Captured pieces are part of the game state — the census that powers the
   // collapse/seal goals counts them, so the player must be able to read them.
   const capturedGlyphs = useMemo(() => {
@@ -103,46 +112,12 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
       black: bySide.black.map((t) => glyph[t]).join(''),
     };
   }, [display]);
-  // Threat arrows/rings are shown only on move RESULTS — drawing them on the
-  // rest position would literally point at the solution.
-  const atRest = Boolean(ply && display === ply.pieces && phase === 'playing');
-  const threats = useMemo(
-    () => (display && !atRest ? listCheckThreats(display) : []),
-    [display, atRest]
-  );
-
-  const selected = selectedSq ? live.find((p) => p.side === 'white' && p.square === selectedSq) : null;
-  const targets = useMemo(() => {
-    if (!selected || phase !== 'playing' || !ply) return [];
-    const moves = enumerateWhiteMoves(ply.pieces, ply.lastMove || null);
-    return Array.from(new Set(moves.filter((m) => m.from === selected.square).map((m) => m.to)));
-  }, [selected, phase, ply]);
 
   const finish = (solved, tries) => {
     const r = { solved, tries };
     if (!previewDate) recordDayResult(puzzle.date, r);
     setResult(r);
     setPhase('done');
-  };
-
-  const handleSquareClick = (alg) => {
-    if (phase !== 'playing' || !ply) return;
-    const pc = live.find((p) => p.square === alg);
-    if (pc && pc.side === 'white') { setSelectedSq(alg); setBanner(null); return; }
-    if (!selected) return;
-    attemptMove(selected.square, alg);
-  };
-
-  // Drag-to-move: picking a piece up selects it (showing its targets), and
-  // releasing over another square plays the same move a click pair would.
-  const canDragFrom = (alg) => phase === 'playing'
-    && live.some((p) => p.square === alg && p.side === 'white');
-  const handleDragStart = (alg) => { setSelectedSq(alg); setBanner(null); };
-  const handleDrop = (from, to) => {
-    if (phase !== 'playing' || !ply) return;
-    const pc = live.find((p) => p.square === to);
-    if (pc && pc.side === 'white') { setSelectedSq(to); return; }
-    attemptMove(from, to);
   };
 
   const attemptMove = (fromSq, toSq) => {
@@ -221,10 +196,6 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
   if (!open) return null;
 
   const styles = {
-    backdrop: {
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001,
-    },
     panel: {
       width: 'min(94vw, 560px)', maxHeight: '92vh', overflowY: 'auto',
       borderRadius: 12, border: `1px solid ${theme.border}`, backgroundColor: theme.cardBackground,
@@ -270,11 +241,15 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
   const streak = getStreak();
 
   return (
-    <div className="qc-puzzle-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div
-        className="qc-puzzle-panel" style={styles.panel} onClick={(e) => e.stopPropagation()}
-        role="dialog" aria-modal="true" aria-labelledby="qc-puzzle-title"
-      >
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={1001}
+      ariaLabelledBy="qc-puzzle-title"
+      backdropClassName="qc-puzzle-backdrop"
+      panelClassName="qc-puzzle-panel"
+      panelStyle={styles.panel}
+    >
         <div style={styles.header}>
           <div style={{ minWidth: 0 }}>
             <div style={styles.kicker}>
@@ -328,18 +303,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
               files={8}
               ranks={8}
               cell={Math.max(30, Math.min(52, Math.floor((Math.min(window.innerWidth * 0.94, 560) - 66) / 8)))}
-              pieces={live.map((p) => ({
-                sq: p.square,
-                side: p.side,
-                types: p.possibleTypes.join(''),
-                pips: p.coherence,
-                regain: Math.max(0, p.recohere || 0),
-                chain: Boolean(p.entangledWith),
-                chevrons: Boolean(p.wasPromoted),
-                sealed: p.possibleTypes.length <= 2 && !p.entangledWith && !canPieceRecohere(display, p.id),
-                mark: marks.includes(p.square),
-                ring: threats.some((t) => t.to === p.square),
-              }))}
+              pieces={boardPieces}
               arrows={[
                 ...threats.map((t) => ({ from: t.from, to: t.to, side: t.side })),
                 ...(revealArrow ? [{ from: revealArrow.from, to: revealArrow.to, side: 'white' }] : []),
@@ -387,8 +351,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
             ) : null}
           </>
         ) : null}
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

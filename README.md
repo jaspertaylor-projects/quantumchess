@@ -5,7 +5,8 @@ collapses as it moves. Measurement pulses, decoherence, entangled castling,
 quantum promotion, recoherence — deterministic throughout, no dice anywhere.
 
 - **Live:** https://quantumchess.ninja
-- **Play:** vs 12 AI bots, local 2-player hotseat, or online 1v1. Optional
+- **Play:** vs 24 AI bots (12 free, 12 premium-locked), local 2-player
+  hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
 
 ---
@@ -191,10 +192,11 @@ Legend: [ ] not started · [~] in progress · [X] done
       `AccountModal.jsx`. Sandbox product `prod_UpdjM1t4mob0k4`, price
       `price_1TpyS2Ia1OXAV1NJoP4YJ2n7` ($3/mo), webhook endpoint
       `we_1TpyeVIa1OXAV1NJ80EZVZOp`.
-  - [ ] **GATE before deploying the premium UI to production**: swap Stripe
-        to live mode (live product/price/webhook + `supabase secrets set`
-        with live keys) — the current sandbox checkout cannot take real
-        cards. Sandbox secrets: `~/.config/quantumchess-stripe-deploy.env`.
+  - [X] Live-mode swap **done 2026-07-06** via `tools/finish-stripe-live.sh`
+        (live product/prices/webhook + `supabase secrets set`; live checkout
+        session creation verified). Live ids:
+        `~/.config/quantumchess-stripe-live.env`; sandbox secrets remain in
+        `~/.config/quantumchess-stripe-deploy.env` for test-mode work.
   - [ ] **GATE (also before live)**: set up the contact@quantumchess.ninja
         inbox (Proton custom domain — see Auth email section). It is now the
         published support address on /terms.html, /privacy.html, /about.html
@@ -216,15 +218,11 @@ Legend: [ ] not started · [~] in progress · [X] done
         localStorage, `tipReviewAvailable`/`markTipReviewUsed` — same trust
         level as the premium review gate itself). Migration
         `20260709000000_qc_tip_adfree.sql`. Remaining wiring:
-    - [ ] Create the one-time price: `stripe prices create --currency usd
-          --unit-amount 500 -d product=prod_UpdjM1t4mob0k4` (no recurring
-          flags), add `STRIPE_TIP_PRICE_ID=<price_...>` to
-          `~/.config/quantumchess-stripe-deploy.env`, re-run
-          `tools/deploy-stripe-functions.sh`, apply the migration.
+    - [X] Tip prices created (sandbox + live, part of the 2026-07-06
+          live-mode swap; `STRIPE_TIP_PRICE_ID` set in both env files).
     - [ ] Test with the 4242 card: tip → `?premium=tip_thanks` → profile
           shows "ad-free until <date>"; ad gating off; tip again → date
           extends by another year.
-    - [ ] Include a live one-time price in the live-mode swap above.
   - [ ] Cleanup: two e2e test accounts exist (qc-e2e-test-1/2@example.com,
         E2ETester1/2) — delete via Dashboard or SQL when convenient.
 - [ ] **Premium tier — promised features** ($3/month). These have been promised
@@ -235,25 +233,26 @@ Legend: [ ] not started · [~] in progress · [X] done
   - [X] Game review with engine moves — **built + browser-tested 2026-07-05**
         (ships with next frontend deploy): `review/ReviewModal.jsx` (replay
         board, eval bar, mistake/blunder marks, engine best-move via worker),
-        `review/replayCore.js` (timeline rebuild + legacy-format translator;
-        round-trip tested over 25 engine games incl. castles + en passant in
-        both flagged and legacy modes). Move recording is now lossless
-        (castle/enPassant flags in `store/gameSlice.js`); games saved before
-        that replay best-effort and may truncate at an ambiguous move.
-  - [X] More bots — **built + browser-tested 2026-07-06**: 4 premium bots in
-        `ai/bots.js` (Ada Kramnik 1450, Richard Anand 1850, Lise Botvinnik
-        2000, Max Alekhine 2200 — the new final boss). Browsable by everyone
-        in the roster (🔒 label); Start becomes "Unlock Premium" → account
-        modal for free users. Gating is client-side (fine: content, not data).
-        Avatar PNGs optional at `public/bots/<id>.png`.
+        `review/replayCore.js` (timeline rebuild from the lossless move
+        records — castle/enPassant flags in `store/gameSlice.js`; the
+        13-game fixture suite replays it move-for-move). The pre-flag
+        legacy-record translator was removed in the 2026-07-07 cleanup
+        (no saved games predate lossless recording).
+  - [X] More bots — **built + browser-tested 2026-07-06**: 12 premium bots
+        in `ai/bots.js` (rated 1300–2250; Ernest Anand 2250 is the final
+        boss). Browsable by everyone in the roster (🔒 label); Start becomes
+        "Unlock Premium" → account modal for free users. Gating is
+        client-side (fine: content, not data). Avatar PNGs optional at
+        `public/bots/<id>.png`.
   - [X] Fully customizable profile pic + tagline — **built + browser-tested
         2026-07-06**: editor in `AccountModal.jsx` (paid only), canvas
         center-crop → 256px webp → `qc-avatars` bucket (`avatarUpload.js`);
         `tagline` column + paid-only enforcement trigger in migration
         `20260707000000_qc_profile_tagline.sql` (applied). Avatar + tagline
         show on the player bar (`App.jsx` selfAvatar).
-  - [~] No ads for premium (`maybeShowGameEndAd()` gated on `profile.tier`
-        in `App.jsx` — ships with next frontend deploy)
+  - [~] No ads for premium (`maybeShowGameEndAd()` gated on `isAdFree()` —
+        paid tier OR a tip's `ad_free_until` — in `App.jsx`; ships with next
+        frontend deploy)
   - [X] Event sayings — **reworked 2026-07-07 to the character system**:
         speech bubbles on the player bars for win/loss/draw/capture/
         full-army-collapse. NO free text anywhere — every saying and
@@ -262,13 +261,15 @@ Legend: [ ] not started · [~] in progress · [X] done
         `public/avatars/`: 16 starter, 32 premium; each has a tagline + one
         line per event). Players pick per-event from their unlocked
         roster (`sayings/SayingsEditor.jsx` in Settings; tagline picker in
-        the account panel). Picks are stored as character ids; legacy
-        `p#` preset ids still resolve; legacy custom text renders as the
-        default character (Pip) instead of user prose. All 24 bots have
-        their own tagline + full saying set (`ai/bots.js`). Server-side:
-        `20260710000000_qc_character_sayings.sql` (needs push) retires
-        custom text for all tiers and allowlists the starter roster for
-        free accounts.
+        the account panel). Picks are stored as character ids; any
+        unknown value renders as the default character (Pip) instead of
+        user prose. All 24 bots have their own tagline + full saying set
+        (`ai/bots.js`). Server-side:
+        `20260710000000_qc_character_sayings.sql` (applied) retires custom
+        text for all tiers and allowlists the starter roster for free
+        accounts; `20260711000000_qc_retire_legacy_presets.sql` drops the
+        old `p#` preset ids entirely (2026-07-07 cleanup — zero users, so
+        the frontend legacy-preset table went too).
       - Character tiers roadmap: 'starter' (everyone), 'quest' (planned:
         earned unlocks recorded in `profile.unlocked_characters` — the
         catalog + `unlockedCharacters()` already support it), 'premium'

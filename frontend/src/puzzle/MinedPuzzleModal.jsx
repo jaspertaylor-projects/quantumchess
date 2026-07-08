@@ -5,19 +5,22 @@
 // user piece colors, board colors, and capture trays — and an EvalGauge
 // below the board wobbles until the player commits a move, then lands on
 // that move's evaluation. Ticks mark the eval of every legal move.
-// Imports From: ../theme.js, ../tutorial/MiniBoard.jsx, ../components/PlayerBar.jsx,
-//   ./EvalGauge.jsx, ./puzzleGenerator.js, ../ai/alphaBetaEngine.js
+// Imports From: ../theme.js, ../components/ModalShell.jsx, ../tutorial/MiniBoard.jsx,
+//   ../components/PlayerBar.jsx, ./EvalGauge.jsx, ./usePuzzleBoard.js,
+//   ./puzzleGenerator.js, ../ai/alphaBetaEngine.js
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { X as XIcon, Pickaxe } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import EvalGauge from './EvalGauge.jsx';
-import { canPieceRecohere, listCheckThreats, generateLegalReplies, evaluateTerminalAfterMove } from '../chessboard/quantumEngine.js';
-import { enumerateWhiteMoves, checkPuzzleMove } from './puzzleGenerator.js';
+import usePuzzleBoard from './usePuzzleBoard.js';
+import { generateLegalReplies, evaluateTerminalAfterMove } from '../chessboard/quantumEngine.js';
+import { checkPuzzleMove } from './puzzleGenerator.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
@@ -89,14 +92,25 @@ export default function MinedPuzzleModal({
   const [phase, setPhase] = useState('playing'); // playing | landing | done
   const [deepEvals, setDeepEvals] = useState(null); // moveKey -> depth-3 score, from the worker
   const workerRef = useRef(null);
-  const [display, setDisplay] = useState(null);
-  const [marks, setMarks] = useState([]);
-  const [selectedSq, setSelectedSq] = useState(null);
   const [needleValue, setNeedleValue] = useState(null);
   const [outcome, setOutcome] = useState(null); // { solved }
   const [revealArrow, setRevealArrow] = useState(null);
-  const timersRef = useRef([]);
-  const later = (fn, ms) => { timersRef.current.push(setTimeout(fn, ms)); };
+
+  const ply = puzzle ? puzzle.plies[plyIdx] : null;
+
+  // Shared board wiring: display/marks/selection state, memos, handlers, the
+  // MiniBoard piece list, and timers. attemptMove is defined below — it only
+  // runs from user events, well after render.
+  const {
+    display, setDisplay, setMarks, selectedSq, setSelectedSq,
+    targets, moves, boardPieces,
+    handleSquareClick, canDragFrom, handleDragStart, handleDrop,
+    later, clearTimers,
+  } = usePuzzleBoard({
+    ply,
+    playing: phase === 'playing',
+    onMove: (from, to) => attemptMove(from, to),
+  });
 
   useEffect(() => {
     if (!open || !puzzle) return undefined;
@@ -108,18 +122,8 @@ export default function MinedPuzzleModal({
     setNeedleValue(null);
     setOutcome(null);
     setRevealArrow(null);
-    return () => {
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
-    };
+    return () => { clearTimers(); };
   }, [open, puzzle]);
-
-  const ply = puzzle ? puzzle.plies[plyIdx] : null;
-
-  const moves = useMemo(
-    () => (ply ? enumerateWhiteMoves(ply.pieces, ply.lastMove || null) : []),
-    [ply]
-  );
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
 
@@ -162,7 +166,7 @@ export default function MinedPuzzleModal({
       const upto = Math.min(i + CHUNK, moves.length);
       for (; i < upto; i++) evalRef.current[i] = replyAwareEval(moves[i]);
       setEvalByIdx({ ...evalRef.current });
-      if (i < moves.length) timersRef.current.push(setTimeout(step, 0));
+      if (i < moves.length) later(step, 0);
     };
     step();
     return () => { alive = false; };
@@ -181,40 +185,10 @@ export default function MinedPuzzleModal({
     return evalRef.current[idx];
   };
 
-  const live = useMemo(() => (display || []).filter((p) => !p.captured && p.square), [display]);
   const whiteLossPawns = useMemo(() => capturedOf(display, 'white', true), [display]);
   const whiteLossOthers = useMemo(() => capturedOf(display, 'white', false), [display]);
   const blackLossPawns = useMemo(() => capturedOf(display, 'black', true), [display]);
   const blackLossOthers = useMemo(() => capturedOf(display, 'black', false), [display]);
-
-  const atRest = Boolean(ply && display === ply.pieces && phase === 'playing');
-  const threats = useMemo(() => (display && !atRest ? listCheckThreats(display) : []), [display, atRest]);
-
-  const selected = selectedSq ? live.find((p) => p.side === 'white' && p.square === selectedSq) : null;
-  const targets = useMemo(() => {
-    if (!selected || phase !== 'playing') return [];
-    return Array.from(new Set(moves.filter((m) => m.from === selected.square).map((m) => m.to)));
-  }, [selected, phase, moves]);
-
-  const handleSquareClick = (alg) => {
-    if (phase !== 'playing' || !ply) return;
-    const pc = live.find((p) => p.square === alg);
-    if (pc && pc.side === 'white') { setSelectedSq(alg); return; }
-    if (!selected) return;
-    attemptMove(selected.square, alg);
-  };
-
-  // Drag-to-move: picking a piece up selects it (showing its targets), and
-  // releasing over another square plays the same move a click pair would.
-  const canDragFrom = (alg) => phase === 'playing'
-    && live.some((p) => p.square === alg && p.side === 'white');
-  const handleDragStart = (alg) => { setSelectedSq(alg); };
-  const handleDrop = (from, to) => {
-    if (phase !== 'playing' || !ply) return;
-    const pc = live.find((p) => p.square === to);
-    if (pc && pc.side === 'white') { setSelectedSq(to); return; }
-    attemptMove(from, to);
-  };
 
   const attemptMove = (fromSq, toSq) => {
     const { correct, move } = checkPuzzleMove(puzzle, plyIdx, fromSq, toSq);
@@ -261,10 +235,6 @@ export default function MinedPuzzleModal({
     Math.floor((window.innerHeight * 0.94 - 475) / 8)
   ));
   const styles = {
-    backdrop: {
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001,
-    },
     card: {
       background: theme.cardBackground, border: `1px solid ${theme.border}`,
       borderRadius: 14, boxShadow: `0 18px 50px ${theme.shadow}`,
@@ -287,8 +257,15 @@ export default function MinedPuzzleModal({
   };
 
   return (
-    <div className="qc-mined-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div className="qc-mined-card" style={styles.card} onClick={(e) => e.stopPropagation()}>
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={1001}
+      ariaLabel="Mined puzzle"
+      backdropClassName="qc-mined-backdrop"
+      panelClassName="qc-mined-card"
+      panelStyle={styles.card}
+    >
         <div style={styles.headRow}>
           <div style={styles.kicker}>
             <Pickaxe size={13} /> Mined puzzle · {puzzle.recipe.moves} move{puzzle.recipe.moves > 1 ? 's' : ''} · one chance
@@ -317,18 +294,7 @@ export default function MinedPuzzleModal({
             ranks={8}
             cell={cell}
             squareColors={boardColors}
-            pieces={live.map((p) => ({
-              sq: p.square,
-              side: p.side,
-              types: p.possibleTypes.join(''),
-              pips: p.coherence,
-              regain: Math.max(0, p.recohere || 0),
-              chain: Boolean(p.entangledWith),
-              chevrons: Boolean(p.wasPromoted),
-              sealed: p.possibleTypes.length <= 2 && !p.entangledWith && !canPieceRecohere(display, p.id),
-              mark: marks.includes(p.square),
-              ring: threats.some((t) => t.to === p.square),
-            }))}
+            pieces={boardPieces}
             arrows={revealArrow ? [{ ...revealArrow, side: 'white' }] : []}
             highlights={selectedSq ? [selectedSq] : []}
             targets={targets}
@@ -367,7 +333,6 @@ export default function MinedPuzzleModal({
             </div>
           </>
         ) : null}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

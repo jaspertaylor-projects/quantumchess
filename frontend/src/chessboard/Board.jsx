@@ -33,7 +33,7 @@ export default function Board({
   measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
   indicators = DEFAULT_INDICATORS, // visibility toggles for the visual reminders
   legalMoves = [], // legal moves for the currently-selected piece id
-  squareColors = { light: '#f0d9b5', dark: '#b58863' },
+  squareColors = { light: theme.boardLight, dark: theme.boardDark },
   borderColor = theme.border,
   borderRadius = 12,
   shadow = theme.shadow,

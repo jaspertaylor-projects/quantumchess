@@ -54,10 +54,6 @@ export function rankLabelForRow(rowIndex, orientation) {
   return RANKS[7 - rowIndex];
 }
 
-export function toBoardIndex(fileIndex, rankIndex) {
-  return rankIndex * 8 + fileIndex;
-}
-
 export function fromBoardIndex(index) {
   const fileIndex = index % 8;
   const rankIndex = Math.floor(index / 8);

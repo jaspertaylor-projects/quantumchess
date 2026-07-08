@@ -1,25 +1,17 @@
 // frontend/src/components/EnPassantChoiceModal.jsx
 // Purpose: Modal overlay asking the player to disambiguate a move onto an en passant square:
 // capture en passant (collapsing the mover to a Pawn) or make the quiet non-capturing move.
-// Imports From: ../theme.js
+// Imports From: ../theme.js, ./ModalShell.jsx
 // Exported To: ../App.jsx
 
 import React from 'react';
 import theme from '../theme.js';
+import ModalShell from './ModalShell.jsx';
 
 export default function EnPassantChoiceModal({ open = false, onEnPassant = () => {}, onQuiet = () => {}, onCancel = () => {} }) {
   if (!open) return null;
 
   const styles = {
-    overlay: {
-      position: 'fixed',
-      inset: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      zIndex: 9999,
-    },
     modal: {
       backgroundColor: '#111',
       color: '#fff',
@@ -73,22 +65,28 @@ export default function EnPassantChoiceModal({ open = false, onEnPassant = () =>
   };
 
   return (
-    <div className="qc-ep-overlay" style={styles.overlay} role="dialog" aria-modal="true" onClick={onCancel}>
-      <div className="qc-ep-modal" style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h2 className="qc-ep-title" style={styles.title}>Phantom Capture?</h2>
-        <p className="qc-ep-sub" style={styles.sub}>
-          This square can be reached two ways. Capture en passant (your piece is measured as a Pawn and the
-          passing piece is removed as a Pawn), or make the quiet move with your superposition intact.
-        </p>
-        <div className="qc-ep-button-row" style={styles.buttonRow}>
-          <button className="qc-ep-capture" style={styles.epBtn} onClick={onEnPassant} autoFocus>
-            Capture En Passant
-          </button>
-          <button className="qc-ep-quiet" style={styles.quietBtn} onClick={onQuiet}>
-            Quiet Move
-          </button>
-        </div>
+    <ModalShell
+      onClose={onCancel}
+      closeOnBackdrop
+      zIndex={9999}
+      ariaLabelledBy="qc-ep-title"
+      backdropClassName="qc-ep-overlay"
+      panelClassName="qc-ep-modal"
+      panelStyle={styles.modal}
+    >
+      <h2 id="qc-ep-title" className="qc-ep-title" style={styles.title}>Phantom Capture?</h2>
+      <p className="qc-ep-sub" style={styles.sub}>
+        This square can be reached two ways. Capture en passant (your piece is measured as a Pawn and the
+        passing piece is removed as a Pawn), or make the quiet move with your superposition intact.
+      </p>
+      <div className="qc-ep-button-row" style={styles.buttonRow}>
+        <button className="qc-ep-capture" style={styles.epBtn} onClick={onEnPassant} autoFocus>
+          Capture En Passant
+        </button>
+        <button className="qc-ep-quiet" style={styles.quietBtn} onClick={onQuiet}>
+          Quiet Move
+        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

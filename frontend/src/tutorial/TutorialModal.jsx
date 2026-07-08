@@ -2,12 +2,14 @@
 // Purpose: Step-by-step illustrated tutorial. Opens automatically on first
 // visit, or on a specific lesson from the rulebook's contents page. Each
 // lesson links back to its rulebook section.
-// Imports From: ../theme.js, ../components/IconButton.jsx, ./lessons.js, ./MiniBoard.jsx
+// Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx,
+//   ./lessons.js, ./MiniBoard.jsx
 // Exported To: ../App.jsx
 
 import React, { useEffect, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, GraduationCap as GraduationCapIcon, BookOpen as BookOpenIcon, Atom as AtomIcon } from 'lucide-react';
 import { LESSONS } from './lessons.js';
 import MiniBoard from './MiniBoard.jsx';
@@ -52,15 +54,6 @@ export default function TutorialModal({ open = false, onClose = () => {}, initia
   };
 
   const styles = {
-    backdrop: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.6)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1001,
-    },
     panel: {
       width: 'min(94vw, 640px)',
       maxHeight: '90vh',
@@ -178,15 +171,15 @@ export default function TutorialModal({ open = false, onClose = () => {}, initia
   };
 
   return (
-    <div className="qc-tutorial-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div
-        className="qc-tutorial-panel"
-        style={styles.panel}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-tutorial-title"
-      >
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={1001}
+      ariaLabelledBy="qc-tutorial-title"
+      backdropClassName="qc-tutorial-backdrop"
+      panelClassName="qc-tutorial-panel"
+      panelStyle={styles.panel}
+    >
         <div className="qc-tutorial-header" style={styles.header}>
           <div style={styles.headerLeft}>
             <GraduationCapIcon size={20} color={theme.primary} />
@@ -277,7 +270,6 @@ export default function TutorialModal({ open = false, onClose = () => {}, initia
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

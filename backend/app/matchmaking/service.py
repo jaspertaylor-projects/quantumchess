@@ -88,6 +88,16 @@ def _touch_client(client_id: str) -> None:
     _MM_CLIENT_LAST_SEEN[client_id] = _now()
 
 
+def _make_room(room_id: str, players: List[str], sides: Dict[str, str]) -> Dict[str, Any]:
+    return {
+        "id": room_id,
+        "players": players,
+        "sides": sides,
+        "created_at": time.time(),
+        "last_heartbeat": {pid: _now() for pid in players},
+    }
+
+
 def _room_view_for(client_id: str, room: Dict[str, Any]) -> MatchResponse:
     rid = room.get("id")
     players: List[str] = room.get("players", [])
@@ -145,13 +155,7 @@ def join(client_id_raw: str) -> MatchResponse:
     room_id = uuid.uuid4().hex
     players = [partner, client_id]
     sides = {partner: "white", client_id: "black"}  # deterministic assignment
-    room = {
-        "id": room_id,
-        "players": players,
-        "sides": sides,
-        "created_at": time.time(),
-        "last_heartbeat": {partner: _now(), client_id: _now()},
-    }
+    room = _make_room(room_id, players, sides)
     _MM_ROOMS[room_id] = room
     for pid in players:
         _MM_CLIENT_ROOM[pid] = room_id
@@ -192,14 +196,8 @@ def create_private(client_id_raw: str) -> MatchResponse:
 
     room_id = uuid.uuid4().hex
     code = _new_invite_code()
-    room = {
-        "id": room_id,
-        "players": [client_id],
-        "sides": {client_id: "white"},
-        "created_at": time.time(),
-        "last_heartbeat": {client_id: _now()},
-        "code": code,
-    }
+    room = _make_room(room_id, [client_id], {client_id: "white"})
+    room["code"] = code
     _MM_ROOMS[room_id] = room
     _MM_CLIENT_ROOM[client_id] = room_id
     _MM_INVITES[code] = room_id

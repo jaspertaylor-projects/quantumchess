@@ -2,13 +2,14 @@
 // Purpose: Premium game review — replay a saved game move by move with an
 // engine eval bar, move-quality marks, and a best-move suggestion computed
 // in a web worker for the position being viewed.
-// Imports From: ../theme.js, ../components/IconButton.jsx, ../chessboard/Board.jsx,
-//   ../ai/alphaBetaEngine.js, ./replayCore.js
+// Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx,
+//   ../chessboard/Board.jsx, ../ai/alphaBetaEngine.js, ./replayCore.js
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import {
   X as XIcon, ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope,
 } from 'lucide-react';
@@ -115,10 +116,6 @@ export default function ReviewModal({
   if (!open) return null;
 
   const styles = {
-    backdrop: {
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1002,
-    },
     panel: {
       width: 'min(96vw, 900px)', maxHeight: '92vh', overflowY: 'auto',
       borderRadius: 12, border: `1px solid ${theme.border}`, backgroundColor: theme.cardBackground,
@@ -198,11 +195,16 @@ export default function ReviewModal({
     : '';
 
   return (
-    <div className="qc-review-backdrop" style={styles.backdrop} onClick={onClose}>
-      <div
-        className="qc-review-panel" style={styles.panel} onClick={(e) => e.stopPropagation()}
-        role="dialog" aria-modal="true" aria-labelledby="qc-review-title"
-      >
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      escapeToClose={false} // the keyboard-navigation effect above already handles Escape
+      zIndex={1002}
+      ariaLabelledBy="qc-review-title"
+      backdropClassName="qc-review-backdrop"
+      panelClassName="qc-review-panel"
+      panelStyle={styles.panel}
+    >
         <div style={styles.header}>
           <h2 id="qc-review-title" style={styles.title}>
             <Microscope size={18} color={theme.primary} /> Game Review
@@ -313,7 +315,6 @@ export default function ReviewModal({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

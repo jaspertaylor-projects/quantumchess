@@ -624,7 +624,7 @@ export default function App() {
     const fromSquare = movingPiece.square || null;
     const result = movePiece(pieceId, toSquare, { enPassant });
     if (result.success && fromSquare) {
-      dispatch(addMove({ from: fromSquare, to: toSquare, side: movingPiece.side, enPassant }));
+      for (const r of result.records) dispatch(addMove(r));
       if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
         sendMoveWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, from: fromSquare, to: toSquare, side: movingPiece.side, enPassant });
       }
@@ -702,8 +702,7 @@ export default function App() {
             if (canCastle) {
               const result = castlePieces(selectedId, piece.id);
               if (result.success) {
-                dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: piece.side, castle: true }));
-                dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: piece.side, castle: true }));
+                for (const r of result.records) dispatch(addMove(r));
                 if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
                   sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: piece.side, plan });
                 }
@@ -774,8 +773,7 @@ export default function App() {
           if (canCastle) {
             const result = castlePieces(selectedId, id);
             if (result.success) {
-              dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: clicked.side, castle: true }));
-              dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: clicked.side, castle: true }));
+              for (const r of result.records) dispatch(addMove(r));
               if (isOnline() && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
                 sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: clicked.side, plan });
               }
@@ -1155,7 +1153,7 @@ export default function App() {
           result = movePiece(piece.id, to, { enPassant: usedEnPassant });
         }
         if (result && result.success) {
-          dispatch(addMove({ from, to, side: sideMsg === 'white' || sideMsg === 'black' ? sideMsg : piece.side, enPassant: usedEnPassant }));
+          for (const r of result.records) dispatch(addMove(r));
           setInfoMessage('Opponent moved.');
           setGameStarted(true);
           devDebug('[WS][client] applied opponent move', { from, to, side: sideMsg });
@@ -1187,8 +1185,7 @@ export default function App() {
         }
         const result = castlePieces(p1.id, p2.id);
         if (result && result.success) {
-          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: sideMsg, castle: true }));
-          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: sideMsg, castle: true }));
+          for (const r of result.records) dispatch(addMove(r));
           setInfoMessage('Opponent castled.');
           setGameStarted(true);
           devDebug('[WS][client] applied opponent castle', { plan, side: sideMsg });
@@ -1547,8 +1544,7 @@ export default function App() {
       if (canCastle) {
         const result = castlePieces(id, targetAtDest.id);
         if (result.success) {
-          dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side: movingPiece.side, castle: true }));
-          dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side: movingPiece.side, castle: true }));
+          for (const r of result.records) dispatch(addMove(r));
           if (isOnlineGameRef.current && wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current) {
             sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side: movingPiece.side, plan });
           }
@@ -1682,7 +1678,7 @@ export default function App() {
       if (!piece) return;
       const res = movePiece(piece.id, mv.to, { enPassant: mv.type === 'enpassant' });
       if (res && res.success) {
-        dispatch(addMove({ from: mv.from, to: mv.to, side, enPassant: mv.type === 'enpassant' }));
+        for (const r of res.records) dispatch(addMove(r));
         setInfoMessage('AI moved.');
         setGameStarted(true);
       }
@@ -1697,8 +1693,7 @@ export default function App() {
       if (!canCastle) return;
       const res = castlePieces(p1.id, p2.id);
       if (res && res.success) {
-        dispatch(addMove({ from: plan.piece1_from, to: plan.piece1_to, side, castle: true }));
-        dispatch(addMove({ from: plan.piece2_from, to: plan.piece2_to, side, castle: true }));
+        for (const r of res.records) dispatch(addMove(r));
         setInfoMessage('AI castled.');
         setGameStarted(true);
       }

@@ -1,12 +1,13 @@
 // frontend/src/settings/SettingsModal.jsx
 // Purpose: Modal dialog for configuring per-side SVG color variables, board square colors, player bar colors, and toggling coordinate labels; includes icon-only actions for restore defaults and close.
-// Imports From: ../theme.js, ../components/IconButton.jsx
+// Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx
 // Exported To: ../App.jsx
 
 import React, { useState, useEffect } from 'react';
 import theme from '../theme.js';
 import { X, RotateCcw, ChevronDown } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
+import ModalShell from '../components/ModalShell.jsx';
 import { DEFAULT_INDICATORS, INDICATOR_LABELS, INDICATOR_PRESETS, PRESET_LABELS, matchIndicatorPreset } from './useIndicatorSettings.js';
 import SayingsEditor from '../sayings/SayingsEditor.jsx';
 
@@ -97,15 +98,6 @@ export default function SettingsModal({
   };
 
   const styles = {
-    backdrop: {
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 999,
-    },
     panel: {
       width: 'min(92vw, 560px)',
       maxWidth: '560px',
@@ -279,7 +271,15 @@ export default function SettingsModal({
   };
 
   return (
-    <div className="qc-settings-backdrop" style={styles.backdrop} onClick={onClose}>
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      zIndex={999}
+      ariaLabelledBy="qc-settings-title"
+      backdropClassName="qc-settings-backdrop"
+      panelClassName="qc-settings-panel"
+      panelStyle={styles.panel}
+    >
       <style>
         {`
           @keyframes spin {
@@ -288,15 +288,7 @@ export default function SettingsModal({
           }
         `}
       </style>
-      <div
-        className="qc-settings-panel"
-        style={styles.panel}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="qc-settings-title"
-      >
-        <div className="qc-settings-header" style={styles.header}>
+      <div className="qc-settings-header" style={styles.header}>
           <h2 id="qc-settings-title" className="qc-settings-title" style={styles.title}>Settings</h2>
           <IconButton
             icon={X}
@@ -590,7 +582,6 @@ export default function SettingsModal({
             )}
           </button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

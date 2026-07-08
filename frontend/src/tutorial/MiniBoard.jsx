@@ -4,16 +4,18 @@
 // tutorial teaches exactly what the board shows. Adds arrows, check rings,
 // pulse marks, and square highlights on top. Optionally interactive: click
 // squares, and (when canDrag/onDrop are provided) drag pieces to move them.
-// Imports From: ../chessboard/QuantumPiece.jsx, ../settings/usePieceColors.js
+// Imports From: ../chessboard/QuantumPiece.jsx, ../settings/usePieceColors.js,
+//   ../theme.js
 // Exported To: ./TutorialModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
 //   ../puzzle/MinedPuzzleModal.jsx
 
 import React, { useEffect, useRef, useState } from 'react';
 import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
+import theme from '../theme.js';
 
-const LIGHT = '#f0d9b5';
-const DARK = '#b58863';
+const LIGHT = theme.boardLight;
+const DARK = theme.boardDark;
 
 const DEFAULT_SVG_STYLES = {
   white: { '--band-fill': DEFAULT_WHITE.bandFill, '--band-stroke': DEFAULT_WHITE.bandStroke, '--icon-color': DEFAULT_WHITE.icon },
