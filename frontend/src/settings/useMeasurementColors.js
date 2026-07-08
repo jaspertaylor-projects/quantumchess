@@ -8,9 +8,13 @@ import { useCallback, useState } from 'react';
 
 const STORAGE_KEY = 'qcMeasurementColors';
 
+// Each side's indicator ink, matched to its piece art: white pieces draw
+// with near-black icons (#111827) so white's ink is dark; black is the
+// navy/blue team so its ink is the light blue. (These shipped swapped
+// once — see the migration in readStorage.)
 export const DEFAULT_MEASUREMENT_COLORS = {
-  white: '#4fc3f7',
-  black: '#000000',
+  white: '#111827',
+  black: '#4fc3f7',
 };
 
 export function hexToRgbString(hex) {
@@ -26,6 +30,10 @@ function readStorage(fallback) {
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return fallback;
+    // Migration: earlier builds shipped the defaults visually swapped (white
+    // got the black team's blue and vice versa). A stored pair equal to the
+    // old defaults was never customized — treat it as unset.
+    if (parsed.white === '#4fc3f7' && parsed.black === '#000000') return fallback;
     return {
       white: typeof parsed.white === 'string' ? parsed.white : fallback.white,
       black: typeof parsed.black === 'string' ? parsed.black : fallback.black,

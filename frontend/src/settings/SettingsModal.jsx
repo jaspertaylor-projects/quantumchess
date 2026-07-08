@@ -445,7 +445,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--measure-white"
                 style={styles.colorInput}
-                value={(localMeasurement && localMeasurement.white) || '#4fc3f7'}
+                value={(localMeasurement && localMeasurement.white) || '#111827'}
                 onChange={handleMeasurement('white')}
                 aria-label="White targeting color"
               />
@@ -458,7 +458,7 @@ export default function SettingsModal({
                 type="color"
                 className="qc-color-input qc-color-input--measure-black"
                 style={styles.colorInput}
-                value={(localMeasurement && localMeasurement.black) || '#000000'}
+                value={(localMeasurement && localMeasurement.black) || '#4fc3f7'}
                 onChange={handleMeasurement('black')}
                 aria-label="Black targeting color"
               />
