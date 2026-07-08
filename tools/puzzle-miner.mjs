@@ -59,23 +59,27 @@ const CFG = {
   maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 160)),
   playMs: Number(argVal('playMs', QUICK ? 250 : 600)), // per-move time for game simulation
   minPly: Number(argVal('minPly', 6)), // skip the noisy opening plies
-  mineDepth: Number(argVal('mineDepth', 3)),
-  prefilterMs: Number(argVal('prefilterMs', 5000)), // depth-(mineDepth-1) funnel budget
-  mineMs: Number(argVal('mineMs', QUICK ? 10000 : 20000)), // deep budget, only for funnel survivors
+  mineDepth: Number(argVal('mineDepth', 4)),
+  prefilterMs: Number(argVal('prefilterMs', 5000)), // depth-2 funnel budget
+  mineMs: Number(argVal('mineMs', QUICK ? 10000 : 45000)), // deep budget, only for funnel survivors
   confirmMs: Number(argVal('confirmMs', QUICK ? 30000 : 120000)), // depth-stability confirm; runs on ~7 candidates per 60 games, so generous
-  verifyDepth: Number(argVal('verifyDepth', 5)),
+  verifyDepth: Number(argVal('verifyDepth', 6)), // gate must sit above confirm (mineDepth+1); falls back one level on timeout
   verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 120000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max only-move plies to re-verify
-  minChoices: Number(argVal('minChoices', 6)), // fewer legal moves = not a real search
+  minChoices: Number(argVal('minChoices', 10)), // fewer legal moves = not a real search
   maxChain: Number(argVal('maxChain', 6)), // rollout-extension cap per chain
-  holdEval: Number(argVal('holdEval', -0.5)), // best move must score at least this
-  failEval: Number(argVal('failEval', -1.0)), // every alternative must score at most this (the gap does the anti-noise work)
-  minGap: Number(argVal('minGap', 2.0)), // and trail the best by at least this
+  extendGap: Number(argVal('extendGap', 1.5)), // relaxed gap for chain steps 2+ (needle scoring absorbs soft steps)
+  // Landing-spot scoring: a ✓ requires keeping a White ADVANTAGE, so the
+  // best move must hold >= 0. No failEval: alternatives may still be
+  // winning (mate-in-3 style) — they just land the needle lower. The gap is
+  // the whole definition of "only".
+  holdEval: Number(argVal('holdEval', 0.0)),
+  minGap: Number(argVal('minGap', 2.0)),
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), 'mined')),
 };
 
 const PREFILTER_WIDTHS = [64, 10, 8]; // narrow: 24% of positions timed out at [64,14,10]
-const MINE_WIDTHS = [64, 14, 10, 8, 6];
+const MINE_WIDTHS = [64, 16, 12, 9, 7]; // certification beams — a beam too narrow can miss a refutation
 const CONFIRM_WIDTHS = [48, 10, 8, 6, 6]; // depth+1 stability check: narrower or it times out
 const VERIFY_WIDTHS = [64, 16, 12, 10, 8, 6];
 
@@ -352,16 +356,42 @@ function tagThemes(position, moveSim) {
   return themes;
 }
 
-// How hard is the solution to FIND? Chain length, real search space, how
-// deep the move is buried in the static ordering (a move that looks bad
-// shallow but is forced deep = classic puzzle trickiness), quiet-move and
-// theme bonuses.
+// How hard is the solution to FIND? The BASELINE is how quantum the position
+// is — the density of superposed pieces plus how much de/recoherence is in
+// flight (pieces mid-transition are exactly where the eye slides off). On
+// top of that: chain length, real search space, how deep the move is buried
+// in the static ordering, a bonus when the SOLUTION'S MOVER is itself
+// decohering/recohering (hard to spot, per playtesting), and quiet/theme
+// bonuses.
+function pieceInFlux(p) {
+  const n = (p.possibleTypes || []).length;
+  return (p.recohere || 0) > 0 || (n > 1 && (p.coherence ?? 3) < 3);
+}
+
+function quantumBaseline(pieces) {
+  let alive = 0;
+  let superposed = 0;
+  let flux = 0;
+  for (const p of pieces) {
+    if (p.captured || !p.square) continue;
+    alive++;
+    if ((p.possibleTypes || []).length > 1) superposed++;
+    if (pieceInFlux(p)) flux++;
+  }
+  const density = alive ? superposed / alive : 0;
+  return density * 2 + Math.min(flux, 6) * 0.4; // 0 .. ~4.4
+}
+
 function trickinessOf(step, chainLen) {
+  const pieces = step.position.pieces;
+  const base = quantumBaseline(pieces);
+  const mover = pieces.find((p) => !p.captured && p.square === step.bestMove.from);
+  const moverFlux = mover && pieceInFlux(mover) ? 1.5 : 0;
   const hidden = Math.min(step.shallowRank, 8) * 1.2;
   const space = Math.min(step.numChoices, 24) / 8;
   const themeBonus = step.themes.filter((t) => t !== 'check' && t !== 'quiet').length;
   const quietBonus = step.themes.includes('quiet') ? 1.5 : 0;
-  return Number((chainLen * 3 + hidden + space + themeBonus + quietBonus).toFixed(2));
+  return Number((base + moverFlux + chainLen * 3 + hidden + space + themeBonus + quietBonus).toFixed(2));
 }
 
 // ----------------------------------------------------------------- mining
@@ -404,47 +434,47 @@ function analyzePosition(position, depth, widths, timeMs) {
   });
 }
 
-function classifyOnlyMove(analysis) {
+function classifyOnlyMove(analysis, gapMin) {
   const { moves } = analysis;
   if (moves.length < CFG.minChoices) return null;
   const best = moves[0];
   const second = moves[1];
   if (!second) return null; // a forced single move is not a findable puzzle
   if (best.score < CFG.holdEval) return null;
-  if (second.score > CFG.failEval) return null;
-  if (best.score - second.score < CFG.minGap) return null;
+  if (best.score - second.score < gapMin) return null;
   return { best, second, gap: Number((best.score - second.score).toFixed(2)), numChoices: moves.length };
 }
 
 // A cheap shallow pass rejects the ~98% of positions that are obviously not
 // only-moves (relaxed bar so a real only-move never dies in the funnel);
 // only survivors pay for the deep analysis.
-function prefilterOnlyMove(analysis) {
+function prefilterOnlyMove(analysis, gapMin) {
   const { moves } = analysis;
   if (moves.length < CFG.minChoices) return false;
   const best = moves[0];
   const second = moves[1];
   if (!second) return false;
   if (best.score < CFG.holdEval - 0.5) return false;
-  if (second.score > CFG.failEval + 0.75) return false;
-  if (best.score - second.score < CFG.minGap * 0.5) return false;
+  if (best.score - second.score < gapMin * 0.5) return false;
   return true;
 }
 
 // Full only-move detection for one white-to-move position (a game position
 // or an engine-rollout position): funnel prefilter → deep analysis →
 // classification → theme tags. Returns a step or null.
-function detectOnlyMoveStep(rec, stats) {
+function detectOnlyMoveStep(rec, stats, gapMin = CFG.minGap) {
   stats.scanned++;
   const t0 = performance.now();
-  const shallow = analyzePosition(rec, Math.max(2, CFG.mineDepth - 1), PREFILTER_WIDTHS, CFG.prefilterMs);
+  // The funnel is pinned to depth 2 regardless of mineDepth — its only job
+  // is cheap rejection; deepening it would starve the pipeline via timeouts.
+  const shallow = analyzePosition(rec, 2, PREFILTER_WIDTHS, CFG.prefilterMs);
   if (!shallow) { stats.prefilterTimeouts++; stats.mineMsTotal += performance.now() - t0; return null; }
-  if (!prefilterOnlyMove(shallow)) { stats.mineMsTotal += performance.now() - t0; return null; }
+  if (!prefilterOnlyMove(shallow, gapMin)) { stats.mineMsTotal += performance.now() - t0; return null; }
   stats.funnelSurvivors++;
   const analysis = analyzePosition(rec, CFG.mineDepth, MINE_WIDTHS, CFG.mineMs);
   stats.mineMsTotal += performance.now() - t0;
   if (!analysis) { stats.timeouts++; return null; }
-  const only = classifyOnlyMove(analysis);
+  const only = classifyOnlyMove(analysis, gapMin);
   if (!only) return null;
 
   // Depth-stability confirmation: the seed-3 run's one gate failure was a
@@ -466,7 +496,7 @@ function detectOnlyMoveStep(rec, stats) {
     const confirmed = cSecond
       && moveKey(cBest.move) === moveKey(only.best.move)
       && cBest.score >= CFG.holdEval
-      && cBest.score - cSecond.score >= CFG.minGap * 0.75;
+      && cBest.score - cSecond.score >= gapMin * 0.75;
     if (!confirmed) { stats.confirmRejects++; return null; }
   }
   stats.onlyMoves++;
@@ -486,6 +516,9 @@ function detectOnlyMoveStep(rec, stats) {
     ply: rec.ply,
     rollout: Boolean(rec.rollout),
     confirm: confirmStatus,
+    // Quantum activity of the solution move itself: possibilities destroyed
+    // (collapse/decoherence). Chains with zero activity anywhere are culled.
+    possDelta: countPossibilities(rec.pieces) - countPossibilities(moveSim.after),
     bestMove: { type: only.best.move.type, from: moveSim.from, to: moveSim.to, enPassant: moveSim.enPassant },
     bestScore: Number(only.best.score.toFixed(2)),
     secondScore: Number(only.second.score.toFixed(2)),
@@ -509,6 +542,7 @@ function extendChain(firstStep, stats, covered) {
   const steps = [firstStep];
   const blackReplies = [];
   let endsInMate = false;
+  let replyActivity = false; // did any Black reply collapse/decohere something
   let state = {
     pieces: firstStep.position.pieces,
     sideToMove: 'white',
@@ -535,6 +569,7 @@ function extendChain(firstStep, stats, covered) {
     const replyMove = blackAnalysis.moves[0].move;
     const afterBlack = applyReply(state, replyMove);
     if (!afterBlack) break;
+    if (countPossibilities(afterBlack.state.pieces) < countPossibilities(state.pieces)) replyActivity = true;
     blackReplies.push({
       type: replyMove.type,
       from: replyMove.type === 'castle' ? replyMove.plan.piece1_from : replyMove.from,
@@ -553,13 +588,28 @@ function extendChain(firstStep, stats, covered) {
       played: null,
     };
     if (!positionSane(rec.pieces) || !censusFixed(rec.pieces)) { stats.censusBug++; break; }
-    const next = detectOnlyMoveStep(rec, stats);
+    // Steps 2+ use the relaxed gap: after the tactic starts White is often
+    // simply winning, and strict uniqueness would end every chain at 1. A
+    // softer "clearly best" continuation is exactly what needle scoring
+    // tests — suboptimal continuations cost bar length, not the puzzle.
+    const next = detectOnlyMoveStep(rec, stats, CFG.extendGap);
     if (!next) break;
     covered.add(computePositionSignature(rec.pieces, 'white', rec.lastMove));
     stats.rolloutExtensions++;
     steps.push(next);
   }
-  return { steps, blackReplies, endsInMate };
+  return { steps, blackReplies, endsInMate, replyActivity };
+}
+
+// "Plain recapture": statically the top move, taking a fully-collapsed piece
+// on the square Black just moved to. Sound but boring — take-back-the-queen.
+// Filtered as a chain START; forced recaptures deeper in a chain are fine.
+function isPlainRecapture(step, rec) {
+  if (step.shallowRank !== 0) return false;
+  const lm = rec.lastMove;
+  if (!lm || lm.to !== step.bestMove.to) return false;
+  const target = rec.pieces.find((p) => !p.captured && p.square === step.bestMove.to && p.side === 'black');
+  return Boolean(target && (target.possibleTypes || []).length === 1);
 }
 
 function mineGame(game, stats) {
@@ -579,7 +629,16 @@ function mineGame(game, stats) {
 
     const first = detectOnlyMoveStep(rec, stats);
     if (!first) continue;
-    const { steps, blackReplies, endsInMate } = extendChain(first, stats, covered);
+    if (isPlainRecapture(first, rec)) { stats.filteredRecapture++; continue; }
+    const { steps, blackReplies, endsInMate, replyActivity } = extendChain(first, stats, covered);
+
+    // Quantum-ness requirement: cull purely classical positions and chains
+    // where nothing collapses or decoheres at any ply — those are classical
+    // chess puzzles wearing the wrong costume.
+    const classicalStart = !rec.pieces.some((p) => !p.captured && (p.possibleTypes || []).length > 1);
+    const quantumActive = replyActivity || steps.some((s) => (s.possDelta || 0) > 0);
+    if (classicalStart || !quantumActive) { stats.filteredClassical++; continue; }
+
     verifySteps.push(...steps);
     chains.push({
       game: game.gameIdx,
@@ -588,7 +647,8 @@ function mineGame(game, stats) {
       startPly: rec.ply,
       length: steps.length,
       endsInMate,
-      trickiness: trickinessOf(steps[steps.length - 1], steps.length),
+      // Scored from the FIRST step — the position the player actually faces.
+      trickiness: trickinessOf(steps[0], steps.length),
       themes: [...new Set(steps.flatMap((s) => s.themes))],
       steps: steps.map(({ position, analysisMove, ...s }) => s),
       blackReplies, // engine-best replies, matching the live product
@@ -637,12 +697,18 @@ function verifyStep(step, position, stats) {
 // -------------------------------------------------------------------- main
 
 console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
-console.log(`only-move bar: best>=${CFG.holdEval}, others<=${CFG.failEval}, gap>=${CFG.minGap}, choices>=${CFG.minChoices}\n`);
+console.log(`only-move bar: best>=${CFG.holdEval}, gap>=${CFG.minGap} (steps 2+: ${CFG.extendGap}), choices>=${CFG.minChoices}; filters: plain recaptures, classical/inert chains\n`);
 
-const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, rolloutExtensions: 0, confirmRejects: 0, confirmTimeouts: 0, mineMsTotal: 0, verifyMsTotal: 0 };
+const stats = { scanned: 0, onlyMoves: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, rolloutExtensions: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
 const verifiable = []; // { step, position } for the gate
+
+// Chains stream to disk AS FOUND (one JSON per line), so a multi-hour run's
+// finds are inspectable/previewable before the final report exists.
+fs.mkdirSync(CFG.outDir, { recursive: true });
+const chainStream = path.join(CFG.outDir, `chains-seed${CFG.seed}.ndjson`);
+fs.writeFileSync(chainStream, '');
 
 for (let g = 0; g < CFG.games; g++) {
   // Vary personalities AND strength: any two distinct roster bots, but seat
@@ -669,6 +735,7 @@ for (let g = 0; g < CFG.games; g++) {
   const mineSec = ((performance.now() - t1) / 1000).toFixed(1);
   for (const chain of mined.chains) {
     allChains.push(chain);
+    fs.appendFileSync(chainStream, JSON.stringify(chain) + '\n');
     console.log(`  chain @ply ${chain.startPly}: len=${chain.length}${chain.endsInMate ? '+mate' : ''} gap=${chain.steps[0].gap} choices=${chain.steps[0].numChoices} trick=${chain.trickiness} themes=[${chain.themes.join(',')}]`);
   }
   for (const step of mined.verifySteps) verifiable.push({ gameIdx: g, step, position: step.position });
@@ -709,6 +776,8 @@ const report = {
     rolloutExtensions: stats.rolloutExtensions,
     depthConfirmRejects: stats.confirmRejects,
     depthConfirmTimeouts: stats.confirmTimeouts,
+    filteredPlainRecaptures: stats.filteredRecapture,
+    filteredClassicalOrInert: stats.filteredClassical,
     prefilterTimeouts: stats.prefilterTimeouts,
     deepAnalysisTimeouts: stats.timeouts,
     insanePositions: stats.insane,
@@ -734,6 +803,7 @@ fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
 console.log(`\n=== SUMMARY ===`);
 console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgMineMsPerPosition}ms each; funnel survivors: ${stats.funnelSurvivors}; timeouts: ${stats.prefilterTimeouts} shallow / ${stats.timeouts} deep)`);
 console.log(`only-moves found: ${stats.onlyMoves}  (${(100 * report.stats.onlyMoveRate).toFixed(1)}% of positions; confirm killed ${stats.confirmRejects}, timed out on ${stats.confirmTimeouts})`);
+console.log(`filtered: ${stats.filteredRecapture} plain recaptures, ${stats.filteredClassical} classical/quantum-inert chains`);
 console.log(`chains: ${allChains.length}  by length: ${JSON.stringify(report.stats.chainLengths)}  (${stats.rolloutExtensions} rollout extensions)`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
 console.log(`GATE — double-depth agreement: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);

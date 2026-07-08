@@ -34,7 +34,10 @@ export default function MiniBoard({
   targets = [], // squares showing a legal-move dot
   onSquareClick = null, // enables interaction: called with the algebraic square
   svgStyleBySide = null, // live piece colors from the app; defaults otherwise
+  squareColors = null, // { light, dark } from user settings; classic defaults otherwise
 }) {
+  const lightSq = (squareColors && squareColors.light) || LIGHT;
+  const darkSq = (squareColors && squareColors.dark) || DARK;
   const W = files * cell;
   const H = ranks * cell;
   const center = (sq) => {
@@ -90,7 +93,7 @@ export default function MiniBoard({
         return (
           <div
             key={`sq-${i}`}
-            style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: dark ? DARK : LIGHT }}
+            style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: dark ? darkSq : lightSq }}
           />
         );
       })}

@@ -5,7 +5,7 @@
 // Imports From: ./alphaBetaEngine.js, ../devlog.js
 // Exported To: ./useLocalAi.js
 
-import { searchBestMove } from './alphaBetaEngine.js';
+import { searchBestMove, analyzeRootMoves } from './alphaBetaEngine.js';
 import { getBotById } from './bots.js';
 import { devDebug } from '../devlog.js';
 
@@ -19,6 +19,39 @@ function minifyMove(mv) {
 
 self.addEventListener('message', (e) => {
   const data = e.data || {};
+
+  // Score EVERY legal root move at fixed depth (mined-puzzle gauge: the
+  // ticks/needle must measure with the same ruler the miner certified with,
+  // not a shallow approximation). Returns moves normalized to
+  // { from, to, enPassant, castle, score } — score from the mover's side.
+  if (data.type === 'analyze') {
+    const { id, payload } = data;
+    try {
+      const res = analyzeRootMoves({
+        pieces: (payload && payload.pieces) || [],
+        sideToMove: (payload && payload.sideToMove) || 'white',
+        lastMove: (payload && payload.lastMove) || null,
+        depth: (payload && payload.depth) || 3,
+        widths: (payload && payload.widths) || [64, 14, 10, 8],
+        timeMs: (payload && payload.timeMs) || 20000,
+      });
+      self.postMessage({
+        type: 'analysis',
+        id,
+        moves: res ? res.moves.map((s) => ({
+          from: s.move.type === 'castle' ? s.move.plan.piece1_from : s.move.from,
+          to: s.move.type === 'castle' ? s.move.plan.piece1_to : s.move.to,
+          enPassant: Boolean(s.move.enPassant) || s.move.type === 'enpassant',
+          castle: s.move.type === 'castle',
+          score: s.score,
+        })) : null,
+      });
+    } catch (err) {
+      self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });
+    }
+    return;
+  }
+
   if (data.type !== 'think') return;
 
   const { id, payload } = data;

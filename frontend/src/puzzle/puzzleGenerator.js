@@ -316,6 +316,11 @@ const SUBGOALS = {
     return listCheckThreats(m.after).some((t) => t.side === 'white');
   },
 
+  // Mined puzzles (dev preview via ?mined=N, and the future mined dailies):
+  // the solution is one specific engine-certified move, not a goal predicate.
+  exactMove: (before, m, ctx) =>
+    m.from === ctx.from && m.to === ctx.to && Boolean(m.enPassant) === Boolean(ctx.enPassant),
+
   // Mate across every world. The cheap check-first prefilter only narrows
   // which candidates get ACCEPTED (deterministically), never the correctness
   // of an accepted puzzle.

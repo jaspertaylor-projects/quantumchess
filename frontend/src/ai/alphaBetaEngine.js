@@ -14,7 +14,7 @@ import {
   attacksForType,
   canSideCaptureSquare,
 } from '../chessboard/quantumEngine.js';
-import { fromAlgebraic } from '../chessboard/boardUtils.js';
+import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
 
 const MATE = 1000;
@@ -46,6 +46,8 @@ export const DEFAULT_WEIGHTS = {
   center: 0.035, // per step of centrality per piece
   pawnAdvance: 0.05, // per rank of progress for pawn-including pieces
   pawnRace: 0.03, // quadratic kicker so far-advanced pawns become urgent
+  promoImminent: 3.2, // definite pawn on the 7th — near-queen when unstoppable
+  promoNear: 1.2, // definite pawn on the 6th, same idea one step earlier
   development: 0.06, // per piece that has moved at least once
   kingHunt: 0.15, // per attacked square around a unique enemy king holder
 };
@@ -157,6 +159,27 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
       if (types.includes('p')) {
         const progress = p.side === 'white' ? pos.rankIndex - 1 : 6 - pos.rankIndex;
         if (progress > 0) score += sign * (W.pawnAdvance * progress + W.pawnRace * progress * progress);
+      }
+      // Any pawn-CAPABLE piece one or two steps from promotion is most of a
+      // queen, not a well-advanced pawn. possibleTypes is census-consistent,
+      // so a piece that includes 'p' can genuinely choose to walk in and
+      // promote — indefinite pieces threaten it exactly like definite pawns.
+      // The quadratic race term alone rated an unstoppable 7th-rank passer
+      // ~1.4 — positions where promotion simply wins read as fine for the
+      // defender.
+      if (types.includes('p')) {
+        const stepsToGo = p.side === 'white' ? 7 - pos.rankIndex : pos.rankIndex;
+        if (stepsToGo === 1 || stepsToGo === 2) {
+          const dir = p.side === 'white' ? 1 : -1;
+          const promoSq = toAlgebraic(pos.fileIndex, p.side === 'white' ? 7 : 0);
+          let pathClear = true;
+          for (let r = pos.rankIndex + dir; r >= 0 && r <= 7; r += dir) {
+            if (occ.get(toAlgebraic(pos.fileIndex, r))) { pathClear = false; break; }
+          }
+          const unstoppable = pathClear && !enemy.squares.has(promoSq) && !enemy.squares.has(p.square);
+          const base = stepsToGo === 1 ? W.promoImminent : W.promoNear;
+          score += sign * base * (unstoppable ? 1 : 0.35);
+        }
       }
     }
     if ((p.moveCount || 0) > 0) score += sign * W.development;

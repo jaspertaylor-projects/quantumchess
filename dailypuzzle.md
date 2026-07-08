@@ -13,7 +13,18 @@ The strategy below is being built. Decisions locked in:
   eval/search first — better to learn that from a report than from players.
 - **One chance, eval-bar scoring.** Player gets one attempt; the engine plays
   Black's best replies live; the final eval is the share ("held +3.2 of +5"
-  as emoji blocks ▓▓▓▓░░░). Streak = "played daily", bar = the flex.
+  as emoji blocks ▓▓▓▓░░░).
+- **Scoring decisions (2026-07-08):** the NEEDLE'S LANDING SPOT IS THE SCORE.
+  Keep a White advantage at the end → ✓ and the streak continues. Gauge
+  ticks may leak the legal-move count (fine — solvers enumerate moves
+  anyway). Multi-move flow: needle lands, GLOWS, then re-arms and wobbles
+  for the next move — a landing per move, relief included.
+  Implication for the miner: `holdEval` must rise to ≥ 0 — a puzzle whose
+  best move "holds" −0.4 can never earn a ✓ under this scoring.
+  **Share bar (2026-07-08):** fill is LINEAR from a floor of −5 to the
+  maximum possible score (the best move's eval on the same ruler as the
+  needle). Land at the max → full bar; land at/below −5 → empty. E.g. best
+  +9.3, you land +3.2 → (3.2+5)/(9.3+5) ≈ 57% → ▓▓▓▓░░░.
 - **White-side puzzles only.**
 - The composed pipeline's verifier stack survives as **pipeline assertions**
   (position sanity + census fixed-point) — mined game states should pass
@@ -29,18 +40,28 @@ docker compose run --rm --no-deps -v "$PWD":/repo -w /repo frontend \
 
 Key knobs (defaults in the script): `--games`, `--seed` (fully reproducible),
 `--playMs` (per-move think time in simulated games), `--mineDepth` /
-`--verifyDepth` (the gate compares these), and the only-move bar:
-`--holdEval -0.5 --failEval -1.0 --minGap 2.0 --minChoices 6` — best move
-holds or wins, every alternative clearly fails, and there were enough legal
-moves that finding it was a real search.
+`--verifyDepth` (the gate compares these), and the only-move bar
+(reworked 2026-07-08 for landing-spot scoring): `--holdEval 0.0
+--minGap 2.0 --minChoices 10`, steps 2+ relaxed to `--extendGap 1.2`.
+NO failEval — alternatives may still win (mate-in-3 style); they just land
+the needle lower. Hard filters: no plain recaptures of a collapsed piece
+(statically-obvious take-backs), no purely classical positions, and no
+chains where nothing collapses/decoheres at any ply. The eval gained
+`promoImminent`/`promoNear` terms (a definite pawn 1–2 steps from promoting
+is most of a queen) — before that, winning promotion races read as fine for
+the defender and the f6→f7→f8 2-mover (seed-4 game 98) was invisible.
 
 Output: `tools/mined/mined-seed<N>.json` — per-game results, only-move
 chains (full serialized game states + solution lines + Black replies),
 quantum-theme tags reusing the composed goals' names (measure3 / The
 Instrument, censusCollapse / The Census, seal, snap, unmask, epCheck / The
-Phantom, mate), a trickiness score (chain length × search-space ×
-how-buried-the-move-is-in-shallow-ordering × theme/quiet bonuses), and the
-gate verdicts.
+Phantom, mate), a trickiness score, and the gate verdicts. Trickiness
+(reworked 2026-07-08): BASELINE = quantum density (superposed pieces /
+alive) + de/recoherence in flight, plus a bonus when the solution's mover
+is itself mid de/recoherence (playtesting: those are the hard-to-spot
+moves), then chain length, search space, shallow-ordering burial, and
+theme/quiet bonuses. Scored from the chain's first position — the one the
+player faces.
 
 ## First results
 
@@ -91,6 +112,20 @@ unmasks the king. Curation should filter/deprioritize rank-0 bare
 recaptures (tag exists in the data: capture-of-collapsed-piece with
 shallowRank 0) rather than the miner rejecting them — they're still fine
 easy-Monday fodder.
+
+## Dev preview of mined puzzles (the future product's UI)
+
+`http://localhost:5175/?mined=N` (N = 0..7, dev builds only) opens chain N of
+`frontend/src/puzzle/minedPreviewData.json` in **the one-chance gauge UI**
+(`MinedPuzzleModal.jsx`): player bars (you vs the Stranger) with capture
+trays, user board/piece colors throughout, no attempt dots — below the board
+an `EvalGauge` speedometer (Black's half left, White's right) with a faint
+neon-red tick at every legal move's eval and a needle that wobbles until you
+commit, then lands on YOUR move's eval. Ticks use reply-aware evals (min
+over Black's answers — static eval would rate "hangs the queen" as fine).
+Fail shows the only move + payoff with an arrow. To refresh the fixture
+after a new mining run, re-extract chains from `tools/mined/mined-seed<N>.json`
+(same slim fields).
 
 ## Remaining to build (in order)
 
