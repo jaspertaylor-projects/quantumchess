@@ -254,15 +254,27 @@ Legend: [ ] not started · [~] in progress · [X] done
         show on the player bar (`App.jsx` selfAvatar).
   - [~] No ads for premium (`maybeShowGameEndAd()` gated on `profile.tier`
         in `App.jsx` — ships with next frontend deploy)
-  - [X] Event sayings — **built + browser-tested 2026-07-06**: speech
-        bubbles overlaid on the player bars for win/loss/draw/capture/
-        full-army-collapse. All 24 bots have authored lines (`ai/bots.js`
-        sayings); players pick theirs in the account panel
-        (`sayings/sayingsCatalog.js`). Signed-out players get the free
-        presets too (picks persist in localStorage `qcSayings`); signed-in
-        free = 3 presets/event; premium = 8 + custom text, enforced
-        server-side by the trigger in `20260708000000_qc_sayings.sql`
-        (applied; free tier limited to preset ids).
+  - [X] Event sayings — **reworked 2026-07-07 to the character system**:
+        speech bubbles on the player bars for win/loss/draw/capture/
+        full-army-collapse. NO free text anywhere — every saying and
+        tagline belongs to a character in
+        `characters/characterCatalog.js` (48 characters mirroring
+        `public/avatars/`: 16 starter, 32 premium; each has a tagline + one
+        line per event). Players pick per-event from their unlocked
+        roster (`sayings/SayingsEditor.jsx` in Settings; tagline picker in
+        the account panel). Picks are stored as character ids; legacy
+        `p#` preset ids still resolve; legacy custom text renders as the
+        default character (Pip) instead of user prose. All 24 bots have
+        their own tagline + full saying set (`ai/bots.js`). Server-side:
+        `20260710000000_qc_character_sayings.sql` (needs push) retires
+        custom text for all tiers and allowlists the starter roster for
+        free accounts.
+      - Character tiers roadmap: 'starter' (everyone), 'quest' (planned:
+        earned unlocks recorded in `profile.unlocked_characters` — the
+        catalog + `unlockedCharacters()` already support it), 'premium'
+        (subscription; tip-unlockables later). Future hardening: a
+        `qc_characters` table so the DB can validate taglines/ids by tier
+        instead of the in-trigger allowlist.
       Stripe CLI is installed (`~/.local/bin/stripe`) and authenticated against
       the Pura Viba LLC **sandbox** (test mode, key in `~/.config/stripe/config.toml`,
       expires 2026-10-03 — re-run `stripe login` after). Useful for wiring:
@@ -440,6 +452,18 @@ Legend: [ ] not started · [~] in progress · [X] done
     Dev builds only. Weekday map: Mon 1-move Instrument, Tue 1-move
     wildcard, Wed Snap Trap (2), Thu Ledger (2), Fri Hunt (3), Sat
     Investigation (3), Sun Long Hunt (4).
+  - Dev preview (mined): `?mined=N` plays chain N of the mined-puzzle
+    fixture (`frontend/src/puzzle/minedPreviewData.json`) through the
+    one-chance eval-gauge modal. Practice mode, dev builds only.
+  - **PRODUCT RULE — the daily is the only puzzle.** Users must only ever
+    see TODAY's puzzle. Never ship an archive, date picker, "tomorrow"
+    peek, or any other user-facing path to past or future puzzles.
+    Puzzles generate deterministically client-side, so any
+    date-addressable UI leaks every future puzzle — and the once-a-day
+    scarcity is the retention mechanic. Both preview params
+    (`?puzzleDate`, `?mined`) are hard-gated to dev builds in `App.jsx`
+    (`import.meta.env.DEV`); the only production deep link is `/?puzzle`,
+    which opens today's. Keep it that way.
   - **Tuning workflow — how to fix a bad puzzle.** When a day's puzzle feels
     wrong (a refutation, a giveaway, too cluttered), don't patch that one
     day — codify the complaint as a VERIFIER rule so it can never ship
