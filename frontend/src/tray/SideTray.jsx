@@ -3,7 +3,7 @@
 // Imports From: ./MoveHistoryPanel.jsx, ./NewGamePanel.jsx, ../components/IconButton.jsx, ../theme.js
 // Exported To: ../App.jsx
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
@@ -92,11 +92,25 @@ export default function SideTray({
   // button-row's right edge (= tray content edge) so it never clips.
   const [coachHint, setCoachHint] = useState(null); // { text, color }
   const [glowing, setGlowing] = useState(false);
+  const [submitSignal, setSubmitSignal] = useState(0);
+
+  // The attention effect must read these without re-firing when they change —
+  // it should run once per attentionSignal bump only.
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const searchingRef = useRef(searching);
+  searchingRef.current = searching;
 
   // The board's "Start a Game" pill points players here: snap to the setup
   // view and pulse a green ring around the tray so the eye lands on it.
+  // If the setup panel is ALREADY on screen, the click means "go" — start
+  // the game with the settings exactly as shown (not while queued online).
   useEffect(() => {
     if (!attentionSignal) return undefined;
+    if (viewRef.current === 'new-game' && !searchingRef.current) {
+      setSubmitSignal((n) => n + 1);
+      return undefined;
+    }
     setView('new-game');
     setGlowing(true);
     const t = setTimeout(() => setGlowing(false), 1150);
@@ -423,7 +437,7 @@ export default function SideTray({
             externalIndex={externalIndex}
           />
         ) : view === 'new-game' ? (
-          <NewGamePanel onStartGame={handleStartGame} isPaid={isPaid} onRequirePremium={onRequirePremium} />
+          <NewGamePanel onStartGame={handleStartGame} isPaid={isPaid} onRequirePremium={onRequirePremium} submitSignal={submitSignal} />
         ) : (
           <div
             className="qc-side-tray-menu"

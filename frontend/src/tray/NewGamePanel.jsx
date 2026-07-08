@@ -3,7 +3,7 @@
 // Imports From: ../theme.js
 // Exported To: ./SideTray.jsx
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import { BOTS, DEFAULT_BOT_ID, getBotById } from '../ai/bots.js';
 
@@ -105,7 +105,10 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
   );
 }
 
-export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePremium = null }) {
+// submitSignal: bump to start a game with the settings exactly as shown —
+// same as clicking the Start Game button (the board CTA uses this when the
+// setup panel is already on screen).
+export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePremium = null, submitSignal = 0 }) {
   const [gameMode, setGameMode] = useState('ai'); // 'local', 'ai', 'online'
   const [aiBotId, setAiBotId] = useState(DEFAULT_BOT_ID);
   const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
@@ -132,6 +135,12 @@ export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePre
       timeControl,
     });
   };
+
+  const handleStartRef = useRef(handleStart);
+  handleStartRef.current = handleStart;
+  useEffect(() => {
+    if (submitSignal > 0) handleStartRef.current();
+  }, [submitSignal]);
 
   const styles = useMemo(
     () => ({
