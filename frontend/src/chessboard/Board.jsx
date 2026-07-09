@@ -31,6 +31,8 @@ export default function Board({
   pieces = [], // [{ id, side, square, possibleTypes }]
   selectedId = null,
   measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
+  attractSquare = null, // square whose piece breathes light, inviting a first pickup
+  guideSquare = null, // destination of a choreographed move: a pulsing gold target
   indicators = DEFAULT_INDICATORS, // visibility toggles for the visual reminders
   legalMoves = [], // legal moves for the currently-selected piece id
   squareColors = { light: theme.boardLight, dark: theme.boardDark },
@@ -92,7 +94,7 @@ export default function Board({
     if (!indicators.recohere) return new Set();
     const out = new Set();
     for (const p of pieces) {
-      if (p.captured || !p.square || p.entangledWith) continue;
+      if (p.captured || !p.square) continue;
       const len = (p.possibleTypes || []).length;
       if (len === 0 || len > 2) continue;
       if (!canPieceRecohere(pieces, p.id)) out.add(p.id);
@@ -163,6 +165,25 @@ export default function Board({
       borderRadius: 2,
       pointerEvents: 'none',
     }),
+    guideTarget: {
+      position: 'absolute',
+      inset: '8%',
+      borderRadius: '18%',
+      border: '3px solid rgba(255, 200, 80, 0.9)',
+      boxShadow: '0 0 12px rgba(255, 200, 80, 0.55), inset 0 0 10px rgba(255, 200, 80, 0.35)',
+      pointerEvents: 'none',
+      zIndex: 5,
+      boxSizing: 'border-box',
+    },
+    // Pieces are near-opaque tiles, so the halo lives in the bleed beyond the
+    // square: a ring of light around the piece rather than a wash behind it.
+    attractGlow: {
+      position: 'absolute',
+      inset: '-25%',
+      borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(255, 224, 130, 0.95) 30%, rgba(255, 200, 80, 0.55) 55%, rgba(255, 200, 80, 0) 75%)',
+      pointerEvents: 'none',
+    },
     dragTargetOverlay: {
       position: 'absolute',
       inset: 0,
@@ -374,6 +395,14 @@ export default function Board({
                 <div className="chessboard-square-drag-target" style={styles.dragTargetOverlay} />
               ) : null}
 
+              {attractSquare && squareAlg === attractSquare && piece ? (
+                <div className="qc-attract-glow" style={styles.attractGlow} aria-hidden="true" />
+              ) : null}
+
+              {guideSquare && squareAlg === guideSquare ? (
+                <div className="qc-guide-target" style={styles.guideTarget} aria-hidden="true" />
+              ) : null}
+
 
               {(indicators.pulseRings ? measureTargetMarks : [])
                 .filter((m) => m && m.square === squareAlg)
@@ -393,7 +422,6 @@ export default function Board({
                   possibleTypes={piece.possibleTypes}
                   coherence={piece.coherence}
                   recohere={piece.recohere}
-                  entangled={Boolean(piece.entangledWith)}
                   promoted={Boolean(piece.wasPromoted)}
                   sealed={sealedIds.has(piece.id)}
                   indicators={indicators}
@@ -513,7 +541,6 @@ export default function Board({
                 possibleTypes={draggingPiece.possibleTypes}
                 coherence={draggingPiece.coherence}
                 recohere={draggingPiece.recohere}
-                entangled={Boolean(draggingPiece.entangledWith)}
                 promoted={Boolean(draggingPiece.wasPromoted)}
                 sealed={sealedIds.has(draggingPiece.id)}
                 indicators={indicators}

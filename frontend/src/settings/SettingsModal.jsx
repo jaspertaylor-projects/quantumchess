@@ -93,7 +93,7 @@ export default function SettingsModal({
     total: 'Every visual hint on.',
     amateur: 'Hides check arrows. The default.',
     master: 'Also hides red check rings and weak-measurement circles.',
-    grandmaster: 'Also hides decoherence dots and all insignia (promotion, entanglement, recoherence).',
+    grandmaster: 'Also hides decoherence dots and all insignia (promotion, recoherence).',
     goat: 'Also hides the piece icons inside 3+ possibility bands. Bands only.',
   };
 

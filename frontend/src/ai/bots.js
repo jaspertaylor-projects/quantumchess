@@ -3,8 +3,10 @@
 // plus 12 premium-only bots, each a scientist × chess-legend mashup with a
 // made-up rating and a personality expressed as search-config and
 // evaluation-weight overrides for the engine.
-// Avatar images: drop a PNG at frontend/public/bots/<id>.png and it is used
-// automatically; otherwise a procedural initials avatar renders (hue below).
+// Avatar source of truth: this roster owns bot ids and tiers. Drop a PNG at
+// frontend/public/bots/<id>.png and getBotAvatarUrl() will use it; otherwise
+// the player bar falls back to procedural initials. Run `pnpm audit:avatars`
+// to check that the files match this catalog.
 // Imports From: None
 // Exported To: ./aiWorker.js, ./useLocalAi.js, ../tray/NewGamePanel.jsx, ../App.jsx
 
@@ -442,6 +444,16 @@ export const BOTS = [
 ];
 
 export const DEFAULT_BOT_ID = 'boris-bohr';
+
+export const BOT_AVATAR_BASE = '/bots';
+
+export function getBotAvatarUrl(botOrId) {
+  const id = typeof botOrId === 'string' ? botOrId : botOrId && botOrId.id;
+  return id ? `${BOT_AVATAR_BASE}/${id}.png` : null;
+}
+
+export const FREE_BOTS = BOTS.filter((b) => !b.premium);
+export const PREMIUM_BOTS = BOTS.filter((b) => b.premium);
 
 export function getBotById(id) {
   return BOTS.find((b) => b.id === id) || null;

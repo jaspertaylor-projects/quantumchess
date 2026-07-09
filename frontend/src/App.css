@@ -72,6 +72,53 @@ button:hover {
   .qc-icon-button[style*="qc-onboard-pulse"] { animation: none !important; }
 }
 
+/* First-visit attract: the intro pawn pulses light until it is picked up */
+@keyframes qc-attract-breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.14); }
+}
+
+.qc-attract-glow {
+  animation: qc-attract-breathe 1.6s ease-in-out infinite;
+}
+
+/* Intro narration bubble: a gentle, continuous golden pulse */
+@keyframes qc-speech-flash {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+  50% { box-shadow: 0 0 0 2px rgba(255, 200, 80, 0.45), 0 0 12px rgba(255, 200, 80, 0.3); }
+}
+
+/* Choreographed destination: the target square pulses until the move lands */
+@keyframes qc-guide-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.qc-guide-target {
+  animation: qc-guide-pulse 1.2s ease-in-out infinite;
+}
+
+/* Off-script nudge: pop in, shake once, hold */
+@keyframes qc-nudge-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  30% { opacity: 1; transform: translate(calc(-50% - 7px), -50%) scale(1.04); }
+  45% { transform: translate(calc(-50% + 6px), -50%) scale(1.02); }
+  60% { transform: translate(calc(-50% - 4px), -50%) scale(1); }
+  75% { transform: translate(calc(-50% + 2px), -50%) scale(1); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.qc-intro-nudge {
+  animation: qc-nudge-in 550ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-attract-glow { animation: none !important; opacity: 0.7; }
+  .qc-player-speech { animation: none !important; }
+  .qc-guide-target { animation: none !important; opacity: 0.9; }
+  .qc-intro-nudge { animation: none !important; }
+}
+
 @keyframes qc-speech-pop {
   from { opacity: 0; transform: translateY(4px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }

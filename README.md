@@ -1,10 +1,14 @@
 # Quantum Chess
 
 Chess where every piece begins as a superposition of all six piece types and
-collapses as it moves. Measurement pulses, decoherence, entangled castling,
+collapses as it moves. Measurement pulses, decoherence, quantum castling,
 quantum promotion, recoherence — deterministic throughout, no dice anywhere.
 
 - **Live:** https://quantumchess.ninja
+- **Status:** launched, but there are **no real users or paying customers
+  yet** — every existing account is a disposable test account that can be
+  nuked. Deploys and even destructive migrations don't need a
+  customer-safety review until that changes; update this line when it does.
 - **Play:** vs 24 AI bots (12 free, 12 premium-locked), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
@@ -428,8 +432,9 @@ Legend: [ ] not started · [~] in progress · [X] done
       per device). Weekly difficulty arc: Mon/Tue 1-movers, Wed/Thu 2-move
       chains, Fri/Sat 3-move chains, Sun a 4-move hunt. Quantum-native goals:
       The Instrument (measure 3 at once), The Census (collapse a piece you
-      never touch), The Seal, The Snap, The Phantom (en passant discovered
-      check), Collapse Mate, plus chains (Snap Trap, Ledger = census→seal,
+      never touch), The Seal, The Snap (the royal {q,k} pair: capturing one member forces
+      both identities through conservation alone), The Phantom (en passant
+      discovered check), Collapse Mate, plus chains (Snap Trap, Ledger = census→seal,
       The Hunt / Long Hunt rook ladders, The Investigation). Every player
       move is verified by the engine to be the UNIQUE move achieving that
       step's goal; scripted Black replies between steps. Soundness rule: no
@@ -491,14 +496,121 @@ Legend: [ ] not started · [~] in progress · [X] done
       above stays live until mined puzzles pass the 95% agreement gate at
       scale. End state: one-chance eval-bar daily (engine plays Black live),
       emoji-bar share card, puzzles.json published to the CDN.
+- [ ] **First-60-seconds onboarding / "first move theater"**: first visit
+      should teach the core magic without a modal wall. One glowing piece,
+      one obvious move, instant collapse animation, and a tiny line like
+      "Every piece starts as every piece. Move it to find out what it was."
+      Goal: get a brand-new player to the first "oh, I get it" moment before
+      asking them to read rules or choose settings.
+- [ ] **Bias the home screen toward today's loop**: make the default first
+      choices feel like "Daily Puzzle", "Start bot game", and "Challenge
+      friend". Daily should feel like the scarce Wordle-style habit, not a
+      side feature hiding in the tray.
+- [ ] **Post-move "Explain why" affordance**: when a surprising collapse,
+      coherence shed, king prune, en passant, or checkmate happens, offer a
+      tiny contextual explanation. Not a rules essay: one sentence such as
+      "King was removed because that square was threatened" or "This piece
+      lost Pawn because its coherence hit 0." This turns "bug?" moments into
+      teachable moments.
 - [ ] Achievements (~15–20, client-side): tutorial finished, first en
       passant, first quantum promotion, castle-resolve, beat each bot tier…
       surfaced at game end next to the winner modal.
-- [ ] Bot ladder: visible 12-bot progression (beat one to light up the
-      next), persistent progress — turns vs-AI (the majority behavior) into
-      a multi-session arc.
+- [~] **Bot ladder** (2026-07-08): visible 12-bot progression that turns
+      vs-AI into a multi-session arc. Shipped:
+      `frontend/src/ladder/BotLadderPanel.jsx` IS the Opponent dropdown in
+      the New Game vs-AI section (no separate bot `<select>` — one picker,
+      no duplicated roster). The trigger shows the selected bot's character
+      card; opening it reveals the 12 free bots easiest-first with avatars,
+      names, ratings, cleared checkmarks and a "next up" highlight. Locks
+      are enforced: only cleared bots and the next rung are playable;
+      locked rungs render faded with a 🔒 and a hover hint "Beat <previous
+      bot> to unlock", with Magnus Einstein as the final boss at the
+      bottom. Below the ladder, subscribers get the premium roster
+      appended; free players get "★ 12 more bots available to monthly
+      subscribers" which routes into the premium/account flow. First win
+      against each bot records the clear in Supabase `qc_bot_progress`
+      (`frontend/src/account/botProgress.js`; old saved `qc_games` wins
+      count as progress so existing players aren't reset). Signed-out
+      players get only the first rung plus "Sign in free to save bot
+      unlocks."
+  - [ ] Remaining: surface the unlocked tagline/sayings/character flavor
+        in the profile and bot picker (the clear + `unlocked_flavor_at`
+        timestamp are already recorded per account).
+- **SHELVED — post-launch, not in the product** · **Enter the Unstable
+  Line**: the roguelite run mode below is parked. The code is kept at
+  `frontend/src/unstableLine/` but is imported by NOTHING, so none of it is
+  bundled or reachable on the live site; its `qc_unstable_runs` migration
+  was removed (only `qc_bot_progress` shipped). Do not re-wire it until the
+  run modifiers (clock pressure, pawn starts, takebacks…) are real gameplay
+  rather than labels. Design notes preserved below.
+  - [ ] **Unstable Line unlock**: after clearing the first 2 beginner ladder
+        bots, show a large Daily Puzzle-style button: "Enter the Unstable
+        Line". Signed-out players see "Sign in free to save bot unlocks."
+        Premium bots remain premium and are NOT part of this mode.
+  - [ ] **Unstable Line map**: a route map, not a blind random queue. The
+        player charts a 4-fight course toward Magnus Einstein. Each node
+        shows a bot avatar/name/rating; the main boss is fixed as
+        `magnus-einstein`. With the current 12-free-bot roster, the first 2
+        beginner clears unlock the mode, then every run places the remaining
+        9 non-boss free bots somewhere on the map plus Magnus Einstein as the
+        collapse point. The shortest route to the boss is 3 bot fights +
+        Magnus Einstein for a 4-game run. Longer routes are allowed for
+        players who want extra pickups or to target specific bot unlocks. This
+        lets players choose the bot problems they want to carry instead of
+        praying a blind pool serves them.
+  - [ ] **Double-slit theme**: visually frame the map as a double-slit
+        experiment. The run begins as one beam, splits into two or more
+        possible paths, interferes across branching bot choices, and collapses
+        into the chosen route toward Magnus Einstein. Unchosen nodes can stay
+        faint/ghosted as "paths not observed yet"; chosen fights become the
+        measured timeline. This should feel quantumy without making the map
+        harder to understand.
+  - [ ] **Persistent run modifiers**: bot nodes add the downside, and
+        in-between spaces add the upside. Both should generally stick for the
+        whole run, so the player is not just picking the next fight; they are
+        deciding which problems to carry and which tools to accumulate before
+        Magnus Einstein.
+  - [ ] **Pickup spaces**: mix non-fight nodes into the map so the player is
+        not only choosing opponents. Good first pickups: +1 takeback for the
+        run, one free "observe" hint, restore a collapsed pawn at the start of
+        each remaining fight, clear one carried disadvantage, reroll a future
+        pickup, or reveal nearby hidden nodes. These should be small enough
+        that the run still belongs to the chess, but meaningful enough that
+        route choice feels strategic.
+  - [ ] **Bot-flavored instability**: tie the carried disadvantages to the
+        bots you choose to fight. Each bot can have a signature pressure
+        pattern so opponents feel distinct even before their search strength
+        matters: fast bots create clock pressure, tricky bots start with more
+        ambiguous pieces, defensive bots reduce your early capture clarity,
+        and chaos bots add recoherence/collapse volatility. This gives every
+        bot a recognizable "feel" inside the mode while preserving normal
+        fair games in the ladder.
+  - [ ] **Run structure**: the map itself owns the choices. Picking a bot node
+        means accepting that bot's carried downside; winning the fight awards
+        the pickup on the following in-between space. Keep early modifiers
+        readable and agency-preserving (no "make the opponent's move" power).
+        Good first set: clock pressure, collapsed pawn starts, lower
+        coherence starts with stronger pulses, recoherence-clock
+        buffs/debuffs, pre-observed pieces, and small run tools such as
+        takebacks or observe hints.
+  - [ ] **Rewards**: beating any free bot for the first time, in ladder or
+        Unstable Line, unlocks that bot's tagline/sayings/character flavor
+        for the account. Beating a bot inside Unstable Line also marks it as
+        unlocked/cleared for future targeting. Premium subscription still
+        unlocks premium bots separately; Unstable Line never grants premium
+        bot access.
+- [ ] **Make premium desire-timed instead of account-panel-only**: upsell at
+      the moment the player wants the thing — locked premium bot selected,
+      "Analyze this game" after a loss, saved-game cap reached, profile
+      character/tagline preview clicked. The account panel remains the
+      checkout surface; the pitch starts from intent.
 - [ ] Daily-puzzle leaderboard (today's fastest solves — resets daily so it
       never looks dead; needs a small Supabase table + rate limiting).
+- [ ] **Shareable replay / collapse cards**: after wild moments (full-army
+      collapse, quantum promotion, en passant phantom, checkmate, daily
+      solve), offer a share card or replay link that shows the actual board
+      story. Text-only is fine for v1; best version is a tiny animated replay
+      or generated card built for Reddit/Twitter/Discord.
 
 #### Later
 - [ ] Replay saved games from stored move lists (moves are already saved;
@@ -508,6 +620,47 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Rewarded ad placement (opt-in, ~3-5x interstitial CPM) — e.g. "watch
       to see full post-game analysis"
 
+### Code nice-to-haves
+- [ ] **Extract `App.jsx` orchestration into focused hooks/controllers**:
+      `frontend/src/App.jsx` currently owns game state wiring, matchmaking,
+      auth/billing return handling, ads/analytics, AI, layout measurement, and
+      modal state. It works, but future changes get safer if online-game
+      orchestration, billing-return polling, game recording, onboarding, and
+      layout measurement move into small hooks with narrow tests.
+- [ ] **Add UI smoke/e2e coverage for launch-critical flows**: the engine
+      replay suite (`frontend/tests/engineReplay.test.js`) is the right
+      regression net for rules, but the launch paths also need browser-level
+      coverage: first visit/onboarding, bot game start, daily puzzle solve,
+      account modal, locked premium bot upsell, saved-game review, and
+      challenge-link creation/join. Playwright would fit this repo well.
+- [ ] **Move multiplayer state out of process memory before serious ranked
+      play**: `backend/app/matchmaking/service.py` intentionally stores queue,
+      rooms, invites, and client mappings in module-level dictionaries. Fine
+      for a cheap launch relay; before public leaderboards or higher online
+      volume, move room/clock/session state to Redis or Supabase-backed
+      storage so deploys/restarts do not erase live games and multiple API
+      instances can run.
+- [ ] **Harden trust boundaries for competitive/user-visible systems**:
+      ratings and some perk quotas are still client-reported/client-enforced
+      by design (`frontend/src/account/gameSync.js`,
+      `frontend/src/account/billing.js`). Before public leaderboards,
+      tournaments, or any abuse-sensitive rewards, move rating updates,
+      review quotas, achievements, and leaderboard writes behind Edge
+      Functions or the backend with server-side validation.
+- [ ] **Split the largest domain files only when touching nearby behavior**:
+      `frontend/src/chessboard/quantumEngine.js`,
+      `frontend/src/puzzle/puzzleGenerator.js`, and
+      `frontend/src/ai/alphaBetaEngine.js` are big because the domain is big.
+      Avoid aesthetic rewrites; instead extract seams around move generation,
+      conservation/fixpoint solving, puzzle verification, and eval terms when
+      a real feature or test needs that boundary.
+- [ ] **Promote analytics from scaffold to product dashboard**:
+      `frontend/src/analytics/analytics.js` has the GA4 shell, but the useful
+      future layer is named events for activation and retention: first move,
+      tutorial step completed, daily opened/solved/shared, bot game finished,
+      premium upsell viewed/clicked, account created, checkout started, and
+      review opened. These answer which product ideas actually move the odds.
+
 ### Art
 - [X] `anonymous.png` and `stranger.png` for the human players
 
@@ -515,3 +668,11 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Launch post for r/chess and Hacker News ("chess where no piece knows
       what it is yet"). The chess.com winks (console message, avatar hover,
       /humans.txt) fire for anyone who arrives — so traffic is the goal.
+- [ ] **Make the killer launch clip**: 15–30 seconds, no narration needed:
+      every piece is every piece → knight move becomes Knight → diagonal
+      slide becomes Bishop/Queen → capture collapses → checkmate lands.
+      This clip likely matters more than another feature for the first wave.
+- [ ] **Daily-puzzle share copy polish**: make the copied/shared text punchy
+      enough to carry the concept out-of-context, e.g. puzzle number, result,
+      streak, compact eval/attempt bar, and one strange line about what
+      happened ("My queen was also my king until it wasn't.").

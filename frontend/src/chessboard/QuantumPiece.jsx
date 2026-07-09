@@ -97,7 +97,6 @@ export default function QuantumPiece({
   rotate180 = false,
   coherence = DEFAULT_COHERENCE,
   recohere = 0,
-  entangled = false,
   promoted = false,
   sealed = false,
   indicators = DEFAULT_INDICATORS,
@@ -281,7 +280,6 @@ export default function QuantumPiece({
   // solid line instead of a clock that would cycle forever.
   const regainProgress = Math.max(0, Math.min(RECOHERE_THRESHOLD, recohere || 0));
   const nearlyDefined = tCount >= 1 && tCount <= 2;
-  const linkWidth = Math.max(10, Math.round(size * 0.22));
   const bottomDots = sealed ? (
     <span
       key="sealed-line"
@@ -300,21 +298,7 @@ export default function QuantumPiece({
       <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ink)} />
     ))
   );
-  const regainPips = nearlyDefined && entangled && indicators.entangled ? (
-    <div className="qc-entangled-mark" style={baseStyles.ringRow} aria-hidden="true">
-      <svg
-        width={linkWidth}
-        height={Math.round(linkWidth * 0.5)}
-        viewBox="0 0 24 12"
-        style={{ filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.7))' }}
-      >
-        <g fill="none" stroke={ink} strokeWidth="2.2">
-          <rect x="1.4" y="2.6" width="11.6" height="6.8" rx="3.4" />
-          <rect x="11" y="2.6" width="11.6" height="6.8" rx="3.4" />
-        </g>
-      </svg>
-    </div>
-  ) : nearlyDefined && !entangled && (indicators.recohere || showPromoBraces) ? (
+  const regainPips = nearlyDefined && (indicators.recohere || showPromoBraces) ? (
     <div className="qc-recohere-pips" style={baseStyles.pipRow} aria-hidden="true">
       {showPromoBraces ? brace(true, bottomBraceH, 'brace-open') : null}
       {indicators.recohere ? bottomDots : null}

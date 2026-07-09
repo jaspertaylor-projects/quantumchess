@@ -1,55 +1,44 @@
 // frontend/src/puzzle/minedPreview.js
-// Purpose: DEV-ONLY preview of mined puzzles (tools/puzzle-miner.mjs output).
-// ?mined=N converts chain N of ./minedPreviewData.json into the exact puzzle
-// shape DailyPuzzleModal plays (subgoal 'exactMove'), in practice mode —
-// nothing recorded, streak untouched. This is also the future adapter shape
-// for mined dailies: a mined chain replays through the same modal machinery.
+// Purpose: DEV-ONLY preview of mined puzzles (tools/puzzle-miner.mjs output,
+// swing/par format). ?mined=N converts chain N of ./minedPreviewData.json
+// into the shape MinedPuzzleModal plays in PAR MODE: the player sees Black's
+// mistake, plays parPlies free moves against live engine replies, and is
+// scored by fidelity vs the certified par evals. This is also the future
+// adapter shape for mined dailies.
 // Imports From: ./puzzleGenerator.js, ../chessboard/quantumEngine.js
 // Exported To: ../App.jsx (dynamic import, dev builds only)
 
 import { enumerateWhiteMoves } from './puzzleGenerator.js';
 import { simulateStandardMove } from '../chessboard/quantumEngine.js';
-import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 
 const THEME_TITLES = {
   measure3: 'The Instrument',
   censusCollapse: 'The Census',
   seal: 'The Seal',
-  snap: 'The Snap',
   unmask: 'The Unmasking',
   epCheck: 'The Phantom',
   mate: 'Collapse Mate',
+  recohere: 'The Regrowth',
 };
 
 function minedTitle(chain) {
   const named = chain.themes.map((t) => THEME_TITLES[t]).filter(Boolean);
-  return named.length ? `Mined: ${named.join(' + ')}` : 'Mined: The Only Move';
+  return named.length ? `Mined: ${named.join(' + ')}` : 'Mined: The Slip';
 }
 
-function blackLastMove(afterPieces, mover, from, to, measuredSquares) {
-  const lastMove = {
-    side: 'black', pieceId: mover.id, from, to,
-    isDoubleStep: false, crossedSquare: null,
-    measuredSquares: measuredSquares || [],
-  };
-  if ((mover.moveCount || 0) === 0) {
-    const fp = fromAlgebraic(from);
-    const tp = fromAlgebraic(to);
-    const moved = afterPieces.find((p) => p.id === mover.id && !p.captured);
-    if (fp && tp && moved && fp.fileIndex === tp.fileIndex && fp.rankIndex - tp.rankIndex === 2 && moved.possibleTypes.includes('p')) {
-      lastMove.isDoubleStep = true;
-      lastMove.crossedSquare = toAlgebraic(fp.fileIndex, fp.rankIndex - 1);
-    }
-  }
-  return lastMove;
-}
+// The client's eval ruler caps mates at 30 (see replyAwareEval); the miner's
+// ply-adjusted mate scores run 900+. Clamp par onto the client ruler so
+// fidelity math compares like with like.
+const clampPar = (v) => Math.min(v, 30);
 
-// Convert one mined chain into the modal's puzzle shape, re-simulating every
-// ply on the real engine (so solutionAfter/measured marks are authentic).
+// Convert one mined chain into the modal's par-mode puzzle. The par line is
+// re-checked ply by ply on the real engine (legality only — the player is
+// free to diverge, so we never pin positions beyond the start): if the
+// fixture and engine have drifted enough that the certified line is not
+// even legal, refuse rather than lie.
 export function buildMinedPuzzle(chain, idx) {
   let pieces = chain.start.pieces;
   let lastMove = chain.start.lastMove || null;
-  const plies = [];
 
   for (let k = 0; k < chain.steps.length; k++) {
     const step = chain.steps[k];
@@ -59,46 +48,39 @@ export function buildMinedPuzzle(chain, idx) {
       Boolean(m.enPassant) === Boolean(step.bestMove.enPassant));
     if (!hit) return null; // fixture/engine drifted — refuse rather than lie
 
-    const record = {
-      pieces,
-      lastMove,
-      subgoal: 'exactMove',
-      ctx: { ...step.bestMove },
-      goalText: `Mined from a real game: of ${step.numChoices} legal moves, exactly ONE holds the position — every alternative loses by ${step.gap}+ pawns (engine-certified at three depths). Find it.`,
-      solution: { from: hit.from, to: hit.to, enPassant: hit.enPassant },
-      solutionAfter: hit.after,
-      solutionMeasured: hit.measuredSquares,
-      legalMoveCount: moves.length,
-      reply: null,
-    };
-
     if (k < chain.steps.length - 1) {
       const reply = chain.blackReplies[k];
       const mover = reply && hit.after.find((p) => !p.captured && p.side === 'black' && p.square === reply.from);
       if (!mover) return null;
       const sim = simulateStandardMove(hit.after, mover.id, reply.to, 0);
       if (!sim.ok) return null;
-      record.reply = { from: reply.from, to: reply.to };
       pieces = sim.pieces;
-      lastMove = blackLastMove(sim.pieces, mover, reply.from, reply.to, sim.measuredSquares);
+      lastMove = {
+        side: 'black', pieceId: mover.id, from: reply.from, to: reply.to,
+        isDoubleStep: false, crossedSquare: null,
+        measuredSquares: sim.measuredSquares || [],
+      };
     }
-
-    plies.push(record);
   }
 
   return {
     date: `mined-${idx}`,
-    number: 0,
-    version: 0,
     recipe: {
-      key: 'mined',
+      key: 'mined-par',
       title: minedTitle(chain),
       emoji: '⛏️',
-      moves: chain.steps.length,
+      moves: chain.parPlies,
     },
-    pieces: chain.start.pieces,
-    lastMove: chain.start.lastMove || null,
-    plies,
+    start: {
+      pieces: chain.start.pieces,
+      lastMove: chain.start.lastMove || null,
+      captureCounter: chain.start.captureCounter || 0,
+    },
+    mistake: chain.mistake, // { from, to, evalBefore, evalAfter, swing }
+    parEvals: chain.parEvals.map(clampPar),
+    parFirstMove: { ...chain.steps[0].bestMove }, // revealed after a rough run
+    themes: chain.themes,
+    trickiness: chain.trickiness,
   };
 }
 
@@ -112,7 +94,7 @@ export async function loadMinedPreview(idx) {
   }
   const puzzle = buildMinedPuzzle(chain, idx);
   if (puzzle) {
-    console.info(`[minedPreview] chain ${idx}: game ${chain.game} ply ${chain.startPly}, trickiness ${chain.trickiness}, themes [${chain.themes.join(', ')}]`);
+    console.info(`[minedPreview] chain ${idx}: game ${chain.game} ply ${chain.startPly}, mistake ${chain.mistake.from}->${chain.mistake.to} (${chain.mistake.evalBefore} -> ${chain.mistake.evalAfter}), par [${chain.parEvals.join(', ')}], trickiness ${chain.trickiness}, themes [${chain.themes.join(', ')}]`);
   }
   return puzzle;
 }

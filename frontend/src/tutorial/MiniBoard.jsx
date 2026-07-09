@@ -32,7 +32,7 @@ export default function MiniBoard({
   files = 6,
   ranks = 6,
   cell = 48,
-  pieces = [], // { sq, side, types, pips, regain, chain, chevrons, ring, mark }
+  pieces = [], // { sq, side, types, pips, regain, chevrons, ring, mark }
   arrows = [], // { from, to, side }
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
@@ -181,7 +181,6 @@ export default function MiniBoard({
               size={cell}
               coherence={Number.isFinite(p.pips) ? p.pips : 3}
               recohere={Number.isFinite(p.regain) ? p.regain : 0}
-              entangled={Boolean(p.chain)}
               promoted={Boolean(p.chevrons)}
               sealed={Boolean(p.sealed)}
               svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}
@@ -325,7 +324,6 @@ export default function MiniBoard({
             size={cell}
             coherence={Number.isFinite(dragPiece.pips) ? dragPiece.pips : 3}
             recohere={Number.isFinite(dragPiece.regain) ? dragPiece.regain : 0}
-            entangled={Boolean(dragPiece.chain)}
             promoted={Boolean(dragPiece.chevrons)}
             sealed={Boolean(dragPiece.sealed)}
             svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}

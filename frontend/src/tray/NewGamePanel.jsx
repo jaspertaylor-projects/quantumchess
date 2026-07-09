@@ -1,11 +1,14 @@
 // frontend/src/tray/NewGamePanel.jsx
 // Purpose: New game configuration panel with responsive layouts that wrap options and eliminate horizontal scrolling.
-// Imports From: ../theme.js
+// The vs-AI opponent is picked through the BotLadderPanel dropdown (unlock ladder + premium roster) — no separate bot list.
+// Imports From: ../theme.js, ../components/ChevronBadge.jsx, ../ai/bots.js, ../ladder/BotLadderPanel.jsx
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
-import { BOTS, DEFAULT_BOT_ID, getBotById } from '../ai/bots.js';
+import ChevronBadge from '../components/ChevronBadge.jsx';
+import { DEFAULT_BOT_ID, getBotById } from '../ai/bots.js';
+import BotLadderPanel from '../ladder/BotLadderPanel.jsx';
 
 function OptionButton({ label, selected, onClick }) {
   const styles = {
@@ -41,66 +44,129 @@ function OptionButton({ label, selected, onClick }) {
   );
 }
 
+// Stylized replacement for a native <select>: the trigger is a card with the
+// chosen option's label + hint and the shared rotating chevron badge; opening
+// it expands the options inline as mini cards, matching the bot ladder picker.
 function OptionSelect({ label, value, options, onChange, ariaLabel }) {
-  const styles = useMemo(
-    () => ({
-      root: {
-        width: '100%',
-      },
-      select: {
-        width: '100%',
-        padding: '10px 12px',
-        fontSize: 14,
-        fontWeight: 700,
-        borderRadius: 8,
-        border: `1px solid ${theme.border}`,
-        background: 'rgba(255,255,255,0.04)',
-        color: theme.textPrimary,
-        outline: 'none',
-        cursor: 'pointer',
-      },
-      option: {
-        background: theme.secondary,
-        color: theme.textPrimary,
-      },
-      srOnly: {
-        position: 'absolute',
-        width: 1,
-        height: 1,
-        padding: 0,
-        margin: -1,
-        overflow: 'hidden',
-        clip: 'rect(0, 0, 0, 0)',
-        whiteSpace: 'nowrap',
-        border: 0,
-      },
-    }),
-    []
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+  const accent = 'rgba(127,231,255,';
+
+  const optionText = (opt, isTrigger = false) => (
+    <span style={{ display: 'grid', minWidth: 0, gap: 1 }}>
+      <span
+        style={{
+          fontSize: isTrigger ? 14 : 13,
+          fontWeight: 850,
+          letterSpacing: '0.015em',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {opt.label}
+      </span>
+      {opt.hint ? (
+        <span style={{ fontSize: 11, color: theme.textSecondary, fontWeight: 700 }}>
+          {opt.hint}
+        </span>
+      ) : null}
+    </span>
   );
 
   return (
-    <div className="qc-new-game-option-select" style={styles.root}>
-      <label className="qc-new-game-option-select-label" style={styles.srOnly}>
-        {label}
-      </label>
-      <select
-        className="qc-new-game-option-select-input"
-        style={styles.select}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+    <div className="qc-new-game-option-select" ref={rootRef} style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         aria-label={ariaLabel || label}
+        title={`Choose ${label.toLowerCase()}`}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          alignItems: 'center',
+          gap: 10,
+          width: '100%',
+          minWidth: 0,
+          padding: '10px 12px',
+          borderRadius: 10,
+          border: `1px solid ${theme.border}`,
+          background: 'rgba(255,255,255,0.04)',
+          color: theme.textPrimary,
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
       >
-        {options.map((opt) => (
-          <option
-            key={opt.value}
-            value={opt.value}
-            className="qc-new-game-option-select-option"
-            style={styles.option}
-          >
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        {optionText(selected, true)}
+        <ChevronBadge open={open} />
+      </button>
+      {open ? (
+        <div style={{ display: 'grid', gap: 6 }}>
+          {options.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                aria-pressed={isSelected}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) auto',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  minWidth: 0,
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: isSelected ? `1px solid ${accent}0.85)` : `1px solid ${theme.border}`,
+                  background: isSelected
+                    ? `linear-gradient(90deg, ${accent}0.16), rgba(255,255,255,0.05))`
+                    : 'rgba(255,255,255,0.03)',
+                  color: theme.textPrimary,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                {optionText(opt)}
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 950,
+                    letterSpacing: '0.07em',
+                    whiteSpace: 'nowrap',
+                    color: isSelected ? '#7fe7ff' : 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {isSelected ? '✓' : ''}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -108,7 +174,14 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
 // submitSignal: bump to start a game with the settings exactly as shown —
 // same as clicking the Start Game button (the board CTA uses this when the
 // setup panel is already on screen).
-export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePremium = null, submitSignal = 0 }) {
+export default function NewGamePanel({
+  onStartGame,
+  isPaid = false,
+  onRequirePremium = null,
+  submitSignal = 0,
+  auth = null,
+  onOpenAccount = () => {},
+}) {
   const [gameMode, setGameMode] = useState('ai'); // 'local', 'ai', 'online'
   const [aiBotId, setAiBotId] = useState(DEFAULT_BOT_ID);
   const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
@@ -177,18 +250,21 @@ export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePre
         flexWrap: 'wrap',
       },
       animatedSectionContainer: {
+        // Sized by the visible section (the vs-AI ladder is tall). flexShrink
+        // 0 stops the panel's fixed-height flex column from squashing it —
+        // the panel scrolls instead and the footer stays below the content.
         position: 'relative',
-        flex: 1,
+        flexShrink: 0,
         minHeight: 200,
       },
       animatedSection: (visible) => ({
-        position: 'absolute',
+        position: visible ? 'relative' : 'absolute',
         width: '100%',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(-10px)',
         transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
         pointerEvents: visible ? 'auto' : 'none',
-        display: 'flex',
+        display: visible ? 'flex' : 'none',
         flexDirection: 'column',
         gap: 20,
       }),
@@ -217,29 +293,18 @@ export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePre
 
   const gameModeOptions = useMemo(
     () => [
-      { value: 'local', label: 'Local 2 Player' },
-      { value: 'ai', label: 'vs. AI' },
-      { value: 'online', label: 'Online' },
+      { value: 'local', label: 'Local 2 Player', hint: 'Pass & play on one device' },
+      { value: 'ai', label: 'vs. AI', hint: 'Climb the bot ladder' },
+      { value: 'online', label: 'Online', hint: 'Matchmaking & friend challenges' },
     ],
     []
   );
 
-  const tierTag = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-  const aiBotOptions = useMemo(
-    () => BOTS.map((b) => ({
-      value: b.id,
-      label: b.premium
-        ? `★ Premium · ${b.name} (${b.rating})${isPaid ? '' : ' 🔒'}`
-        : `${tierTag[b.tier]} · ${b.name} (${b.rating})`,
-    })),
-    [isPaid]
-  );
-
   const preferredSideOptions = useMemo(
     () => [
-      { value: 'white', label: 'White' },
-      { value: 'black', label: 'Black' },
-      { value: 'random', label: 'Random' },
+      { value: 'white', label: 'White', hint: 'Move first' },
+      { value: 'black', label: 'Black', hint: 'Move second' },
+      { value: 'random', label: 'Random', hint: 'Let the universe decide' },
     ],
     []
   );
@@ -265,25 +330,14 @@ export default function NewGamePanel({ onStartGame, isPaid = false, onRequirePre
             <span className="qc-new-game-label" style={styles.label}>
               Opponent
             </span>
-            <OptionSelect
-              label="Opponent"
-              ariaLabel="Select AI opponent"
-              value={aiBotId}
-              options={aiBotOptions}
-              onChange={setAiBotId}
+            <BotLadderPanel
+              auth={auth}
+              onOpenAccount={onOpenAccount}
+              selectedBotId={aiBotId}
+              onSelectBot={setAiBotId}
+              isPaid={isPaid}
+              onRequirePremium={onRequirePremium}
             />
-            {premiumLocked ? (
-              <div
-                className="qc-new-game-premium-hint"
-                style={{
-                  fontSize: 12, lineHeight: 1.45, borderRadius: 8, padding: '7px 10px',
-                  border: '1px solid rgba(246,196,69,0.55)', background: 'rgba(246,196,69,0.08)',
-                  color: '#f6c445',
-                }}
-              >
-                ★ {selectedBot.name} is a Premium bot — upgrade for $3/month to play the premium roster.
-              </div>
-            ) : null}
           </div>
           <div className="qc-new-game-section" style={styles.section}>
             <span className="qc-new-game-label" style={styles.label}>

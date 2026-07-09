@@ -86,9 +86,8 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     types: p.possibleTypes.join(''),
     pips: p.coherence,
     regain: Math.max(0, p.recohere || 0),
-    chain: Boolean(p.entangledWith),
     chevrons: Boolean(p.wasPromoted),
-    sealed: p.possibleTypes.length <= 2 && !p.entangledWith && !canPieceRecohere(display, p.id),
+    sealed: p.possibleTypes.length <= 2 && !canPieceRecohere(display, p.id),
     mark: marks.includes(p.square),
     ring: threats.some((t) => t.to === p.square),
   })), [live, display, marks, threats]);

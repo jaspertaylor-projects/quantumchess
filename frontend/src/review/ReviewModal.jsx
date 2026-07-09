@@ -37,11 +37,64 @@ function describeHintMove(mv) {
   return `${mv.from} → ${mv.to}${mv.type === 'enpassant' ? ' (en passant)' : ''}`;
 }
 
+// Dev/mined-game strip: the full game's eval story as a clickable seek
+// graph. Values are computed CLIENT-SIDE, progressively, at parity-matched
+// depths (white-to-move depth 2, black-to-move depth 1 — every lookahead
+// ends after a Black move), because a fixed depth flips who-moved-last
+// every ply and saws the curve: the mover always looks a tempo better.
+// Only rendered when showEvalGraph is set — live premium reviews are
+// untouched.
+function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening }) {
+  const W = 560;
+  const H = 96;
+  const PAD = 8;
+  const maxPly = Math.max(1, count - 1);
+  const x = (ply) => PAD + (ply / maxPly) * (W - 2 * PAD);
+  const y = (v) => H / 2 - (Math.max(-8, Math.min(8, v)) / 8) * (H / 2 - 10);
+  const pts = [...trace].sort((a, b) => a.ply - b.ply);
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.ply).toFixed(1)} ${y(p.eval).toFixed(1)}`).join(' ');
+  const seek = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width;
+    onSeek(Math.max(0, Math.min(count - 1, Math.round(fx * maxPly))));
+  };
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: '100%', height: 'auto', display: 'block', cursor: 'pointer' }}
+      onClick={seek}
+      role="img"
+      aria-label="Game evaluation graph; click to jump to a move"
+    >
+      <rect x="0" y="0" width={W} height={H} rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.15)" />
+      {/* balance band ±1 */}
+      <rect x={PAD} y={y(1)} width={W - 2 * PAD} height={y(-1) - y(1)} fill="rgba(126,231,135,0.07)" />
+      <line x1={PAD} y1={y(0)} x2={W - PAD} y2={y(0)} stroke="rgba(128,128,128,0.5)" strokeWidth="1" />
+      <path d={path} fill="none" stroke="#39e6ff" strokeWidth="1.6" />
+      {pts.map((p) => (
+        <circle
+          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={p.side === 'white' ? 2.4 : 1.6}
+          fill={p.side === 'white' ? '#39e6ff' : 'rgba(57,230,255,0.5)'}
+        />
+      ))}
+      <line x1={x(idx)} y1={6} x2={x(idx)} y2={H - 6} stroke="#ffd166" strokeWidth="1.5" />
+      <text x={PAD + 2} y={12} fontSize="9" fill="rgba(255,255,255,0.5)">+8</text>
+      <text x={PAD + 2} y={H - 5} fontSize="9" fill="rgba(255,255,255,0.5)">-8</text>
+      {pendingCount > 0 ? (
+        <text x={W - PAD} y={12} fontSize="9" textAnchor="end" fill="rgba(255,255,255,0.5)">
+          {deepening ? `deepening (d6/d5)… ${pendingCount} left` : `scanning… ${pendingCount} left`}
+        </text>
+      ) : null}
+    </svg>
+  );
+}
+
 export default function ReviewModal({
   open = false,
   onClose = () => {},
-  game = null, // { id, opponent, opponent_rating, user_side, result, created_at }
+  game = null, // { id, opponent, opponent_rating, user_side, result, created_at, headline? }
   moves = null, // stored qc_games.moves array
+  showEvalGraph = false, // dev/mined only: compute + show the whole-game eval graph strip
   pieceSvgStyles,
   indicators,
   squareColors,
@@ -63,6 +116,74 @@ export default function ReviewModal({
   useEffect(() => {
     if (open) setIdx(snapshots.length > 0 ? snapshots.length - 1 : 0);
   }, [open, snapshots.length]);
+
+  // Whole-game eval graph (dev/mined): one worker walks the snapshots in
+  // coarse-to-fine stride passes so a rough curve appears in seconds, then a
+  // second pass re-resolves every point DEEP — the modal never waits on it.
+  // Depth pairs are parity-matched (white-to-move even, black-to-move odd:
+  // every lookahead ends after a Black move) because a fixed depth flips
+  // who-moved-last each ply and saws the curve. Ladder: (2,1) fast, then
+  // (6,5) replacing values as they land; deep timeouts keep the fast value.
+  const [graphTrace, setGraphTrace] = useState([]);
+  const [graphPending, setGraphPending] = useState(0);
+  const [graphDeepening, setGraphDeepening] = useState(false);
+  useEffect(() => {
+    if (!open || !showEvalGraph || !timeline || timeline.snapshots.length <= 1) return undefined;
+    const snaps = timeline.snapshots;
+    setGraphTrace([]);
+    setGraphDeepening(false);
+    let stopped = false;
+    const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
+    const jobs = [];
+    for (const phase of [
+      { depthW: 2, depthB: 1, widths: [40, 8, 6], timeMs: 6000, deep: false },
+      { depthW: 6, depthB: 5, widths: [28, 10, 7, 5, 4, 3], timeMs: 25000, deep: true },
+    ]) {
+      const seen = new Set();
+      for (const stride of [8, 4, 2, 1]) {
+        for (let k = 0; k < snaps.length; k += stride) {
+          if (!seen.has(k)) { seen.add(k); jobs.push({ id: jobs.length, k, ...phase }); }
+        }
+      }
+    }
+    setGraphPending(jobs.length);
+    let cur = null;
+    const next = () => {
+      if (stopped) return;
+      if (!jobs.length) { worker.terminate(); return; }
+      cur = jobs.shift();
+      setGraphDeepening(cur.deep);
+      const snap = snaps[cur.k];
+      if (!snap || snap.gameOver) { setGraphPending((n) => Math.max(0, n - 1)); next(); return; }
+      worker.postMessage({
+        type: 'analyze',
+        id: cur.id,
+        payload: {
+          pieces: snap.pieces,
+          sideToMove: snap.sideToMove,
+          lastMove: snap.lastMove || null,
+          depth: snap.sideToMove === 'white' ? cur.depthW : cur.depthB,
+          widths: cur.widths,
+          timeMs: cur.timeMs,
+        },
+      });
+    };
+    worker.onmessage = (e) => {
+      const d = e.data || {};
+      if (d.type !== 'analysis' || !cur || d.id !== cur.id) return;
+      if (d.moves && d.moves.length) {
+        const side = snaps[cur.k].sideToMove;
+        const v = side === 'white' ? d.moves[0].score : -d.moves[0].score;
+        const point = { ply: cur.k, eval: Number(v.toFixed(2)), side };
+        setGraphTrace((t) => [...t.filter((p) => p.ply !== cur.k), point]);
+      } // timeout: the earlier (shallow) value stands
+      setGraphPending((n) => Math.max(0, n - 1));
+      next();
+    };
+    worker.onerror = () => { setGraphPending((n) => Math.max(0, n - 1)); next(); };
+    next();
+    return () => { stopped = true; worker.terminate(); };
+  }, [open, showEvalGraph, timeline]);
 
   const bounded = Math.max(0, Math.min(idx, snapshots.length - 1));
   const snap = snapshots[bounded] || null;
@@ -190,7 +311,7 @@ export default function ReviewModal({
     : null;
 
   const orientation = game && game.user_side === 'black' ? 'black' : 'white';
-  const headline = game
+  const headline = game && game.headline ? game.headline : game
     ? `vs ${game.opponent || 'unknown'}${game.opponent_rating ? ` (${game.opponent_rating})` : ''} · ${game.result || ''}`
     : '';
 
@@ -231,6 +352,16 @@ export default function ReviewModal({
             ) : null}
             <div style={styles.content}>
               <div className="qc-review-board" style={styles.boardCol}>
+                {showEvalGraph ? (
+                  <EvalTraceGraph
+                    trace={graphTrace}
+                    count={snapshots.length}
+                    idx={bounded}
+                    onSeek={setIdx}
+                    pendingCount={graphPending}
+                    deepening={graphDeepening}
+                  />
+                ) : null}
                 <div style={styles.evalBarOuter} title={`Eval ${formatEval(currentEval)} (white)`}>
                   <div style={{ position: 'absolute', inset: 0, width: `${evalPct}%`, background: '#e8e8e8', transition: 'width 200ms ease' }} />
                   <div style={{

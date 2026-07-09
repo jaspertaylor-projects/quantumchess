@@ -10,11 +10,15 @@ import { supabase, accountsEnabled } from './supabaseClient.js';
 export default function useAuth() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -66,6 +70,22 @@ export default function useAuth() {
     if (!supabase) return;
     await supabase.auth.signOut();
     setProfile(null);
+    setRecoveryMode(false);
+  }, []);
+
+  const resetPassword = useCallback(async (email) => {
+    if (!supabase) return { error: { message: 'Accounts are not configured.' } };
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/?reset=1'
+    });
+    return { error };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword) => {
+    if (!supabase) return { error: { message: 'Accounts are not configured.' } };
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error) setRecoveryMode(false);
+    return { error };
   }, []);
 
   return {
@@ -77,5 +97,8 @@ export default function useAuth() {
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
+    recoveryMode,
   };
 }

@@ -4,7 +4,7 @@
 // difficulty arc: two 1-move puzzles (Mon/Tue), two 2-move chains (Wed/Thu),
 // two 3-move chains (Fri/Sat) and a 4-move hunt on Sunday. A puzzle is a
 // CHAIN of quantum sub-goals (measure three at once, census collapse, seal,
-// entanglement snap, unmasking, phantom check, mate across all worlds); each
+// royal snap, unmasking, phantom check, mate across all worlds); each
 // of the player's moves must be the UNIQUE move achieving that step's goal —
 // verified by the real engine against every legal move — with a scripted
 // Black reply between steps. Candidates that fail any ply are rejected and
@@ -82,8 +82,7 @@ function P(side, square, types, opts = {}) {
     coherence: 3,
     recohere: opts.regain || 0,
     observed: false,
-    entangledWith: opts.entangledWith || null,
-    castled: Boolean(opts.entangledWith),
+    castled: false,
   };
 }
 
@@ -274,7 +273,8 @@ const SUBGOALS = {
     return !canPieceRecohere(m.after, ctx.targetId);
   },
 
-  // Exactly one of the entangled pair is captured; both end definite.
+  // Exactly one of the royal pair is captured; conservation defines both
+  // (the captured one collapses to Queen, so the survivor must be the King).
   snap: (before, m, ctx) => {
     const a = m.after.find((p) => p.id === ctx.pairIds[0]);
     const b = m.after.find((p) => p.id === ctx.pairIds[1]);
@@ -789,10 +789,11 @@ const R_SNAP = {
     const pf = randInt(rng, 1, 5);
     const gap = pick(rng, [1, 2]);
     if (!b.free(pf, pr) || !b.free(pf + gap, pr)) return null;
-    const e1 = P('black', b.take(pf, pr), 'rk', { entangledWith: 'TBD' });
-    const e2 = P('black', b.take(pf + gap, pr), 'rk', { entangledWith: 'TBD' });
-    e1.entangledWith = e2.id;
-    e2.entangledWith = e1.id;
+    // The royal pair: queen-or-king each. The census alone anti-correlates
+    // them (one queen slot, one king slot), so capturing either collapses
+    // BOTH — no entanglement link needed, or possible, under current rules.
+    const e1 = P('black', b.take(pf, pr), 'qk');
+    const e2 = P('black', b.take(pf + gap, pr), 'qk');
     pieces.push(e1, e2);
     const dd = pick(rng, [[-1, -1], [1, -1]]);
     const dist = randInt(rng, 2, 3);
@@ -801,17 +802,16 @@ const R_SNAP = {
     if (!b.free(bf, br)) return null;
     for (let s = 1; s < dist; s++) if (!b.free(pf + dd[0] * s, pr + dd[1] * s)) return null;
     pieces.push(P('white', b.take(bf, br), 'b'));
-    // three {n,b,q} blurs: a closed group over open slots {n, b, q} (the
-    // pair holds the open r and k), consistent with the full-16 census.
-    // Their queen branch sees far, so keep them off the capture square's
-    // and the white king's lines and jumps.
+    // three {n,b} blurs: a closed group over open slots {n, b} (the pair
+    // holds q and k, so no blur can carry the queen branch at fixed point).
+    // Keep them off the capture square's and the white king's lines and jumps.
     const wkf = pf < 4 ? 7 : 0;
     for (let k = 0; k < 3; k++) {
       const spot = b.findFree(rng, 0, 7, 5, 7, 20, (f, r) =>
         atkQueenly(pf, pr, f, r) || atkKnight(pf, pr, f, r) ||
         atkQueenly(wkf, 0, f, r) || atkKnight(wkf, 0, f, r));
       if (!spot) return null;
-      pieces.push(P('black', b.take(spot[0], spot[1]), 'nbq'));
+      pieces.push(P('black', b.take(spot[0], spot[1]), 'nb'));
     }
     if (!b.free(wkf, 0)) return null;
     pieces.push(whiteKingHolder(wkf));
@@ -824,7 +824,7 @@ const R_SNAP = {
       plies: [{
         subgoal: 'snap',
         ctx: { pairIds: [e1.id, e2.id] },
-        goalText: 'The castled pair is entangled: in every world exactly one is the King. Break the chain — one capture forces BOTH to resolve, instantly, at any distance.',
+        goalText: 'The royal pair: in every world exactly one is the Queen and the other the King — conservation allows nothing else. One capture forces BOTH to resolve, instantly, at any distance.',
       }],
     };
   },
@@ -924,7 +924,7 @@ const R_MATE1 = {
 
 // ==================== two-move chains (Wed / Thu) ===========================
 
-// Wed: snap the pair, then back-rank mate on the revealed king.
+// Wed: snap the royal pair, then back-rank mate on the revealed king.
 const R_SNAP_TRAP = {
   key: 'snaptrap',
   title: 'The Snap Trap',
@@ -936,12 +936,12 @@ const R_SNAP_TRAP = {
     const b = boardCtx();
     const pieces = [];
     const pf = randInt(rng, 2, 3);
-    // pair on the 8th rank, TWO apart: the revealed king (E2) is never
-    // adjacent to the capture square, so no refuting recapture exists
-    const e1 = P('black', b.take(pf, 7), 'rk', { entangledWith: 'TBD' });
-    const e2 = P('black', b.take(pf + 2, 7), 'rk', { entangledWith: 'TBD' });
-    e1.entangledWith = e2.id;
-    e2.entangledWith = e1.id;
+    // royal pair on the 8th rank, TWO apart: the revealed king (E2) is never
+    // adjacent to the capture square, so no refuting recapture exists. The
+    // census anti-correlates {q,k} pieces on its own — capture one and the
+    // other must be the King.
+    const e1 = P('black', b.take(pf, 7), 'qk');
+    const e2 = P('black', b.take(pf + 2, 7), 'qk');
     pieces.push(e1, e2);
     // shields box the king in on rank 7
     for (const f of [pf + 1, pf + 2, pf + 3]) {
@@ -990,7 +990,7 @@ const R_SNAP_TRAP = {
         {
           subgoal: 'snap',
           ctx: { pairIds: [e1.id, e2.id] },
-          goalText: 'Step 1 of 2 — Break the entangled pair: one capture forces both partners to resolve. Watch where the King appears…',
+          goalText: 'Step 1 of 2 — Break the royal pair: capture one and conservation defines both. Watch where the King appears…',
           reply: { from: sq(blur[0], blur[1]), to: sq(hop[0], hop[1]) },
         },
         {
@@ -1135,24 +1135,23 @@ function buildHunt(rng, rungs) {
   const F = (f) => (mirror ? 7 - f : f); // mirror on files for variety
   const r0 = 7 - rungs; // final mate lands on rank 8
 
-  // pair: E1 on the inner file, king-to-be E2 pinned to the wall file
+  // royal pair: E1 on the inner file, king-to-be E2 pinned to the wall file.
+  // {q,k} each — the census anti-correlates them by itself, so capturing E1
+  // (it collapses to Queen) confirms E2 as the King.
   const pf = F(5);
   const kfile = F(7);
-  const e1 = P('black', b.take(pf, r0), 'rk', { entangledWith: 'TBD' });
-  const e2 = P('black', b.take(kfile, r0), 'rk', { entangledWith: 'TBD' });
-  e1.entangledWith = e2.id;
-  e2.entangledWith = e1.id;
+  const e1 = P('black', b.take(pf, r0), 'qk');
+  const e2 = P('black', b.take(kfile, r0), 'qk');
   pieces.push(e1, e2);
-  // extra pretenders — the unmask cascade strips their crowns. They carry
-  // knight/bishop/king branches, so keep them off the white corner king.
-  const wkf = mirror ? 7 : 0;
-  for (const tp of ['nk', 'bk']) {
-    const spot = b.findFree(rng, mirror ? 4 : 0, mirror ? 7 : 3, 0, 2, 20, (f, r) =>
-      f === pf || f === kfile || r === r0 ||
-      atkKnight(wkf, 0, f, r) || atkDiag(wkf, 0, f, r) || atkNear(wkf, 0, f, r));
-    if (!spot) return null;
-    pieces.push(P('black', b.take(spot[0], spot[1]), tp));
+  // The {q,k} pair's queen branch sees diagonals the old rook pair never
+  // did: at rungs=2 (and only then — |pf−wkf| = r0 needs r0=5), E1's long
+  // diagonal reaches the white corner king. A shield pawn blocks it.
+  if (rungs === 2) {
+    const shieldF = mirror ? 6 : 1;
+    if (!b.free(shieldF, 1)) return null;
+    pieces.push(P('white', b.take(shieldF, 1), 'p'));
   }
+  const wkf = mirror ? 7 : 0;
   // R1 below E1 on its file, clear path
   const r1r = randInt(rng, 0, 1);
   if (!b.free(pf, r1r)) return null;
@@ -1181,11 +1180,26 @@ function buildHunt(rng, rungs) {
   for (let f = Math.min(pf, kfile) + 1; f < Math.max(pf, kfile); f++) {
     if (!b.free(f, r0)) return null;
   }
-  // texture blur, kept off the corridors and the white king's lines
-  const blur = b.findFree(rng, mirror ? 5 : 0, mirror ? 7 : 2, 2, 3, 14, (f, r) =>
-    f === pf || f === kfile || f === rf || r >= r0 ||
-    atkQueenly(wkf, 0, f, r) || atkKnight(wkf, 0, f, r));
-  if (blur) pieces.push(P('black', b.take(blur[0], blur[1]), 'nbr'));
+  // texture blurs. {n,b} only: with the pair pinning q and k, a rook branch
+  // has no open-slot grouping left (padCapturedSides would reject every
+  // try). Ladder safety: a {n,b} piece refutes the puzzle if it can swoop
+  // onto the unmask square or a rook's landing squares (a bishop diagonal
+  // or a knight jump away) — the old {n,k}/{b,k} pretenders carried one
+  // long-range branch each, these carry two, so screen every ladder square.
+  const ladder = [];
+  for (let r = r0; r <= 7; r++) ladder.push([pf, r], [rf, r]);
+  const reachesLadder = (f, r) => ladder.some(([lf, lr]) =>
+    atkKnight(lf, lr, f, r) || atkDiag(lf, lr, f, r));
+  let blurs = 0;
+  for (let k = 0; k < 3; k++) {
+    const spot = b.findFree(rng, 0, 7, 0, 3, 20, (f, r) =>
+      f === pf || f === kfile || f === rf || r >= r0 || reachesLadder(f, r) ||
+      atkQueenly(wkf, 0, f, r) || atkKnight(wkf, 0, f, r));
+    if (!spot) continue;
+    pieces.push(P('black', b.take(spot[0], spot[1]), 'nb'));
+    blurs++;
+  }
+  if (blurs < 2) return null; // too austere — retry with a fresh layout
   if (!b.free(wkf, 0)) return null;
   pieces.push(whiteKingHolder(wkf));
 
@@ -1195,7 +1209,7 @@ function buildHunt(rng, rungs) {
   plies.push({
     subgoal: 'unmask',
     ctx: {},
-    goalText: `Step 1 of ${total} — Four pieces might be the King. One capture snaps the entanglement and unmasks him — with check.`,
+    goalText: `Step 1 of ${total} — The royal pair shares one crown. Capture the one you can reach: conservation crowns the other — with check.`,
     reply: { from: sq(kfile, r0), to: sq(kfile, r0 + 1) },
   });
   // middle rungs: alternate rooks cutting off ranks

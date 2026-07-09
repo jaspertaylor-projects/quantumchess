@@ -378,32 +378,6 @@ export const LESSONS = [
         },
       },
       {
-        title: 'The chain link',
-        text: [
-          'Entangled castle partners never recohere — their identities stay bound to each other. Instead of a clock that would never fill, they wear a chain link.',
-        ],
-        physics: "A maximally entangled pair carries all of its uncertainty in the correlation. There is no free entropy left for either partner to re-superpose independently.",
-        interactive: {
-          prompt: 'This castled pair is entangled. Make any move and watch their bottom row: no clock ever appears.',
-          pieces: [
-            { id: 'WA', side: 'white', square: 'd1', types: 'rk', moved: true, entangledWith: 'WB' },
-            { id: 'WB', side: 'white', square: 'e1', types: 'rk', moved: true, entangledWith: 'WA' },
-            { id: 'W2', side: 'white', square: 'a2', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'a2', to: 'a3' },
-          success: 'The pair wears the chain link instead of a clock: their uncertainty lives entirely in the correlation, so neither partner can ever re-blur on its own.',
-        },
-        board: {
-          files: 4,
-          ranks: 2,
-          pieces: [
-            { sq: 'b1', side: 'white', types: 'rk', chain: true },
-            { sq: 'c1', side: 'white', types: 'rk', chain: true },
-          ],
-        },
-      },
-      {
         title: 'The solid line: sealed',
         text: [
           'Sometimes the census is complete: every identity a collapsed piece could regain is already confirmed elsewhere, or forbidden by its square. Its clock would tick forever and never deliver.',
@@ -512,7 +486,7 @@ export const LESSONS = [
             { id: 'B1', side: 'black', square: 'h8', types: 'pnbrqk' },
           ],
           goal: { kind: 'castle' },
-          success: 'Entangled! Both partners collapsed to Rook-or-King and met in the middle, wearing the chain link. In every world exactly one is the King — resolve either, and the other snaps to the complement instantly.',
+          success: 'Castled! Both partners collapsed to Rook-or-King and met in the middle. Which is which stays an open question — conservation will settle it the moment the King is confirmed anywhere.',
         },
         board: {
           files: 8,
@@ -525,28 +499,28 @@ export const LESSONS = [
         },
       },
       {
-        title: 'The entangled pair',
+        title: 'Two maybe-kings',
         text: [
-          'Both pieces collapse to exactly Rook-or-King — and become anti-correlated: in every consistent world, one is the King and the other is the Rook.',
-          'The moment either partner resolves, the other instantly snaps to the complementary type. Until then they wear the chain link, bound and unrecoverable.',
+          'Both pieces collapse to exactly Rook-or-King. No special bond ties them afterward — team conservation alone keeps the story straight: the moment ANY piece is confirmed as the King, every other piece loses King from its possibilities.',
+          'And like any nearly-defined piece, a castled partner recoheres: its clock fills, and it can blur back toward superposition.',
         ],
-        physics: "The pair leaves in the anti-correlated Bell state (|K⟩|R⟩ + |R⟩|K⟩)/√2. Measuring either partner instantly determines the other, at any distance across the board.",
+        physics: "The castle is a projective measurement onto the rook-king subspace — nothing more. Which piece is which stays undetermined, and the environment is free to re-mix each partner's amplitudes over time.",
         interactive: {
           prompt: 'Resolve one partner: slide d1 up the board like a Rook (d1 → d5) and watch e1.',
           pieces: [
-            { id: 'WA', side: 'white', square: 'd1', types: 'rk', moved: true, entangledWith: 'WB' },
-            { id: 'WB', side: 'white', square: 'e1', types: 'rk', moved: true, entangledWith: 'WA' },
+            { id: 'WA', side: 'white', square: 'd1', types: 'rk', moved: true, castled: true },
+            { id: 'WB', side: 'white', square: 'e1', types: 'rk', moved: true, castled: true },
             { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'd1', to: 'd5' },
-          success: 'Only a Rook slides four squares, so d1 IS the Rook — and its partner snapped to King instantly, untouched, from across the board. That is entanglement paying out.',
+          success: 'Only a Rook slides four squares, so d1 IS the Rook. Its old partner keeps both faces — nothing snapped. Its recoherence clock is running, and if the KING is ever confirmed anywhere, every other piece sheds King on its own.',
         },
         board: {
           files: 8,
           ranks: 3,
           pieces: [
-            { sq: 'd1', side: 'white', types: 'rk', chain: true },
-            { sq: 'e1', side: 'white', types: 'rk', chain: true },
+            { sq: 'd1', side: 'white', types: 'rk', regain: 0 },
+            { sq: 'e1', side: 'white', types: 'rk', regain: 0 },
           ],
         },
       },
@@ -713,7 +687,7 @@ export const LESSONS = [
           'Stalemate: no legal move and not in check — drawn. Fifty quiet moves with no capture, no definite pawn move, no promotion, and no information gained — drawn. The same FULL quantum state three times — drawn.',
           'Collapsing superpositions counts as progress, so active quantum play never runs the clock down. Now go play. Your pieces do not know who they are — teach them the hard way.',
         ],
-        physics: "Positions repeat only if their full quantum states are identical — possibility sets, coherence, entanglement and all. Equality of the classical shadow is not equality of the state.",
+        physics: "Positions repeat only if their full quantum states are identical — possibility sets, coherence, clocks and all. Equality of the classical shadow is not equality of the state.",
         interactive: {
           prompt: 'Last exercise. Make any move at all — then go play a real game.',
           pieces: [

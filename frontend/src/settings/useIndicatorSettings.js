@@ -1,7 +1,7 @@
 // frontend/src/settings/useIndicatorSettings.js
 // Purpose: Manage visibility toggles for the board's visual reminders
-// (decoherence gauge, recoherence dots, entanglement link, promotion
-// chevrons, check glow, pulse rings), persisted to localStorage.
+// (decoherence gauge, recoherence dots, promotion chevrons, check glow,
+// pulse rings), persisted to localStorage.
 // Imports From: ./usePersistentSetting.js
 // Exported To: ../App.jsx, ./SettingsModal.jsx, ../chessboard/Board.jsx
 
@@ -12,7 +12,6 @@ const STORAGE_KEY = 'qcIndicatorSettings';
 export const DEFAULT_INDICATORS = {
   coherence: true, // center triangle gauge (measurement damage)
   recohere: true, // bottom dots counting toward regaining a possibility
-  entangled: true, // chain link under entangled castle partners
   promoted: true, // bra-ket braces on already-promoted pieces
   checkGlow: false, // arrow from each checker to the checked king-holder (Amateur default)
   checkRing: true, // pulsing red ring around the checked piece
@@ -23,7 +22,6 @@ export const DEFAULT_INDICATORS = {
 export const INDICATOR_LABELS = {
   coherence: 'Decoherence gauge (center dots)',
   recohere: 'Recoherence dots (bottom)',
-  entangled: 'Entanglement link',
   promoted: 'Promotion insignia',
   checkGlow: 'Check arrows',
   checkRing: 'Check target ring',
@@ -34,7 +32,7 @@ export const INDICATOR_LABELS = {
 // Cumulative hint levels: each preset strips everything the one above it
 // strips, plus more. "custom" is any hand-picked combination.
 const ALL_ON = {
-  coherence: true, recohere: true, entangled: true, promoted: true,
+  coherence: true, recohere: true, promoted: true,
   checkGlow: true, checkRing: true, pulseRings: true, typeIcons: true,
 };
 export const INDICATOR_PRESETS = {
@@ -44,10 +42,10 @@ export const INDICATOR_PRESETS = {
   grandmaster: {
     ...ALL_ON,
     checkGlow: false, checkRing: false, pulseRings: false,
-    coherence: false, recohere: false, entangled: false, promoted: false,
+    coherence: false, recohere: false, promoted: false,
   },
   goat: {
-    coherence: false, recohere: false, entangled: false, promoted: false,
+    coherence: false, recohere: false, promoted: false,
     checkGlow: false, checkRing: false, pulseRings: false, typeIcons: false,
   },
 };

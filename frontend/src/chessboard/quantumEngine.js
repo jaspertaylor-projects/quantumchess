@@ -53,7 +53,7 @@ function restrictTypes(piece, allowedTypes) {
 
 // Any collapse is a fresh start: whenever a piece's possibility set shrank
 // during a move's resolution (its own collapse, solver pruning, check
-// pruning, sheds, entanglement), its coherence resets to full. If the shrink
+// pruning, sheds), its coherence resets to full. If the shrink
 // leaves the piece nearly defined (<= 2 possibilities), its recoherence
 // clock restarts empty: the dots show zero the moment it collapses, and each
 // of the owner's subsequent moves ticks the clock (0 -> 1 -> 2 -> 3). This
@@ -585,37 +585,11 @@ export function enforceGlobalTypeConstraintsToFixpoint(pieces) {
   }
 }
 
-// Castled pairs are entangled: exactly one of the two is the King and the
-// other the Rook in every consistent world. Whenever one partner resolves to a
-// single type (by move collapse, capture, check pruning, or measurement), the
-// other loses that type. Mutates in place; returns whether anything changed.
-function resolveEntanglements(pieces) {
-  let changed = false;
-  for (const p of pieces) {
-    if (!p.entangledWith) continue;
-    if (!Array.isArray(p.possibleTypes) || p.possibleTypes.length !== 1) continue;
-    const partner = pieces.find((x) => x.id === p.entangledWith);
-    if (!partner || partner.captured) continue;
-    if (!Array.isArray(partner.possibleTypes) || partner.possibleTypes.length <= 1) continue;
-    const resolvedType = p.possibleTypes[0];
-    const filtered = partner.possibleTypes.filter((t) => t !== resolvedType);
-    if (filtered.length > 0 && filtered.length !== partner.possibleTypes.length) {
-      restrictTypes(partner, filtered);
-      changed = true;
-    }
-  }
-  return changed;
-}
-
-// Run global conservation and entanglement resolution together to a fixpoint.
+// Run global conservation to a fixpoint. (Castled pairs need no special
+// link: if one partner resolves to the King, conservation strips King from
+// everything else — the census IS the correlation.)
 export function applyQuantumConstraints(pieces) {
-  let current = enforceGlobalTypeConstraintsToFixpoint(pieces);
-  for (let i = 0; i < 8; i++) {
-    const changed = resolveEntanglements(current);
-    if (!changed) return current;
-    current = enforceGlobalTypeConstraintsToFixpoint(current);
-  }
-  return current;
+  return enforceGlobalTypeConstraintsToFixpoint(pieces);
 }
 
 export function computeThreatenedSquaresForSide(pieces, side) {
@@ -779,7 +753,7 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
 
   const prePulse = applyQuantumConstraints(afterCheck);
   const pulse = applyMeasurementPulse(prePulse, [moving.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id], prevPieces);
   resetCoherenceOnCollapse(prevPieces, finalPieces);
   return { ok: true, pieces: finalPieces, didCapture, measuredSquares: pulse.measuredSquares };
 }
@@ -881,11 +855,19 @@ function attemptGuardedShed(current, targetId) {
 //    superposition. Each of the owner's moves advances every such piece by
 //    one step; at RECOHERE_THRESHOLD the piece regains its least valuable
 //    feasible possibility (never King, never Pawn on promoted pieces or the
-//    promotion rank, never anything conservation rules out). Pulses reset the
-//    progress (quantum Zeno) and entangled castle pairs never recohere.
-export function applyOwnerTurnEffects(pieces, moverSide, movedIds = []) {
+//    promotion rank, never anything conservation rules out). Pulses reset
+//    the progress (quantum Zeno).
+export function applyOwnerTurnEffects(pieces, moverSide, movedIds = [], prevPieces = null) {
   let current = pieces;
   const movedSet = new Set(movedIds);
+  // Pre-move possibility counts: a piece whose set shrank DURING this move's
+  // resolution collapsed this turn, and a collapse is a fresh start — its
+  // clock must not tick (let alone pay out a regained identity) in the same
+  // breath. Without this, a piece one tick from recohering could collapse
+  // via en passant and instantly regain the identity, erasing the collapse.
+  const prevLens = prevPieces
+    ? new Map(prevPieces.map((p) => [p.id, (p.possibleTypes || []).length]))
+    : null;
 
   // --- Deferred measurement damage ---
   const shedDueIds = [];
@@ -916,9 +898,9 @@ export function applyOwnerTurnEffects(pieces, moverSide, movedIds = []) {
       if ((p.recohere || 0) !== 0) p.recohere = 0;
       continue;
     }
-    if (p.entangledWith) {
-      p.recohere = 0;
-      continue;
+    if (prevLens) {
+      const was = prevLens.get(p.id);
+      if (was !== undefined && len < was) { p.recohere = 0; continue; } // collapsed this move
     }
     const next = (p.recohere || 0) + 1;
     if (next >= RECOHERE_THRESHOLD) {
@@ -968,7 +950,6 @@ export function canPieceRecohere(pieces, pieceId) {
   if (!live) return false;
   const len = (live.possibleTypes || []).length;
   if (len === 0 || len > 2) return false;
-  if (live.entangledWith) return false;
 
   const promoted = getPromoTypes(live).length > 0;
   const pos = fromAlgebraic(live.square);
@@ -1064,7 +1045,7 @@ export function simulateEnPassant(prevPieces, pieceId, toSquare, victimId, captu
 
   const prePulse = applyQuantumConstraints(afterCheck);
   const pulse = applyMeasurementPulse(prePulse, [moving.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id], prevPieces);
   resetCoherenceOnCollapse(prevPieces, finalPieces);
   return { ok: true, pieces: finalPieces, didCapture: true, measuredSquares: pulse.measuredSquares };
 }
@@ -1207,12 +1188,12 @@ export function simulateCastle(prevPieces, plan) {
   piece1.observed = false;
   piece2.observed = false;
 
-  // The castled pair becomes an anti-correlated entangled pair: in every
-  // consistent world exactly one of them is the King and the other the Rook.
+  // The pair leaves the castle as two ordinary rook-or-king superpositions —
+  // no entanglement link (rules change 2026-07-08: single-history is gone,
+  // and the global census already keeps the kings honest). Like any other
+  // nearly-defined pieces they may recohere back toward superposition.
   piece1.castled = true;
   piece2.castled = true;
-  piece1.entangledWith = piece2.id;
-  piece2.entangledWith = piece1.id;
 
   const constrained = applyQuantumConstraints(next);
   const moverSide = piece1.side;
@@ -1229,7 +1210,7 @@ export function simulateCastle(prevPieces, plan) {
 
   const prePulse = applyQuantumConstraints(afterCheck);
   const pulse = applyMeasurementPulse(prePulse, [piece1.id, piece2.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, piece1.side, [piece1.id, piece2.id]);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, piece1.side, [piece1.id, piece2.id], prevPieces);
   resetCoherenceOnCollapse(prevPieces, finalPieces);
   return { ok: true, pieces: finalPieces, measuredSquares: pulse.measuredSquares };
 }
@@ -1318,8 +1299,8 @@ export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter
 
 // Canonical signature of a position for repetition detection. Includes
 // everything the rules can depend on: occupancy, tagged possibility sets,
-// first-move rights, coherence, castling/entanglement state, the side to
-// move, and any live en passant window.
+// first-move rights, coherence, castling state, the side to move, and any
+// live en passant window.
 export function computePositionSignature(pieces, sideToMove, lastMove = null) {
   const parts = pieces
     .map((p) => [
@@ -1332,7 +1313,6 @@ export function computePositionSignature(pieces, sideToMove, lastMove = null) {
       String(p.recohere || 0),
       p.observed ? 'o' : '',
       p.castled ? 'c' : '',
-      p.entangledWith || '',
     ].join(':'))
     .sort()
     .join('|');

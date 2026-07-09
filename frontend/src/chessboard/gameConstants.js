@@ -65,7 +65,6 @@ export function createStartingPieces() {
       coherence: DEFAULT_COHERENCE,
       recohere: 0,
       observed: false,
-      entangledWith: null,
       castled: false,
     });
   });
@@ -84,7 +83,6 @@ export function createStartingPieces() {
       coherence: DEFAULT_COHERENCE,
       recohere: 0,
       observed: false,
-      entangledWith: null,
       castled: false,
     });
   });

@@ -225,6 +225,9 @@ export default function PlayerBar({
   avatar = null,
   tagline = null,
   speech = null, // transient saying shown as a speech bubble (string|null)
+  // Attention mode for narration (the first-visit intro): the bubble may
+  // wrap to two lines, wears a gold accent, and flashes softly on arrival.
+  speechFlash = false,
   // 'inline' keeps captures in the bar's right third; 'above'/'below' moves
   // them to a full-width strip outside the bar so the text can use the width.
   capturedPosition = 'inline',
@@ -447,7 +450,9 @@ export default function PlayerBar({
           )}
           {speech ? (
             // A saying briefly takes over the tagline's spot as a bubble.
+            // Keyed by text so a new line replays its entrance (and flash).
             <span
+              key={typeof speech === 'string' ? speech : 'speech'}
               className={`qc-player-speech qc-player-speech--${side}`}
               role="status"
               style={{
@@ -456,12 +461,15 @@ export default function PlayerBar({
                 opacity: 1,
                 color: '#fff',
                 background: 'rgba(20, 24, 32, 0.96)',
-                border: '1px solid rgba(126, 231, 135, 0.55)',
+                border: speechFlash ? '1px solid rgba(255, 200, 80, 0.6)' : '1px solid rgba(126, 231, 135, 0.55)',
                 borderRadius: 10,
                 borderBottomLeftRadius: 3,
                 padding: '2px 10px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-                animation: 'qc-speech-pop 180ms ease-out',
+                animation: speechFlash
+                  ? 'qc-speech-pop 180ms ease-out, qc-speech-flash 2.2s ease-in-out 0.2s infinite'
+                  : 'qc-speech-pop 180ms ease-out',
+                ...(speechFlash ? { whiteSpace: 'normal', lineHeight: 1.25 } : {}),
               }}
             >
               💬 {speech}

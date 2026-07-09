@@ -1,7 +1,7 @@
 // frontend/src/tutorial/InteractiveExercise.jsx
 // Purpose: A hands-on tutorial step: the player makes real moves on a small
 // position and the REAL game engine resolves them — collapses, pulses,
-// entanglement, en passant, promotion and check threats all behave exactly
+// en passant, promotion and check threats all behave exactly
 // as in a live game. Supports scripted Black replies (autoReply) so lessons
 // can demonstrate deferred measurement damage and the Zeno lock.
 // Imports From: ./MiniBoard.jsx, ../theme.js, ../chessboard/quantumEngine.js
@@ -35,8 +35,7 @@ function buildPieces(specs) {
     wasPromoted: Boolean(s.promoted),
     coherence: Number.isFinite(s.pips) ? s.pips : 3,
     recohere: Number.isFinite(s.regain) ? s.regain : 0,
-    entangledWith: s.entangledWith || null,
-    castled: Boolean(s.entangledWith),
+    castled: Boolean(s.castled),
     observed: false,
   }));
 }
@@ -169,11 +168,9 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     types: p.possibleTypes.join(''),
     pips: p.coherence,
     regain: Math.max(0, p.recohere || 0),
-    chain: Boolean(p.entangledWith),
     chevrons: Boolean(p.wasPromoted),
     sealed:
       p.possibleTypes.length <= 2 &&
-      !p.entangledWith &&
       !canPieceRecohere(pieces, p.id),
     mark: marks.includes(p.square),
     ring: threats.some((t) => t.to === p.square),

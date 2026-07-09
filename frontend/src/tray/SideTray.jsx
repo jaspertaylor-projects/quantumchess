@@ -77,6 +77,7 @@ export default function SideTray({
   newGameSignal = 0,
   onOpenAccount = () => {},
   accountSignedIn = false,
+  auth = null,
   onOfferDraw = () => {},
   onboarding = false,
   onDismissOnboarding = () => {},
@@ -437,7 +438,14 @@ export default function SideTray({
             externalIndex={externalIndex}
           />
         ) : view === 'new-game' ? (
-          <NewGamePanel onStartGame={handleStartGame} isPaid={isPaid} onRequirePremium={onRequirePremium} submitSignal={submitSignal} />
+          <NewGamePanel
+            onStartGame={handleStartGame}
+            isPaid={isPaid}
+            onRequirePremium={onRequirePremium}
+            submitSignal={submitSignal}
+            auth={auth}
+            onOpenAccount={onOpenAccount}
+          />
         ) : (
           <div
             className="qc-side-tray-menu"

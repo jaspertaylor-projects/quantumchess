@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Describes check threats overlay, king removal after each move, quantum castling with entanglement, quantum promotion, en passant phantom captures, measurement/decoherence, and checkmate.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Describes check threats overlay, king removal after each move, quantum castling, quantum promotion, en passant phantom captures, measurement/decoherence, and checkmate.
 // Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx
 // Exported To: ../App.jsx
 
@@ -80,7 +80,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Requirement 2 — No checks through: None of the squares strictly between the two pieces may be under attack by an opposing checking piece at the moment of castling.',
           'Requirement 3 — Meet in the middle: Both pieces move simultaneously toward each other and finish on the two most central empty squares between them. If the number of empty squares between is even, each moves exactly half the gap; if odd, they occupy the two center-biased squares closer to the board center.',
           'Requirement 4 — Collapse set: After castling, both pieces reduce to Rook–King only; all other types are removed from their superposition.',
-          'Entanglement: The castled pair becomes an entangled, anti-correlated pair — in every consistent world exactly one of them is the King and the other the Rook. The moment either partner resolves to a single type (by capture, check pruning, or measurement), the other instantly collapses to the complementary type.',
+          'No strings attached: after the castle the two pieces are ordinary Rook-or-King superpositions — no special link between them. Team conservation still keeps the story straight: if either piece is ever confirmed as the King, no other piece can be one. And like any nearly-defined piece, both partners recohere over time — a castled piece can blur back toward superposition.',
           'Castling never captures; all destination squares must be empty. The move consumes your entire turn.',
           'Conservation applies: If Rook or King capacity is already exhausted by prior collapses/superpositions, castling that would violate conservation is disallowed.',
           'Destination squares may be threatened; if so, end-of-turn king pruning may remove King from one or both castling pieces per the Checks and Threats rules.',
@@ -107,12 +107,11 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Castling pulses from both castled pieces. An en passant capturer pulses as the Pawn it has become.',
           'Coherence: every superposed piece carries 3 coherence points, shown as the triangle gauge in its center (always visible on pieces with 3+ possibilities). At 0 the piece sheds its LEAST valuable remaining possibility — Pawn, Knight, Bishop, Rook, Queen order; King never — and its coherence resets to 3. Symmetric with recoherence: gain cheap, lose cheap. Losing your cheap identities is real pain — the piece becomes expensive to hang and loses its cheap capture threats.',
           'Soft measurement never fully collapses a piece: only pieces with three or more possibilities are affected, and observation can never reduce a piece below two. Full collapse happens only through the piece’s own moves, captures, and check pruning — a soft measurement narrows reality, it never finishes the job.',
-          'This holds even indirectly: if shedding a type would force ANY piece — through team conservation or entanglement — into a single definite identity, the measurement dissipates instead. The target keeps its possibilities and its coherence resets, protected by the very structure the observation would have over-determined.',
+          'This holds even indirectly: if shedding a type would force ANY piece — through team conservation — into a single definite identity, the measurement dissipates instead. The target keeps its possibilities and its coherence resets, protected by the very structure the observation would have over-determined.',
           'Recovery by self-measurement: moving a piece restores its own coherence to 3 (the move collapses it by the normal rules, on your terms rather than your opponent’s). A piece under sustained observation is a piece being told to move or be defined.',
           'Feedback: after each move, rings appear on every piece that move’s pulse touched, drawn in the moving side’s measurement color (editable in Settings). They fade when the next move lands.',
           'Recoherence: a piece with two or fewer possibilities slowly diffuses back into superposition. Three dots beneath the piece, in its own side’s color, show the progress — they appear empty the moment a piece collapses. From then on, each of its owner’s moves fills one dot, and at 3 the piece regains its least valuable feasible possibility — never King, never Pawn on a promoted piece or on the promotion rank, and never anything conservation has ruled out (two Knights already captured means Knight cannot come back).',
           'The Zeno lock: any pulse that touches a nearly-defined piece resets its recoherence to zero. A watched piece never re-blurs — keep your attackers trained on their collapsed pieces to freeze them, or let your own knights slip out of observation and regain their mystery.',
-          'Entangled castle partners never recohere; their identities stay bound to each other. Instead of a recoherence clock they carry a chain-link mark beneath them, in their own side’s color.',
         ],
       },
       {

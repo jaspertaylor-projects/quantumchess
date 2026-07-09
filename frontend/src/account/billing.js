@@ -7,7 +7,7 @@
 import { supabase } from './supabaseClient.js';
 
 export const PREMIUM_PRICE_LABEL = '$3/month';
-export const TIP_PRICE_LABEL = '$5';
+export const TIP_PRICE_LABEL = '$3';
 
 // The pitch leads with the human: supporters pay because of the first
 // sentence, feature-shoppers pay because of the list under it — and the
@@ -17,7 +17,7 @@ export const PREMIUM_PITCH =
   '$3/month keeps the servers on and the ads off, and gets you:';
 
 export const TIP_PITCH =
-  'Not a subscription person? Tip $5 once — a year with no ads, plus one engine game review a day.';
+  'Not a subscription person? Tip $3 once — a year with no ads, plus one engine game review a day.';
 
 export const PREMIUM_FEATURES = [
   'No ads',

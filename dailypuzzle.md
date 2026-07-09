@@ -1,34 +1,45 @@
 # Daily puzzle v2 — mined from real games
 
-## Status (2026-07-06)
+## Status (2026-07-08, third design: SWING MINING + PAR SCORING)
 
-The strategy below is being built. Decisions locked in:
+The only-move era (below, kept as history) ended with the inventory
+deletion: gap-based only-moves contradicted the product's own scoring, and
+blunder-farm texture never felt right. Decisions now locked in (Jasper):
 
-- **Stage, don't rip out.** The composed generator (`frontend/src/puzzle/`)
-  stays live — it's certified and teaches the mechanics. The miner runs in
-  parallel as `tools/puzzle-miner.mjs` until it earns its way into rotation.
-- **Gate before switching:** re-search mined only-moves at a depth well above
-  mining depth; need **95%+ agreement** before mined puzzles feed the daily.
-  The miner prints this rate on every run. If it's low, strengthen the
-  eval/search first — better to learn that from a report than from players.
-- **One chance, eval-bar scoring.** Player gets one attempt; the engine plays
-  Black's best replies live; the final eval is the share ("held +3.2 of +5"
-  as emoji blocks ▓▓▓▓░░░).
-- **Scoring decisions (2026-07-08):** the NEEDLE'S LANDING SPOT IS THE SCORE.
-  Keep a White advantage at the end → ✓ and the streak continues. Gauge
-  ticks may leak the legal-move count (fine — solvers enumerate moves
-  anyway). Multi-move flow: needle lands, GLOWS, then re-arms and wobbles
-  for the next move — a landing per move, relief included.
-  Implication for the miner: `holdEval` must rise to ≥ 0 — a puzzle whose
-  best move "holds" −0.4 can never earn a ✓ under this scoring.
-  **Share bar (2026-07-08):** fill is LINEAR from a floor of −5 to the
-  maximum possible score (the best move's eval on the same ruler as the
-  needle). Land at the max → full bar; land at/below −5 → empty. E.g. best
-  +9.3, you land +3.2 → (3.2+5)/(9.3+5) ≈ 57% → ▓▓▓▓░░░.
+- **Mine mistakes, not only-moves.** Strong-vs-stronger bot games (hard
+  tier only, blunder noise OFF, higher-rated seats White). The puzzle
+  moment is Black's FIRST MISTAKE FROM BALANCE: the eval sat near 0 for a
+  stretch, Black moved, and now White's best line reaches `swingMin`. The
+  puzzle SHOWS Black's move — the player must capitalize.
+- **Perishability instead of only-ness.** No gap requirement at all. The
+  MEDIAN legal move must keep less than `perishFrac` of the advantage:
+  most moves leak the win, or it's not a test. (The honest generalization
+  of the old "cliff" idea, without the binary pretense.)
+- **All puzzles are 3-movers.** The miner rolls a PAR LINE — parPlies
+  white moves vs engine-best black replies — and every ply must stay
+  quantum-tricky (`minPlyTrick`) or the position is rejected. Lines that
+  mate before move 3 are rejected too (wrong format); mate ON move 3 is
+  fine.
+- **Par scoring (fidelity).** The player plays FREE moves; the engine
+  answers live. Every move earns a graded square vs that ply's certified
+  par eval (🟩 ≥85%, 🟨 ≥50%, 🟥 below, ⬛ unreached), and the final
+  landing vs final par is the FIDELITY percent — uncapped, so out-playing
+  the certification reads "fidelity 104% ⚡ beyond the line". Share text is
+  Wordle-shaped: squares + fidelity + "held +4.9 of +6.2". No binary ✗:
+  the landing IS the score.
+- **Recoherence is tracked in trickiness** both ways: running clocks count
+  in the quantum baseline (pieceInFlux), and an identity actually REGROWING
+  during the line tags the `recohere` theme (+ its trickiness bonus).
+- **Gate before switching:** re-search every par ply at a depth well above
+  mining depth; par must HOLD (deep best ≥ par − 1.0; ply 0 must still
+  clear the swing bar). A deeper engine finding a BETTER line only raises
+  par — that's fidelity >100% territory, not a failure. Need **95%+**
+  agreement before mined puzzles feed the daily.
 - **White-side puzzles only.**
 - The composed pipeline's verifier stack survives as **pipeline assertions**
   (position sanity + census fixed-point) — mined game states should pass
-  trivially; failures are engine-bug detectors and are logged loudly.
+  trivially; failures are engine-bug detectors and are logged loudly
+  (they caught the en-passant recoherence bug on 2026-07-08).
 
 ## How to run the miner (in Docker, like everything here)
 
@@ -38,39 +49,41 @@ docker compose run --rm --no-deps -v "$PWD":/repo -w /repo frontend \
 # smoke test: --quick
 ```
 
-Key knobs (defaults in the script): `--games`, `--seed` (fully reproducible),
-`--playMs` (per-move think time in simulated games), `--mineDepth` /
-`--verifyDepth` (the gate compares these), and the only-move bar
-(reworked 2026-07-08 for landing-spot scoring): `--holdEval 0.0
---minGap 2.0 --minChoices 10`, steps 2+ relaxed to `--extendGap 1.2`.
-NO failEval — alternatives may still win (mate-in-3 style); they just land
-the needle lower. Hard filters: no plain recaptures of a collapsed piece
-(statically-obvious take-backs), no purely classical positions, no chains
-where nothing collapses/decoheres at any ply. "Fastest mate" candidates
-(runner-up also mates — the gap is just mate-distance, half the early
-seed-5 haul) are kept but tagged `genre: 'findMate'` — under landing-spot
-scoring any mate lands the needle at max, so they play as "find a mate
-among N moves"; a separate genre for the curation queue (their confirm/gate
-checks verify "best move still mates" rather than same-move uniqueness,
-since equal mates swap ranks between depths). True only-moves carry
-`genre: 'onlyMove'`. Decision (2026-07-08): findMate is NOT used anywhere
-for now — it doesn't fit the eval-bar format. Banked as future inventory
-for a possible second daily, a puzzle-solver mode, or side-by-side puzzles. The eval gained
-`promoImminent`/`promoNear` terms (a definite pawn 1–2 steps from promoting
-is most of a queen) — before that, winning promotion races read as fine for
-the defender and the f6→f7→f8 2-mover (seed-4 game 98) was invisible.
+Key knobs (defaults in the script): `--games`, `--seed` (fully
+reproducible), `--playMs 900` (strong bots need thinking room),
+`--mineDepth` / `--verifyDepth` (the gate compares these), and the SWING
+bar (2026-07-08): `--balanceBand 1.25 --balanceStreak 2` (the position must
+have probed within ±band for streak consecutive white-to-move plies —
+"mistake FROM BALANCE", which also absorbs bots that drift and recover;
+probes use fast narrow beams and their own `--probeMs 8000` budget because
+a timed-out probe breaks the streak — the first diagnostic run lost 42/98
+probes to timeouts and never opened a single balance window),
+`--swingMin 2.5` (post-mistake advantage floor), `--perishFrac 0.34`
+(median legal move must keep less than this fraction of the advantage),
+`--minChoices 10 --maxChoices 50`, `--minPly 16` ("over 15 moves played"),
+`--parPlies 3 --minPlyTrick 4.0` (every par ply must stay this
+interesting). Hard filters kept from the only-move era: no plain
+recaptures of a collapsed piece as the puzzle start, no purely classical
+positions, no lines where nothing collapses/decoheres/recoheres at any
+ply. The depth-stability confirm (mineDepth+1, relaxed bars) still guards
+against the engine-as-referee depth-flip problem. The eval keeps its
+`promoImminent`/`promoNear` terms.
 
-Output: `tools/mined/mined-seed<N>.json` — per-game results, only-move
-chains (full serialized game states + solution lines + Black replies),
-quantum-theme tags reusing the composed goals' names (measure3 / The
-Instrument, censusCollapse / The Census, seal, snap, unmask, epCheck / The
-Phantom, mate), a trickiness score, and the gate verdicts. Trickiness
-(reworked 2026-07-08): BASELINE = quantum density (superposed pieces /
-alive) + de/recoherence in flight, plus a bonus when the solution's mover
-is itself mid de/recoherence (playtesting: those are the hard-to-spot
-moves), then chain length, search space, shallow-ordering burial, and
-theme/quiet bonuses. Scored from the chain's first position — the one the
-player faces.
+Output: `tools/mined/mined-seed<N>.json` — per-game results and one chain
+per accepted mistake: the mistake move + evalBefore/evalAfter, the full
+serialized start state (start.lastMove IS the mistake, drawn by the
+client), parEvals per ply (the fidelity ruler), spread stats, blackReplies,
+theme tags (measure3 / The Instrument, censusCollapse / The Census, seal,
+unmask, epCheck / The Phantom, mate, recohere / The Regrowth), per-ply +
+aggregate trickiness, and the gate verdicts. Chains also stream to
+`chains-seed<N>.ndjson` as found. Trickiness: BASELINE = quantum density
+(superposed pieces / alive) + de/recoherence in flight (running recohere
+clocks count here), plus a bonus when the solution's mover is itself mid
+de/recoherence, then search space, shallow-ordering burial, and
+theme/quiet bonuses ('recohere' counts — an identity growing back mid-line
+is hard to read ahead of time). Every par ply is scored; `minPlyTrick`
+enforces sustained interest and the report keeps trickiness / trickMin /
+trickAvg.
 
 ## First results
 
@@ -122,40 +135,307 @@ recaptures (tag exists in the data: capture-of-collapsed-piece with
 shallowRank 0) rather than the miner rejecting them — they're still fine
 easy-Monday fodder.
 
+**Gem playtest correction (2026-07-08, Jasper):** the two "quiet pawn
+moves" (games 93/98) are actually CLEAR PROMOTION PUSHES — the tagger's
+`quiet` (no capture, no check) can't tell a waiting move from a pawn
+walking into a queen, and the trickiness quiet-bonus rewarded exactly the
+wrong thing. Fixed: definite-pawn pushes to the 7th/8th now tag `promo`,
+are excluded from `quiet`, and earn no theme bonus (stale `quiet` tags
+remain in the seed-3/4/5 reports). The census-unmask recapture (seed 4
+game 1, `?mined=1`) is the curation benchmark — notably, a promotion move
+is available there and is NOT the winning move. Also: playtesting the
+seed-3 phantom exposed a LIVE ENGINE BUG — the en-passant capture collapses
+the mover to a definite pawn, but if the mover's recoherence clock was one
+tick from full, the same turn's owner-effects paid out the regained
+identity immediately, silently erasing the collapse (`resetCoherenceOnCollapse`
+then saw no shrink and reset nothing). Fixed in `applyOwnerTurnEffects`:
+a piece whose possibility set shrank during the move's own resolution
+never ticks its clock that turn (collapse = fresh start). Engine replay
+fixtures regenerated — 15/41 pinned games changed, which is how often this
+was firing in ordinary play.
+
+**Inventory deleted (2026-07-08, Jasper): every mined puzzle is gone.**
+`tools/mined/` cleared (seeds 1–2 remain in git history; the rest were
+untracked but fully reproducible by `--seed`) and the preview fixture
+emptied. Verdict from playtesting the gems: the "quiet pawn moves" were
+clear promotions, and even the census-unmask benchmark (`?mined=1`) was
+only OK. Mining's BEST case failed the feel bar — weight that heavily when
+choosing between the cliff retune and composed (Strategy A) puzzles. The
+same-day rules changes (recoherence fresh-start, castling entanglement
+removal) had already staled every certification, so nothing of value was
+lost: any future run re-mines and re-certifies under current rules.
+
+**Rules change (2026-07-08, Jasper): castling entanglement removed.** With
+single-history gone, the entanglement link never made sense to keep: the
+global census already keeps the kings honest (confirm a King anywhere and
+every other piece sheds `k`), and the never-recohere lock made castling a
+strictly bad move. Now the castled pair leaves as two ordinary rook-or-king
+superpositions that recohere like anything else. The entire entanglement
+mechanism went with it (it had no other source): `resolveEntanglements`,
+the chain-link insignia + its settings toggle, the tutorial chain-link
+page, and the miner's `snap` theme. The snap-family recipes survived by
+redesign: the pair is now `{q,k}` (a "royal pair") — one queen slot + one
+king slot means the census alone anti-correlates them, so capturing one
+(it collapses to Queen; capture-collapse never yields King) still unmasks
+the other, at any distance. Hunt's maybe-king pretenders could not survive
+(with the pair census-locked, no other piece can hold `k` at fixed point);
+they became `{n,b}` texture screened off the ladder squares (a two-branch
+blur refutes cutoffs the old one-branch pretenders couldn't reach — found
+via `debugRecipe` failure stats: `pad`, then `p1:unsound`). Harness
+verified vs stashed baseline over 56- and 84-day windows: recipe counts
+match HEAD exactly (hunt3 12/12, hunt4 12/12, snaptrap 12/12, fails 0).
+
+## Multi-move improvement plan
+
+The current miner is good at finding **single sharp moments** and bad at
+finding naturally consecutive multi-movers. The saved reports confirm this:
+every mined chain so far is length 1. This is not just a scale problem. The
+objective function is selecting positions where the tactical tension resolves
+in one move; after that first punishing move, White is usually winning enough
+that many continuations "hold", so strict only-move chaining dies.
+
+Do not expect bot self-play + consecutive only-moves to reliably produce the
+daily's 2-4 move inventory. Keep mining for one-move gems and real-game
+texture, but use a different shape for multi-move puzzles.
+
+### Design rule: quantum moves must carry the chain
+
+Multi-move puzzles should not feel like classical tactics wearing quantum
+clothes. If `hunt3` / `hunt4` collapse into "put a queen-containing piece in
+the middle of the board", demote or retire them from the daily arc. Ladder
+mates are readable, but they risk making the quantum state irrelevant after
+the first move.
+
+Add/keep a verifier or curation rule for multi-movers:
+
+```js
+nonFinalQuantumMove =
+  possDelta > 0 ||
+  measuredSquares.length >= 2 ||
+  targetRecohereReset ||
+  targetBecomesSealed ||
+  untouchedPieceCollapses ||
+  entangledPairResolves
+```
+
+For every 2+ move puzzle, at least one non-final move should pass this test;
+for 3-4 movers, ideally most non-final moves should. The player should feel
+that each move changes what reality permits, not merely that a heavy piece
+centralized or gave a normal check.
+
+### Strategy A: build backward from payoffs
+
+For multi-move puzzles, start with a known satisfying final payoff:
+
+- mate across every world
+- seal a nearly-defined target
+- snap an entangled pair
+- census-collapse an untouched piece
+- capture the now-known queen/rook/king-carrier
+- en passant discovered check
+- promotion branch revealed or killed
+
+Then generate one move earlier: find a position where exactly one White setup
+move, followed by a scripted or engine-plausible Black reply, creates that
+payoff. Repeat once more for 3-movers. This is better aligned with the
+existing composed generator than trying to mine consecutive only-moves from
+bot games.
+
+Shape:
+
+```text
+final tactic exists
+<- hide it behind one required quantum setup
+<- optionally hide that behind another setup
+```
+
+The existing `verifyCandidate()` already supports this: each ply has a
+subgoal, a uniqueness check over all legal White moves, and an optional
+scripted Black reply. Use that machinery rather than demanding the eval
+miner rediscover a whole line.
+
+### Strategy B: prelude grafting
+
+Take reliable one-move recipes and graft a short prelude onto them. Example
+base payoffs:
+
+- `mate`
+- `census`
+- `seal`
+- `snap`
+- `phantom`
+- `instrument`
+
+Prelude transforms to try:
+
+- move a blocker out of the way
+- force/allow Black's king or target to move one square
+- measure a piece so deferred damage lands after Black ignores it
+- complete one census so a final target becomes vulnerable
+- make a rook/queen line appear only after a reply
+- reset a recoherence clock so an escape identity cannot return
+- kill or reveal a promotion branch before the payoff
+
+Then run the normal verifier. This should produce more good 2-3 movers per
+hour than pure self-play mining, while still allowing seeded variety.
+
+### Strategy C: setup-move mining instead of only-move chaining
+
+Upgrade the miner to search for positions where exactly one **setup move**
+creates a good puzzle after Black replies. The current miner asks:
+
+```text
+Is this position already an only-move?
+```
+
+For multi-movers, ask:
+
+```text
+Does exactly one White move create a known one-move tactic after Black's
+best/plausible reply?
+```
+
+Sketch:
+
+```text
+for each White-to-move position:
+  enumerate legal White setup moves
+  for each setup:
+    apply setup
+    choose Black reply (engine-best, or best reply that does not refute)
+    scan resulting White position for a known payoff:
+      mate / seal / census / snap / phantom / target capture
+  keep positions where exactly one setup produces a strong payoff
+```
+
+This is the middle path: more organic than hand-authored recipes, but much
+more productive than waiting for consecutive only-move positions to occur in
+self-play. A setup move may be quiet or only slightly best by eval; its value
+is that it creates the next quantum fact.
+
+### Preferred multi-move templates
+
+**Probe -> Shed -> Punish**
+
+White lands a measurement pulse that marks a key piece. Black replies with a
+different piece. The marked piece loses coherence or sheds a cheap identity.
+White exploits the newly narrowed target.
+
+Why it works: the first move matters because of measurement, not because it
+is a normal check.
+
+**Census -> Newly Known Target -> Capture**
+
+White captures one ambiguous piece. That completes a type census and forces
+an untouched target to become definite. The follow-up captures or mates using
+that new fact.
+
+This is close to `investigation`; keep pushing in this direction.
+
+**Seal -> No Recoherence Escape -> Payoff**
+
+White seals a nearly-defined defender. Black makes a waiting move. The
+follow-up works because the defender cannot regain the identity that would
+save it.
+
+This is strongly quantum: the tactic is about preventing future possibilities.
+
+**Snap -> Identity Cascade -> Surgical Follow-up**
+
+White snaps an entangled pair, but the follow-up should not just become a
+ladder mate. Prefer a payoff where the snap reveals which square is defended,
+which piece is the king/rook, or which capture is now sound.
+
+**Phantom -> Discovery -> Exploit**
+
+Use en passant discovered check as the first move or the payoff. A 2-mover can
+force/recognize the phantom capture, then exploit the opened file/diagonal or
+the pawn-collapse census.
+
+**Recoherence Clock Puzzle**
+
+A piece with two identities is about to regain a third. The only move is to
+measure it, attack it, or force it to move so its recoherence clock resets.
+The follow-up works because it stayed narrow.
+
+This may be one of the most "only in Quantum Chess" multi-move motifs.
+
+### Recommended slate direction
+
+Replace the ladder-heavy part of the arc with state-changing chains:
+
+- Wed: `ledger`-style census -> seal
+- Thu: probe -> shed -> punish
+- Fri: `investigation`-style measure -> census -> capture
+- Sun: snap / phantom / recoherence-clock special, 3-4 moves, but not a
+  generic ladder mate
+
+Keep `hunt3` / `hunt4` available as fallback/tutorial-adjacent material only
+if they pass the state-changing rule and do not read as "queen-ish piece to
+the center".
+
 ## Dev preview of mined puzzles (the future product's UI)
 
-`http://localhost:5175/?mined=N` (N = 0..7, dev builds only) opens chain N of
-`frontend/src/puzzle/minedPreviewData.json` in **the one-chance gauge UI**
-(`MinedPuzzleModal.jsx`): player bars (you vs the Stranger) with capture
-trays, user board/piece colors throughout, no attempt dots — below the board
-an `EvalGauge` speedometer (Black's half left, White's right) with a faint
-neon-red tick at every legal move's eval and a needle that wobbles until you
-commit, then lands on YOUR move's eval. Ticks use reply-aware evals (min
-over Black's answers — static eval would rate "hangs the queen" as fine).
-Fail shows the only move + payoff with an arrow. To refresh the fixture
-after a new mining run, re-extract chains from `tools/mined/mined-seed<N>.json`
-(same slim fields).
+`http://localhost:5175/?mined=N` (N indexes the fixture's chains, 0-based;
+dev builds only) opens chain N of
+`frontend/src/puzzle/minedPreviewData.json` in **PAR MODE**
+(`MinedPuzzleModal.jsx`, rebuilt 2026-07-08): player bars (you vs the
+Stranger) with capture trays, user board/piece colors throughout. The
+board opens on the position AFTER Black's mistake, with a black arrow on
+the mistake move and the gauge caption "Black slipped: d7 → d6.
+Capitalize." The player then plays **3 free moves** — no exactMove, any
+legal move counts — and the engine answers as Black live (depth-3 worker,
+greedy 1-ply fallback on timeout). Per move: the needle lands on the
+move's eval (`EvalGauge` ticks = reply-aware evals of every legal move,
+swapped for depth-3 worker scores when ready), a rank line gives the exact
+standing ("3rd best move of 45"), and a GRADED SQUARE lights vs that
+ply's certified par eval (🟩 ≥85% of par, 🟨 ≥50%, 🟥 below, ⬛ never
+reached — early mate fills the rest 🟩). After move 3: **fidelity** =
+final landing / final par, uncapped (beat the certification → ">100% ⚡
+beyond the line"), a graded banner, and a Wordle-shaped share text with a
+copy button:
+
+```text
+⚛️ Quantum Chess · mined mined-0
+🟩🟨🟩 fidelity 84%
+held +4.9 of +6.2
+```
+
+On a rough run (first square not green) the start position returns with
+the par line's first move drawn as an arrow. To refresh the fixture after
+a mining run, extract chains from `tools/mined/mined-seed<N>.json` (the
+chain objects are already the fixture shape; par evals are clamped to the
+client's 30-cap mate ruler at load).
+
+**Dev game viewer (2026-07-08):** `?minedGame=N` opens miner game N —
+bot names + result in the headline, full replay, and a clickable EVAL
+GRAPH of the whole game (the miner's per-ply probe evals, white-positive,
+balance band tinted; click to seek) — in the existing premium
+`ReviewModal` via two opt-in props (`evalTrace`, `game.headline`); the
+live product surface is unchanged when they're absent. Fixture:
+`frontend/src/puzzle/minedGamesData.json`, extracted from a report's
+`games` array (each game now carries stored-format `moves` + `evals`).
+The graph is the knob-tuning instrument: one glance shows where games sit
+relative to the balance band and where the swings are.
 
 ## Remaining to build (in order)
 
 1. [X] Miner + only-move chains + theme tags + double-depth gate (2026-07-06)
-2. [X] Engine-rollout chain extension (2026-07-06): chains no longer depend
-       on the game line cooperating — the miner plays the mined best move,
-       the engine answers with Black's best reply (exactly what the live
-       eval-bar product does), and the new position is re-analyzed for
-       another only-move, up to `--maxChain 6`. Necessary because weak bots
-       blunder INTO tactics but don't follow the punishing line afterwards.
-       Bot pairings also now keep their real tiers + blunder noise (skill
-       diversity creates tactics; the verification gate keeps quality
-       independent of how positions arose).
-3. [~] Scale runs (overnight, hundreds of games), tune the only-move bar so
-       chains of length 2–4 show up at usable rates — 60-game run (seed 3)
-       launched 2026-07-06, logs to `tools/mined/run-seed3.log`
-4. [ ] Curation/ranking step: pick a week's arc from the mined pool by
-       length × trickiness; publish `puzzles.json` to the CDN
-5. [ ] Client: one-chance eval-bar puzzle mode (engine plays Black live,
-       reuses the review worker), emoji-bar share card
-6. [ ] Cut the daily over to mined puzzles once the gate holds at scale;
+2. [X] Engine-rollout chain extension (2026-07-06)
+3. [X] SWING REWORK (2026-07-08): mistakes-from-balance + perishability +
+       3-move par lines with sustained trickiness + par-holds gate; strong
+       bots only, no blunder noise; recoherence tracked (baseline clocks +
+       'recohere' regrowth theme). First 30-game run: seed 1, logs to
+       `tools/mined/run-seed1.log`.
+4. [X] Client par mode (2026-07-08): free play vs live engine Black,
+       per-move graded squares, fidelity score, share text with copy.
+       Dev-preview only (`?mined=N`).
+5. [ ] Tune the swing knobs from real runs (balanceBand/streak, swingMin,
+       perishFrac, minPlyTrick) until yield is a few chains per 30 games
+       AND they feel right; then scale overnight.
+6. [ ] Curation/ranking step: pick a week's arc from the mined pool by
+       trickiness × swing size; publish `puzzles.json` to the CDN
+7. [ ] Cut the daily over to mined puzzles once the gate holds at scale;
        keep the composed generator as fallback + tutorial-adjacent content
 
 ---

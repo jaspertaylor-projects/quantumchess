@@ -25,7 +25,9 @@ import { consumeCheckoutReturn, isAdFree } from './account/billing.js';
 import { resolveSaying, loadLocalSayings, saveLocalSayings } from './sayings/sayingsCatalog.js';
 import ReviewModal from './review/ReviewModal.jsx';
 import AccountModal from './account/AccountModal.jsx';
+import PricingModal from './account/PricingModal.jsx';
 import { recordFinishedGame, fetchGameMoves } from './account/gameSync.js';
+import { recordBotClear } from './account/botProgress.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
 import { setGameSettings } from './store/settingsSlice.js';
@@ -44,7 +46,7 @@ import useChessClock from './hooks/useChessClock.js';
 import { formatClock, clampMs } from './hooks/clockUtils.js';
 import { devDebug } from './devlog.js';
 import useLocalAi from './ai/useLocalAi.js';
-import { getBotById, DEFAULT_BOT_ID, botInitials } from './ai/bots.js';
+import { getBotById, DEFAULT_BOT_ID, botInitials, getBotAvatarUrl } from './ai/bots.js';
 
 // The active online game is remembered per-browser so a reload or dropped
 // connection can rejoin it (the server replays the move history on welcome).
@@ -58,6 +60,60 @@ function readActiveOnlineGame() {
 function clearActiveOnlineGame() {
   try { localStorage.removeItem(ACTIVE_GAME_KEY); } catch (_) {}
 }
+
+// Opponent quietly seated when a first-time visitor moves a piece on the
+// intro board (see introFreePlay). Easiest bot: the first minute should feel
+// magical, not punishing.
+const INTRO_BOT_ID = 'isaac-steinitz';
+
+// Black's scripted opening for the intro game: two knight leaps that vacate
+// the back rank, then a quantum castle through the empty square — a first
+// minute that shows off the game's strangest rule. Each step tries its
+// candidates in order against the live position (the visitor's play can block
+// them); if none is legal the script yields to the real engine. `delay` gives
+// the visitor time to read the payoff card their own move just earned.
+const INTRO_SCRIPT = [
+  { moves: [['g8', 'f6'], ['g8', 'h6']], stage: 'reply1', delay: 1100 },
+  { moves: [['b8', 'c6'], ['b8', 'a6']], stage: 'reply2', delay: 4500 },
+  { castles: [['f8', 'h8'], ['a8', 'c8']], stage: 'castle', delay: 4500 },
+  { moves: [['d7', 'd5']], stage: 'reply3', delay: 4500 },
+  { moves: [['e7', 'e5']], stage: 'reply4', delay: 4500 },
+  { moves: [['e5', 'e4']], stage: 'reply5', delay: 4500 },
+];
+
+// White's choreographed moves: entry i is offered once Black has made i
+// scripted replies — the piece glows, the destination lights up, and other
+// moves are gently refused. The line is picked so the pips tell their story
+// on cue: e4 stays a watched 3-type piece whose coherence pips drain (Nf6
+// observes it), and b1-c3 collapses to a knight whose recoherence clock
+// then fills move by move.
+const INTRO_GUIDE = [
+  { candidates: [['e2', 'e4']], stage: null },
+  { candidates: [['d2', 'd4']], stage: 'guide1' },
+  { candidates: [['b1', 'c3']], stage: 'guide2' },
+  { candidates: [['a2', 'a3']], stage: 'guide3' },
+  { candidates: [['g2', 'g3']], stage: 'guide4' },
+  { candidates: [['a3', 'a4']], stage: 'guide5' },
+  { candidates: [['d4', 'e4']], stage: 'guide6' },
+];
+
+// Spoken in the top player bar's speech bubble (welcome by the Stranger,
+// the rest by the intro bot), so keep each line bubble-sized.
+const INTRO_DIALOGUE = {
+  welcome: 'Every piece is every piece — until it’s observed. Move the glowing pawn to the lit square.',
+  reply1: 'A leap only a knight could make… so a knight it becomes.',
+  guide1: 'The pips on your e4 pawn are coherence. My knight is watching it — one pip just went dark.',
+  reply2: 'Both my knights are out — no other piece of mine can be one now.',
+  guide2: 'Your leap fully collapsed that piece — a knight, nothing else. The dots beneath it are a recoherence clock.',
+  castle: 'A quantum castle: two pieces, each maybe king, maybe rook — and free to blur again.',
+  guide3: 'The clock fills as you move — full, a piece regains a possibility. Keep an eye on your knight.',
+  reply3: 'My pawn steps out — and takes another look at your e4. Watched pieces wear down.',
+  guide4: 'A second look landed — your e4 is down to its last pip. One more and it breaks.',
+  reply4: 'A third look, straight down the file. Your e4 cannot absorb another.',
+  guide5: 'Three measurements — e4 broke. It was never a pawn: rook or queen now. And your knight’s clock just filled.',
+  reply5: 'Captured — a taken piece resolves as the least it could be. A rook. And my rings now claim your maybe-kings.',
+  guide6: 'Answered — take the checker and the claim dies. A maybe-king left under a ring stops being one. The board is yours.',
+};
 
 export default function App() {
   const boardStageRef = useRef(null);
@@ -139,6 +195,44 @@ export default function App() {
     }
   }, []);
 
+  // Never-visited first minute: the board is live immediately — no Start Game
+  // wall. A white pawn glows until it is picked up, and the first interaction
+  // quietly seats an easy bot as Black whose opening is scripted (INTRO_SCRIPT)
+  // and narrated (INTRO_DIALOGUE). Anonymous visitors only — a restored
+  // sign-in switches back to the normal home. Consumed once any game starts.
+  // Storage-blocked browsers (private windows with cookies/site-data blocked —
+  // localStorage ACCESS throws there) can never remember a visit, so every
+  // session is a first visit: show the intro rather than silently skipping it.
+  const [introFreePlay, setIntroFreePlay] = useState(() => {
+    try { return !localStorage.getItem('qcOnboardSeen'); } catch (_) { return true; }
+  });
+  // Which intro dialogue card is showing (null = none).
+  const [introStage, setIntroStage] = useState(() => (introFreePlay ? 'welcome' : null));
+  // While true, Black's replies come from INTRO_SCRIPT and useLocalAi stays
+  // quiet; flips false after the castle (or if the script is invalidated).
+  const [introScriptOn, setIntroScriptOn] = useState(false);
+  const [introScriptStep, setIntroScriptStep] = useState(0);
+  // Guards the reply timer against stale duplicate firings: records the last
+  // script step that actually executed.
+  const introScriptDoneRef = useRef(-1);
+  // The whole choreography (guided White moves included) lives under this
+  // flag; unlike introFreePlay it survives the game starting, and dies on an
+  // explicit new game, a restored sign-in, or a derailed script.
+  const [introChoreo, setIntroChoreo] = useState(() => {
+    try { return !localStorage.getItem('qcOnboardSeen'); } catch (_) { return true; }
+  });
+  // Guided White moves already played (INTRO_GUIDE index).
+  const [introGuideStep, setIntroGuideStep] = useState(0);
+  // Off-script attempt during a guided turn: a shaking toast over the board.
+  // The counter keys the element so repeat offenses replay the animation.
+  const [introNudge, setIntroNudge] = useState(null); // { text, n }
+  useEffect(() => {
+    if (!introNudge) return;
+    const timer = setTimeout(() => setIntroNudge(null), 2600);
+    return () => clearTimeout(timer);
+  }, [introNudge]);
+  const introSpeech = introStage ? INTRO_DIALOGUE[introStage] || null : null;
+
   const closeTutorial = useCallback(() => {
     setTutorialOpen(false);
     setTutorialLessonId(null);
@@ -210,7 +304,7 @@ export default function App() {
   // rating, and avatar; the second local player is "Stranger". Online games
   // keep the classic White/Black labels.
   const botSide = aiBot ? (userTeam === 'white' ? 'black' : 'white') : null;
-  const botAvatar = aiBot ? { initials: botInitials(aiBot), hue: aiBot.hue ?? 200, imageUrl: `/bots/${aiBot.id}.png`, name: aiBot.name, tagline: aiBot.tagline || '' } : null;
+  const botAvatar = aiBot ? { initials: botInitials(aiBot), hue: aiBot.hue ?? 200, imageUrl: getBotAvatarUrl(aiBot), name: aiBot.name, tagline: aiBot.tagline || '' } : null;
   const anonymousAvatar = {
     initials: 'A',
     hue: 145,
@@ -290,7 +384,10 @@ export default function App() {
     avatar: blackAvatar,
     tagline: botSide === 'black' ? (aiBot.tagline || null)
       : (isOnlineBars ? null : (userTeam === 'black' ? (selfTagline || null) : strangerAvatar.tagline)),
-    speech: speech.black,
+    // Intro narration borrows the opponent's bubble (intro seats the user as
+    // White, so the storyteller is always the black bar).
+    speech: introSpeech || speech.black,
+    speechFlash: Boolean(introSpeech),
     clockText: effectiveClock.blackText,
     clockActive: effectiveClock.blackActive,
     clockLow: effectiveClock.blackLow,
@@ -413,6 +510,7 @@ export default function App() {
   // Accounts (optional): save finished games for signed-in players and
   // apply Elo against rated bots. Saved exactly once per game end.
   const [accountOpen, setAccountOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   // Stripe Checkout returns to /?premium=success|cancelled. The webhook flips
   // the tier server-side, so after a success poll the profile briefly until
@@ -487,7 +585,12 @@ export default function App() {
       result,
       moves,
     })
-      .then(() => auth.refreshProfile())
+      .then(async () => {
+        if (vsBot && result === 'win') {
+          await recordBotClear({ user: auth.user, botId: aiBot.id });
+        }
+        await auth.refreshProfile();
+      })
       .catch(() => {});
   }, [showWinPopup, gameOver, winner, externalGameOver, userTeam, aiBot, moves]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -637,9 +740,54 @@ export default function App() {
     setPendingEpChoice(null);
   }, [pieces, movePiece, dispatch, isOnline]);
 
+  // The choreographed White move currently on offer, or null. Turn order is
+  // the lockstep: Black's scripted replies hold sideToMove until they land,
+  // so on White's turn the next unplayed guide entry is always the right one
+  // (counter equality with the script proved brittle — one double-stepped
+  // reply desynced it for good). If the position invalidates every candidate,
+  // the guidance retires and the game is theirs.
+  const introGuide = useMemo(() => {
+    if (!introChoreo || gameOver || sideToMove !== 'white') return null;
+    const g = INTRO_GUIDE[introGuideStep];
+    if (!g) return null;
+    for (const [from, to] of g.candidates) {
+      const piece = getPieceAtSquare(from);
+      if (piece && piece.side === 'white' && getLegalMoves(piece.id).includes(to)) {
+        return { from, to, stage: g.stage };
+      }
+    }
+    return null;
+  }, [introChoreo, gameOver, sideToMove, introGuideStep, getPieceAtSquare, getLegalMoves]);
+
+  // The choreography is all-or-nothing: it retires explicitly — last guided
+  // move played, game somehow over, or no candidate playable on a guided
+  // turn — and only then do the engine and free movement take over. No
+  // silent drift between scripted and unscripted play.
+  useEffect(() => {
+    if (!introChoreo) return;
+    if (introGuideStep >= INTRO_GUIDE.length || gameOver) {
+      setIntroChoreo(false);
+      return;
+    }
+    if (!gameStarted || sideToMove !== 'white') return;
+    if (!introGuide) setIntroChoreo(false);
+  }, [introChoreo, introGuide, introGuideStep, gameStarted, gameOver, sideToMove]);
+
   // Route a destination square to the right kind of move. Returns false if the
   // square is neither a legal move nor an en passant capture for the piece.
   const commitMoveOrChoose = useCallback((pieceId, toSquare) => {
+    if (introGuide) {
+      const movingPiece = pieces.find((p) => p.id === pieceId);
+      const onScript = movingPiece && movingPiece.square === introGuide.from && toSquare === introGuide.to;
+      if (!onScript) {
+        // Not an illegal move, just off-script: nudge back to the glow.
+        setIntroNudge((prev) => ({ text: `Follow the glow: ${introGuide.from} → ${introGuide.to}`, n: (prev?.n || 0) + 1 }));
+        setSelectedId(null);
+        return true;
+      }
+      setIntroGuideStep((n) => n + 1);
+      if (introGuide.stage) setIntroStage(introGuide.stage);
+    }
     const legal = new Set(getLegalMoves(pieceId));
     const isEp = getEnPassantMoves(pieceId).some((ep) => ep.to === toSquare);
     const isLegal = legal.has(toSquare);
@@ -657,7 +805,7 @@ export default function App() {
       return true;
     }
     return false;
-  }, [getLegalMoves, getEnPassantMoves, performMove]);
+  }, [getLegalMoves, getEnPassantMoves, performMove, introGuide, pieces]);
 
   // Pre-game the board is a preview, not a sandbox: interacting nudges the
   // player to game setup instead of silently starting a hotseat session
@@ -672,8 +820,102 @@ export default function App() {
     dismissOnboarding();
   }, [isNarrow, dismissOnboarding]);
 
+  // First touch of the intro board seats the opponent. The move itself flips
+  // gameStarted via performMove, exactly like any other first move; Black's
+  // replies then come from INTRO_SCRIPT, and useLocalAi takes over after it.
+  const ensureIntroGame = useCallback(() => {
+    if (aiEnabledRef.current) return;
+    const bot = getBotById(INTRO_BOT_ID) || getBotById(DEFAULT_BOT_ID);
+    aiEnabledRef.current = true;
+    aiDifficultyRef.current = bot ? bot.tier : 'easy';
+    setAiBot(bot);
+    setIntroScriptOn(true);
+    dispatch(setUserTeam('white'));
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (introFreePlay && gameStarted) {
+      setIntroFreePlay(false);
+      dismissOnboarding();
+      // The invitation did its job; the next card arrives with Black's reply.
+      setIntroStage((s) => (s === 'welcome' ? null : s));
+    }
+  }, [introFreePlay, gameStarted, dismissOnboarding]);
+
+  // The intro is for anonymous first-timers only: a signed-in session that
+  // restores before any game starts gets the normal home instead.
+  useEffect(() => {
+    if (auth.user && !gameStarted) {
+      setIntroFreePlay(false);
+      setIntroStage(null);
+      setIntroScriptOn(false);
+      setIntroChoreo(false);
+    }
+  }, [auth.user, gameStarted]);
+
+  // Plays Black's scripted intro opening, one reply per Black turn, a beat
+  // after the visitor's move so it reads as a decision rather than a reflex.
+  useEffect(() => {
+    if (!introScriptOn || !gameStarted || gameOver) return;
+    if (sideToMove !== 'black') return;
+    const step = INTRO_SCRIPT[introScriptStep];
+    if (!step) { setIntroScriptOn(false); return; }
+    const timer = setTimeout(() => {
+      if (introScriptDoneRef.current >= introScriptStep) return;
+      let played = false;
+      for (const [fromSq, toSq] of step.moves || []) {
+        const piece = getPieceAtSquare(fromSq);
+        if (!piece || piece.side !== 'black') continue;
+        if (!getLegalMoves(piece.id).includes(toSq)) continue;
+        const res = movePiece(piece.id, toSq);
+        if (res && res.success) {
+          for (const r of res.records) dispatch(addMove(r));
+          played = true;
+          break;
+        }
+      }
+      if (!played) {
+        for (const [sqA, sqB] of step.castles || []) {
+          const a = getPieceAtSquare(sqA);
+          const b = getPieceAtSquare(sqB);
+          if (!a || !b) continue;
+          const { canCastle } = canCastleBetween(a.id, b.id);
+          if (!canCastle) continue;
+          const res = castlePieces(a.id, b.id);
+          if (res && res.success) {
+            for (const r of res.records) dispatch(addMove(r));
+            played = true;
+            break;
+          }
+        }
+      }
+      if (played) {
+        introScriptDoneRef.current = introScriptStep;
+        setIntroStage(step.stage);
+        setIntroScriptStep((n) => n + 1);
+        if (introScriptStep + 1 >= INTRO_SCRIPT.length) setIntroScriptOn(false);
+      } else {
+        // The visitor's play blocked the script — hand Black to the engine,
+        // stop choreographing White, and leave whatever card is up alone.
+        setIntroScriptOn(false);
+        setIntroChoreo(false);
+      }
+    }, step.delay || 1100);
+    return () => clearTimeout(timer);
+  }, [introScriptOn, introScriptStep, gameStarted, gameOver, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, canCastleBetween, castlePieces, dispatch]);
+
+  // The closing card lingers, then bows out on its own.
+  useEffect(() => {
+    if (introStage !== 'guide6') return;
+    const timer = setTimeout(() => setIntroStage(null), 12000);
+    return () => clearTimeout(timer);
+  }, [introStage]);
+
   const handleSquareClick = (data) => {
-    if (!gameStarted) { promptStartGame(); return; }
+    if (!gameStarted) {
+      if (!introFreePlay) { promptStartGame(); return; }
+      ensureIntroGame();
+    }
     if (guardExternalOver()) return;
 
     if (!canMakeMove) {
@@ -698,6 +940,13 @@ export default function App() {
         if (selectedId && selectedId !== piece.id) {
           const left = pieces.find((p) => p.id === selectedId);
           if (left && ownsPiece(left)) {
+            if (introGuide) {
+              // Castling would sidestep the choreography; nudge back to it.
+              setIntroNudge((prev) => ({ text: `Follow the glow: ${introGuide.from} → ${introGuide.to}`, n: (prev?.n || 0) + 1 }));
+              setSelectedId(piece.id);
+              setTrayHighlights([]);
+              return;
+            }
             const { canCastle, reason, plan } = canCastleBetween(selectedId, piece.id);
             if (canCastle) {
               const result = castlePieces(selectedId, piece.id);
@@ -746,7 +995,10 @@ export default function App() {
   };
 
   const handlePieceClick = ({ id }) => {
-    if (!gameStarted) { promptStartGame(); return; }
+    if (!gameStarted) {
+      if (!introFreePlay) { promptStartGame(); return; }
+      ensureIntroGame();
+    }
     if (guardExternalOver()) return;
 
     if (!canMakeMove) {
@@ -769,6 +1021,13 @@ export default function App() {
       if (selectedId && selectedId !== id) {
         const left = pieces.find((p) => p.id === selectedId);
         if (left && ownsPiece(left)) {
+          if (introGuide) {
+            // Castling would sidestep the choreography; nudge back to it.
+            setIntroNudge((prev) => ({ text: `Follow the glow: ${introGuide.from} → ${introGuide.to}`, n: (prev?.n || 0) + 1 }));
+            setSelectedId(id);
+            setTrayHighlights([]);
+            return;
+          }
           const { canCastle, reason, plan } = canCastleBetween(selectedId, id);
           if (canCastle) {
             const result = castlePieces(selectedId, id);
@@ -852,8 +1111,10 @@ export default function App() {
     if (checkHighlights && checkHighlights.length) combined.push(...checkHighlights);
     if (baseHighlights && baseHighlights.length) combined.push(...baseHighlights);
     if (trayHighlights && trayHighlights.length) combined.push(...trayHighlights);
+    // Choreographed move: light the destination in the same gold as the glow.
+    if (introGuide) combined.push({ square: introGuide.to, color: 'rgba(255, 200, 80, 0.4)' });
     return combined;
-  }, [baseHighlights, checkHighlights, trayHighlights]);
+  }, [baseHighlights, checkHighlights, trayHighlights, introGuide]);
 
   const whiteCapturedPawns = useMemo(() => {
     return pieces
@@ -1004,10 +1265,10 @@ export default function App() {
   // Share deep-link: /?puzzle opens today's daily puzzle directly — it's the
   // URL on the share card, so a friend following it lands on the puzzle, not
   // the home screen. Works in production builds.
-  // Dev tools: ?puzzleDate=YYYY-MM-DD previews any date's puzzle, and
-  // ?mined=N previews chain N of the mined-puzzle fixture
-  // (puzzle/minedPreviewData.json) — both practice mode (nothing recorded).
-  // Dev builds only.
+  // Dev tools: ?puzzleDate=YYYY-MM-DD previews any date's puzzle, ?mined=N
+  // previews chain N of the mined-puzzle fixture (both practice mode,
+  // nothing recorded), and ?minedGame=N opens miner game N (bot names +
+  // eval graph) in the review modal. Dev builds only.
   const [puzzlePreviewDate, setPuzzlePreviewDate] = useState(null);
   const [minedPreviewPuzzle, setMinedPreviewPuzzle] = useState(null);
   useEffect(() => {
@@ -1028,6 +1289,14 @@ export default function App() {
       import('./puzzle/minedPreview.js').then(async (mod) => {
         const p = await mod.loadMinedPreview(Number(m) || 0);
         if (p) setMinedPreviewPuzzle(p);
+      });
+      return;
+    }
+    const gm = params.get('minedGame');
+    if (gm !== null) {
+      import('./puzzle/minedGameLoader.js').then(async (mod) => {
+        const g = await mod.loadMinedGame(Number(gm) || 0);
+        if (g) setReviewGame(g);
       });
     }
   }, []);
@@ -1335,6 +1604,11 @@ export default function App() {
     mmAbortRef.current = true;
     clearActiveOnlineGame();
 
+    // An explicit new game retires the intro script and its narration.
+    setIntroScriptOn(false);
+    setIntroStage(null);
+    setIntroChoreo(false);
+
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
 
@@ -1468,7 +1742,10 @@ export default function App() {
 
   const handlePieceDragStart = useCallback((piece) => {
     if (!piece) return false;
-    if (!gameStarted) { promptStartGame(); return false; }
+    if (!gameStarted) {
+      if (!introFreePlay) { promptStartGame(); return false; }
+      ensureIntroGame();
+    }
     if (guardExternalOver()) return false;
     if (!canMakeMove) return false;
     if (isOnlineGameRef.current) {
@@ -1486,10 +1763,13 @@ export default function App() {
     setSelectedId(piece.id);
     setTrayHighlights([]);
     return true;
-  }, [sideToMove, canMakeMove, userTeam, guardExternalOver, gameStarted, promptStartGame]);
+  }, [sideToMove, canMakeMove, userTeam, guardExternalOver, gameStarted, promptStartGame, introFreePlay, ensureIntroGame]);
 
   const handlePieceDrop = useCallback(({ id, from, to }) => {
-    if (!gameStarted) { promptStartGame(); setSelectedId(null); return; }
+    if (!gameStarted) {
+      if (!introFreePlay) { promptStartGame(); setSelectedId(null); return; }
+      ensureIntroGame();
+    }
     if (guardExternalOver()) {
       setSelectedId(null);
       return;
@@ -1540,6 +1820,12 @@ export default function App() {
 
     const targetAtDest = getPieceAtSquare(to);
     if (targetAtDest && targetAtDest.side === movingPiece.side && targetAtDest.id !== id) {
+      if (introGuide) {
+        // Castling would sidestep the choreography; nudge back to it.
+        setIntroNudge((prev) => ({ text: `Follow the glow: ${introGuide.from} → ${introGuide.to}`, n: (prev?.n || 0) + 1 }));
+        setSelectedId(null);
+        return;
+      }
       const { canCastle, reason, plan } = canCastleBetween(id, targetAtDest.id);
       if (canCastle) {
         const result = castlePieces(id, targetAtDest.id);
@@ -1564,7 +1850,7 @@ export default function App() {
       setInfoMessage('Illegal move.');
       setSelectedId(null);
     }
-  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame]);
+  }, [pieces, getPieceAtSquare, canCastleBetween, castlePieces, getLegalMoves, movePiece, dispatch, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame, introFreePlay, ensureIntroGame, introGuide]);
 
   const handleDragHover = useCallback(() => {}, []);
 
@@ -1702,7 +1988,10 @@ export default function App() {
   }, [dispatch, sideToMove, getPieceAtSquare, movePiece, canCastleBetween, castlePieces]);
 
   useLocalAi({
-    enabled: !isOnlineGameRef.current && aiEnabledRef.current,
+    // The engine never moves during the intro choreography — Black belongs
+    // to INTRO_SCRIPT until the whole act retires (or aborts), not merely
+    // between scripted replies.
+    enabled: !isOnlineGameRef.current && aiEnabledRef.current && !introScriptOn && !introChoreo,
     aiSide,
     difficulty: aiDifficultyRef.current,
     botId: aiBot ? aiBot.id : null,
@@ -1883,6 +2172,7 @@ export default function App() {
                   newGameSignal={newGameSignal}
                   onOpenAccount={handleOpenAccount}
                   accountSignedIn={Boolean(auth.user)}
+                  auth={auth}
                   onboarding={onboarding}
                   onDismissOnboarding={dismissOnboarding}
                   isPaid={isPaidUser}
@@ -1931,8 +2221,10 @@ export default function App() {
                         pieceSvgStyles={svgStyles}
                         onResize={handleBoardResize}
                         squareColors={boardColors}
+                        attractSquare={introGuide && !selectedId ? introGuide.from : null}
+                        guideSquare={introGuide ? introGuide.to : null}
                       />
-                      {!gameStarted ? (
+                      {!gameStarted && !introFreePlay ? (
                         <button
                           type="button"
                           className="qc-board-start-cta"
@@ -1960,6 +2252,34 @@ export default function App() {
                         >
                           ▶ Start a Game
                         </button>
+                      ) : null}
+                      {introNudge ? (
+                        <div
+                          className="qc-intro-nudge"
+                          key={`intro-nudge-${introNudge.n}`}
+                          role="alert"
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 40,
+                            padding: '10px 18px',
+                            borderRadius: 10,
+                            border: '2px solid rgba(255, 200, 80, 0.9)',
+                            background: 'rgba(12, 14, 22, 0.94)',
+                            color: theme.textPrimary,
+                            fontWeight: 700,
+                            fontSize: 'clamp(13px, 2.2vw, 16px)',
+                            letterSpacing: '0.02em',
+                            boxShadow: '0 0 18px rgba(255, 200, 80, 0.4), 0 8px 24px rgba(0,0,0,0.5)',
+                            backdropFilter: 'blur(2px)',
+                            pointerEvents: 'none',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          ✦ {introNudge.text}
+                        </div>
                       ) : null}
                     </div>
                     {!isNarrow ? trayEl : null}
@@ -2049,6 +2369,8 @@ export default function App() {
                   }}
                   isPaid={isPaidUser}
                   onRequirePremium={handleRequirePremium}
+                  auth={auth}
+                  onOpenAccount={handleOpenAccount}
                 />
               </div>
             </div>
@@ -2173,12 +2495,20 @@ export default function App() {
         auth={auth}
         billingReturn={billingReturn}
         onReviewGame={handleReviewGame}
+        onAccountCreated={() => { setAccountOpen(false); setPricingOpen(true); }}
       />
+
+      <PricingModal
+        open={pricingOpen}
+        onClose={() => setPricingOpen(false)}
+      />
+
       <ReviewModal
         open={Boolean(reviewGame)}
         onClose={() => setReviewGame(null)}
         game={reviewGame ? reviewGame.game : null}
         moves={reviewGame ? reviewGame.moves : null}
+        showEvalGraph={Boolean(reviewGame && reviewGame.showEvalGraph)}
         pieceSvgStyles={svgStyles}
         indicators={indicators}
         squareColors={boardColors}

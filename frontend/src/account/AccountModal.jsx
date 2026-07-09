@@ -19,6 +19,7 @@ import {
 } from './billing.js';
 import { uploadAvatar } from './avatarUpload.js';
 import { taglineOptions } from '../sayings/sayingsCatalog.js';
+import './AccountModal.css';
 
 export default function AccountModal({
   open = false,
@@ -26,18 +27,20 @@ export default function AccountModal({
   auth, // the useAuth() bundle from App
   billingReturn = null, // 'success' | 'cancelled' | null (from ?premium= redirect)
   onReviewGame = () => {}, // premium: open the game review modal for a saved game
+  onAccountCreated = () => {}, // triggered after successful sign up
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null); // { kind: 'info'|'error', text }
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [games, setGames] = useState([]);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [taglineDraft, setTaglineDraft] = useState('');
   const avatarInputRef = useRef(null);
 
-  const { authEnabled, user, profile, refreshProfile, signIn, signUp, signOut } = auth;
+  const { authEnabled, user, profile, refreshProfile, signIn, signUp, signOut, resetPassword, updatePassword, recoveryMode } = auth;
 
   useEffect(() => {
     if (open) {
@@ -69,75 +72,6 @@ export default function AccountModal({
 
   if (!open) return null;
 
-  const styles = {
-    panel: {
-      width: 'min(94vw, 460px)', maxHeight: '88vh', overflowY: 'auto',
-      borderRadius: 12, border: `1px solid ${theme.border}`, backgroundColor: theme.cardBackground,
-      boxShadow: `0 12px 32px ${theme.shadow}`, color: theme.textPrimary, padding: 18,
-      boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 12,
-    },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-    title: { margin: 0, fontSize: '1.1rem', fontWeight: 900, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 8 },
-    label: { fontSize: 12, color: theme.textSecondary, fontWeight: 700, letterSpacing: '0.04em' },
-    input: {
-      width: '100%', boxSizing: 'border-box', padding: '9px 11px', borderRadius: 8,
-      border: `1px solid ${theme.border}`, background: 'rgba(255,255,255,0.05)',
-      color: theme.textPrimary, fontSize: 14,
-    },
-    primaryBtn: {
-      padding: '9px 14px', borderRadius: 8, border: 'none', backgroundColor: theme.primary,
-      color: theme.secondary, fontWeight: 800, fontSize: 13, cursor: 'pointer',
-    },
-    ghostBtn: {
-      padding: '9px 14px', borderRadius: 8, border: `1px solid ${theme.border}`,
-      background: 'transparent', color: theme.textPrimary, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-    },
-    notice: (kind) => ({
-      fontSize: 13, lineHeight: 1.45, borderRadius: 8, padding: '8px 11px',
-      background: kind === 'error' ? 'rgba(255,59,48,0.12)' : 'rgba(79,195,247,0.10)',
-      border: `1px solid ${kind === 'error' ? 'rgba(255,59,48,0.5)' : 'rgba(79,195,247,0.45)'}`,
-      color: theme.textPrimary,
-    }),
-    statRow: { display: 'flex', gap: 10, flexWrap: 'wrap' },
-    stat: {
-      flex: '1 1 100px', border: `1px solid ${theme.border}`, borderRadius: 10,
-      padding: '10px 12px', background: 'rgba(255,255,255,0.03)',
-    },
-    statLabel: { fontSize: 10.5, color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 },
-    statValue: { fontSize: 20, fontWeight: 900, marginTop: 2 },
-    tierBadge: (tier) => ({
-      display: 'inline-block', padding: '2px 9px', borderRadius: 999, fontSize: 11, fontWeight: 800,
-      letterSpacing: '0.06em', textTransform: 'uppercase',
-      background: tier === 'paid' ? 'rgba(246,196,69,0.15)' : 'rgba(255,255,255,0.07)',
-      border: `1px solid ${tier === 'paid' ? '#f6c445' : theme.border}`,
-      color: tier === 'paid' ? '#f6c445' : theme.textSecondary,
-    }),
-    gameRow: {
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-      padding: '7px 10px', borderRadius: 8, border: `1px solid ${theme.border}`,
-      background: 'rgba(255,255,255,0.02)', fontSize: 12.5,
-    },
-    resultChip: (r) => ({
-      fontWeight: 900, textTransform: 'uppercase', fontSize: 11,
-      color: r === 'win' ? '#7ee787' : r === 'loss' ? '#ff7b72' : theme.textSecondary,
-    }),
-    premiumCard: {
-      border: '1px solid rgba(246,196,69,0.55)', borderRadius: 10, padding: '12px 14px',
-      background: 'linear-gradient(160deg, rgba(246,196,69,0.10), rgba(246,196,69,0.03))',
-      display: 'flex', flexDirection: 'column', gap: 8,
-    },
-    premiumTitle: {
-      display: 'flex', alignItems: 'center', gap: 7, fontSize: 13.5, fontWeight: 900,
-      color: '#f6c445', letterSpacing: '0.04em',
-    },
-    featureList: { margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 },
-    featureItem: { fontSize: 12.5, color: theme.textPrimary, display: 'flex', alignItems: 'center', gap: 7 },
-    goldBtn: {
-      padding: '9px 14px', borderRadius: 8, border: 'none', backgroundColor: '#f6c445',
-      color: '#1a1a1a', fontWeight: 900, fontSize: 13, cursor: 'pointer', alignSelf: 'flex-start',
-    },
-  };
-
   const handleSignIn = async () => {
     setBusy(true);
     setNotice(null);
@@ -168,8 +102,40 @@ export default function AccountModal({
     }
     const { error, needsConfirmation } = await signUp(email.trim(), password, name);
     setBusy(false);
+    if (error) {
+      setNotice({ kind: 'error', text: error.message });
+    } else {
+      if (needsConfirmation) {
+        setNotice({ kind: 'info', text: 'Account created — check your email for the confirmation link, then sign in.' });
+      }
+      onAccountCreated();
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setNotice({ kind: 'error', text: 'Enter your email address first.' });
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    const { error } = await resetPassword(email.trim());
+    setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
-    else if (needsConfirmation) setNotice({ kind: 'info', text: 'Account created — check your email for the confirmation link, then sign in.' });
+    else setNotice({ kind: 'info', text: 'Password reset link sent! Check your email.' });
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!password.trim()) {
+      setNotice({ kind: 'error', text: 'Enter a new password.' });
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    const { error } = await updatePassword(password);
+    setBusy(false);
+    if (error) setNotice({ kind: 'error', text: error.message });
+    else setNotice({ kind: 'info', text: 'Password successfully updated.' });
   };
 
   const handleSaveUsername = async () => {
@@ -263,106 +229,183 @@ export default function AccountModal({
       zIndex={1001}
       ariaLabelledBy="qc-account-title"
       backdropClassName="qc-account-backdrop"
-      panelClassName="qc-account-panel"
-      panelStyle={styles.panel}
+      panelClassName="qc-account-panel qc-am-panel"
+      panelStyle={{}}
     >
-        <div style={styles.header}>
-          <h2 id="qc-account-title" style={styles.title}><UserIcon size={18} color={theme.primary} /> {user ? 'Your Account' : 'Sign In'}</h2>
+        <div className="qc-am-header">
+          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {user ? 'Your Account' : 'Sign In'}</h2>
           <IconButton
             icon={XIcon} size={20} title="Close" ariaLabel="Close account panel"
             className="qc-account-close" onClick={onClose} width={36} height={36} radius={8}
-            bg={theme.secondary} color={theme.error} hoverInvert={true} shadow="transparent"
+            bg="rgba(255,255,255,0.1)" color="#fff" hoverInvert={true} shadow="transparent"
           />
         </div>
 
         {!authEnabled ? (
-          <div style={styles.notice('error')}>Accounts are not configured in this build.</div>
-        ) : !user ? (
+          <div className="qc-am-notice-error">Accounts are not configured in this build.</div>
+        ) : recoveryMode ? (
           <>
-            <p style={{ margin: 0, fontSize: 13, color: theme.textSecondary, lineHeight: 1.5 }}>
-              Accounts are optional — sign up to get a rating and keep your recent games.
+            <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+              Enter your new password below.
             </p>
-            <div style={{ ...styles.premiumCard, padding: '9px 12px', gap: 5 }}>
-              <div style={{ ...styles.premiumTitle, fontSize: 12.5 }}>
-                <SparklesIcon size={14} /> Premium · {PREMIUM_PRICE_LABEL}
-              </div>
-              <div style={{ fontSize: 12, color: theme.textPrimary, lineHeight: 1.5 }}>
-                {PREMIUM_PITCH}
-              </div>
-              <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.5 }}>
-                {PREMIUM_FEATURES.join(' · ')}. {TIP_PITCH} Sign up to do either.
-              </div>
-            </div>
             <div>
-              <div style={styles.label}>Username (shown when you play — required to sign up)</div>
+              <div className="qc-am-label">New Password</div>
               <input
-                className="qc-account-signup-username" style={styles.input} value={signupUsername}
-                onChange={(e) => setSignupUsername(e.target.value)} maxLength={20}
-                placeholder="e.g. WaveFunctionWrecker"
+                className="qc-account-password qc-am-input" type="password" value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <div>
-              <div style={styles.label}>Email</div>
-              <input
-                className="qc-account-email" style={styles.input} type="email" value={email}
-                onChange={(e) => setEmail(e.target.value)} autoComplete="email"
-              />
-            </div>
-            <div>
-              <div style={styles.label}>Password</div>
-              <input
-                className="qc-account-password" style={styles.input} type="password" value={password}
-                onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
-              />
-            </div>
-            {notice ? <div style={styles.notice(notice.kind)}>{notice.text}</div> : null}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="qc-account-signin" style={styles.primaryBtn} disabled={busy} onClick={handleSignIn}>
-                {busy ? 'Working…' : 'Sign In'}
-              </button>
-              <button type="button" className="qc-account-signup" style={styles.ghostBtn} disabled={busy} onClick={handleSignUp}>
-                Create Account
+            {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+            <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+              <button type="button" className="qc-account-signin qc-am-primary-btn" style={{flex: 1}} disabled={busy} onClick={handleUpdatePassword}>
+                {busy ? 'Working…' : 'Set New Password'}
               </button>
             </div>
           </>
+        ) : !user ? (
+          <>
+            {authMode === 'signin' && (
+              <>
+                <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                  Sign in to continue. Accounts are optional but keep your rating and history safe.
+                </p>
+                <div>
+                  <div className="qc-am-label">Email</div>
+                  <input
+                    className="qc-account-email qc-am-input" type="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)} autoComplete="email"
+                  />
+                </div>
+                <div>
+                  <div className="qc-am-label">Password</div>
+                  <input
+                    className="qc-account-password qc-am-input" type="password" value={password}
+                    onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
+                  />
+                </div>
+                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
+                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleSignIn}>
+                    {busy ? 'Working…' : 'Sign In'}
+                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('forgot'); setNotice(null); }}>
+                      Forgot Password?
+                    </button>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signup'); setNotice(null); }}>
+                      Create an Account
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {authMode === 'signup' && (
+              <>
+                <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                  Join the ladder! Sign up to get a rating and keep your recent games.
+                </p>
+                <div>
+                  <div className="qc-am-label">Username (shown when you play)</div>
+                  <input
+                    className="qc-account-signup-username qc-am-input" value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value)} maxLength={20}
+                    placeholder="e.g. WaveFunctionWrecker"
+                  />
+                </div>
+                <div>
+                  <div className="qc-am-label">Email</div>
+                  <input
+                    className="qc-account-email qc-am-input" type="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)} autoComplete="email"
+                  />
+                </div>
+                <div>
+                  <div className="qc-am-label">Password</div>
+                  <input
+                    className="qc-account-password qc-am-input" type="password" value={password}
+                    onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
+                  />
+                </div>
+                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
+                  <button type="button" className="qc-account-signup qc-am-create-btn" disabled={busy} onClick={handleSignUp}>
+                    {busy ? 'Working…' : 'Create Account'}
+                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                      Already have an account? Sign In
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {authMode === 'forgot' && (
+              <>
+                <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+                <div>
+                  <div className="qc-am-label">Email</div>
+                  <input
+                    className="qc-account-email qc-am-input" type="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)} autoComplete="email"
+                  />
+                </div>
+                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
+                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleResetPassword}>
+                    {busy ? 'Working…' : 'Send Reset Link'}
+                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                      Back to Sign In
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <>
-            <div style={styles.statRow}>
-              <div style={styles.stat}>
-                <div style={styles.statLabel}>Rating</div>
-                <div style={styles.statValue}>{profile ? profile.rating : '…'}</div>
+            <div className="qc-am-stat-row">
+              <div className="qc-am-stat">
+                <div className="qc-am-stat-label">Rating</div>
+                <div className="qc-am-stat-value">{profile ? profile.rating : '…'}</div>
               </div>
-              <div style={styles.stat}>
-                <div style={styles.statLabel}>Rated Games</div>
-                <div style={styles.statValue}>{profile ? profile.games_played : '…'}</div>
+              <div className="qc-am-stat">
+                <div className="qc-am-stat-label">Rated Games</div>
+                <div className="qc-am-stat-value">{profile ? profile.games_played : '…'}</div>
               </div>
-              <div style={styles.stat}>
-                <div style={styles.statLabel}>Tier</div>
-                <div style={{ marginTop: 6 }}><span style={styles.tierBadge(profile ? profile.tier : 'free')}>{profile ? profile.tier : 'free'}</span></div>
+              <div className="qc-am-stat">
+                <div className="qc-am-stat-label">Tier</div>
+                <div style={{ marginTop: 8 }}><span className={profile && profile.tier === 'paid' ? 'qc-am-tier-badge-paid' : 'qc-am-tier-badge-free'}>{profile ? profile.tier : 'free'}</span></div>
               </div>
             </div>
 
             <div>
-              <div style={styles.label}>Username</div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="qc-am-label">Username</div>
+              <div style={{ display: 'flex', gap: 10 }}>
                 <input
-                  className="qc-account-username" style={{ ...styles.input, flex: 1 }} value={usernameDraft}
+                  className="qc-account-username qc-am-input" style={{ flex: 1 }} value={usernameDraft}
                   onChange={(e) => setUsernameDraft(e.target.value)} maxLength={24}
                 />
-                <button type="button" style={styles.ghostBtn} disabled={busy} onClick={handleSaveUsername}>Save</button>
+                <button type="button" className="qc-am-ghost-btn" disabled={busy} onClick={handleSaveUsername}>Save</button>
               </div>
             </div>
 
             {isPaid ? (
               <div>
-                <div style={styles.label}>Profile Pic & Tagline <span style={{ color: '#f6c445' }}>★</span></div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
+                <div className="qc-am-label">Profile Pic & Tagline <span style={{ color: '#f6c445', textShadow: '0 0 8px rgba(246,196,69,0.6)' }}>★</span></div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
                   <div
                     style={{
-                      width: 52, height: 52, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-                      border: `1px solid ${theme.border}`, background: 'rgba(255,255,255,0.05)',
+                      width: 60, height: 60, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
+                      border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 900, fontSize: 20, color: theme.textSecondary,
+                      fontWeight: 900, fontSize: 24, color: '#a8b2d1',
+                      boxShadow: '0 0 15px rgba(0,0,0,0.5) inset'
                     }}
                   >
                     {profile && profile.avatar_url ? (
@@ -371,10 +414,10 @@ export default function AccountModal({
                       (usernameDraft[0] || '?').toUpperCase()
                     )}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 10 }}>
                       <select
-                        className="qc-account-tagline" style={{ ...styles.input, flex: 1 }} value={taglineDraft}
+                        className="qc-account-tagline qc-am-input" style={{ flex: 1 }} value={taglineDraft}
                         onChange={(e) => setTaglineDraft(e.target.value)}
                         aria-label="Pick a tagline from your characters"
                       >
@@ -383,7 +426,7 @@ export default function AccountModal({
                           <option key={o.id} value={o.tagline}>{`${o.name} — “${o.tagline}”`}</option>
                         ))}
                       </select>
-                      <button type="button" style={styles.ghostBtn} disabled={busy} onClick={handleSaveTagline}>Save</button>
+                      <button type="button" className="qc-am-ghost-btn" disabled={busy} onClick={handleSaveTagline}>Save</button>
                     </div>
                     <div>
                       <input
@@ -391,7 +434,7 @@ export default function AccountModal({
                         style={{ display: 'none' }} onChange={handleAvatarFile}
                       />
                       <button
-                        type="button" className="qc-account-avatar-upload" style={styles.ghostBtn} disabled={busy}
+                        type="button" className="qc-account-avatar-upload qc-am-ghost-btn" disabled={busy}
                         onClick={() => avatarInputRef.current && avatarInputRef.current.click()}
                       >
                         {busy ? 'Working…' : 'Upload profile pic'}
@@ -402,91 +445,88 @@ export default function AccountModal({
               </div>
             ) : null}
 
-            {notice ? <div style={styles.notice(notice.kind)}>{notice.text}</div> : null}
+            {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
 
             {isPaid ? (
-              <div style={{ ...styles.premiumCard, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div style={styles.premiumTitle}><SparklesIcon size={15} /> Premium active</div>
+              <div className="qc-am-premium-card" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Premium active</div>
                 <button
-                  type="button" className="qc-account-manage-sub" style={styles.ghostBtn}
+                  type="button" className="qc-account-manage-sub qc-am-ghost-btn"
+                  style={{ borderColor: 'rgba(246,196,69,0.4)', color: '#f6c445' }}
                   disabled={busy} onClick={handleManageSubscription}
                 >
                   {busy ? 'Working…' : 'Manage subscription'}
                 </button>
               </div>
             ) : (
-              <div className="qc-account-premium" style={styles.premiumCard}>
-                <div style={styles.premiumTitle}><SparklesIcon size={15} /> Go Premium · {PREMIUM_PRICE_LABEL}</div>
-                <div style={{ fontSize: 12.5, color: theme.textPrimary, lineHeight: 1.55 }}>
+              <div className="qc-account-premium qc-am-premium-card">
+                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Go Premium · {PREMIUM_PRICE_LABEL}</div>
+                <div style={{ fontSize: 13.5, color: '#fff', lineHeight: 1.55 }}>
                   {PREMIUM_PITCH}
                 </div>
-                <ul style={styles.featureList}>
+                <ul className="qc-am-feature-list">
                   {PREMIUM_FEATURES.map((f) => (
-                    <li key={f} style={styles.featureItem}><span style={{ color: '#f6c445' }}>✦</span> {f}</li>
+                    <li key={f} className="qc-am-feature-item"><span style={{ color: '#f6c445', textShadow: '0 0 5px rgba(246,196,69,0.5)' }}>✦</span> {f}</li>
                   ))}
                 </ul>
                 <button
-                  type="button" className="qc-account-upgrade" style={styles.goldBtn}
+                  type="button" className="qc-account-upgrade qc-am-gold-btn"
                   disabled={busy} onClick={handleUpgrade}
+                  style={{ marginTop: 4 }}
                 >
                   {busy ? 'Working…' : `Upgrade — ${PREMIUM_PRICE_LABEL}`}
                 </button>
                 <div
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                    borderTop: '1px solid rgba(246,196,69,0.25)', paddingTop: 9, marginTop: 2,
+                    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                    borderTop: '1px solid rgba(246,196,69,0.25)', paddingTop: 12, marginTop: 4,
                   }}
                 >
-                  <span style={{ flex: '1 1 200px', fontSize: 12, color: theme.textSecondary, lineHeight: 1.5 }}>
+                  <span style={{ flex: '1 1 200px', fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                     {isAdFree(profile)
                       ? `You're ad-free until ${new Date(profile.ad_free_until).toLocaleDateString()} with one engine review a day — thanks for the tip! ♥`
                       : TIP_PITCH}
                   </span>
                   <button
-                    type="button" className="qc-account-tip" style={styles.ghostBtn}
+                    type="button" className="qc-account-tip qc-am-ghost-btn"
+                    style={{ borderColor: 'rgba(246,196,69,0.3)', color: '#f6c445' }}
                     disabled={busy} onClick={handleTip}
                     title="One-time payment — no ads for a year (tips stack)"
                   >
                     {busy ? 'Working…' : `Tip ${TIP_PRICE_LABEL}`}
                   </button>
                 </div>
-                <div style={{ fontSize: 11, color: theme.textSecondary }}>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)' }}>
                   The subscription renews automatically at {PREMIUM_PRICE_LABEL} until cancelled —
                   cancel anytime from this panel. The tip is a one-time payment. Secure payment via Stripe.{' '}
-                  <a href="/terms.html" target="_blank" rel="noopener" style={{ color: 'inherit' }}>Terms</a>
+                  <a href="/terms.html" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms</a>
                   {' · '}
-                  <a href="/terms.html#refunds" target="_blank" rel="noopener" style={{ color: 'inherit' }}>Refund policy</a>
+                  <a href="/terms.html#refunds" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>Refund policy</a>
                 </div>
               </div>
             )}
 
             <div>
-              <div style={{ ...styles.label, marginBottom: 6 }}>
+              <div className="qc-am-label">
                 Saved Games ({isPaid ? games.length : `${games.length} of last 10`})
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto', paddingRight: 4 }}>
                 {games.length === 0 ? (
-                  <div style={{ fontSize: 12.5, color: theme.textSecondary }}>Finished games will appear here.</div>
+                  <div style={{ fontSize: 13, color: '#a8b2d1', fontStyle: 'italic' }}>Finished games will appear here.</div>
                 ) : (
                   games.map((g) => (
-                    <div key={g.id} className="qc-account-game-row" style={styles.gameRow}>
-                      <span style={styles.resultChip(g.result)}>{g.result}</span>
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        vs {g.opponent}{g.opponent_rating ? ` (${g.opponent_rating})` : ''} · {g.user_side}
+                    <div key={g.id} className="qc-account-game-row qc-am-game-row">
+                      <span className={`qc-am-result-${g.result}`}>{g.result}</span>
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>
+                        vs {g.opponent}{g.opponent_rating ? ` (${g.opponent_rating})` : ''} <span style={{color: '#a8b2d1'}}>· {g.user_side}</span>
                       </span>
-                      <span style={{ color: theme.textSecondary }}>
+                      <span style={{ color: '#a8b2d1', fontWeight: 600 }}>
                         {g.rating_after ? `${g.rating_before}→${g.rating_after}` : 'unrated'}
                       </span>
-                      <span style={{ color: theme.textSecondary }}>{new Date(g.created_at).toLocaleDateString()}</span>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11.5 }}>{new Date(g.created_at).toLocaleDateString()}</span>
                       <button
                         type="button"
-                        className="qc-account-review-game"
-                        style={{
-                          padding: '3px 9px', borderRadius: 6, fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                          border: `1px solid ${isPaid || (isTipper(profile) && tipReviewAvailable(user.id)) ? '#f6c445' : theme.border}`,
-                          background: 'transparent',
-                          color: isPaid || (isTipper(profile) && tipReviewAvailable(user.id)) ? '#f6c445' : theme.textSecondary,
-                        }}
+                        className={`qc-account-review-game qc-am-review-btn ${isPaid || (isTipper(profile) && tipReviewAvailable(user.id)) ? 'premium' : 'standard'}`}
                         title={
                           isPaid
                             ? 'Review this game with the engine'
@@ -498,7 +538,6 @@ export default function AccountModal({
                         }
                         onClick={async () => {
                           if (isPaid) { onReviewGame(g); return; }
-                          // Tippers get one engine review per day.
                           if (isTipper(profile)) {
                             if (!tipReviewAvailable(user.id)) {
                               setNotice({ kind: 'info', text: "You've used today's tip review — another unlocks tomorrow, or go Premium for unlimited reviews." });
@@ -519,9 +558,9 @@ export default function AccountModal({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: theme.textSecondary }}>{user.email}</span>
-              <button type="button" className="qc-account-signout" style={styles.ghostBtn} onClick={() => { signOut(); }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16 }}>
+              <span style={{ fontSize: 12.5, color: '#a8b2d1' }}>Logged in as <strong style={{color: '#fff'}}>{user.email}</strong></span>
+              <button type="button" className="qc-account-signout qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={() => { signOut(); }}>
                 Sign Out
               </button>
             </div>

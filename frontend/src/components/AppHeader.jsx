@@ -21,14 +21,16 @@ export default function AppHeader({
     appHeader: {
       position: 'relative',
       backgroundColor: '#000',
-      padding: '0 clamp(8px, 1.5vw, 16px)',
-      textAlign: 'center',
+      // Wordmark sits flush left (same inset as the top-right controls);
+      // the underline still spans the full header width below it.
+      padding: '0 clamp(22px, 3.5vw, 56px)',
+      textAlign: 'left',
       width: '100%',
       boxSizing: 'border-box',
       userSelect: 'none',
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       overflow: 'hidden',
       ['--qc-title-size']: TITLE_SIZE_CSS,

@@ -1,17 +1,19 @@
 # Bot avatars
 
-Drop a square PNG named `<bot-id>.png` in this folder and it will be used as
-that bot's avatar automatically (procedural initials render otherwise).
+Source of truth: `frontend/src/ai/bots.js`.
 
-Free bot ids:
-  isaac-steinitz, emmy-menchik, galileo-greco, wolfgang-nimzowitsch,
-  boris-bohr, marie-polgar, enrico-capablanca, erwin-fischer,
-  gary-oppenheimer, werner-karpov, nikola-tal, magnus-einstein
+That catalog owns bot ids, tiers, names, ratings, personalities, taglines,
+sayings, and hues. Drop a square PNG named `<bot-id>.png` in this folder and
+`getBotAvatarUrl()` will use it automatically. If the file is missing, the
+player bar falls back to procedural initials.
 
-Premium bot ids:
-  freeman-morphy, fabiano-feynman, nona-franklin, paul-penrose,
-  james-kramnik, hikaru-hawking, tigran-turing, max-alekhine,
-  vera-krush, mikhail-faraday, alexandra-payne, ernest-anand
+Do not maintain free/premium bot lists here by hand; read them from the
+catalog (`FREE_BOTS`, `PREMIUM_BOTS`) or run:
+
+```bash
+cd frontend
+pnpm audit:avatars
+```
 
 Human players use the same drop-in scheme:
   anonymous.png — you (vs AI, and the White seat in Local 2 Player)

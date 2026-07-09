@@ -1,0 +1,188 @@
+/* frontend/src/account/PricingModal.css */
+
+.qc-pm-panel {
+  width: 900px;
+  max-width: 95vw;
+  background: rgba(10, 10, 14, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+.qc-pm-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.qc-pm-title {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.qc-pm-subtitle {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.qc-pm-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .qc-pm-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qc-pm-card {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.qc-pm-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.qc-pm-card.premium {
+  background: linear-gradient(135deg, rgba(20, 15, 0, 0.7) 0%, rgba(30, 20, 0, 0.9) 100%);
+  border: 1px solid rgba(246, 196, 69, 0.4);
+  box-shadow: 0 0 20px rgba(246, 196, 69, 0.1) inset, 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.qc-pm-card.premium:hover {
+  border-color: rgba(246, 196, 69, 0.7);
+  box-shadow: 0 0 30px rgba(246, 196, 69, 0.15) inset, 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.qc-pm-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qc-pm-card.premium .qc-pm-card-title {
+  color: #f6c445;
+  text-shadow: 0 0 10px rgba(246, 196, 69, 0.4);
+}
+
+.qc-pm-card-price {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.qc-pm-card.premium .qc-pm-card-price {
+  border-bottom-color: rgba(246, 196, 69, 0.2);
+}
+
+.qc-pm-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  flex: 1;
+}
+
+.qc-pm-feature-item {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.qc-pm-feature-item .check {
+  color: #61dafb;
+}
+
+.qc-pm-card.premium .qc-pm-feature-item .check {
+  color: #f6c445;
+  text-shadow: 0 0 5px rgba(246, 196, 69, 0.5);
+}
+
+.qc-pm-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.qc-pm-btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.qc-pm-btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.qc-pm-btn-gold {
+  background: linear-gradient(135deg, #f6c445 0%, #d49c1a 100%);
+  color: #000;
+  box-shadow: 0 0 15px rgba(246, 196, 69, 0.3);
+}
+
+.qc-pm-btn-gold:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 0 25px rgba(246, 196, 69, 0.5);
+}
+
+.qc-pm-btn-tip {
+  background: rgba(246, 196, 69, 0.1);
+  color: #f6c445;
+  border: 1px solid rgba(246, 196, 69, 0.4);
+}
+
+.qc-pm-btn-tip:hover:not(:disabled) {
+  background: rgba(246, 196, 69, 0.15);
+  border-color: rgba(246, 196, 69, 0.6);
+  box-shadow: 0 0 15px rgba(246, 196, 69, 0.2);
+}
+
+.qc-pm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.qc-pm-notice {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(217, 70, 239, 0.1);
+  border: 1px solid rgba(217, 70, 239, 0.3);
+  color: #ff9cf9;
+  font-size: 13.5px;
+  text-align: center;
+}
