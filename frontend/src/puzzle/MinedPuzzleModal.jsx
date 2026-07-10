@@ -143,6 +143,16 @@ export default function MinedPuzzleModal({
   const [revealArrow, setRevealArrow] = useState(null); // par move 1, shown on a rough run
   const [copied, setCopied] = useState(false);
   const aliveRef = useRef(0); // bumps on reset; async work checks it
+  // Black's in-flight reply search. computeBlackReply runs in a Promise, not
+  // an effect, so the modal closing mid-think would otherwise leave the
+  // worker searching until its own 9s timeout — this ref lets the
+  // close/unmount effect kill it immediately.
+  const replyWorkerRef = useRef(null);
+  const killReplyWorker = () => {
+    if (!replyWorkerRef.current) return;
+    try { replyWorkerRef.current.terminate(); } catch (_) {}
+    replyWorkerRef.current = null;
+  };
 
   const {
     display, setDisplay, setMarks, selectedSq, setSelectedSq,
@@ -172,7 +182,7 @@ export default function MinedPuzzleModal({
     setRevealArrow(null);
     setCopied(false);
     moveMadeRef.current = null;
-    return () => { clearTimers(); };
+    return () => { clearTimers(); killReplyWorker(); };
   }, [open, puzzle]);
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
@@ -289,18 +299,24 @@ export default function MinedPuzzleModal({
       (evaluatePosition(r.resultPieces) < evaluatePosition(best.resultPieces) ? r : best));
     const finish = (reply) => resolve(reply || greedy());
 
+    killReplyWorker(); // at most one reply search in flight
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
-    const timer = setTimeout(() => { worker.terminate(); finish(null); }, 9000);
+    replyWorkerRef.current = worker;
+    const settle = (reply) => {
+      clearTimeout(timer);
+      try { worker.terminate(); } catch (_) {}
+      if (replyWorkerRef.current === worker) replyWorkerRef.current = null;
+      finish(reply);
+    };
+    const timer = setTimeout(() => settle(null), 9000);
     worker.onmessage = (e) => {
       const d = e.data || {};
       if (d.type !== 'analysis') return;
-      clearTimeout(timer);
-      worker.terminate();
       const best = (d.moves || []).find((m) => !m.castle
         && replies.some((r) => r.from === m.from && r.to === m.to));
-      finish(best ? replies.find((r) => r.from === best.from && r.to === best.to) : null);
+      settle(best ? replies.find((r) => r.from === best.from && r.to === best.to) : null);
     };
-    worker.onerror = () => { clearTimeout(timer); worker.terminate(); finish(null); };
+    worker.onerror = () => settle(null);
     worker.postMessage({
       type: 'analyze',
       id: 'black-reply',
