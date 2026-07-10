@@ -172,4 +172,55 @@ function playGame(gameIdx, roles) {
   };
 }
 
+// ------------------------------------------------- mirror (black windows)
+
+const mirrorSide = (s) => (s === 'white' ? 'black' : 'white');
+const mirrorSquare = (sq) => (sq ? sq[0] + String(9 - Number(sq[1])) : sq);
+
+function mirrorPiece(p) {
+  return {
+    ...p,
+    side: mirrorSide(p.side),
+    square: p.square ? mirrorSquare(p.square) : p.square,
+    possibleTypes: [...(p.possibleTypes || [])],
+    baseTypes: Array.isArray(p.baseTypes) ? [...p.baseTypes] : p.baseTypes,
+    promoTypes: Array.isArray(p.promoTypes) ? [...p.promoTypes] : p.promoTypes,
+  };
+}
+
+function mirrorLastMove(lm) {
+  if (!lm) return lm;
+  return {
+    ...lm,
+    side: mirrorSide(lm.side),
+    from: mirrorSquare(lm.from),
+    to: mirrorSquare(lm.to),
+    crossedSquare: lm.crossedSquare ? mirrorSquare(lm.crossedSquare) : lm.crossedSquare,
+    measuredSquares: (lm.measuredSquares || []).map(mirrorSquare),
+  };
+}
+
+// Reflect a finished game top-to-bottom so BLACK's capitalizing windows can
+// be mined by the unchanged White pipeline: every piece swaps sides, ranks
+// flip (file-preserving, a1<->a8), and every side flag inverts. The rules
+// engine is fully color-symmetric, so the mirrored positions replay
+// identically — no sign-flipped duplicate of the detector to keep honest.
+export function mirrorGame(game) {
+  return {
+    ...game,
+    white: game.black,
+    black: game.white,
+    mirrored: true,
+    record: game.record.map((rec) => ({
+      ...rec,
+      sideToMove: mirrorSide(rec.sideToMove),
+      pieces: rec.pieces.map(mirrorPiece),
+      lastMove: mirrorLastMove(rec.lastMove),
+      played: rec.played
+        ? { ...rec.played, from: mirrorSquare(rec.played.from), to: mirrorSquare(rec.played.to) }
+        : rec.played,
+    })),
+  };
+}
+
 export { applyReply, minerBot, BY_RATING, MID_STRONG, MID_WEAK, playGame };

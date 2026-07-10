@@ -350,6 +350,10 @@ function mineGame(game, stats) {
         chain.game = game.gameIdx;
         chain.white = game.white;
         chain.black = game.black;
+        // Mirrored pass: this window was BLACK's in the real game; the saved
+        // start state is the reflected board (the puzzle player still plays
+        // White, as always).
+        chain.mirrored = Boolean(game.mirrored);
         chains.push(chain);
         // The first accepted mistake ends this game's DETECTION (the story
         // of the game IS that moment) — probing continues for the graph.

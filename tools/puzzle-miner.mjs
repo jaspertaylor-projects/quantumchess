@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { args, CFG, rng } from './miner/config.mjs';
-import { minerBot, BY_RATING, MID_STRONG, MID_WEAK, playGame } from './miner/gameplay.mjs';
+import { minerBot, mirrorGame, BY_RATING, MID_STRONG, MID_WEAK, playGame } from './miner/gameplay.mjs';
 import { mineGame, verifyParPly } from './miner/swing.mjs';
 
 // -------------------------------------------------------------------- main
@@ -57,12 +57,13 @@ for (let g = 0; g < CFG.games; g++) {
   } else {
     const openW = MID_STRONG[Math.floor(rng() * MID_STRONG.length)];
     const mainB = MID_WEAK[Math.floor(rng() * MID_WEAK.length)];
-    // The strongest bot thinks longer (--strongMs): flat --playMs for every
-    // seat neutralized its roster edge — wider beams complete FEWER
-    // iterative-deepening levels on the same budget.
+    // The post-handoff White capitalizer thinks longer (--strongMs): flat
+    // --playMs neutralized its roster edge — wider beams complete FEWER
+    // iterative-deepening levels on the same budget. Opening seats play
+    // --playMs; the time edge switches on WITH the seat swap.
     roles = {
       openW: minerBot(openW),
-      openB: minerBot(BY_RATING[0], CFG.strongMs),
+      openB: minerBot(BY_RATING[0]),
       mainW: minerBot(BY_RATING[0], CFG.strongMs),
       mainB: minerBot(mainB),
     };
@@ -74,16 +75,25 @@ for (let g = 0; g < CFG.games; g++) {
   console.log(`game ${g}: [open ${game.opening.white} vs ${game.opening.black}] -> ${game.white} vs ${game.black} — ${game.plies} plies, ${game.result.winner || 'draw'} (${game.result.reason}) [${playSec}s]`);
   const t1 = performance.now();
   const mined = mineGame(game, stats);
-  games.push({ gameIdx: g, white: game.white, black: game.black, opening: game.opening, plies: game.plies, result: game.result, moves: game.stored, evals: mined.evals });
+  // Mirror pass: reflect the board and run the SAME White pipeline, so
+  // BLACK's capitalizing windows (White's mistakes from balance) are mined
+  // too. Mirrored evals negate back into the original frame for the viewer.
+  console.log('  -- mirror pass: mining the black windows --');
+  const minedMirror = mineGame(mirrorGame(game), stats);
+  const evals = [
+    ...mined.evals,
+    ...minedMirror.evals.map((e) => ({ ply: e.ply, eval: Number((-e.eval).toFixed(2)), side: 'black' })),
+  ].sort((a, b) => a.ply - b.ply);
+  games.push({ gameIdx: g, white: game.white, black: game.black, opening: game.opening, plies: game.plies, result: game.result, moves: game.stored, evals });
   const mineSec = ((performance.now() - t1) / 1000).toFixed(1);
-  for (const chain of mined.chains) {
+  for (const chain of [...mined.chains, ...minedMirror.chains]) {
     for (const entry of chain._verify) verifiable.push({ gameIdx: g, startPly: chain.startPly, entry });
     const { _verify, ...saved } = chain;
     allChains.push(saved);
     fs.appendFileSync(chainStream, JSON.stringify(saved) + '\n');
-    console.log(`  chain @ply ${chain.startPly}: mistake ${chain.mistake.from}->${chain.mistake.to} (${chain.mistake.evalBefore} -> ${chain.mistake.evalAfter})${chain.endsInMate ? ' +mate' : ''} par=[${chain.parEvals.join(', ')}] medianFrac=${chain.spread.medianFrac} trick=${chain.trickiness}/min${chain.trickMin} themes=[${chain.themes.join(',')}]`);
+    console.log(`  chain${chain.mirrored ? ' [mirror]' : ''} @ply ${chain.startPly}: mistake ${chain.mistake.from}->${chain.mistake.to} (${chain.mistake.evalBefore} -> ${chain.mistake.evalAfter})${chain.endsInMate ? ' +mate' : ''} par=[${chain.parEvals.join(', ')}] medianFrac=${chain.spread.medianFrac} trick=${chain.trickiness}/min${chain.trickMin} themes=[${chain.themes.join(',')}]`);
   }
-  console.log(`  mined ${mined.chains.length} chain(s) from ${game.record.filter((r) => r.sideToMove === 'white' && r.ply >= CFG.minPly).length} white positions [${mineSec}s]`);
+  console.log(`  mined ${mined.chains.length + minedMirror.chains.length} chain(s) (${mined.chains.length} white-window, ${minedMirror.chains.length} mirrored black-window) from ${game.record.filter((r) => r.ply >= CFG.minPly).length} positions [${mineSec}s]`);
 }
 
 // GATE: par must hold under a deeper, independent search (capped).

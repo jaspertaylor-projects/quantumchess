@@ -25,8 +25,8 @@ const CFG = {
   seed: Number(argVal('seed', 1)),
   maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 90)), // 45 full moves, then adjudicate (Jasper 2026-07-09): past that it's classical endgame territory — no puzzles there, and probing it isn't free
   playMs: Number(argVal('playMs', QUICK ? 250 : 900)), // per-move time; strong bots need thinking room
-  strongMs: Number(argVal('strongMs', QUICK ? 400 : 1400)), // the STRONGEST bot's per-move time (its openB + mainW seats) — the capitalizer earns real thinking room (Jasper, 2026-07-10)
-  minPly: Number(argVal('minPly', 20)), // plies (half-moves): ~10 full moves in — mid-game, quantum state developed (Jasper, 2026-07-09)
+  strongMs: Number(argVal('strongMs', QUICK ? 400 : 2000)), // the post-handoff WHITE capitalizer's per-move time; the opening seats all play --playMs (Jasper, 2026-07-10: 2000ms, main seat only)
+  minPly: Number(argVal('minPly', 14)), // plies (half-moves): mid-game starts at the ply-14 handoff (seed-11: was 20 — fast post-handoff wins were erring below the floor)
   handoffPly: Number(argVal('handoffPly', 20)), // bot handoff: opening controllers play plies 0..handoffPly-1, main controllers after
   mineDepth: Number(argVal('mineDepth', 4)),
   probeMs: Number(argVal('probeMs', 8000)), // per-ply balance probe budget (timeouts poison the streak)
