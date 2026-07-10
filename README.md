@@ -351,7 +351,7 @@ Legend: [ ] not started · [~] in progress · [X] done
        stays put).
     5. Test from your laptop — this logs a fake frontend error at ERROR
        level, which should email you within ~30s:
-       `curl -X POST https://api.quantumchess.ninja/api/logs/frontend -H 'content-type: application/json' -d '{"message":"alert-pipeline test"}'`
+       `curl -X POST https://api.quantumchess.ninja/api/client-error -H 'content-type: application/json' -d '{"message":"alert-pipeline test"}'`
     6. No email? Until AWS grants SES production access, only VERIFIED
        addresses can receive — check the recipient is verified in SES
        (us-east-1 → Verified identities) or wait for prod access. Also

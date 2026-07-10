@@ -87,7 +87,7 @@ def _now_mono() -> float:
 
 
 def _get_room_state(room_id: str) -> Dict[str, Any]:
-    s = _WS_ROOMS.setdefault(
+    return _WS_ROOMS.setdefault(
         room_id,
         {
             "conns": {},
@@ -98,48 +98,49 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
             "winner": None,
             "end_reason": None,
             "announced_end": False,
+            "history": [],
+            "both_connected_at": None,
+            "dc_at": {},
+            # Default to 5+0 control. Single source of truth on the server.
+            "clock": {
+                "baseMs": 5 * 60 * 1000,
+                "incMs": 0,
+                "whiteMs": 5 * 60 * 1000,
+                "blackMs": 5 * 60 * 1000,
+                "active": "none",  # "white" | "black" | "none"
+                "lastMono": _now_mono(),
+                "started": False,
+            },
+            "clock_task": None,
         },
     )
-    if "conns" not in s:
-        s["conns"] = {}
-    if "turn" not in s:
-        s["turn"] = "white"
-    if "seq" not in s:
-        s["seq"] = 0
-    if "lock" not in s or not isinstance(s.get("lock"), asyncio.Lock):
-        s["lock"] = asyncio.Lock()
-    if "ended" not in s:
-        s["ended"] = False
-    if "winner" not in s:
-        s["winner"] = None
-    if "end_reason" not in s:
-        s["end_reason"] = None
-    if "announced_end" not in s:
-        s["announced_end"] = False
-    if "history" not in s:
-        s["history"] = []
-    if "both_connected_at" not in s:
-        s["both_connected_at"] = None
-    if "dc_at" not in s:
-        s["dc_at"] = {}
-    _ensure_clock(s)
-    return s
 
 
-def _ensure_clock(state: Dict[str, Any]) -> None:
-    if "clock" not in state or not isinstance(state.get("clock"), dict):
-        # Default to 5+0 control. Single source of truth on the server.
-        state["clock"] = {
-            "baseMs": 5 * 60 * 1000,
-            "incMs": 0,
-            "whiteMs": 5 * 60 * 1000,
-            "blackMs": 5 * 60 * 1000,
-            "active": "none",  # "white" | "black" | "none"
-            "lastMono": _now_mono(),
-            "started": False,
-        }
-    if "clock_task" not in state:
-        state["clock_task"] = None
+def _end_game_locked(state: Dict[str, Any], winner: Optional[str], reason: str) -> None:
+    """Mark the game over and freeze the clock. Call under the room lock."""
+    state["ended"] = True
+    state["winner"] = winner
+    state["end_reason"] = reason
+    clk = state.get("clock", {})
+    clk["active"] = "none"
+    state["clock"] = clk
+
+
+def _game_over_payload_locked(room_id: str, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The exactly-once game_over broadcast payload, or None if a prior path
+    already announced this room's end. Call under the room lock."""
+    if state.get("announced_end"):
+        return None
+    state["announced_end"] = True
+    return {
+        "type": "game_over",
+        "roomId": room_id,
+        "reason": state.get("end_reason") or "rules",
+        "winner": state.get("winner"),
+        "seq": state.get("seq", 0),
+        "turn": state.get("turn", "white"),
+        "clock": _clock_view(state),
+    }
 
 
 async def _send(ws: WebSocket, payload: Dict[str, Any]) -> None:
@@ -241,54 +242,28 @@ async def _ensure_clock_task(room_id: str) -> None:
                     clk = s.get("clock", {})
                     if not s.get("ended") and bool(clk.get("started")):
                         if int(clk.get("whiteMs", 0)) <= 0:
-                            s["ended"] = True
-                            s["winner"] = "black"
-                            s["end_reason"] = "time"
-                            clk["active"] = "none"
+                            _end_game_locked(s, "black", "time")
                         elif int(clk.get("blackMs", 0)) <= 0:
-                            s["ended"] = True
-                            s["winner"] = "white"
-                            s["end_reason"] = "time"
-                            clk["active"] = "none"
-                        s["clock"] = clk
+                            _end_game_locked(s, "white", "time")
 
                     nowm = _now_mono()
                     if not s.get("ended"):
                         bca = s.get("both_connected_at")
                         if s.get("seq", 0) == 0 and bca and (nowm - bca) > FIRST_MOVE_TIMEOUT_S:
                             # Nobody moved within the window: void the game.
-                            s["ended"] = True
-                            s["winner"] = None
-                            s["end_reason"] = "first-move timeout"
-                            clk = s.get("clock", {})
-                            clk["active"] = "none"
-                            s["clock"] = clk
+                            _end_game_locked(s, None, "first-move timeout")
                         else:
                             for dcid, ts in list((s.get("dc_at") or {}).items()):
                                 if (nowm - ts) > DISCONNECT_TIMEOUT_S:
-                                    s["ended"] = True
+                                    winner = None
                                     if s.get("seq", 0) > 0:
                                         side_gone = service.get_side_for_client(room_id, dcid)
-                                        s["winner"] = _other_side(side_gone) if side_gone in ("white", "black") else None
-                                    else:
-                                        s["winner"] = None
-                                    s["end_reason"] = "abandonment"
-                                    clk = s.get("clock", {})
-                                    clk["active"] = "none"
-                                    s["clock"] = clk
+                                        winner = _other_side(side_gone) if side_gone in ("white", "black") else None
+                                    _end_game_locked(s, winner, "abandonment")
                                     break
 
-                    if s.get("ended") and not s.get("announced_end"):
-                        s["announced_end"] = True
-                        game_over_payload = {
-                            "type": "game_over",
-                            "roomId": room_id,
-                            "reason": s.get("end_reason") or "rules",
-                            "winner": s.get("winner"),
-                            "seq": s.get("seq", 0),
-                            "turn": s.get("turn", "white"),
-                            "clock": _clock_view(s),
-                        }
+                    if s.get("ended"):
+                        game_over_payload = _game_over_payload_locked(room_id, s)
 
                     # Prepare a periodic clock update snapshot regardless
                     view = _clock_view(s)
@@ -383,25 +358,8 @@ async def _apply_turn(
         # If time is out for either side, end immediately
         clk = state.get("clock", {})
         if bool(clk.get("started")) and (int(clk.get("whiteMs", 0)) <= 0 or int(clk.get("blackMs", 0)) <= 0):
-            if int(clk.get("whiteMs", 0)) <= 0:
-                state["winner"] = "black"
-            else:
-                state["winner"] = "white"
-            state["ended"] = True
-            state["end_reason"] = "time"
-            clk["active"] = "none"
-            state["clock"] = clk
-            if not state.get("announced_end"):
-                state["announced_end"] = True
-                time_over_payload = {
-                    "type": "game_over",
-                    "roomId": room_id,
-                    "reason": "time",
-                    "winner": state.get("winner"),
-                    "seq": state.get("seq", 0),
-                    "turn": state.get("turn", "white"),
-                    "clock": _clock_view(state),
-                }
+            _end_game_locked(state, "black" if int(clk.get("whiteMs", 0)) <= 0 else "white", "time")
+            time_over_payload = _game_over_payload_locked(room_id, state)
         else:
             # Apply increment to the mover
             inc_ms = int(clk.get("incMs", 0))
@@ -614,23 +572,8 @@ async def matchmaking_ws(
                 over_payload: Optional[Dict[str, Any]] = None
                 async with state["lock"]:
                     if not state.get("ended"):
-                        state["ended"] = True
-                        state["winner"] = report_winner
-                        state["end_reason"] = report_reason
-                        clk = state.get("clock", {})
-                        clk["active"] = "none"
-                        state["clock"] = clk
-                        if not state.get("announced_end"):
-                            state["announced_end"] = True
-                            over_payload = {
-                                "type": "game_over",
-                                "roomId": room_id,
-                                "reason": report_reason,
-                                "winner": report_winner,
-                                "seq": state.get("seq", 0),
-                                "turn": state.get("turn", "white"),
-                                "clock": _clock_view(state),
-                            }
+                        _end_game_locked(state, report_winner, report_reason)
+                        over_payload = _game_over_payload_locked(room_id, state)
                         print(
                             f"[WS][game_over] room={room_id} by={cid} winner={report_winner} reason={report_reason}"
                         )

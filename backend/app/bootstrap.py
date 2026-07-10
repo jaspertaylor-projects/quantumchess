@@ -12,10 +12,9 @@ import os
 import time
 import traceback
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 from typing import Any, Dict, Tuple, Optional, Callable
 
-LOG_DIR = os.getenv("LOG_DIR", "logs")
+LOG_DIR = os.getenv("LOG_DIR", "/logs")  # same default as app.main — the two must never diverge
 BACKEND_ERR_FILE = os.path.join(LOG_DIR, "backend-error.log")
 FRONTEND_ERR_FILE = os.path.join(LOG_DIR, "frontend-error.log")
 
@@ -72,7 +71,6 @@ class _ClientErrorProxy:
         self.app = app
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
-        self.out_path = Path(self.log_dir) / "frontend-error.log"
         # rate limiting: max 20 events / 10s per ip
         self._rate: Dict[str, Tuple[float, int]] = {}
         self._rate_window = 10.0
@@ -187,9 +185,14 @@ class _ClientErrorProxy:
             "componentStack": component_stack,
         }
 
+        # Emit through the "frontend.client" logger: its rotating handler owns
+        # frontend-error.log AND the throttled alert emails, so shipped browser
+        # errors actually page the operator (a direct file append here used to
+        # bypass alerting).
         try:
-            with self.out_path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            logging.getLogger("frontend.client").error(
+                "FrontendError | %s", json.dumps(record, ensure_ascii=False)
+            )
         except Exception:
             # Best-effort; do not fail the app if logging fails
             pass

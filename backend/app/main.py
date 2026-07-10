@@ -13,15 +13,11 @@ import sys
 import threading
 import time
 import traceback
-import uuid
 from email.message import EmailMessage
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import numpy as np
-import requests
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
 # ---- Paths -------------------------------------------------------------------
 LOG_DIR = os.getenv("LOG_DIR", "/logs")
@@ -272,54 +268,13 @@ app.include_router(matchmaking_router)
 
 
 # ---- Endpoints: Health --------------------------------------------------------
+# The path is load-bearing: the compose healthcheck and the uptime workflow
+# both probe /api/hello. (Frontend error intake lives in bootstrap.py's
+# /api/client-error proxy, which logs through the "frontend.client" logger —
+# one intake path, rate-limited, and it fires the alert emails.)
 @app.get("/api/hello")
 def read_root() -> dict[str, Any]:
     return {
-        "message": "Hello from the FastAPI & Docker Coming in Hot and fresh and tasty today!!!",
+        "message": "ok",
         "timestamp": datetime.datetime.now().isoformat(),
     }
-
-
-@app.get("/api/external-data")
-def get_external_data() -> dict[str, Any]:
-    try:
-        response = requests.get(
-            "https://jsonplaceholder.typicode.com/todos/1", timeout=5
-        )
-        response.raise_for_status()  # Raise an exception for bad status codes
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        # Log the error and return a user-friendly message
-        logging.getLogger("fastapi").error("Failed to fetch external data: %s", e)
-        return {"error": "Failed to fetch data from external service."}
-
-
-# ---- Frontend Error Intake ----------------------------------------------------
-class FrontendErrorPayload(BaseModel):
-    message: str
-    stack: str | None = None
-    source: str | None = None
-    line: int | None = None
-    col: int | None = None
-    href: str | None = None
-    userAgent: str | None = None
-
-
-@app.post("/api/logs/frontend")
-def log_frontend_error(
-    payload: FrontendErrorPayload, request: Request
-) -> dict[str, str]:
-    client_ip = request.client.host if request.client else None
-    logger = logging.getLogger("frontend.client")
-    logger.error(
-        "FrontendError | ip=%s | message=%s | source=%s | line=%s | col=%s | href=%s | userAgent=%s | stack=%s",
-        client_ip,
-        payload.message,
-        payload.source,
-        payload.line,
-        payload.col,
-        payload.href,
-        payload.userAgent,
-        payload.stack,
-    )
-    return {"status": "ok"}

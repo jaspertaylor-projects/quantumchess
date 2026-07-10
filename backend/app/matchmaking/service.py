@@ -88,6 +88,22 @@ def _touch_client(client_id: str) -> None:
     _MM_CLIENT_LAST_SEEN[client_id] = _now()
 
 
+def _begin_op(client_id_raw: str) -> Optional[str]:
+    """The shared preamble of every public operation: prune stale state,
+    normalize the client id (None when blank), refresh the caller's
+    liveness."""
+    _cleanup_stale()
+    client_id = (client_id_raw or "").strip()
+    if not client_id:
+        return None
+    _touch_client(client_id)
+    return client_id
+
+
+def _queued_view(client_id: str) -> MatchResponse:
+    return MatchResponse(status="queued", position=_MM_QUEUE.index(client_id) + 1)
+
+
 def _make_room(room_id: str, players: List[str], sides: Dict[str, str]) -> Dict[str, Any]:
     return {
         "id": room_id,
@@ -112,12 +128,9 @@ def _room_view_for(client_id: str, room: Dict[str, Any]) -> MatchResponse:
 # Public operations -------------------------------------------------------------
 
 def join(client_id_raw: str) -> MatchResponse:
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     if not client_id:
         return MatchResponse(status="error")
-
-    _touch_client(client_id)
 
     # Already in a room
     existing_room_id = _MM_CLIENT_ROOM.get(client_id)
@@ -130,8 +143,7 @@ def join(client_id_raw: str) -> MatchResponse:
 
     # Already queued
     if client_id in _MM_QUEUE:
-        pos = _MM_QUEUE.index(client_id) + 1
-        return MatchResponse(status="queued", position=pos)
+        return _queued_view(client_id)
 
     # Try to match with earliest waiting distinct player
     partner: Optional[str] = None
@@ -143,8 +155,7 @@ def join(client_id_raw: str) -> MatchResponse:
     if partner is None:
         # No partner available; enqueue
         _MM_QUEUE.append(client_id)
-        pos = _MM_QUEUE.index(client_id) + 1
-        return MatchResponse(status="queued", position=pos)
+        return _queued_view(client_id)
 
     # Create a room with partner and client
     try:
@@ -170,12 +181,9 @@ def create_private(client_id_raw: str) -> MatchResponse:
     via join_private. Idempotent: re-creating while already waiting in an
     open private room returns the same room and code.
     """
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     if not client_id:
         return MatchResponse(status="error")
-
-    _touch_client(client_id)
 
     existing_room_id = _MM_CLIENT_ROOM.get(client_id)
     if existing_room_id:
@@ -209,13 +217,10 @@ def create_private(client_id_raw: str) -> MatchResponse:
 
 def join_private(client_id_raw: str, code_raw: str) -> MatchResponse:
     """Seat a friend (black) into the private room behind an invite code."""
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     code = (code_raw or "").strip().upper()
     if not client_id or not code:
         return MatchResponse(status="error")
-
-    _touch_client(client_id)
 
     room_id = _MM_INVITES.get(code)
     room = _MM_ROOMS.get(room_id) if room_id else None
@@ -242,12 +247,9 @@ def join_private(client_id_raw: str, code_raw: str) -> MatchResponse:
 
 
 def get_status(client_id_raw: str) -> MatchResponse:
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     if not client_id:
         return MatchResponse(status="error")
-
-    _touch_client(client_id)
 
     rid = _MM_CLIENT_ROOM.get(client_id)
     if rid and rid in _MM_ROOMS:
@@ -255,19 +257,15 @@ def get_status(client_id_raw: str) -> MatchResponse:
         return _room_view_for(client_id, room)
 
     if client_id in _MM_QUEUE:
-        pos = _MM_QUEUE.index(client_id) + 1
-        return MatchResponse(status="queued", position=pos)
+        return _queued_view(client_id)
 
     return MatchResponse(status="idle")
 
 
 def leave(client_id_raw: str) -> Dict[str, Any]:
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     if not client_id:
         return {"status": "error"}
-
-    _touch_client(client_id)
 
     # Remove from queue
     try:
@@ -295,12 +293,9 @@ def leave(client_id_raw: str) -> Dict[str, Any]:
 
 
 def heartbeat(client_id_raw: str) -> Dict[str, Any]:
-    _cleanup_stale()
-    client_id = (client_id_raw or "").strip()
+    client_id = _begin_op(client_id_raw)
     if not client_id:
         return {"status": "error"}
-
-    _touch_client(client_id)
 
     rid = _MM_CLIENT_ROOM.get(client_id)
     if rid and rid in _MM_ROOMS:
