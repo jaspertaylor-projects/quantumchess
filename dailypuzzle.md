@@ -89,6 +89,42 @@ is hard to read ahead of time). Every par ply is scored; `minPlyTrick`
 enforces sustained interest and the report keeps trickiness / trickMin /
 trickAvg.
 
+## Swing-run history (seeds 3–9, 2026-07-09) and the ready-to-go next run
+
+Roughly 100 games of iteration, zero chains kept, every gate individually
+proven out — each run killed exactly one blocker:
+
+- **Seeds 3–6 (strong-vs-stronger, top-4 pool):** balance windows opened
+  (14–27 per run) but evenly-matched bots produced ~1 sharp Black mistake
+  per 30+ games. Along the way: probe timeouts fixed (fast narrow-tail
+  beams + own budget), pre-count size gate (a wasted deep search on a
+  wide position costs minutes; counting moves costs 30ms).
+- **Seed 7 (Jasper's PHASED HANDOFF — opening pair mid-strong-White vs
+  strongest-Black to build a balanced start, controllers swap at
+  `--handoffPly 20`: strongest bot takes White, a rank-5-10 bot takes
+  Black):** candidate rate jumped to 7 per 16 games. All died at the
+  `<50 legal moves` cap.
+- **Seed 8 (cap 64):** swings measured at 78/118/149/158 legal moves —
+  width is INHERENT to winning quantum positions. Decision: cap dropped
+  entirely; `numChoices` is curation metadata. All search roots widened to
+  176 (a root-pruned move silently corrupts an eval).
+- **Seed 9 (capless):** the funnel finally reached its last gate: 5
+  survivors, 4 near-misses with deep bests 1.33/1.77/2.25/2.28 against
+  the `swingMin 2.5` floor, 1 depth-confirm reject, zero plumbing rejects.
+  The floor is provably ~a quarter-pawn too high for what these games
+  produce.
+
+**Queued for the next run (seed 10, NOT yet launched — Jasper wants it
+held):** `swingMin 2.5 -> 2.0`, `swingDelta 2.0 -> 1.5` (catches seed-9's
+2.25-class misses; perishability + per-ply trickiness remain the real
+quality gates), probes switched from analyzeRootMoves to searchBestMove
+(root-wide alpha pruning, measured ~6x faster at the same full width),
+`--maxPlies 90` (adjudicate at move 45 — no classical-endgame probing),
+and the first run whose GAMES benefit from the same-day engine work:
+mop-up conversion gradients, repetition avoidance, and the recoherence
+fresh-start fix. Suggested launch:
+`node tools/puzzle-miner.mjs --games 16 --seed 10 --probeMs 15000 --mineMs 360000 --confirmMs 360000`.
+
 ## First results
 
 **Pilot (2026-07-06, 6 games, seed 2):** 305 positions → 1 certified

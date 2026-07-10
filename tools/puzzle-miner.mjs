@@ -60,7 +60,7 @@ const QUICK = args.includes('--quick');
 const CFG = {
   games: Number(argVal('games', QUICK ? 2 : 8)),
   seed: Number(argVal('seed', 1)),
-  maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 160)),
+  maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 90)), // 45 full moves, then adjudicate (Jasper 2026-07-09): past that it's classical endgame territory — no puzzles there, and probing it isn't free
   playMs: Number(argVal('playMs', QUICK ? 250 : 900)), // per-move time; strong bots need thinking room
   minPly: Number(argVal('minPly', 20)), // plies (half-moves): ~10 full moves in — mid-game, quantum state developed (Jasper, 2026-07-09)
   handoffPly: Number(argVal('handoffPly', 20)), // bot handoff: opening controllers play plies 0..handoffPly-1, main controllers after
@@ -80,8 +80,8 @@ const CFG = {
   // player is shown Black's move and must capitalize.
   balanceBand: Number(argVal('balanceBand', 1.25)), // |eval| <= band counts as balanced
   balanceStreak: Number(argVal('balanceStreak', 2)), // consecutive balanced white-to-move probes required before the swing
-  swingMin: Number(argVal('swingMin', 2.5)), // post-mistake advantage floor (deep eval)
-  swingDelta: Number(argVal('swingDelta', 2.0)), // and the JUMP from the last balanced eval must be at least this
+  swingMin: Number(argVal('swingMin', 2.0)), // post-mistake advantage floor (deep eval; 2.5 rejected every seed-9 candidate — deep bests clustered 1.3-2.3)
+  swingDelta: Number(argVal('swingDelta', 1.5)), // and the JUMP from the last balanced eval must be at least this
   // Perishability: an advantage that survives lazy play is no puzzle. The
   // MEDIAN legal move must keep less than this fraction of the best move's
   // advantage — most moves must leak the win.
@@ -458,18 +458,18 @@ function analyzePosition(position, depth, widths, timeMs) {
 // rather than lying).
 function probeEval(position, stats, side = 'white') {
   const t0 = performance.now();
-  const shallow = analyzeRootMoves({
+  // searchBestMove, not analyzeRootMoves: probes only need the BEST score,
+  // and root-wide alpha pruning is ~6x cheaper at the same full root width
+  // (measured 118s -> 18s on a 98-move position).
+  const res = searchBestMove({
     pieces: position.pieces,
     sideToMove: side,
     lastMove: position.lastMove,
-    depth: 2,
-    widths: PROBE_WIDTHS,
-    timeMs: CFG.probeMs,
+    bot: { search: { maxDepth: 2, widths: PROBE_WIDTHS, timeMs: CFG.probeMs, noise: 0 } },
   });
   stats.mineMsTotal += performance.now() - t0;
-  if (!shallow || !shallow.moves.length) { stats.prefilterTimeouts++; return null; }
-  const score = shallow.moves[0].score;
-  return Number((side === 'white' ? score : -score).toFixed(2));
+  if (!res || !res.move || res.depth < 2) { stats.prefilterTimeouts++; return null; }
+  return Number((side === 'white' ? res.score : -res.score).toFixed(2));
 }
 
 // Spread stats over a full root analysis: how perishable is the advantage?

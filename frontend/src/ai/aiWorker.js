@@ -52,6 +52,33 @@ self.addEventListener('message', (e) => {
     return;
   }
 
+  // Best-move score only (eval graphs, balance probes): searchBestMove's
+  // root-wide alpha pruning makes this several times cheaper than analyze's
+  // score-every-move at the same full root width. Returns the reached depth
+  // so callers can treat an under-depth result as a timeout.
+  if (data.type === 'bestScore') {
+    const { id, payload } = data;
+    try {
+      const res = searchBestMove({
+        pieces: (payload && payload.pieces) || [],
+        sideToMove: (payload && payload.sideToMove) || 'white',
+        lastMove: (payload && payload.lastMove) || null,
+        bot: {
+          search: {
+            maxDepth: (payload && payload.depth) || 3,
+            widths: (payload && payload.widths) || [176, 12, 8],
+            timeMs: (payload && payload.timeMs) || 20000,
+            noise: 0,
+          },
+        },
+      });
+      self.postMessage({ type: 'bestScore', id, score: res ? res.score : null, depth: res ? res.depth : 0 });
+    } catch (err) {
+      self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });
+    }
+    return;
+  }
+
   if (data.type !== 'think') return;
 
   const { id, payload } = data;

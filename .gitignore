@@ -60,3 +60,4 @@ supabase/.temp/
 
 # Root-level scratch images (screenshots, art-gen output) stay out of git
 /*.png
+tools/mined-diag/

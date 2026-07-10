@@ -17,6 +17,8 @@ import Board from '../chessboard/Board.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import { getBotById, getBotAvatarUrl } from '../ai/bots.js';
 import { buildReviewTimeline } from './replayCore.js';
+import { advanceEntry } from '../chessboard/advanceCore.js';
+import { generateLegalReplies } from '../chessboard/quantumEngine.js';
 
 const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
 const HIGHLIGHT_TO = 'rgba(246, 196, 69, 0.55)';
@@ -57,19 +59,17 @@ function capturedOf(pieces, side, pawns) {
 // every ply and saws the curve: the mover always looks a tempo better.
 // Only rendered when showEvalGraph is set — live premium reviews are
 // untouched.
-function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening, lineTier }) {
+function EvalTraceGraph({ points, count, idx, onSeek, pendingCount, deepening, label }) {
   const W = 560;
   const H = 96;
   const PAD = 8;
   const maxPly = Math.max(1, count - 1);
   const x = (ply) => PAD + (ply / maxPly) * (W - 2 * PAD);
   const y = (v) => H / 2 - (Math.max(-8, Math.min(8, v)) / 8) * (H / 2 - 10);
-  const sorted = [...trace].sort((a, b) => a.ply - b.ply);
-  // The whole curve draws from ONE tier (chosen by the modal — the deepest
-  // one complete at every point). Mixed-tier neighbors draw phantom swings.
-  const pts = sorted
-    .map((p) => ({ ply: p.ply, side: p.side, eval: p.vals[lineTier] }))
-    .filter((p) => p.eval !== undefined);
+  // Points arrive pre-resolved by the modal's display stage, so every value
+  // on the curve shares a declared ruler. Mixed-ruler neighbors draw
+  // phantom swings — that lesson is paid for.
+  const pts = [...points].filter((p) => p.eval !== undefined).sort((a, b) => a.ply - b.ply);
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.ply).toFixed(1)} ${y(p.eval).toFixed(1)}`).join(' ');
   const seek = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -89,21 +89,16 @@ function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening, li
       <rect x={PAD} y={y(1)} width={W - 2 * PAD} height={y(-1) - y(1)} fill="rgba(126,231,135,0.07)" />
       <line x1={PAD} y1={y(0)} x2={W - PAD} y2={y(0)} stroke="rgba(128,128,128,0.5)" strokeWidth="1" />
       <path d={path} fill="none" stroke="#39e6ff" strokeWidth="1.6" />
-      {pts.map((p) => (lineTier === 'fast' ? (
+      {pts.map((p) => (
         <circle
-          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={2.2}
-          fill="none" stroke="rgba(57,230,255,0.7)" strokeWidth="1"
+          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={p.side === 'white' ? 2.3 : 1.8}
+          fill={p.side === 'white' ? '#39e6ff' : 'rgba(57,230,255,0.65)'}
         />
-      ) : (
-        <circle
-          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={lineTier === 'deep' ? 2.4 : 1.9}
-          fill={lineTier === 'deep' ? '#39e6ff' : 'rgba(57,230,255,0.7)'}
-        />
-      )))}
+      ))}
       <line x1={x(idx)} y1={6} x2={x(idx)} y2={H - 6} stroke="#ffd166" strokeWidth="1.5" />
       <text x={PAD + 2} y={12} fontSize="9" fill="rgba(255,255,255,0.5)">+8</text>
       <text x={W / 2} y={12} fontSize="9" textAnchor="middle" fill="rgba(255,255,255,0.45)">
-        {`curve: ${lineTier === 'deep' ? 'd6/d5' : lineTier === 'mid' ? 'd4/d3' : 'd2/d1'}`}
+        {`curve: ${label}`}
       </text>
       <text x={PAD + 2} y={H - 5} fontSize="9" fill="rgba(255,255,255,0.5)">-8</text>
       {pendingCount > 0 ? (
@@ -134,6 +129,8 @@ export default function ReviewModal({
 
   useEffect(() => {
     if (open) setIdx(snapshots.length > 0 ? snapshots.length - 1 : 0);
+    setVariation(null);
+    setVarSel(null);
   }, [open, snapshots.length]);
 
   // Whole-game eval graph (dev/mined): one worker walks the snapshots in
@@ -170,11 +167,25 @@ export default function ReviewModal({
       mid: { tier: 'mid', depthW: 4, depthB: 3, widths: [176, 12, 8, 6], timeMs: 20000, deep: true },
       deep: { tier: 'deep', depthW: 6, depthB: 5, widths: [176, 12, 8, 6, 5, 4], timeMs: 45000, deep: true },
     };
-    for (const phase of [PHASES.fast, PHASES.mid, PHASES.deep]) {
+    // Staged by side: white plies at d2 land in seconds; black plies go
+    // straight to d3 (a d1 black eval is blind to the threat the next d2
+    // point sees, and d3-black NESTS into d2-white searches, so those pairs
+    // read exactly consistently); then white upgrades to d4, then the deep
+    // pass sweeps everything.
+    const phasePlan = [
+      { ...PHASES.fast, only: 'white' },
+      { ...PHASES.mid, only: 'black' },
+      { ...PHASES.mid, only: 'white' },
+      { ...PHASES.deep, only: null },
+    ];
+    for (const phase of phasePlan) {
       const seen = new Set();
       for (const stride of [8, 4, 2, 1]) {
         for (let k = 0; k < snaps.length; k += stride) {
-          if (!seen.has(k)) { seen.add(k); jobs.push({ id: nextId++, k, ...phase }); }
+          if (seen.has(k)) continue;
+          if (phase.only && snaps[k] && snaps[k].sideToMove !== phase.only) continue;
+          seen.add(k);
+          jobs.push({ id: nextId++, k, tier: phase.tier, depthW: phase.depthW, depthB: phase.depthB, widths: phase.widths, timeMs: phase.timeMs, deep: phase.deep });
         }
       }
     }
@@ -195,14 +206,15 @@ export default function ReviewModal({
         takeJob(worker, state);
         return;
       }
+      state.depthAsked = snap.sideToMove === 'white' ? job.depthW : job.depthB;
       worker.postMessage({
-        type: 'analyze',
+        type: 'bestScore',
         id: job.id,
         payload: {
           pieces: snap.pieces,
           sideToMove: snap.sideToMove,
           lastMove: snap.lastMove || null,
-          depth: snap.sideToMove === 'white' ? job.depthW : job.depthB,
+          depth: state.depthAsked,
           widths: job.widths,
           timeMs: job.timeMs,
         },
@@ -213,21 +225,28 @@ export default function ReviewModal({
       const state = { job: null };
       worker.onmessage = (e) => {
         const d = e.data || {};
-        if (d.type !== 'analysis' || !state.job || d.id !== state.job.id) return;
+        if (d.type !== 'bestScore' || !state.job || d.id !== state.job.id) return;
         const job = state.job;
-        if (d.moves && d.moves.length) {
+        if (Number.isFinite(d.score) && d.depth >= state.depthAsked) {
           const side = snaps[job.k].sideToMove;
-          const v = Number((side === 'white' ? d.moves[0].score : -d.moves[0].score).toFixed(2));
+          const v = Number((side === 'white' ? d.score : -d.score).toFixed(2));
           setGraphTrace((t) => {
             const prev = t.find((p) => p.ply === job.k);
             const point = { ply: job.k, side, vals: { ...(prev ? prev.vals : {}), [job.tier]: v } };
             return [...t.filter((p) => p.ply !== job.k), point];
           });
+          setGraphPending((n) => Math.max(0, n - 1));
+        } else if ((job.retries || 0) < 2) {
+          // Timeout: retry AT THE FRONT with a doubled budget. At the back
+          // it would queue behind whole deeper phases and the ply would
+          // starve for many minutes — a '…' that outlives the user's
+          // patience. Bounded retries keep this from livelocking.
+          jobs.unshift({ ...job, id: nextId++, retries: (job.retries || 0) + 1, timeMs: job.timeMs * 2 });
+        } else {
+          // Two retries exhausted: give up on this tier for the ply; a
+          // deeper phase may still supply its stage value.
+          setGraphPending((n) => Math.max(0, n - 1));
         }
-        // Timeouts keep the previous tier's value: the ladder runs the full
-        // mid pass before deep, so the curve is uniformly d4/d3 quickly and
-        // d6/d5 upgrades land wherever the budget allows.
-        setGraphPending((n) => Math.max(0, n - 1));
         takeJob(worker, state);
       };
       worker.onerror = () => { setGraphPending((n) => Math.max(0, n - 1)); takeJob(worker, state); };
@@ -237,19 +256,43 @@ export default function ReviewModal({
     return () => { stopped = true; workers.forEach((w) => w.terminate()); };
   }, [open, showEvalGraph, timeline]);
 
-  // One tier rules everywhere: the deepest tier complete at every graphed
-  // point. The move list, eval bar, and mistake marks all read these values
-  // (falling back to the static eval for plies the graph hasn't reached),
-  // so the numbers beside the moves always agree with the curve.
-  const lineTier = useMemo(
-    () => ['deep', 'mid', 'fast'].find((t) => graphTrace.length && graphTrace.every((p) => p.vals[t] !== undefined)) || 'fast',
-    [graphTrace],
-  );
+  // Display STAGES, not raw tiers: white and black plies are trustworthy at
+  // different depths (white d2 pairs with black d3 — nested searches), so
+  // the curve/list upgrade wholesale through stages:
+  //   S1 white:fast + black:mid -> S2 both:mid -> S3 both:deep.
+  // Within a stage every value is on a declared ruler; a ply ahead of its
+  // stage shows its stage value, never a mixed one.
+  const STAGES = [
+    { name: 'd6/d5', white: 'deep', black: 'deep' },
+    { name: 'd4/d3', white: 'mid', black: 'mid' },
+    { name: 'd2/d3', white: 'fast', black: 'mid' },
+  ];
+  const stage = useMemo(() => {
+    const complete = (st) => graphTrace.length
+      && graphTrace.every((p) => p.vals[st[p.side]] !== undefined);
+    return STAGES.find(complete) || STAGES[STAGES.length - 1];
+  }, [graphTrace]);
+  const lineTier = stage.name; // label for the graph badge
+  // Per-point resolution: the stage tier, else the point's own DEEPER value
+  // (a retry-exhausted ply borrows its more accurate future rather than
+  // holding a '…' hostage; never a shallower one).
+  const resolvePoint = (p) => {
+    const order = { fast: 0, mid: 1, deep: 2 };
+    const want = stage[p.side];
+    let v = p.vals[want];
+    for (const t of ['mid', 'deep']) {
+      if (v === undefined && order[t] > order[want]) v = p.vals[t];
+    }
+    return v;
+  };
   const graphVals = useMemo(() => {
     const m = new Map();
-    for (const p of graphTrace) if (p.vals[lineTier] !== undefined) m.set(p.ply, p.vals[lineTier]);
+    for (const p of graphTrace) {
+      const v = resolvePoint(p);
+      if (v !== undefined) m.set(p.ply, v);
+    }
     return m;
-  }, [graphTrace, lineTier]);
+  }, [graphTrace, stage]); // eslint-disable-line react-hooks/exhaustive-deps
   // One ruler only: a ply shows its parity-matched search value or nothing
   // ('…' while the scanner gets there). Terminal snapshots pin to the mate
   // score. The bar borrows the nearest known value so it never jumps rulers.
@@ -273,7 +316,17 @@ export default function ReviewModal({
   };
 
   const bounded = Math.max(0, Math.min(idx, snapshots.length - 1));
-  const snap = snapshots[bounded] || null;
+  const mainSnap = snapshots[bounded] || null;
+
+  // --- Alternate variation line ---
+  // Click a piece of the side to move (either color) and a destination to
+  // branch off the game; the line extends move by move through the shared
+  // advanceEntry, so quantum rules, repetition, and game-over all behave
+  // exactly like live play. Everything downstream (board, bars, hints,
+  // arrows, eval bar) follows the variation because `snap` does.
+  const [variation, setVariation] = useState(null); // { baseIdx, snaps, vIdx } — snaps[0] is the branch point
+  const [varSel, setVarSel] = useState(null); // selected from-square
+  const snap = variation ? variation.snaps[variation.vIdx] : mainSnap;
 
   // Engine suggestions for the viewed position, computed off-thread: the
   // THREE strongest moves drawn as layered green arrows — the best one
@@ -308,19 +361,86 @@ export default function ReviewModal({
     return () => { worker.terminate(); };
   }, [open, snap]);
 
+  // Variation move generation for the viewed position (either side).
+  const varMoves = useMemo(
+    () => (snap && !snap.gameOver
+      ? generateLegalReplies(snap.pieces, snap.sideToMove, snap.captureCounter, snap.lastMove)
+      : []),
+    [snap],
+  );
+
+  const goMainline = (i) => {
+    setVariation(null);
+    setVarSel(null);
+    setIdx(i);
+  };
+  const seekPrev = () => {
+    if (!variation) { setIdx((i) => Math.max(0, i - 1)); return; }
+    if (variation.vIdx > 0) setVariation({ ...variation, vIdx: variation.vIdx - 1 });
+    else goMainline(variation.baseIdx);
+    setVarSel(null);
+  };
+  const seekNext = () => {
+    if (!variation) { setIdx((i) => Math.min(snapshots.length - 1, i + 1)); return; }
+    setVariation({ ...variation, vIdx: Math.min(variation.snaps.length - 1, variation.vIdx + 1) });
+    setVarSel(null);
+  };
+  const seekStart = () => (variation ? setVariation({ ...variation, vIdx: 0 }) : setIdx(0));
+  const seekEnd = () => (variation
+    ? setVariation({ ...variation, vIdx: variation.snaps.length - 1 })
+    : setIdx(snapshots.length - 1));
+
+  // Click a side-to-move piece to select it, a legal destination to play it.
+  // Playing from a mainline position opens a variation; playing mid-variation
+  // truncates the tail and continues from there. (Castling: not in v1.)
+  const playVariationMove = (from, to) => {
+    if (!snap || snap.gameOver || !from || !to) return false;
+    const cand = varMoves.filter((m) => m.from === from && m.to === to && m.type !== 'castle');
+    if (!cand.length) return false;
+    const mv = cand.find((m) => m.type === 'move') || cand[0];
+    const entry = { from: mv.from, to: mv.to, enPassant: mv.type === 'enpassant' };
+    const prior = variation
+      ? [...snapshots.slice(0, variation.baseIdx + 1), ...variation.snaps.slice(1, variation.vIdx + 1)]
+      : snapshots.slice(0, bounded + 1);
+    const adv = advanceEntry(snap, entry, prior);
+    if (!adv.ok) return false;
+    setVarSel(null);
+    if (variation) {
+      const snaps = [...variation.snaps.slice(0, variation.vIdx + 1), adv.snap];
+      setVariation({ ...variation, snaps, vIdx: snaps.length - 1 });
+    } else {
+      setVariation({ baseIdx: bounded, snaps: [mainSnap, adv.snap], vIdx: 1 });
+    }
+    return true;
+  };
+  const handleBoardClick = ({ square }) => {
+    if (!snap || snap.gameOver || !square) return;
+    const pc = snap.pieces.find((p) => !p.captured && p.square === square);
+    if (pc && pc.side === snap.sideToMove) {
+      // Always select (no toggle): a click's own pointerdown already
+      // selected via drag-start, and a toggle here would immediately undo it.
+      setVarSel(square);
+      return;
+    }
+    if (!varSel) return;
+    playVariationMove(varSel, square);
+  };
+  const varSelPiece = varSel && snap ? snap.pieces.find((p) => !p.captured && p.square === varSel) : null;
+  const varTargets = varSel ? [...new Set(varMoves.filter((m) => m.from === varSel && m.type !== 'castle').map((m) => m.to))] : [];
+
   // Keyboard navigation while the modal is open.
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => {
-      if (e.key === 'ArrowLeft') { e.preventDefault(); setIdx((i) => Math.max(0, i - 1)); }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); setIdx((i) => Math.min(snapshots.length - 1, i + 1)); }
-      else if (e.key === 'Home') { e.preventDefault(); setIdx(0); }
-      else if (e.key === 'End') { e.preventDefault(); setIdx(snapshots.length - 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); seekPrev(); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); seekNext(); }
+      else if (e.key === 'Home') { e.preventDefault(); seekStart(); }
+      else if (e.key === 'End') { e.preventDefault(); seekEnd(); }
       else if (e.key === 'Escape') { e.preventDefault(); onClose(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, snapshots.length, onClose]);
+  }); // re-bound each render: the seek helpers close over live variation state
 
   if (!open) return null;
 
@@ -368,6 +488,25 @@ export default function ReviewModal({
       flex: '1 1 0', minHeight: 160, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 6,
     },
     moveNo: { color: theme.textSecondary, fontSize: 12, minWidth: 22, textAlign: 'right' },
+    variationStrip: {
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5,
+      border: '1px dashed rgba(79,195,247,0.55)', borderRadius: 8, padding: '6px 8px',
+      background: 'rgba(79,195,247,0.07)',
+    },
+    variationLabel: {
+      fontSize: 10.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+      color: 'rgba(79,195,247,0.95)', marginRight: 2,
+    },
+    variationChip: (active) => ({
+      fontSize: 12, fontVariantNumeric: 'tabular-nums', padding: '2px 7px', borderRadius: 6,
+      cursor: 'pointer', color: theme.textPrimary,
+      background: active ? 'rgba(79,195,247,0.25)' : 'rgba(255,255,255,0.06)',
+      border: `1px solid ${active ? 'rgba(79,195,247,0.7)' : 'rgba(255,255,255,0.18)'}`,
+    }),
+    variationExit: {
+      fontSize: 11.5, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', marginLeft: 'auto',
+      color: '#ff8f8f', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.45)',
+    },
     moveCell: (active) => ({
       display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6,
       cursor: 'pointer', fontSize: 12.5, minWidth: 0,
@@ -412,8 +551,19 @@ export default function ReviewModal({
     highlights.push({ square: snap.lastMove.to, color: HIGHLIGHT_TO });
   }
 
-  const exactEval = evalAt(bounded);
-  const currentEval = exactEval !== null && exactEval !== undefined ? exactEval : nearestEval(bounded);
+  // Engine scores are mover-relative; show them white-positive to match the bar.
+  const hintEvalWhite = (score) => (snap && snap.sideToMove === 'black' ? -score : score);
+  // Variation positions read the hint engine's live judgment; the mainline
+  // reads the graph's tier-consistent values.
+  const varEval = variation
+    ? (snap && snap.gameOver
+      ? (snap.winner === 'white' ? 1000 : snap.winner === 'black' ? -1000 : 0)
+      : (hints && hints.length && Number.isFinite(hints[0].score) ? hintEvalWhite(hints[0].score) : null))
+    : null;
+  const exactEval = variation ? varEval : evalAt(bounded);
+  const currentEval = exactEval !== null && exactEval !== undefined
+    ? exactEval
+    : variation ? 0 : nearestEval(bounded);
   // Squash white-positive pawn eval into a 0..100% bar position.
   const evalPct = 100 / (1 + Math.exp(-currentEval / 3));
   // The number lives in the bar's top band. The fill boundary must never
@@ -422,8 +572,6 @@ export default function ReviewModal({
   // digits to dark exactly when the band's background is white.
   const evalFillPct = evalPct >= 99.9 ? 100 : Math.min(evalPct, 96.5);
   const evalTextDark = evalFillPct >= 99.9;
-  // Engine scores are mover-relative; show them white-positive to match the bar.
-  const hintEvalWhite = (score) => (snap && snap.sideToMove === 'black' ? -score : score);
   // The three strongest moves as arrows: best is boldest, the others fade.
   const HINT_OPACITIES = [0.8, 0.38, 0.28];
   const hintArrows = (hints || [])
@@ -525,7 +673,7 @@ export default function ReviewModal({
                 <Board
                   orientation={orientation}
                   showCoordinates={false}
-                  highlights={highlights}
+                  highlights={varSel ? [...highlights, { square: varSel, color: 'rgba(79,195,247,0.45)' }] : highlights}
                   arrows={hintArrows}
                   pieces={snap.pieces}
                   indicators={indicators}
@@ -535,6 +683,25 @@ export default function ReviewModal({
                   pieceSvgStyles={pieceSvgStyles}
                   squareColors={squareColors}
                   ariaLabel="Review board"
+                  onSquareClick={handleBoardClick}
+                  onPieceClick={({ id }) => {
+                    const pc = snap.pieces.find((p) => p.id === id);
+                    if (pc && pc.square) handleBoardClick({ square: pc.square });
+                  }}
+                  onPieceDragStart={(piece) => {
+                    const pc = piece && snap.pieces.find((p) => p.id === piece.id);
+                    if (!pc || snap.gameOver || pc.side !== snap.sideToMove) return false;
+                    setVarSel(pc.square);
+                    return true;
+                  }}
+                  onPieceDrop={({ from, to }) => {
+                    // A no-move drop is just a click's pointerdown/up pair —
+                    // keep the selection so click-then-click works; the
+                    // second click (or a drag) completes the move.
+                    if (from && to && from !== to) playVariationMove(from, to);
+                  }}
+                  selectedId={varSelPiece ? varSelPiece.id : null}
+                  legalMoves={varTargets}
                 />
                 <PlayerBar
                   side={bottomSide}
@@ -579,10 +746,30 @@ export default function ReviewModal({
                     )}
                   </div>
                 </div>
+                {variation ? (
+                  <div style={styles.variationStrip}>
+                    <span style={styles.variationLabel}>
+                      Variation · from move {Math.floor(variation.baseIdx / 2) + 1}
+                    </span>
+                    {variation.snaps.slice(1).map((vs, i) => (
+                      <button
+                        key={`var-${i}`}
+                        type="button"
+                        style={styles.variationChip(variation.vIdx === i + 1)}
+                        onClick={() => setVariation({ ...variation, vIdx: i + 1 })}
+                      >
+                        {vs.lastMove ? `${vs.lastMove.from}→${vs.lastMove.to}` : '?'}
+                      </button>
+                    ))}
+                    <button type="button" style={styles.variationExit} onClick={() => goMainline(variation.baseIdx)}>
+                      ✕ back to game
+                    </button>
+                  </div>
+                ) : null}
                 <div className="qc-review-moves" style={styles.moveList}>
                   <div
-                    style={{ ...styles.moveCell(bounded === 0), gridColumn: '1 / -1' }}
-                    onClick={() => setIdx(0)}
+                    style={{ ...styles.moveCell(!variation && bounded === 0), gridColumn: '1 / -1' }}
+                    onClick={() => goMainline(0)}
                     role="button" tabIndex={0}
                   >
                     <span style={{ flex: 1 }}>Starting position</span>
@@ -594,8 +781,8 @@ export default function ReviewModal({
                         <div
                           key={`cell-${r.snapIdx}`}
                           className="qc-review-move-row"
-                          style={styles.moveCell(bounded === r.snapIdx)}
-                          onClick={() => setIdx(r.snapIdx)}
+                          style={styles.moveCell(!variation && bounded === r.snapIdx)}
+                          onClick={() => goMainline(r.snapIdx)}
                           role="button" tabIndex={0}
                         >
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
@@ -615,25 +802,27 @@ export default function ReviewModal({
                 </div>
                 {showEvalGraph ? (
                   <EvalTraceGraph
-                    trace={graphTrace}
+                    points={graphTrace.map((p) => ({ ply: p.ply, side: p.side, eval: resolvePoint(p) }))}
                     count={snapshots.length}
                     idx={bounded}
-                    onSeek={setIdx}
+                    onSeek={goMainline}
                     pendingCount={graphPending}
                     deepening={graphDeepening}
-                    lineTier={lineTier}
+                    label={lineTier}
                   />
                 ) : null}
               </div>
             </div>
             <div style={styles.nav}>
               <span style={{ fontSize: 12, color: theme.textSecondary, marginRight: 8 }}>
-                Move {bounded} / {snapshots.length - 1}
+                {variation
+                  ? `Variation ${variation.vIdx} / ${variation.snaps.length - 1}`
+                  : `Move ${bounded} / ${snapshots.length - 1}`}
               </span>
-              <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={() => setIdx(0)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={ChevronLeft} size={18} title="Previous move" ariaLabel="Previous move" onClick={() => setIdx((i) => Math.max(0, i - 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={ChevronRight} size={18} title="Next move" ariaLabel="Next move" onClick={() => setIdx((i) => Math.min(snapshots.length - 1, i + 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={() => setIdx(snapshots.length - 1)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={seekStart} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={ChevronLeft} size={18} title="Previous move" ariaLabel="Previous move" onClick={seekPrev} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={ChevronRight} size={18} title="Next move" ariaLabel="Next move" onClick={seekNext} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={seekEnd} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
             </div>
           </>
         )}

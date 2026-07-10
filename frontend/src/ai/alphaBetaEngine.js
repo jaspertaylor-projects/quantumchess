@@ -51,6 +51,12 @@ export const DEFAULT_WEIGHTS = {
   promoNear: 1.2, // definite pawn on the 6th, same idea one step earlier
   development: 0.06, // per piece that has moved at least once
   kingHunt: 0.15, // per attacked square around a unique enemy king holder
+  // Mop-up: clinical conversion instincts, active only when clearly winning
+  // against a unique king-holder (raw search rarely sees a mate past its
+  // horizon; these gradients are how KQK/KRK technique emerges).
+  mopUpThreshold: 6.0, // advantage (pawns) required before mop-up kicks in
+  mopUpEdge: 0.35, // per step the loser's king stands from the center (drive to the edge)
+  mopUpClose: 0.25, // per average step of winner-piece proximity (close the net)
 };
 const KING_SPREAD_CAP = 5;
 
@@ -224,6 +230,36 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
     }
     score += W.kingHunt * huntPressure(blackSoleHolder.square, attacks.white);
   }
+
+  // --- Mop-up: clinical conversion when clearly winning ---
+  // Two classical endgame gradients, so a won game walks toward mate
+  // instead of wandering until the horizon happens to reveal one: push the
+  // loser's unique king-holder toward the edge, and bring the winner's
+  // pieces closer to it. Gated on a decisive advantage so ordinary play is
+  // untouched, and bounded (~2.8 max) so it can never flip who is winning.
+  const mopUp = (loserHolder, winnerIsWhite) => {
+    const lp = fromAlgebraic(loserHolder.square);
+    if (!lp) return 0;
+    const centerDist = Math.max(
+      Math.abs(lp.fileIndex - 3.5),
+      Math.abs(lp.rankIndex - 3.5),
+    ) - 0.5; // 0 center .. 3 rim
+    let proximity = 0;
+    let n = 0;
+    for (const p of pieces) {
+      if (p.captured || !p.square) continue;
+      if ((p.side === 'white') !== winnerIsWhite) continue;
+      const pp = fromAlgebraic(p.square);
+      if (!pp) continue;
+      const d = Math.max(Math.abs(pp.fileIndex - lp.fileIndex), Math.abs(pp.rankIndex - lp.rankIndex));
+      proximity += 7 - d;
+      n += 1;
+    }
+    const avgProx = n ? proximity / n : 0; // 0..7
+    return W.mopUpEdge * centerDist + W.mopUpClose * avgProx;
+  };
+  if (blackHolders === 1 && score >= W.mopUpThreshold) score += mopUp(blackSoleHolder, true);
+  else if (whiteHolders === 1 && -score >= W.mopUpThreshold) score -= mopUp(whiteSoleHolder, false);
 
   return score;
 }
