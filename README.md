@@ -627,12 +627,16 @@ Legend: [ ] not started · [~] in progress · [X] done
       to see full post-game analysis"
 
 ### Code nice-to-haves
-- [ ] **Extract `App.jsx` orchestration into focused hooks/controllers**:
-      `frontend/src/App.jsx` currently owns game state wiring, matchmaking,
-      auth/billing return handling, ads/analytics, AI, layout measurement, and
-      modal state. It works, but future changes get safer if online-game
-      orchestration, billing-return polling, game recording, onboarding, and
-      layout measurement move into small hooks with narrow tests.
+- **HOUSE RULE (2026-07-10 cleanup): no source file over 800 lines.** The
+  whole tree currently complies; split along real seams (see the extracted
+  modules below for the pattern), never mid-concern.
+- [X] **Extract `App.jsx` orchestration into focused hooks/controllers** —
+      done 2026-07-10: App.jsx is a ~750-line composition root; online play
+      (`hooks/useOnlineGame.js`), intro choreography (`useIntroSequence`),
+      board input (`useBoardInput`), player bars/sayings/monetization/
+      recording/clock/layout/puzzle-links each own their concern. Shared
+      commit path (`commitEngineResult`) replaced ~6 pasted
+      dispatch-records/relay loops.
 - [ ] **Add UI smoke/e2e coverage for launch-critical flows**: the engine
       replay suite (`frontend/tests/engineReplay.test.js`) is the right
       regression net for rules, but the launch paths also need browser-level
@@ -653,13 +657,14 @@ Legend: [ ] not started · [~] in progress · [X] done
       tournaments, or any abuse-sensitive rewards, move rating updates,
       review quotas, achievements, and leaderboard writes behind Edge
       Functions or the backend with server-side validation.
-- [ ] **Split the largest domain files only when touching nearby behavior**:
-      `frontend/src/chessboard/quantumEngine.js`,
-      `frontend/src/puzzle/puzzleGenerator.js`, and
-      `frontend/src/ai/alphaBetaEngine.js` are big because the domain is big.
-      Avoid aesthetic rewrites; instead extract seams around move generation,
-      conservation/fixpoint solving, puzzle verification, and eval terms when
-      a real feature or test needs that boundary.
+- [X] **Split the largest domain files** — done 2026-07-10 along real seams:
+      quantumEngine.js is a facade over engineTypes/engineGeometry/
+      engineConservation (importers unchanged); puzzleGenerator.js is entry
+      points over puzzleBoardKit + two recipe modules (30 consecutive daily
+      puzzles verified hash-identical to the pre-split generator — no
+      PUZZLE_VERSION bump needed); puzzle-miner.mjs is a CLI driver over
+      tools/miner/{config,gameplay,themes,swing}.mjs; ReviewModal splits
+      into useGameEvalGraph/useReviewVariation/EvalTraceGraph.
 - [ ] **Promote analytics from scaffold to product dashboard**:
       `frontend/src/analytics/analytics.js` has the GA4 shell, but the useful
       future layer is named events for activation and retention: first move,
