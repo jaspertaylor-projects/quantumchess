@@ -41,7 +41,7 @@ const CFG = {
   // The puzzle moment is Black's FIRST MISTAKE FROM BALANCE: the eval sat
   // near 0, Black moved, and now White's best line reaches swingMin. The
   // player is shown Black's move and must capitalize.
-  balanceBand: Number(argVal('balanceBand', 1.25)), // |eval| <= band counts as balanced
+  balanceBand: Number(argVal('balanceBand', 1.5)), // |eval| <= band counts as balanced (seed-11: 1.25 -> 1.5 — a grind to +1.4 then a blunder IS a puzzle; Jasper)
   balanceStreak: Number(argVal('balanceStreak', 2)), // consecutive balanced white-to-move probes required before the swing
   swingMin: Number(argVal('swingMin', 2.0)), // post-mistake advantage floor (deep eval; 2.5 rejected every seed-9 candidate — deep bests clustered 1.3-2.3)
   swingDelta: Number(argVal('swingDelta', 1.5)), // and the JUMP from the last balanced eval must be at least this
