@@ -7,17 +7,11 @@
 // Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
 // Idempotent: event ids are recorded in qc_stripe_events; retries are skipped.
 
-import Stripe from 'npm:stripe@18';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import Stripe from 'npm:stripe@18'; // type-only (Stripe.Event)
+import { adminClient, stripeClient } from '../_shared/edge.ts';
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-  httpClient: Stripe.createFetchHttpClient(),
-});
-
-const admin = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-);
+const stripe = stripeClient();
+const admin = adminClient();
 
 // Statuses that keep premium on. past_due keeps access during Stripe's dunning
 // retries; if all retries fail the subscription is deleted and we downgrade.
