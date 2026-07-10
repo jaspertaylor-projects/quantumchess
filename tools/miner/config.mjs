@@ -25,6 +25,7 @@ const CFG = {
   seed: Number(argVal('seed', 1)),
   maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 90)), // 45 full moves, then adjudicate (Jasper 2026-07-09): past that it's classical endgame territory — no puzzles there, and probing it isn't free
   playMs: Number(argVal('playMs', QUICK ? 250 : 900)), // per-move time; strong bots need thinking room
+  strongMs: Number(argVal('strongMs', QUICK ? 400 : 1400)), // the STRONGEST bot's per-move time (its openB + mainW seats) — the capitalizer earns real thinking room (Jasper, 2026-07-10)
   minPly: Number(argVal('minPly', 20)), // plies (half-moves): ~10 full moves in — mid-game, quantum state developed (Jasper, 2026-07-09)
   handoffPly: Number(argVal('handoffPly', 20)), // bot handoff: opening controllers play plies 0..handoffPly-1, main controllers after
   mineDepth: Number(argVal('mineDepth', 4)),

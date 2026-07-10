@@ -80,16 +80,17 @@ function applyReply(state, reply) {
 }
 
 // A miner bot: a top-tier roster bot with its personality weights, blunder
-// noise FORCED OFF, and think time set by --playMs. Swing mining wants
+// noise FORCED OFF, and think time set by --playMs (the strongest bot's
+// seats pass --strongMs instead). Swing mining wants
 // strong-vs-stronger: balanced positions where the mistakes that do happen
 // are subtle and worth punishing — a weak bot's queen-hang produces mop-up
 // puzzles, which is exactly what the seed-3/4/5 era taught us to avoid.
-function minerBot(rosterBot) {
+function minerBot(rosterBot, timeMs = CFG.playMs) {
   return {
     id: rosterBot.id,
     tier: rosterBot.tier,
     weights: rosterBot.weights || {},
-    search: { ...(rosterBot.search || {}), noise: 0, timeMs: CFG.playMs },
+    search: { ...(rosterBot.search || {}), noise: 0, timeMs },
   };
 }
 

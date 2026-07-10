@@ -30,7 +30,7 @@ import { mineGame, verifyParPly } from './miner/swing.mjs';
 
 // -------------------------------------------------------------------- main
 
-console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
+console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} strongMs=${CFG.strongMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
 console.log(`swing bar: balanced |eval|<=${CFG.balanceBand} for ${CFG.balanceStreak} probes (one developing probe allowed), then best>=${CFG.swingMin} & jump>=${CFG.swingDelta}, medianFrac<${CFG.perishFrac}, ${CFG.minChoices}<=choices<${CFG.maxChoices}, ply>=${CFG.minPly}; par line: ${CFG.parPlies} white moves, every ply trickiness>=${CFG.minPlyTrick}; filters: plain recaptures, classical/inert lines\n`);
 
 const stats = { scanned: 0, swings: 0, balancedEligible: 0, weakSwingRejects: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
@@ -57,10 +57,13 @@ for (let g = 0; g < CFG.games; g++) {
   } else {
     const openW = MID_STRONG[Math.floor(rng() * MID_STRONG.length)];
     const mainB = MID_WEAK[Math.floor(rng() * MID_WEAK.length)];
+    // The strongest bot thinks longer (--strongMs): flat --playMs for every
+    // seat neutralized its roster edge — wider beams complete FEWER
+    // iterative-deepening levels on the same budget.
     roles = {
       openW: minerBot(openW),
-      openB: minerBot(BY_RATING[0]),
-      mainW: minerBot(BY_RATING[0]),
+      openB: minerBot(BY_RATING[0], CFG.strongMs),
+      mainW: minerBot(BY_RATING[0], CFG.strongMs),
       mainB: minerBot(mainB),
     };
   }
