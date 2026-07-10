@@ -79,6 +79,10 @@ function cloneWithoutKing(p) {
   return clone;
 }
 
+export function otherSide(side) {
+  return side === 'white' ? 'black' : 'white';
+}
+
 function inBounds(file, rank) {
   return file >= 0 && file < 8 && rank >= 0 && rank < 8;
 }
@@ -96,6 +100,22 @@ export function buildOccupancy(pieces) {
   }
   return map;
 }
+
+// Movement geometry. Each shape has a "moves" walk (blockers stop rays, own
+// pieces excluded) and an "attacks" walk (blocker squares included — threat
+// maps care about reach, not landability).
+const ORTHO_DELTAS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const DIAG_DELTAS = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
+const QUEEN_DELTAS = [...ORTHO_DELTAS, ...DIAG_DELTAS];
+const KING_STEPS = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1, 0], /*self*/ [1, 0],
+  [-1, 1], [0, 1], [1, 1],
+];
+const KNIGHT_STEPS = [
+  [-1, -2], [1, -2], [-2, -1], [2, -1],
+  [-2, 1], [2, 1], [-1, 2], [1, 2],
+];
 
 function rayMoves(file, rank, deltas, occ, side) {
   const results = [];
@@ -134,12 +154,7 @@ function rayAttacks(file, rank, deltas, occ) {
   return results;
 }
 
-function kingMoves(file, rank, occ, side) {
-  const steps = [
-    [-1, -1], [0, -1], [1, -1],
-    [-1, 0], /*self*/ [1, 0],
-    [-1, 1], [0, 1], [1, 1],
-  ];
+function stepMoves(file, rank, steps, occ, side) {
   const out = [];
   for (const [df, dr] of steps) {
     const f = file + df;
@@ -152,46 +167,9 @@ function kingMoves(file, rank, occ, side) {
   return out;
 }
 
-function kingAttacks(file, rank) {
-  const steps = [
-    [-1, -1], [0, -1], [1, -1],
-    [-1, 0], /*self*/ [1, 0],
-    [-1, 1], [0, 1], [1, 1],
-  ];
+function stepAttacks(file, rank, steps) {
   const out = [];
   for (const [df, dr] of steps) {
-    const f = file + df;
-    const r = rank + dr;
-    if (!inBounds(f, r)) continue;
-    out.push(keySquare(f, r));
-  }
-  return out;
-}
-
-function knightMoves(file, rank, occ, side) {
-  const deltas = [
-    [-1, -2], [1, -2], [-2, -1], [2, -1],
-    [-2, 1], [2, 1], [-1, 2], [1, 2],
-  ];
-  const out = [];
-  for (const [df, dr] of deltas) {
-    const f = file + df;
-    const r = rank + dr;
-    if (!inBounds(f, r)) continue;
-    const sq = keySquare(f, r);
-    const blocker = occ.get(sq);
-    if (!blocker || blocker.side !== side) out.push(sq);
-  }
-  return out;
-}
-
-function knightAttacks(file, rank) {
-  const deltas = [
-    [-1, -2], [1, -2], [-2, -1], [2, -1],
-    [-2, 1], [2, 1], [-1, 2], [1, 2],
-  ];
-  const out = [];
-  for (const [df, dr] of deltas) {
     const f = file + df;
     const r = rank + dr;
     if (!inBounds(f, r)) continue;
@@ -245,55 +223,21 @@ function pawnAttacks(file, rank, side) {
   return out;
 }
 
-function rookMoves(file, rank, occ, side) {
-  const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  return rayMoves(file, rank, deltas, occ, side);
-}
-
-function rookAttacks(file, rank, occ) {
-  const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  return rayAttacks(file, rank, deltas, occ);
-}
-
-function bishopMoves(file, rank, occ, side) {
-  const deltas = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
-  return rayMoves(file, rank, deltas, occ, side);
-}
-
-function bishopAttacks(file, rank, occ) {
-  const deltas = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
-  return rayAttacks(file, rank, deltas, occ);
-}
-
-function queenMoves(file, rank, occ, side) {
-  return [
-    ...rookMoves(file, rank, occ, side),
-    ...bishopMoves(file, rank, occ, side),
-  ];
-}
-
-function queenAttacks(file, rank, occ) {
-  return [
-    ...rookAttacks(file, rank, occ),
-    ...bishopAttacks(file, rank, occ),
-  ];
-}
-
 export function movesForType(t, file, rank, occ, side, options = {}) {
   const { isFirstMove = false } = options;
   switch (t) {
     case 'p':
       return pawnMoves(file, rank, occ, side, isFirstMove);
     case 'n':
-      return knightMoves(file, rank, occ, side);
+      return stepMoves(file, rank, KNIGHT_STEPS, occ, side);
     case 'b':
-      return bishopMoves(file, rank, occ, side);
+      return rayMoves(file, rank, DIAG_DELTAS, occ, side);
     case 'r':
-      return rookMoves(file, rank, occ, side);
+      return rayMoves(file, rank, ORTHO_DELTAS, occ, side);
     case 'q':
-      return queenMoves(file, rank, occ, side);
+      return rayMoves(file, rank, QUEEN_DELTAS, occ, side);
     case 'k':
-      return kingMoves(file, rank, occ, side);
+      return stepMoves(file, rank, KING_STEPS, occ, side);
     default:
       return [];
   }
@@ -304,15 +248,15 @@ export function attacksForType(t, file, rank, occ, side) {
     case 'p':
       return pawnAttacks(file, rank, side);
     case 'n':
-      return knightAttacks(file, rank);
+      return stepAttacks(file, rank, KNIGHT_STEPS);
     case 'b':
-      return bishopAttacks(file, rank, occ);
+      return rayAttacks(file, rank, DIAG_DELTAS, occ);
     case 'r':
-      return rookAttacks(file, rank, occ);
+      return rayAttacks(file, rank, ORTHO_DELTAS, occ);
     case 'q':
-      return queenAttacks(file, rank, occ);
+      return rayAttacks(file, rank, QUEEN_DELTAS, occ);
     case 'k':
-      return kingAttacks(file, rank);
+      return stepAttacks(file, rank, KING_STEPS);
     default:
       return [];
   }
@@ -326,6 +270,19 @@ export function subsetTypesThatCanMakeMove(types, fromFile, fromRank, toFile, to
     if (candidateMoves.includes(toSq)) subset.push(t);
   }
   return subset;
+}
+
+// Union of destination squares across a piece's remaining possible types —
+// the move set the UI, reply generator, and measurement pulse all share.
+export function mergedDestinations(piece, occ, options = {}) {
+  const merged = new Set();
+  const pos = fromAlgebraic(piece.square);
+  if (!pos) return merged;
+  for (const t of piece.possibleTypes) {
+    const list = movesForType(t, pos.fileIndex, pos.rankIndex, occ, piece.side, options);
+    for (const sq of list) merged.add(sq);
+  }
+  return merged;
 }
 
 export function clonePieces(pieces) {
@@ -571,7 +528,7 @@ function enforceGlobalTypeConstraintsOnce(pieces) {
   return updated;
 }
 
-export function enforceGlobalTypeConstraintsToFixpoint(pieces) {
+function enforceGlobalTypeConstraintsToFixpoint(pieces) {
   const sig = (p) => `${(p.possibleTypes || []).join('')}|${getBaseTypes(p).join('')}|${getPromoTypes(p).join('')}`;
   let current = clonePieces(pieces);
   while (true) {
@@ -660,8 +617,10 @@ export function canSideCaptureSquare(pieces, side, targetSq) {
   return false;
 }
 
-function hasCollapsedKingCapturable(pieces, side) {
-  const opponent = side === 'white' ? 'black' : 'white';
+// A collapsed (definitely-known) King standing in capture range loses on the
+// spot, so every legality filter in the game rejects moves that produce one.
+export function hasCollapsedKingCapturable(pieces, side) {
+  const opponent = otherSide(side);
   const kings = pieces.filter((p) => !p.captured && p.side === side && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
   if (kings.length === 0) return false;
   for (const k of kings) {
@@ -669,6 +628,39 @@ function hasCollapsedKingCapturable(pieces, side) {
     if (canSideCaptureSquare(pieces, opponent, k.square)) return true;
   }
   return false;
+}
+
+// A side with NO legal replies is lost (checkmate) when it is kingless or its
+// unique king-holder stands in capture range; otherwise it is stalemated.
+// Shared by terminal evaluation and the AI's leaf scoring.
+export function isLostInCheck(pieces, side) {
+  const holders = pieces.filter((p) => !p.captured && p.side === side && p.square && (p.possibleTypes || []).includes('k'));
+  if (holders.length === 0) return true;
+  return holders.length === 1 && canSideCaptureSquare(pieces, otherSide(side), holders[0].square);
+}
+
+// The resolution tail every move simulation shares once the mover has landed:
+// run conservation, prune mover-side King possibilities standing on threatened
+// squares (never a piece already collapsed to the King), re-run conservation,
+// fire the measurement pulse from the mover(s), apply the owner's end-of-turn
+// effects, and reset coherence on anything that collapsed.
+function resolveMoveTail(next, moverSide, moverIds, prevPieces) {
+  const constrained = applyQuantumConstraints(next);
+  const oppThreats = computeThreatenedSquaresForSide(constrained, otherSide(moverSide));
+
+  const afterCheck = constrained.map((p) => {
+    if (p.captured || p.side !== moverSide || !p.square) return p;
+    if (!p.possibleTypes.includes('k')) return p;
+    if (!oppThreats.has(p.square)) return p;
+    if (p.possibleTypes.length === 1) return p;
+    return cloneWithoutKing(p);
+  });
+
+  const prePulse = applyQuantumConstraints(afterCheck);
+  const pulse = applyMeasurementPulse(prePulse, moverIds);
+  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moverSide, moverIds, prevPieces);
+  resetCoherenceOnCollapse(prevPieces, finalPieces);
+  return { pieces: finalPieces, measuredSquares: pulse.measuredSquares };
 }
 
 export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCounter) {
@@ -736,26 +728,8 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     }
   }
 
-  const constrained = applyQuantumConstraints(next);
-
-  const moverSide = moving.side;
-  const opponentSide = moverSide === 'white' ? 'black' : 'white';
-  const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
-
-  const afterCheck = constrained.map((p) => {
-    if (p.captured || p.side !== moverSide || !p.square) return p;
-    if (p.possibleTypes.length <= 0) return p;
-    if (!p.possibleTypes.includes('k')) return p;
-    if (!oppThreats.has(p.square)) return p;
-    if (p.possibleTypes.length === 1) return p;
-    return cloneWithoutKing(p);
-  });
-
-  const prePulse = applyQuantumConstraints(afterCheck);
-  const pulse = applyMeasurementPulse(prePulse, [moving.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id], prevPieces);
-  resetCoherenceOnCollapse(prevPieces, finalPieces);
-  return { ok: true, pieces: finalPieces, didCapture, measuredSquares: pulse.measuredSquares };
+  const tail = resolveMoveTail(next, moving.side, [moving.id], prevPieces);
+  return { ok: true, pieces: tail.pieces, didCapture, measuredSquares: tail.measuredSquares };
 }
 
 // --- Measurement (targeted decoherence) ---
@@ -785,13 +759,7 @@ export function applyMeasurementPulse(pieces, moverIds) {
   for (const moverId of moverIds) {
     const mover = pieces.find((p) => p.id === moverId && !p.captured && p.square);
     if (!mover) continue;
-    const pos = fromAlgebraic(mover.square);
-    if (!pos) continue;
-    const reach = new Set();
-    for (const t of mover.possibleTypes) {
-      const list = movesForType(t, pos.fileIndex, pos.rankIndex, occ, mover.side, { isFirstMove: false });
-      for (const sq of list) reach.add(sq);
-    }
+    const reach = mergedDestinations(mover, occ, { isFirstMove: false });
     for (const sq of reach) {
       const target = occ.get(sq);
       if (!target || target.side === mover.side || target.captured) continue;
@@ -1029,25 +997,8 @@ export function simulateEnPassant(prevPieces, pieceId, toSquare, victimId, captu
   moving.coherence = DEFAULT_COHERENCE;
   moving.observed = false;
 
-  const constrained = applyQuantumConstraints(next);
-
-  const moverSide = moving.side;
-  const opponentSide = moverSide === 'white' ? 'black' : 'white';
-  const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
-
-  const afterCheck = constrained.map((p) => {
-    if (p.captured || p.side !== moverSide || !p.square) return p;
-    if (!p.possibleTypes.includes('k')) return p;
-    if (!oppThreats.has(p.square)) return p;
-    if (p.possibleTypes.length === 1) return p;
-    return cloneWithoutKing(p);
-  });
-
-  const prePulse = applyQuantumConstraints(afterCheck);
-  const pulse = applyMeasurementPulse(prePulse, [moving.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moving.side, [moving.id], prevPieces);
-  resetCoherenceOnCollapse(prevPieces, finalPieces);
-  return { ok: true, pieces: finalPieces, didCapture: true, measuredSquares: pulse.measuredSquares };
+  const tail = resolveMoveTail(next, moving.side, [moving.id], prevPieces);
+  return { ok: true, pieces: tail.pieces, didCapture: true, measuredSquares: tail.measuredSquares };
 }
 
 export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
@@ -1097,7 +1048,7 @@ export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
     if (occupancy.get(sq)) return { canCastle: false, reason: 'The path between pieces must be clear.' };
   }
 
-  const opponentSide = a.side === 'white' ? 'black' : 'white';
+  const opponentSide = otherSide(a.side);
   const oppThreats = computeThreatenedSquaresForSide(pieces, opponentSide);
   for (let f = f1 + 1; f < f2; f++) {
     const sq = toAlgebraic(f, rank);
@@ -1195,24 +1146,8 @@ export function simulateCastle(prevPieces, plan) {
   piece1.castled = true;
   piece2.castled = true;
 
-  const constrained = applyQuantumConstraints(next);
-  const moverSide = piece1.side;
-  const opponentSide = moverSide === 'white' ? 'black' : 'white';
-  const oppThreats = computeThreatenedSquaresForSide(constrained, opponentSide);
-
-  const afterCheck = constrained.map((p) => {
-    if (p.captured || p.side !== moverSide || !p.square) return p;
-    if (!p.possibleTypes.includes('k')) return p;
-    if (!oppThreats.has(p.square)) return p;
-    if (p.possibleTypes.length === 1) return p;
-    return cloneWithoutKing(p);
-  });
-
-  const prePulse = applyQuantumConstraints(afterCheck);
-  const pulse = applyMeasurementPulse(prePulse, [piece1.id, piece2.id]);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, piece1.side, [piece1.id, piece2.id], prevPieces);
-  resetCoherenceOnCollapse(prevPieces, finalPieces);
-  return { ok: true, pieces: finalPieces, measuredSquares: pulse.measuredSquares };
+  const tail = resolveMoveTail(next, piece1.side, [piece1.id, piece2.id], prevPieces);
+  return { ok: true, pieces: tail.pieces, measuredSquares: tail.measuredSquares };
 }
 
 export function generateLegalReplies(pieces, side, captureCounter, lastMove = null) {
@@ -1229,16 +1164,7 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
 
   for (const p of pieces) {
     if (p.captured || p.side !== side || !p.square) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const { fileIndex: f, rankIndex: r } = pos;
-    const isFirstMove = (p.moveCount || 0) === 0;
-
-    const merged = new Set();
-    for (const t of p.possibleTypes) {
-      const list = movesForType(t, f, r, occ, side, { isFirstMove });
-      for (const sq of list) merged.add(sq);
-    }
+    const merged = mergedDestinations(p, occ, { isFirstMove: (p.moveCount || 0) === 0 });
 
     for (const toSq of merged) {
       const sim = simulateStandardMove(pieces, p.id, toSq, captureCounter);
@@ -1266,33 +1192,19 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
 // Evaluate the opponent's situation after the mover's move fully resolves.
 // Returns 'checkmate', 'stalemate', or null (game continues).
 export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove = null) {
-  const opponent = moverSide === 'white' ? 'black' : 'white';
+  const opponent = otherSide(moverSide);
   const replies = generateLegalReplies(finalPieces, opponent, captureCounter, lastMove);
 
   if (replies.length === 0) {
     // No legal replies at all: checkmate only if the opponent is already
-    // lost-in-check (kingless, or a unique King the mover can capture);
-    // otherwise it is stalemate — a draw.
-    const holders = finalPieces.filter((p) => !p.captured && p.side === opponent && p.square && p.possibleTypes.includes('k'));
-    if (holders.length === 0) return 'checkmate';
-    if (holders.length === 1 && canSideCaptureSquare(finalPieces, moverSide, holders[0].square)) return 'checkmate';
-    return 'stalemate';
+    // lost-in-check; otherwise it is stalemate — a draw.
+    return isLostInCheck(finalPieces, opponent) ? 'checkmate' : 'stalemate';
   }
 
+  // With replies available it is mate only if EVERY reply still leaves the
+  // opponent lost-in-check.
   for (const reply of replies) {
-    const pos = reply.resultPieces;
-    const oppKingHolders = pos.filter((p) => !p.captured && p.side === opponent && p.square && p.possibleTypes.includes('k'));
-    if (oppKingHolders.length === 0) {
-      continue;
-    }
-    if (oppKingHolders.length === 1) {
-      const kingSq = oppKingHolders[0].square;
-      const canCapture = canSideCaptureSquare(pos, moverSide, kingSq);
-      if (canCapture) {
-        continue;
-      }
-    }
-    return null;
+    if (!isLostInCheck(reply.resultPieces, opponent)) return null;
   }
   return 'checkmate';
 }

@@ -7,19 +7,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fromAlgebraic } from './boardUtils.js';
-import { advanceEntry, makeInitialSnapshot, moveOutcome } from './advanceCore.js';
+import { advanceEntry, makeInitialSnapshot, moveOutcome, outcomeToSnapshot } from './advanceCore.js';
 import {
   buildOccupancy,
-  clonePieces,
-  computePositionSignature,
+  computeCastlePlanInPosition,
   computeThreatenedSquaresForSide,
+  hasCollapsedKingCapturable,
   listEnPassantCaptures,
+  mergedDestinations,
   simulateCastle,
   simulateEnPassant,
   simulateStandardMove,
-  movesForType,
-  canSideCaptureSquare,
-  computeCastlePlanInPosition,
 } from './quantumEngine.js';
 
 export default function useQuantumGameState(resetKey = 0) {
@@ -55,39 +53,12 @@ export default function useQuantumGameState(resetKey = 0) {
     });
   }, [history.length]);
 
-  const pushSnapshot = useCallback((snapInput) => {
+  // Append the next snapshot derived from a moveOutcome — outcomeToSnapshot
+  // (shared with replay/fixtures/miner) owns the position signature and the
+  // threefold-repetition check, so live play cannot diverge from replay.
+  const pushOutcome = useCallback((prevSideToMove, outcome) => {
     setHistory((prev) => {
-      const positionSig = computePositionSignature(snapInput.pieces, snapInput.sideToMove, snapInput.lastMove || null);
-
-      let over = Boolean(snapInput.gameOver);
-      let win = snapInput.winner ?? null;
-      let reason = snapInput.gameOverReason ?? null;
-
-      // Threefold repetition: this exact position (including quantum state)
-      // has now occurred three times across the timeline.
-      if (!over) {
-        let repeats = 1;
-        for (const s of prev) {
-          if (s.positionSig === positionSig) repeats += 1;
-        }
-        if (repeats >= 3) {
-          over = true;
-          win = null;
-          reason = 'threefold repetition';
-        }
-      }
-
-      const snap = {
-        pieces: clonePieces(snapInput.pieces),
-        sideToMove: snapInput.sideToMove,
-        captureCounter: snapInput.captureCounter,
-        gameOver: over,
-        winner: win,
-        gameOverReason: reason,
-        lastMove: snapInput.lastMove || null,
-        halfmoveClock: snapInput.halfmoveClock || 0,
-        positionSig,
-      };
+      const snap = outcomeToSnapshot({ sideToMove: prevSideToMove }, outcome, prev);
       const nextHistory = [...prev, snap];
       setViewIndexState(nextHistory.length - 1);
       return nextHistory;
@@ -104,32 +75,15 @@ export default function useQuantumGameState(resetKey = 0) {
     const piece = pieces.find((p) => p.id === pieceId && !p.captured);
     if (!piece) return [];
     if (piece.side !== sideToMove) return [];
-    const pos = fromAlgebraic(piece.square);
-    if (!pos) return [];
-    const { fileIndex: f, rankIndex: r } = pos;
+    if (!fromAlgebraic(piece.square)) return [];
 
-    const isFirstMove = (piece.moveCount || 0) === 0;
-
-    const merged = new Set();
-    for (const t of piece.possibleTypes) {
-      const list = movesForType(t, f, r, occupancy, piece.side, { isFirstMove });
-      for (const sq of list) merged.add(sq);
-    }
+    const merged = mergedDestinations(piece, occupancy, { isFirstMove: (piece.moveCount || 0) === 0 });
 
     const legal = [];
     for (const toSq of merged) {
       const sim = simulateStandardMove(pieces, piece.id, toSq, captureCounter);
       if (!sim.ok) continue;
-      const movingSide = piece.side;
-      const kings = sim.pieces.filter((p) => !p.captured && p.side === movingSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
-      let collapsedCapturable = false;
-      if (kings.length > 0) {
-        const opponent = movingSide === 'white' ? 'black' : 'white';
-        for (const k of kings) {
-          if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) { collapsedCapturable = true; break; }
-        }
-      }
-      if (collapsedCapturable) continue;
+      if (hasCollapsedKingCapturable(sim.pieces, piece.side)) continue;
       legal.push(toSq);
     }
 
@@ -150,15 +104,10 @@ export default function useQuantumGameState(resetKey = 0) {
   const enPassantMovesForSide = useMemo(() => {
     if (gameOver) return [];
     const candidates = listEnPassantCaptures(pieces, sideToMove, lastMove);
-    const opponent = sideToMove === 'white' ? 'black' : 'white';
     return candidates.filter((ep) => {
       const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
       if (!sim.ok) return false;
-      const kings = sim.pieces.filter((p) => !p.captured && p.side === sideToMove && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
-      for (const k of kings) {
-        if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) return false;
-      }
-      return true;
+      return !hasCollapsedKingCapturable(sim.pieces, sideToMove);
     });
   }, [pieces, sideToMove, lastMove, captureCounter, gameOver]);
 
@@ -191,15 +140,8 @@ export default function useQuantumGameState(resetKey = 0) {
     }
     if (!sim.ok) return { success: false, reason: sim.reason || 'Illegal move.' };
 
-    const movingSide = moving.side;
-    const kings = sim.pieces.filter((p) => !p.captured && p.side === movingSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
-    if (kings.length > 0) {
-      const opponent = movingSide === 'white' ? 'black' : 'white';
-      for (const k of kings) {
-        if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) {
-          return { success: false, reason: 'Move would leave a collapsed King capturable.' };
-        }
-      }
+    if (hasCollapsedKingCapturable(sim.pieces, moving.side)) {
+      return { success: false, reason: 'Move would leave a collapsed King capturable.' };
     }
 
     const outcome = moveOutcome(
@@ -215,16 +157,7 @@ export default function useQuantumGameState(resetKey = 0) {
       },
     );
 
-    pushSnapshot({
-      pieces: outcome.finalPieces,
-      sideToMove: sideToMove === 'white' ? 'black' : 'white',
-      captureCounter: outcome.nextCaptureCounter,
-      gameOver: outcome.gameOver,
-      winner: outcome.winner,
-      gameOverReason: outcome.gameOverReason,
-      lastMove: outcome.nextLastMove,
-      halfmoveClock: outcome.nextHalfmoveClock,
-    });
+    pushOutcome(sideToMove, outcome);
 
     lastMoveSignatureRef.current = moveSignature;
 
@@ -234,7 +167,7 @@ export default function useQuantumGameState(resetKey = 0) {
       success: true,
       records: [{ from: fromSquareAlg, to: toSquare, side: sideToMove, enPassant: Boolean(enPassant) }],
     };
-  }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot, gameOver, enPassantMovesForSide, halfmoveClock]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, enPassantMovesForSide, halfmoveClock]);
 
   // Rebuild the whole timeline from a relayed move list — used when rejoining
   // an online game after a reload. Entries are the server's history records:
@@ -268,14 +201,8 @@ export default function useQuantumGameState(resetKey = 0) {
     const sim = simulateCastle(pieces, result.plan);
     if (!sim.ok) return { canCastle: false, reason: sim.reason || 'Castling simulation failed.' };
     const moverSide = pieces.find((p) => p.id === result.plan.piece1_id)?.side || sideToMove;
-    const kings = sim.pieces.filter((p) => !p.captured && p.side === moverSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
-    if (kings.length > 0) {
-      const opponent = moverSide === 'white' ? 'black' : 'white';
-      for (const k of kings) {
-        if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) {
-          return { canCastle: false, reason: 'Castling would leave a collapsed King capturable.' };
-        }
-      }
+    if (hasCollapsedKingCapturable(sim.pieces, moverSide)) {
+      return { canCastle: false, reason: 'Castling would leave a collapsed King capturable.' };
     }
 
     return result;
@@ -294,14 +221,8 @@ export default function useQuantumGameState(resetKey = 0) {
     if (!sim.ok) return { success: false, reason: sim.reason || 'Castling failed.' };
 
     const moverSide = pieces.find((p) => p.id === plan.piece1_id)?.side || sideToMove;
-    const kings = sim.pieces.filter((p) => !p.captured && p.side === moverSide && p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k');
-    if (kings.length > 0) {
-      const opponent = moverSide === 'white' ? 'black' : 'white';
-      for (const k of kings) {
-        if (k.square && canSideCaptureSquare(sim.pieces, opponent, k.square)) {
-          return { success: false, reason: 'Castling would leave a collapsed King capturable.' };
-        }
-      }
+    if (hasCollapsedKingCapturable(sim.pieces, moverSide)) {
+      return { success: false, reason: 'Castling would leave a collapsed King capturable.' };
     }
 
     const outcome = moveOutcome(
@@ -310,16 +231,7 @@ export default function useQuantumGameState(resetKey = 0) {
       { moverId: plan.piece1_id, from: plan.piece1_from, to: plan.piece1_to, isCastle: true },
     );
 
-    pushSnapshot({
-      pieces: outcome.finalPieces,
-      sideToMove: sideToMove === 'white' ? 'black' : 'white',
-      captureCounter: outcome.nextCaptureCounter,
-      gameOver: outcome.gameOver,
-      winner: outcome.winner,
-      gameOverReason: outcome.gameOverReason,
-      lastMove: outcome.nextLastMove,
-      halfmoveClock: outcome.nextHalfmoveClock,
-    });
+    pushOutcome(sideToMove, outcome);
 
     lastMoveSignatureRef.current = signature;
 
@@ -331,7 +243,7 @@ export default function useQuantumGameState(resetKey = 0) {
         { from: plan.piece2_from, to: plan.piece2_to, side: sideToMove, castle: true },
       ],
     };
-  }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot, gameOver, halfmoveClock]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, halfmoveClock]);
 
   // Position-signature counts across the timeline: the AI passes these to
   // the search so a winning bot avoids shuffling into threefold repetition.

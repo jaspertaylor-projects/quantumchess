@@ -13,6 +13,7 @@
 // Exported To: ./DailyPuzzleModal.jsx (and the harness in tools/)
 
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
+import { buildLastMoveRecord } from '../chessboard/advanceCore.js';
 import {
   applyQuantumConstraints,
   buildOccupancy,
@@ -20,12 +21,14 @@ import {
   canSideCaptureSquare,
   evaluateTerminalAfterMove,
   generateLegalReplies,
+  hasCollapsedKingCapturable,
   listCheckThreats,
   listEnPassantCaptures,
-  movesForType,
+  mergedDestinations,
   simulateEnPassant,
   simulateStandardMove,
 } from '../chessboard/quantumEngine.js';
+import { hashString, mulberry32 } from '../utils/rng.js';
 
 // Bump to invalidate cached puzzles after generator changes.
 export const PUZZLE_VERSION = 4;
@@ -38,22 +41,6 @@ export const PUZZLE_EPOCH = '2026-07-06';
 const FALLBACK_DATE = '2026-01-01';
 
 // ---------------------------------------------------------------- seeded rng
-
-function hashString(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
-  return h >>> 0;
-}
-
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return function rng() {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
 const randInt = (rng, lo, hi) => lo + Math.floor(rng() * (hi - lo + 1)); // inclusive
@@ -147,38 +134,18 @@ const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -
 
 // ------------------------------------------------------------- move scanner
 
-function leavesCollapsedKingCapturable(pieces, side) {
-  const opp = side === 'white' ? 'black' : 'white';
-  for (const p of pieces) {
-    if (p.captured || p.side !== side || !p.square) continue;
-    if (p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k') {
-      if (canSideCaptureSquare(pieces, opp, p.square)) return true;
-    }
-  }
-  return false;
-}
-
+// buildLastMoveRecord signature adapter for the scanner's call sites.
 function buildLastMove(afterPieces, mover, from, to, enPassant, measuredSquares, side = 'white') {
-  const lastMove = {
-    side,
-    pieceId: mover.id,
+  return buildLastMoveRecord({
+    finalPieces: afterPieces,
+    moverId: mover.id,
     from,
     to,
-    isDoubleStep: false,
-    crossedSquare: null,
-    measuredSquares: measuredSquares || [],
-  };
-  if (!enPassant && (mover.moveCount || 0) === 0) {
-    const fp = fromAlgebraic(from);
-    const tp = fromAlgebraic(to);
-    const dir = side === 'white' ? 1 : -1;
-    const moved = afterPieces.find((p) => p.id === mover.id && !p.captured);
-    if (fp && tp && moved && fp.fileIndex === tp.fileIndex && tp.rankIndex - fp.rankIndex === 2 * dir && moved.possibleTypes.includes('p')) {
-      lastMove.isDoubleStep = true;
-      lastMove.crossedSquare = toAlgebraic(fp.fileIndex, fp.rankIndex + dir);
-    }
-  }
-  return lastMove;
+    side,
+    usedEnPassant: enPassant,
+    wasFirstMove: (mover.moveCount || 0) === 0,
+    measuredSquares,
+  });
 }
 
 // Every legal white move with its fully-resolved result. Mirrors the game's
@@ -190,7 +157,7 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
   for (const ep of listEnPassantCaptures(pieces, 'white', lastMove)) {
     const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
     if (!sim.ok) continue;
-    if (leavesCollapsedKingCapturable(sim.pieces, 'white')) continue;
+    if (hasCollapsedKingCapturable(sim.pieces, 'white')) continue;
     const mover = pieces.find((p) => p.id === ep.pieceId);
     out.push({
       from: mover.square,
@@ -208,17 +175,11 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
   const occ = buildOccupancy(pieces);
   for (const p of pieces) {
     if (p.captured || p.side !== 'white' || !p.square) continue;
-    const pos = fromAlgebraic(p.square);
-    if (!pos) continue;
-    const isFirstMove = (p.moveCount || 0) === 0;
-    const merged = new Set();
-    for (const t of p.possibleTypes) {
-      for (const to of movesForType(t, pos.fileIndex, pos.rankIndex, occ, 'white', { isFirstMove })) merged.add(to);
-    }
+    const merged = mergedDestinations(p, occ, { isFirstMove: (p.moveCount || 0) === 0 });
     for (const to of merged) {
       const sim = simulateStandardMove(pieces, p.id, to, captureCounter);
       if (!sim.ok) continue;
-      if (leavesCollapsedKingCapturable(sim.pieces, 'white')) continue;
+      if (hasCollapsedKingCapturable(sim.pieces, 'white')) continue;
       out.push({
         from: p.square,
         to,
@@ -243,7 +204,7 @@ function applyBlackReply(pieces, reply) {
   if (!mover) return null;
   const sim = simulateStandardMove(pieces, mover.id, reply.to, 0);
   if (!sim.ok) return null;
-  if (leavesCollapsedKingCapturable(sim.pieces, 'black')) return null;
+  if (hasCollapsedKingCapturable(sim.pieces, 'black')) return null;
   return {
     pieces: sim.pieces,
     lastMove: buildLastMove(sim.pieces, mover, reply.from, reply.to, false, sim.measuredSquares, 'black'),

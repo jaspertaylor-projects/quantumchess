@@ -13,7 +13,8 @@ import {
   computePositionSignature,
   generateLegalReplies,
   attacksForType,
-  canSideCaptureSquare,
+  isLostInCheck,
+  otherSide,
 } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
@@ -65,10 +66,6 @@ const DIFFICULTY_CONFIG = {
   medium: { maxDepth: 2, widths: [40, 12], timeMs: 5000, noise: 0 },
   hard: { maxDepth: 3, widths: [20, 12, 8], timeMs: 12000, noise: 0 },
 };
-
-function otherSide(side) {
-  return side === 'white' ? 'black' : 'white';
-}
 
 // Per-side attack info: which squares each side attacks, and the cheapest
 // piece-value it can bring to bear on each square. Rays respect blockers.
@@ -269,11 +266,7 @@ class SearchTimeout extends Error {}
 // Score a no-legal-replies node from `side`'s perspective, mirroring the
 // game's terminal rules: checkmate if lost-in-check, else stalemate (draw).
 function noReplyScore(pieces, side, ply) {
-  const opp = otherSide(side);
-  const holders = pieces.filter((p) => !p.captured && p.side === side && p.square && (p.possibleTypes || []).includes('k'));
-  if (holders.length === 0) return -MATE + ply;
-  if (holders.length === 1 && canSideCaptureSquare(pieces, opp, holders[0].square)) return -MATE + ply;
-  return 0;
+  return isLostInCheck(pieces, side) ? -MATE + ply : 0;
 }
 
 function sideSign(side) {

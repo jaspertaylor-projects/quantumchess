@@ -8,7 +8,9 @@
       "Bash(git commit -q -m 'feat\\(header\\): account chip top-right \\(Sign In pill / avatar+username\\); fix signed-in account panel crash *)",
       "Bash(git commit -q -m 'style\\(header\\): drop decorative piece strips, add settings gear to top-right controls *)",
       "Bash(docker exec *)",
-      "Bash(docker exec -u 1000:1000 -w /app quantumchess-frontend-1 sh -c 'node -e \" *)"
+      "Bash(docker exec -u 1000:1000 -w /app quantumchess-frontend-1 sh -c 'node -e \" *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }
