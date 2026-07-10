@@ -8,7 +8,7 @@
 // Exported To: ../App.jsx
 
 import { useMemo } from 'react';
-import { botInitials, getBotAvatarUrl } from '../ai/bots.js';
+import { botAvatarDescriptor } from '../ai/bots.js';
 import { capturedPieces } from '../chessboard/boardUtils.js';
 
 const ANONYMOUS_AVATAR = {
@@ -22,9 +22,7 @@ const STRANGER_AVATAR = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png
 
 export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pieces, onSignUpClick }) {
   const botSide = aiBot ? (userTeam === 'white' ? 'black' : 'white') : null;
-  const botAvatar = aiBot
-    ? { initials: botInitials(aiBot), hue: aiBot.hue ?? 200, imageUrl: getBotAvatarUrl(aiBot), name: aiBot.name, tagline: aiBot.tagline || '' }
-    : null;
+  const botAvatar = botAvatarDescriptor(aiBot);
 
   // Signed-in players appear under their unique account username and rating.
   const selfName = (auth.profile && auth.profile.username) || 'Anonymous';

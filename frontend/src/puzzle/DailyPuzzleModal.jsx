@@ -9,9 +9,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
-import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, Share2 as ShareIcon, Puzzle as PuzzleIcon } from 'lucide-react';
+import { Share2 as ShareIcon, Puzzle as PuzzleIcon } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
 import usePuzzleBoard from './usePuzzleBoard.js';
 import { checkPuzzleMove } from './puzzleGenerator.js';
@@ -260,11 +260,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
               {puzzle ? `${puzzle.recipe.title} ${puzzle.recipe.emoji}` : 'Preparing…'}
             </h2>
           </div>
-          <IconButton
-            icon={XIcon} size={20} title="Close" ariaLabel="Close daily puzzle"
-            className="qc-puzzle-close" onClick={onClose} width={36} height={36} radius={8}
-            bg={theme.secondary} color={theme.error} hoverInvert={true} shadow="transparent"
-          />
+          <ModalCloseButton ariaLabel="Close daily puzzle" className="qc-puzzle-close" onClick={onClose} />
         </div>
 
         {phase === 'loading' ? (

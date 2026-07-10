@@ -26,6 +26,7 @@ import {
   simulateStandardMove,
 } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
+import { capturedPieces } from '../chessboard/boardUtils.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
@@ -40,13 +41,6 @@ function replyAwareEval(move) {
   let worst = Infinity;
   for (const r of replies) worst = Math.min(worst, evaluatePosition(r.resultPieces));
   return worst;
-}
-
-function capturedOf(pieces, side, pawns) {
-  return (pieces || [])
-    .filter((p) => p.captured && p.side === side && Array.isArray(p.possibleTypes)
-      && (pawns ? p.possibleTypes[0] === 'p' : p.possibleTypes[0] !== 'p'))
-    .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
 }
 
 const ordinal = (n) => {
@@ -278,10 +272,10 @@ export default function MinedPuzzleModal({
     if (made.roundIdx === totalMoves - 1) setFinalLanding(Number(landed.toFixed(2)));
   }, [deepEvals]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const whiteLossPawns = useMemo(() => capturedOf(display, 'white', true), [display]);
-  const whiteLossOthers = useMemo(() => capturedOf(display, 'white', false), [display]);
-  const blackLossPawns = useMemo(() => capturedOf(display, 'black', true), [display]);
-  const blackLossOthers = useMemo(() => capturedOf(display, 'black', false), [display]);
+  const whiteLossPawns = useMemo(() => capturedPieces(display || [], 'white', true), [display]);
+  const whiteLossOthers = useMemo(() => capturedPieces(display || [], 'white', false), [display]);
+  const blackLossPawns = useMemo(() => capturedPieces(display || [], 'black', true), [display]);
+  const blackLossOthers = useMemo(() => capturedPieces(display || [], 'black', false), [display]);
 
   // Black's live answer: the worker searches the reply position; a one-shot
   // greedy fallback (min static eval over legal replies — the same ruler the

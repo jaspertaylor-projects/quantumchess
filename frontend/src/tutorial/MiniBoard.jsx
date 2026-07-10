@@ -11,6 +11,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import QuantumPiece from '../chessboard/QuantumPiece.jsx';
+import { arrowGeometry } from '../chessboard/arrowGeometry.js';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import theme from '../theme.js';
 
@@ -194,29 +195,8 @@ export default function MiniBoard({
         {arrows.map((a, i) => {
           const from = center(a.from);
           const to = center(a.to);
-          const dx = to.x - from.x;
-          const dy = to.y - from.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          // Same short-arrow guard as the live board: adjacent squares get a
-          // compact arrow instead of a shaft that runs backwards.
-          const tipInset = cell * 0.46;
-          let startInset = cell * 0.5;
-          let headLen = cell * 0.2;
-          const headHalf = cell * 0.11;
-          if (len - tipInset - startInset < headLen) {
-            startInset = Math.max(cell * 0.1, len - tipInset - headLen - cell * 0.06);
-            headLen = Math.min(headLen, Math.max(cell * 0.12, len - tipInset - startInset));
-          }
-          const tipX = to.x - ux * tipInset;
-          const tipY = to.y - uy * tipInset;
-          const baseX = tipX - ux * headLen;
-          const baseY = tipY - uy * headLen;
-          const x1 = from.x + ux * startInset;
-          const y1 = from.y + uy * startInset;
-          const px = -uy;
-          const py = ux;
+          // Same geometry (and short-arrow guard) as the live board.
+          const { x1, y1, baseX, baseY, headPoints } = arrowGeometry(from, to, cell);
           const hex = bodyHex(a.side || 'white');
           const halo = a.side === 'white' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
           const w = Math.max(3, cell * 0.08);
@@ -225,7 +205,7 @@ export default function MiniBoard({
               <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={halo} strokeWidth={w + 2.5} strokeLinecap="round" />
               <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={hex} strokeWidth={w} strokeLinecap="round" />
               <polygon
-                points={`${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`}
+                points={headPoints}
                 fill={hex}
                 stroke={halo}
                 strokeWidth="1.4"

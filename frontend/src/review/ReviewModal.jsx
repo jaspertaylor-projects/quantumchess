@@ -11,13 +11,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import {
-  X as XIcon, ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles,
+  ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import { capturedPieces } from '../chessboard/boardUtils.js';
-import { getBotById, getBotAvatarUrl } from '../ai/bots.js';
+import { getBotById, botAvatarDescriptor } from '../ai/bots.js';
 import { buildReviewTimeline } from './replayCore.js';
 import useGameEvalGraph from './useGameEvalGraph.js';
 import useReviewVariation from './useReviewVariation.js';
@@ -179,12 +180,7 @@ export default function ReviewModal({
     if (game && game.blackName && side === 'black') return game.blackName;
     return side === bottomSide ? 'You' : (game && game.opponent) || 'Opponent';
   };
-  const avatarOf = (side) => {
-    const bot = botOf(side);
-    if (!bot) return null;
-    const initials = (bot.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-    return { initials, hue: bot.hue ?? 200, imageUrl: getBotAvatarUrl(bot), name: bot.name, tagline: bot.tagline || '' };
-  };
+  const avatarOf = (side) => botAvatarDescriptor(botOf(side));
   const ratingOf = (side) => {
     const bot = botOf(side);
     return bot && Number.isFinite(bot.rating) ? bot.rating : '????';
@@ -224,11 +220,7 @@ export default function ReviewModal({
             <Microscope size={18} color={theme.primary} /> Game Review
             <span style={styles.sub}>{headline}</span>
           </h2>
-          <IconButton
-            icon={XIcon} size={20} title="Close" ariaLabel="Close game review"
-            className="qc-review-close" onClick={onClose} width={36} height={36} radius={8}
-            bg={theme.secondary} color={theme.error} hoverInvert={true} shadow="transparent"
-          />
+          <ModalCloseButton ariaLabel="Close game review" className="qc-review-close" onClick={onClose} />
         </div>
 
         {!timeline || snapshots.length <= 1 ? (

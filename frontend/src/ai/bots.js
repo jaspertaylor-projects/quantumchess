@@ -472,3 +472,10 @@ export function botInitials(bot) {
     .join('')
     .toUpperCase();
 }
+
+// The avatar descriptor PlayerBar consumes, built from a roster bot — shared
+// by the live player bars and the review modal.
+export function botAvatarDescriptor(bot) {
+  if (!bot) return null;
+  return { initials: botInitials(bot), hue: bot.hue ?? 200, imageUrl: getBotAvatarUrl(bot), name: bot.name, tagline: bot.tagline || '' };
+}

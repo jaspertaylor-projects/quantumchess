@@ -15,6 +15,7 @@ import {
 import theme from '../theme.js';
 import QuantumPiece from './QuantumPiece.jsx';
 import { hexToRgbString } from '../settings/useMeasurementColors.js';
+import { arrowGeometry } from './arrowGeometry.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 import { listCheckThreats, canPieceRecohere } from './quantumEngine.js';
 
@@ -464,33 +465,10 @@ export default function Board({
               const to = squareCenterPx(t.to);
               if (!from || !to) return null;
               const cell = dimensions.cell || 0;
-              const dx = to.x - from.x;
-              const dy = to.y - from.y;
-              const len = Math.hypot(dx, dy) || 1;
-              const ux = dx / len;
-              const uy = dy / len;
               // Emanate from the edge of the attacker's square; stop the tip
               // just outside the target ring, with the shaft ending at the
-              // arrowhead's base. Adjacent squares leave less room than the
-              // default insets assume, so shrink the start inset (and if
-              // needed the head) rather than letting the shaft run backwards.
-              const tipInset = cell * 0.46;
-              let startInset = cell * 0.5;
-              let headLen = cell * 0.2;
-              const headHalf = cell * 0.11;
-              if (len - tipInset - startInset < headLen) {
-                startInset = Math.max(cell * 0.1, len - tipInset - headLen - cell * 0.06);
-                headLen = Math.min(headLen, Math.max(cell * 0.12, len - tipInset - startInset));
-              }
-              const tipX = to.x - ux * tipInset;
-              const tipY = to.y - uy * tipInset;
-              const baseX = tipX - ux * headLen;
-              const baseY = tipY - uy * headLen;
-              const x1 = from.x + ux * startInset;
-              const y1 = from.y + uy * startInset;
-              const px = -uy;
-              const py = ux;
-              const headPoints = `${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`;
+              // arrowhead's base.
+              const { x1, y1, baseX, baseY, headPoints } = arrowGeometry(from, to, cell);
               // Arrow wears the attacking piece's own body color (band fill),
               // with a contrast halo picked by luminance so light arrows read
               // on light squares and dark arrows on dark squares.
@@ -542,28 +520,11 @@ export default function Board({
               const to = squareCenterPx(a.to);
               if (!from || !to) return null;
               const cell = dimensions.cell || 0;
-              const dx = to.x - from.x;
-              const dy = to.y - from.y;
-              const len = Math.hypot(dx, dy) || 1;
-              const ux = dx / len;
-              const uy = dy / len;
-              const tipInset = cell * 0.22;
-              let startInset = cell * 0.34;
-              let headLen = cell * 0.3;
-              const headHalf = cell * 0.19;
-              if (len - tipInset - startInset < headLen) {
-                startInset = Math.max(cell * 0.08, len - tipInset - headLen - cell * 0.05);
-                headLen = Math.min(headLen, Math.max(cell * 0.14, len - tipInset - startInset));
-              }
-              const tipX = to.x - ux * tipInset;
-              const tipY = to.y - uy * tipInset;
-              const baseX = tipX - ux * headLen;
-              const baseY = tipY - uy * headLen;
-              const x1 = from.x + ux * startInset;
-              const y1 = from.y + uy * startInset;
-              const px = -uy;
-              const py = ux;
-              const headPoints = `${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`;
+              // Fatter, shorter-nosed proportions than the check rays.
+              const { x1, y1, baseX, baseY, headPoints } = arrowGeometry(from, to, cell, {
+                tipInset: 0.22, startInset: 0.34, headLen: 0.3, headHalf: 0.19,
+                minStartInset: 0.08, minHeadLen: 0.14, headGap: 0.05,
+              });
               const op = a.opacity ?? 0.5;
               const w = Math.max(5, cell * 0.17);
               return (
