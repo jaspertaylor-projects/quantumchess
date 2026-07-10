@@ -333,10 +333,21 @@ export default function useQuantumGameState(resetKey = 0) {
     };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushSnapshot, gameOver, halfmoveClock]);
 
+  // Position-signature counts across the timeline: the AI passes these to
+  // the search so a winning bot avoids shuffling into threefold repetition.
+  const positionSigCounts = useMemo(() => {
+    const counts = {};
+    for (const snap of history) {
+      if (snap.positionSig) counts[snap.positionSig] = (counts[snap.positionSig] || 0) + 1;
+    }
+    return counts;
+  }, [history]);
+
   return {
     pieces,
     sideToMove,
     checkingSquaresBySide,
+    positionSigCounts,
 
     viewIndex,
     historyLength: history.length,

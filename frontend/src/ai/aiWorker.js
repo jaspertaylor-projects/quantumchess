@@ -66,6 +66,7 @@ self.addEventListener('message', (e) => {
   try {
     let baselineSent = false;
     const result = searchBestMove({
+    repetitionSigs: payload.repetitionSigs || null,
       pieces: pieces || [],
       sideToMove,
       difficulty: (bot && bot.tier) || difficulty,

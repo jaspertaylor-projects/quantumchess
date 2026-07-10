@@ -15,7 +15,7 @@ const MIN_THINK_FLOOR_MS = 2000;
 // search result is used instead of the baseline fallback.
 const MAX_THINK_MS = 15000;
 
-export default function useLocalAi({ enabled, aiSide, difficulty, botId = null, pieces, sideToMove, canMakeMove, gameOver, lastMove = null, onApplyMove }) {
+export default function useLocalAi({ enabled, aiSide, difficulty, botId = null, pieces, sideToMove, canMakeMove, gameOver, lastMove = null, repetitionSigs = null, onApplyMove }) {
   const thinkingRef = useRef(false);
   const workerRef = useRef(null);
   const requestIdRef = useRef(0);
@@ -121,7 +121,7 @@ export default function useLocalAi({ enabled, aiSide, difficulty, botId = null, 
     worker.postMessage({
       type: 'think',
       id,
-      payload: { pieces, sideToMove: aiSide, difficulty, botId, lastMove },
+      payload: { pieces, sideToMove: aiSide, difficulty, botId, lastMove, repetitionSigs },
     });
 
     maxTimerRef.current = setTimeout(() => {

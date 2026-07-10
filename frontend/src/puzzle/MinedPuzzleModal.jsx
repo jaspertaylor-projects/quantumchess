@@ -200,7 +200,7 @@ export default function MinedPuzzleModal({
     worker.postMessage({
       type: 'analyze',
       id: round,
-      payload: { pieces: cur.pieces, sideToMove: 'white', lastMove: cur.lastMove || null, depth: 3, timeMs: 25000 },
+      payload: { pieces: cur.pieces, sideToMove: 'white', lastMove: cur.lastMove || null, depth: 3, widths: [176, 12, 8], timeMs: 25000 },
     });
     return () => { worker.terminate(); };
   }, [open, cur, round]);
@@ -310,7 +310,7 @@ export default function MinedPuzzleModal({
     worker.postMessage({
       type: 'analyze',
       id: 'black-reply',
-      payload: { pieces: afterMove.after, sideToMove: 'black', lastMove: afterMove.nextLastMove, depth: 3, timeMs: 8000 },
+      payload: { pieces: afterMove.after, sideToMove: 'black', lastMove: afterMove.nextLastMove, depth: 3, widths: [176, 12, 8], timeMs: 8000 },
     });
   });
 

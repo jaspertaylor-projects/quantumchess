@@ -10,6 +10,7 @@
 import {
   buildOccupancy,
   clonePieces,
+  computePositionSignature,
   generateLegalReplies,
   attacksForType,
   canSideCaptureSquare,
@@ -319,7 +320,7 @@ export function analyzeRootMoves({ pieces, sideToMove, lastMove = null, depth = 
 // Iterative-deepening search. Returns { move, score, depth, nodes } where
 // score is from the mover's perspective. onDepthComplete (optional) receives
 // the best move after each completed depth for progressive reporting.
-export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot = null, lastMove = null, onDepthComplete = null }) {
+export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot = null, lastMove = null, onDepthComplete = null, repetitionSigs = null }) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
   const W = { ...DEFAULT_WEIGHTS, ...((bot && bot.weights) || {}) };
@@ -368,8 +369,30 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
   const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove);
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
+  // Repetition avoidance: a WINNING side that re-enters an already-seen
+  // position is shuffling toward a threefold draw the search can't see
+  // (the mate sits past the horizon, so shuffle and progress eval equal —
+  // a 2250 bot drew a won game this way). Recreating a once-seen position
+  // costs a nudge; recreating a twice-seen one IS the draw, so it costs a
+  // pile. When losing, repetition is a legitimate resource — no penalty.
+  const repCount = (sig) => {
+    if (!repetitionSigs) return 0;
+    const n = repetitionSigs instanceof Map ? repetitionSigs.get(sig) : repetitionSigs[sig];
+    return n || 0;
+  };
+  const repWinning = Boolean(repetitionSigs) && rootChildren[0].score >= 1;
+  const repPen = rootChildren.map((c) => {
+    if (!repWinning) return 0;
+    const n = repCount(computePositionSignature(c.mv.resultPieces, otherSide(sideToMove), null));
+    return n >= 2 ? 50 : n === 1 ? 3 : 0;
+  });
+
   // Depth-1 result is always available instantly.
-  let best = { move: rootChildren[0].mv, score: rootChildren[0].score, depth: 1, nodes: ctx.nodes };
+  let initIdx = 0;
+  for (let i = 1; i < rootChildren.length; i++) {
+    if (rootChildren[i].score - repPen[i] > rootChildren[initIdx].score - repPen[initIdx]) initIdx = i;
+  }
+  let best = { move: rootChildren[initIdx].mv, score: rootChildren[initIdx].score, depth: 1, nodes: ctx.nodes };
   if (typeof onDepthComplete === 'function') onDepthComplete(best);
 
   const rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
@@ -386,7 +409,8 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
         } else {
           s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, -alpha, ctx);
         }
-        if (!depthBest || s > depthBest.score) depthBest = { move: child.mv, score: s };
+        const adjusted = s - repPen[i];
+        if (!depthBest || adjusted > depthBest.adjusted) depthBest = { move: child.mv, score: s, adjusted };
         if (s > alpha) alpha = s;
       }
       if (depthBest) {
@@ -404,7 +428,7 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
   if (cfg.noise > 0 && rootChildren.length > 1) {
     const jittered = rootChildren
       .slice(0, Math.min(6, rootChildren.length))
-      .map((c) => ({ mv: c.mv, s: c.score + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((c, i) => ({ mv: c.mv, s: c.score - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
       .sort((a, b) => b.s - a.s);
     return { ...best, move: jittered[0].mv };
   }

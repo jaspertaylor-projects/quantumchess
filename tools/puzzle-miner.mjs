@@ -73,7 +73,7 @@ const CFG = {
   verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 120000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max par plies to re-verify
   minChoices: Number(argVal('minChoices', 10)), // fewer legal moves = not a real search
-  maxChoices: Number(argVal('maxChoices', 50)), // more = too complex to read; no such puzzle
+  maxChoices: Number(argVal('maxChoices', 10000)), // no hard cap (2026-07-09: seed-8 swings sat at 78-158 moves — width is inherent to winning quantum positions); numChoices is curation metadata
   // --- swing detection (2026-07-08 rework: mistakes, not only-moves) ---
   // The puzzle moment is Black's FIRST MISTAKE FROM BALANCE: the eval sat
   // near 0, Black moved, and now White's best line reaches swingMin. The
@@ -95,11 +95,11 @@ const CFG = {
 // Root widths must NEVER truncate — quantum midgames reach 60-80 legal
 // moves, and a root-pruned move silently corrupts evals (a graph point drew
 // 0.8 where the true value was 3.45 because the root beam was 40).
-const PREFILTER_WIDTHS = [128, 10, 8];
-const PROBE_WIDTHS = [128, 8, 6]; // balance probes: full root, narrow tail — speed comes from the inner beams
-const MINE_WIDTHS = [128, 16, 12, 9, 7]; // certification beams — a beam too narrow can miss a refutation
-const CONFIRM_WIDTHS = [128, 10, 8, 6, 6]; // depth+1 stability check: narrow inner beams or it times out
-const VERIFY_WIDTHS = [128, 16, 12, 10, 8, 6];
+const PREFILTER_WIDTHS = [176, 10, 8];
+const PROBE_WIDTHS = [176, 8, 6]; // balance probes: full root, narrow tail — speed comes from the inner beams
+const MINE_WIDTHS = [176, 16, 12, 9, 7]; // certification beams — a beam too narrow can miss a refutation
+const CONFIRM_WIDTHS = [176, 10, 8, 6, 6]; // depth+1 stability check: narrow inner beams or it times out
+const VERIFY_WIDTHS = [176, 16, 12, 10, 8, 6];
 
 // ------------------------------------------------- determinism (seeded rng)
 
@@ -220,6 +220,7 @@ function playGame(gameIdx, roles) {
       sideToMove: state.sideToMove,
       bot,
       lastMove: state.lastMove,
+      repetitionSigs: sigCounts, // a winning bot must convert, not shuffle into threefold
     });
     if (!res.move) { result = { winner: null, reason: 'no legal move' }; break; }
 
@@ -555,7 +556,11 @@ function detectSwingChain(rec, preEval, stats) {
   // a wasted deep search on a 60-move position is minutes (seed-5 burned
   // both its deep-timeout budget slots on positions the gate would reject).
   const moveCount = generateLegalReplies(rec.pieces, 'white', rec.captureCounter, rec.lastMove).length;
-  if (moveCount < CFG.minChoices || moveCount >= CFG.maxChoices) { stats.sizeRejects++; return { probe, chain: null }; }
+  if (moveCount < CFG.minChoices || moveCount >= CFG.maxChoices) {
+    stats.sizeRejects++;
+    console.log(`  size-reject @ply ${rec.ply}: probe ${probe} but ${moveCount} legal moves (bar: ${CFG.minChoices}..${CFG.maxChoices - 1})`);
+    return { probe, chain: null };
+  }
 
   const t0 = performance.now();
   const analysis = analyzePosition(rec, CFG.mineDepth, MINE_WIDTHS, CFG.mineMs);

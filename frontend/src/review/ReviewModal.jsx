@@ -16,7 +16,6 @@ import {
 import Board from '../chessboard/Board.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import { getBotById, getBotAvatarUrl } from '../ai/bots.js';
-import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { buildReviewTimeline } from './replayCore.js';
 
 const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
@@ -133,14 +132,6 @@ export default function ReviewModal({
   const snapshots = timeline ? timeline.snapshots : [];
   const [idx, setIdx] = useState(0);
 
-  // Static eval per snapshot (white-positive, pawn units) — the instant
-  // fallback for the bar/marks/move list until the graph's parity-matched
-  // search values land, which then take over everywhere.
-  const evals = useMemo(
-    () => snapshots.map((s) => evaluatePosition(s.pieces)),
-    [snapshots],
-  );
-
   useEffect(() => {
     if (open) setIdx(snapshots.length > 0 ? snapshots.length - 1 : 0);
   }, [open, snapshots.length]);
@@ -161,9 +152,11 @@ export default function ReviewModal({
     setGraphTrace([]);
     setGraphDeepening(false);
     let stopped = false;
-    // Long games sample every other ply — the curve reads the same and the
-    // deep pass finishes in this lifetime.
-    const step = snaps.length > 64 ? 2 : 1;
+    // EVERY ply gets a value: an unsampled ply would fall back to a
+    // different ruler (static eval), and mixed rulers saw the move list —
+    // material counted before the search's discounting made White's moves
+    // look like they improved the eval.
+    const step = 1;
     const jobs = [];
     let nextId = 0;
     // Root beams are FULL WIDTH on the deep passes: a pruned root move is
@@ -173,13 +166,13 @@ export default function ReviewModal({
     // the hard way: d1->d7 pruned at root width 40 drew 0.8 where the true
     // matched-tier value was 3.45).
     const PHASES = {
-      fast: { tier: 'fast', depthW: 2, depthB: 1, widths: [128, 8, 6], timeMs: 8000, deep: false },
-      mid: { tier: 'mid', depthW: 4, depthB: 3, widths: [128, 12, 8, 6], timeMs: 20000, deep: true },
-      deep: { tier: 'deep', depthW: 6, depthB: 5, widths: [128, 12, 8, 6, 5, 4], timeMs: 45000, deep: true },
+      fast: { tier: 'fast', depthW: 2, depthB: 1, widths: [176, 8, 6], timeMs: 8000, deep: false },
+      mid: { tier: 'mid', depthW: 4, depthB: 3, widths: [176, 12, 8, 6], timeMs: 20000, deep: true },
+      deep: { tier: 'deep', depthW: 6, depthB: 5, widths: [176, 12, 8, 6, 5, 4], timeMs: 45000, deep: true },
     };
     for (const phase of [PHASES.fast, PHASES.mid, PHASES.deep]) {
       const seen = new Set();
-      for (const stride of [8 * step, 4 * step, 2 * step, step]) {
+      for (const stride of [8, 4, 2, 1]) {
         for (let k = 0; k < snaps.length; k += stride) {
           if (!seen.has(k)) { seen.add(k); jobs.push({ id: nextId++, k, ...phase }); }
         }
@@ -257,6 +250,9 @@ export default function ReviewModal({
     for (const p of graphTrace) if (p.vals[lineTier] !== undefined) m.set(p.ply, p.vals[lineTier]);
     return m;
   }, [graphTrace, lineTier]);
+  // One ruler only: a ply shows its parity-matched search value or nothing
+  // ('…' while the scanner gets there). Terminal snapshots pin to the mate
+  // score. The bar borrows the nearest known value so it never jumps rulers.
   const evalAt = (k) => {
     const s2 = snapshots[k];
     if (s2 && s2.gameOver) {
@@ -264,7 +260,16 @@ export default function ReviewModal({
       if (s2.winner === 'black') return -1000;
       return 0; // stalemate/draw endings
     }
-    return graphVals.has(k) ? graphVals.get(k) : evals[k];
+    return graphVals.has(k) ? graphVals.get(k) : null;
+  };
+  const nearestEval = (k) => {
+    for (let d = 0; d < snapshots.length; d++) {
+      const lo = evalAt(k - d);
+      if (lo !== null && lo !== undefined) return lo;
+      const hi = evalAt(k + d);
+      if (hi !== null && hi !== undefined) return hi;
+    }
+    return 0;
   };
 
   const bounded = Math.max(0, Math.min(idx, snapshots.length - 1));
@@ -390,13 +395,15 @@ export default function ReviewModal({
   const rows = snapshots.slice(1).map((s, i) => {
     const entry = timeline.entries[i] || null;
     const mover = s.lastMove ? s.lastMove.side : (i % 2 === 0 ? 'white' : 'black');
-    const whiteDelta = evalAt(i + 1) - evalAt(i);
-    const moverDrop = mover === 'white' ? -whiteDelta : whiteDelta;
-    const mark = moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
+    const before = evalAt(i);
+    const after = evalAt(i + 1);
+    const haveBoth = before !== null && after !== null;
+    const moverDrop = haveBoth ? (mover === 'white' ? -(after - before) : after - before) : 0;
+    const mark = !haveBoth ? '' : moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
     const label = entry && entry.type === 'castle'
       ? `${entry.piece1_from} ⇄ ${entry.piece2_from}`
       : s.lastMove ? `${s.lastMove.from} → ${s.lastMove.to}${entry && entry.enPassant ? ' ep' : ''}` : '?';
-    return { snapIdx: i + 1, mover, label, mark, evalAfter: evalAt(i + 1) };
+    return { snapIdx: i + 1, mover, label, mark, evalAfter: after };
   });
 
   const highlights = [];
@@ -405,7 +412,8 @@ export default function ReviewModal({
     highlights.push({ square: snap.lastMove.to, color: HIGHLIGHT_TO });
   }
 
-  const currentEval = evalAt(bounded) ?? 0;
+  const exactEval = evalAt(bounded);
+  const currentEval = exactEval !== null && exactEval !== undefined ? exactEval : nearestEval(bounded);
   // Squash white-positive pawn eval into a 0..100% bar position.
   const evalPct = 100 / (1 + Math.exp(-currentEval / 3));
   // The number lives in the bar's top band. The fill boundary must never
@@ -499,7 +507,7 @@ export default function ReviewModal({
                     position: 'absolute', left: 0, right: 0, top: '50%', height: 1,
                     background: 'rgba(120,120,120,0.8)',
                   }} />
-                  <span style={styles.evalBarNumber(evalTextDark)}>{formatEval(currentEval)}</span>
+                  <span style={styles.evalBarNumber(evalTextDark)}>{exactEval === null ? '…' : formatEval(currentEval)}</span>
                 </div>
                 <div style={{ width: 'min(60vmin, 440px)', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <PlayerBar
@@ -592,7 +600,7 @@ export default function ReviewModal({
                         >
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
                           <span style={styles.mark(r.mark)}>{r.mark}</span>
-                          <span style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}>{formatEval(r.evalAfter)}</span>
+                          <span style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}>{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span>
                         </div>
                       ) : (
                         <span key={`cell-empty-${pair.moveNo}-${col}`} />

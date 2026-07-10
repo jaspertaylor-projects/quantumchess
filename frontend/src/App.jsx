@@ -148,6 +148,7 @@ export default function App() {
     getEnPassantMoves,
     // rejoin support
     replayMoves,
+    positionSigCounts,
   } = useQuantumGameState(gameInstanceId);
 
   const [selectedId, setSelectedId] = useState(null);
@@ -2000,6 +2001,7 @@ export default function App() {
     canMakeMove,
     gameOver,
     lastMove,
+    repetitionSigs: positionSigCounts,
     onApplyMove: applyEngineMove,
   });
 
