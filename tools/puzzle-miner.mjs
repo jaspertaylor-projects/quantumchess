@@ -62,7 +62,8 @@ const CFG = {
   seed: Number(argVal('seed', 1)),
   maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 160)),
   playMs: Number(argVal('playMs', QUICK ? 250 : 900)), // per-move time; strong bots need thinking room
-  minPly: Number(argVal('minPly', 16)), // "over 15 moves played": mid-game only, quantum state developed
+  minPly: Number(argVal('minPly', 20)), // plies (half-moves): ~10 full moves in — mid-game, quantum state developed (Jasper, 2026-07-09)
+  handoffPly: Number(argVal('handoffPly', 20)), // bot handoff: opening controllers play plies 0..handoffPly-1, main controllers after
   mineDepth: Number(argVal('mineDepth', 4)),
   prefilterMs: Number(argVal('prefilterMs', 5000)), // deep-funnel shallow pass budget
   probeMs: Number(argVal('probeMs', 8000)), // per-ply balance probe budget (timeouts poison the streak)
@@ -181,13 +182,20 @@ function minerBot(rosterBot) {
   };
 }
 
-// The ABSOLUTE strongest bots only (top 4 by rating): swing mining needs
-// games that stay balanced past minPly, and the lower hard-tier bots were
-// losing the thread by ply 8-12 (seed-2 traces).
-const STRONG_POOL = [...BOTS].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 4);
-if (STRONG_POOL.length < 2) throw new Error('need at least two bots');
+// Role pools for the phased handoff: the strongest bot capitalizes as
+// White post-handoff; ranks 2-4 open as White (slightly outgunned by the
+// strongest opening as Black); ranks 5-10 err as Black post-handoff.
+const BY_RATING = [...BOTS].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+const MID_STRONG = BY_RATING.slice(1, 4);
+const MID_WEAK = BY_RATING.slice(4, 10);
+if (BY_RATING.length < 10) throw new Error('need at least ten bots for the role pools');
 
-function playGame(gameIdx, botW, botB) {
+// roles: { openW, openB, mainW, mainB } — the OPENING pair plays the first
+// handoffPly plies (mid-strong White vs the strongest Black: a balanced,
+// slightly White-worse start), then the controllers swap: the strongest bot
+// takes White to capitalize and a mid-weak bot takes Black to err (Jasper's
+// phased-handoff design, 2026-07-09).
+function playGame(gameIdx, roles) {
   let state = {
     pieces: createStartingPieces(),
     sideToMove: 'white',
@@ -203,7 +211,10 @@ function playGame(gameIdx, botW, botB) {
   let result = { winner: null, reason: 'move cap' };
 
   for (let ply = 0; ply < CFG.maxPlies; ply++) {
-    const bot = state.sideToMove === 'white' ? botW : botB;
+    const opening = ply < CFG.handoffPly;
+    const bot = state.sideToMove === 'white'
+      ? (opening ? roles.openW : roles.mainW)
+      : (opening ? roles.openB : roles.mainB);
     const res = searchBestMove({
       pieces: state.pieces,
       sideToMove: state.sideToMove,
@@ -239,7 +250,13 @@ function playGame(gameIdx, botW, botB) {
     if (n >= 3) { result = { winner: null, reason: 'threefold repetition' }; break; }
   }
 
-  return { gameIdx, white: botW.id, black: botB.id, record, stored, result, plies: record.length };
+  return {
+    gameIdx,
+    white: roles.mainW.id,
+    black: roles.mainB.id,
+    opening: { white: roles.openW.id, black: roles.openB.id },
+    record, stored, result, plies: record.length,
+  };
 }
 
 // ------------------------------------------------------------ theme tagging
@@ -784,34 +801,33 @@ const chainStream = path.join(CFG.outDir, `chains-seed${CFG.seed}.ndjson`);
 fs.writeFileSync(chainStream, '');
 
 for (let g = 0; g < CFG.games; g++) {
-  // Strong vs stronger: two distinct top-tier bots, the higher-rated seated
-  // as White (we mine White-side puzzles: Black errs, White capitalizes).
-  // Personalities still vary between games for positional variety.
-  const pool = STRONG_POOL;
-  let hi;
-  let lo;
+  // Phased handoff (Jasper, 2026-07-09): the opening pair builds a balanced,
+  // slightly White-worse position; at handoffPly the controllers swap — the
+  // STRONGEST bot takes White to capitalize, a mid-weak bot takes Black to
+  // err. Random picks per game keep positional variety.
+  let roles;
   if (args.includes('--selfPlay')) {
-    // Diagnostic: the same bot on both sides — isolates structural
-    // first/second-player advantage from personality mismatches.
-    hi = pool.reduce((a, b) => ((a.rating || 0) >= (b.rating || 0) ? a : b));
-    lo = hi;
+    // Diagnostic: the same strongest bot everywhere.
+    const top = BY_RATING[0];
+    roles = { openW: minerBot(top), openB: minerBot(top), mainW: minerBot(top), mainB: minerBot(top) };
   } else {
-    const aIdx = Math.floor(rng() * pool.length);
-    let bIdx2 = Math.floor(rng() * pool.length);
-    if (bIdx2 === aIdx) bIdx2 = (bIdx2 + 1) % pool.length;
-    [hi, lo] = (pool[aIdx].rating || 0) >= (pool[bIdx2].rating || 0)
-      ? [pool[aIdx], pool[bIdx2]] : [pool[bIdx2], pool[aIdx]];
+    const openW = MID_STRONG[Math.floor(rng() * MID_STRONG.length)];
+    const mainB = MID_WEAK[Math.floor(rng() * MID_WEAK.length)];
+    roles = {
+      openW: minerBot(openW),
+      openB: minerBot(BY_RATING[0]),
+      mainW: minerBot(BY_RATING[0]),
+      mainB: minerBot(mainB),
+    };
   }
-  const botW = minerBot(hi);
-  const botB = minerBot(lo);
 
   const t0 = performance.now();
-  const game = playGame(g, botW, botB);
+  const game = playGame(g, roles);
   const playSec = ((performance.now() - t0) / 1000).toFixed(1);
-  console.log(`game ${g}: ${game.white} vs ${game.black} — ${game.plies} plies, ${game.result.winner || 'draw'} (${game.result.reason}) [${playSec}s]`);
+  console.log(`game ${g}: [open ${game.opening.white} vs ${game.opening.black}] -> ${game.white} vs ${game.black} — ${game.plies} plies, ${game.result.winner || 'draw'} (${game.result.reason}) [${playSec}s]`);
   const t1 = performance.now();
   const mined = mineGame(game, stats);
-  games.push({ gameIdx: g, white: game.white, black: game.black, plies: game.plies, result: game.result, moves: game.stored, evals: mined.evals });
+  games.push({ gameIdx: g, white: game.white, black: game.black, opening: game.opening, plies: game.plies, result: game.result, moves: game.stored, evals: mined.evals });
   const mineSec = ((performance.now() - t1) / 1000).toFixed(1);
   for (const chain of mined.chains) {
     for (const entry of chain._verify) verifiable.push({ gameIdx: g, startPly: chain.startPly, entry });

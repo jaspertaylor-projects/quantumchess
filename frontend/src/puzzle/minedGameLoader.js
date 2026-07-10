@@ -17,7 +17,7 @@ export async function loadMinedGame(idx) {
   console.info(`[minedGame] game ${g.gameIdx}: ${g.white} vs ${g.black} — ${g.result.winner || 'draw'} (${g.result.reason}), ${g.plies} plies, ${(g.evals || []).length} eval probes`);
   return {
     game: {
-      headline: `${g.white} vs ${g.black} · ${g.result.winner || 'draw'} (${g.result.reason})`,
+      headline: `${g.white} vs ${g.black}${g.opening ? ` · opening: ${g.opening.white} vs ${g.opening.black}` : ''} · ${g.result.winner || 'draw'} (${g.result.reason})`,
       whiteName: g.white,
       blackName: g.black,
       user_side: 'white',
