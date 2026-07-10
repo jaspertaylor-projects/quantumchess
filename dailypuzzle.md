@@ -125,6 +125,43 @@ mop-up conversion gradients, repetition avoidance, and the recoherence
 fresh-start fix. Suggested launch:
 `node tools/puzzle-miner.mjs --games 16 --seed 10 --probeMs 15000 --mineMs 360000 --confirmMs 360000`.
 
+## Seed 10 (2026-07-10): handoff 14 + strongMs 1400 — 0 chains, the windows moved
+
+Launched with the queued config plus two changes: `--handoffPly 14` (the
+strongest bot takes White after 7 moves, not 10 — Jasper) and the new
+`--strongMs 1400` (flat --playMs had neutralized the strongest bot's roster
+edge: it keeps its wider beams, and a wider root completes FEWER
+iterative-deepening levels on the same 900ms; now its openB/mainW seats
+think 1400ms vs 900ms).
+
+Result: 16 games (7 move-cap draws, 5 White mates, 4 Black mates), 579
+positions probed, only 30 balanced-eligible, 10 probe survivors, 8 weak-swing
+rejects, 0 chains. The games got the INTENDED texture — tight, half of them
+wire-to-wire draws — but the mistakes moved out of the detector's window:
+
+- Ernest's wins were fast (45-71 plies): Black's decisive error lands before
+  the ply-20 `minPly` floor or before a 2-probe balance streak can form.
+- The balanced games stayed balanced (that's what 1400ms vs 900ms at these
+  depths produces): near-misses plateaued at deep-best ~0.6-1.2, far under
+  swingMin 2.0.
+- One inverted window (game 11 @ply 48: 0.7 -> deep -6.09): a genuine
+  mistake-from-balance by WHITE, which the White-only detector is
+  structurally blind to.
+
+Levers for seed 11, in suggested order:
+1. **Mine both colors** — mirror the detector for Black-capitalizing windows
+   (the miner already probes every white-to-move ply; a black pass reuses the
+   same machinery with sides flipped). Doubles the harvest surface and
+   catches game-11-style windows.
+2. **Lower `minPly` toward 14** (the new handoff): with the swap 6 plies
+   earlier, mid-game texture starts earlier too — fast-win mistakes at plies
+   14-18 are currently below the floor.
+3. **Plateau dedupe** — a stable +1.1 position re-triggers a full deep
+   analysis every other ply (game 8 burned 20 minutes on 12 positions this
+   way; probe trigger swingMin-1=1.0 sits inside balanceBand 1.25). Skip the
+   deep pass when the probe matches the last deep-rejected value within
+   epsilon.
+
 ## First results
 
 **Pilot (2026-07-06, 6 games, seed 2):** 305 positions → 1 certified
