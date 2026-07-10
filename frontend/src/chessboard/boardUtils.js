@@ -72,3 +72,16 @@ export function getOrientationAdjustedIndices(rowFromTop, colFromLeft, orientati
   }
   return { fileIndex, rankIndex };
 }
+
+// Captured pieces of one side, in capture order. `pawns` narrows to pieces
+// whose collapsed identity is (true) / is not (false) a pawn; null = all.
+// Shared by the player bars, review board, and puzzle modals.
+export function capturedPieces(pieces, side, pawns = null) {
+  return pieces
+    .filter((p) => {
+      if (!p.captured || p.side !== side || !Array.isArray(p.possibleTypes)) return false;
+      if (pawns === null) return true;
+      return (p.possibleTypes[0] === 'p') === pawns;
+    })
+    .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
+}
