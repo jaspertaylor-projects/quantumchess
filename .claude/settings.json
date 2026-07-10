@@ -11,7 +11,8 @@
       "Bash(docker exec -u 1000:1000 -w /app quantumchess-frontend-1 sh -c 'node -e \" *)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "mcp__playwright__browser_find"
     ]
   }
 }

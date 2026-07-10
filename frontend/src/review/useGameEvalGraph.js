@@ -10,6 +10,7 @@
 // Exported To: ./ReviewModal.jsx
 
 import { useEffect, useMemo, useState } from 'react';
+import { cacheEval, getCachedEvals } from './evalCache.js';
 
 // Display STAGES, not raw tiers: white and black plies are trustworthy at
 // different depths (white d2 pairs with black d3 — nested searches), so the
@@ -31,7 +32,16 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
   useEffect(() => {
     if (!open || !showEvalGraph || !timeline || timeline.snapshots.length <= 1) return undefined;
     const snaps = timeline.snapshots;
-    setGraphTrace([]);
+    // Seed every ply that a previous session (or another game passing through
+    // the same positions) already resolved — a reopened review draws its full
+    // curve instantly and only re-searches what's missing.
+    const seeded = [];
+    snaps.forEach((snap, k) => {
+      if (snap.gameOver) return;
+      const cached = getCachedEvals(snap.positionSig);
+      if (cached) seeded.push({ ply: k, side: snap.sideToMove, vals: { ...cached } });
+    });
+    setGraphTrace(seeded);
     setGraphDeepening(false);
     let stopped = false;
     // EVERY ply gets a value: an unsampled ply would fall back to a
@@ -69,6 +79,9 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
           if (seen.has(k)) continue;
           if (phase.only && snaps[k] && snaps[k].sideToMove !== phase.only) continue;
           seen.add(k);
+          // Already resolved at this tier (this session or a persisted one).
+          const cached = snaps[k] ? getCachedEvals(snaps[k].positionSig) : null;
+          if (cached && cached[phase.tier] !== undefined) continue;
           jobs.push({ id: nextId++, k, tier: phase.tier, depthW: phase.depthW, depthB: phase.depthB, widths: phase.widths, timeMs: phase.timeMs, deep: phase.deep });
         }
       }
@@ -114,6 +127,7 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
         if (Number.isFinite(d.score) && d.depth >= state.depthAsked) {
           const side = snaps[job.k].sideToMove;
           const v = Number((side === 'white' ? d.score : -d.score).toFixed(2));
+          cacheEval(snaps[job.k].positionSig, job.tier, v);
           setGraphTrace((t) => {
             const prev = t.find((p) => p.ply === job.k);
             const point = { ply: job.k, side, vals: { ...(prev ? prev.vals : {}), [job.tier]: v } };

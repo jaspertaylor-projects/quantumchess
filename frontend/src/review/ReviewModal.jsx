@@ -22,6 +22,7 @@ import { capturedPieces } from '../chessboard/boardUtils.js';
 import { getBotById, botAvatarDescriptor } from '../ai/bots.js';
 import { buildReviewTimeline } from './replayCore.js';
 import useGameEvalGraph from './useGameEvalGraph.js';
+import { cacheEval, cacheHints, getCachedHints } from './evalCache.js';
 import useReviewVariation from './useReviewVariation.js';
 import EvalTraceGraph from './EvalTraceGraph.jsx';
 import styles from './reviewStyles.js';
@@ -76,13 +77,24 @@ export default function ReviewModal({
   // Engine suggestions for the viewed position, computed off-thread: the
   // THREE strongest moves drawn as layered green arrows — the best one
   // boldest. Two stages in one worker so arrows appear in ~a second (full
-  // root, depth 2) and then refine at depth 4. Stale replies are ignored.
+  // root, depth 2) and then refine deeper. The deep stage is parity-matched
+  // to the graph's ruler (white d4 / black d3), so its best score doubles as
+  // the position's 'mid'-tier eval in the shared cache. A position whose
+  // deep hints were already computed (this session) skips the worker
+  // entirely; stale replies are ignored.
   const [hints, setHints] = useState(null); // [{ from, to, enPassant, castle, score }] best-first
   const reqIdRef = useRef(0);
   useEffect(() => {
     setHints(null);
     if (!open || !snap || snap.gameOver) return undefined;
+    const sig = snap.positionSig || null;
+    const cached = getCachedHints(sig);
+    if (cached) {
+      setHints(cached);
+      return undefined;
+    }
     const reqId = ++reqIdRef.current;
+    const deepDepth = snap.sideToMove === 'white' ? 4 : 3;
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
     const post = (stage, depth, widths, timeMs) => worker.postMessage({
       type: 'analyze',
@@ -100,7 +112,16 @@ export default function ReviewModal({
       const data = e.data || {};
       if (reqId !== reqIdRef.current || data.type !== 'analysis') return;
       if (data.moves) setHints(data.moves.slice(0, 3));
-      if (data.id === `${reqId}:quick`) post('deep', 4, [128, 12, 8, 6], 25000);
+      if (data.id === `${reqId}:deep` && data.moves && data.moves.length) {
+        cacheHints(sig, data.moves.slice(0, 3));
+        // The deep best score IS this position's mid-tier eval — bank it so
+        // the graph/moves list never re-searches what the hint box found.
+        const best = data.moves[0];
+        if (Number.isFinite(best.score)) {
+          cacheEval(sig, 'mid', Number((snap.sideToMove === 'white' ? best.score : -best.score).toFixed(2)));
+        }
+      }
+      if (data.id === `${reqId}:quick`) post('deep', deepDepth, [128, 12, 8, 6], 25000);
     });
     post('quick', 2, [128, 10, 8], 8000);
     return () => { worker.terminate(); };
@@ -147,14 +168,19 @@ export default function ReviewModal({
 
   // Engine scores are mover-relative; show them white-positive to match the bar.
   const hintEvalWhite = (score) => (snap && snap.sideToMove === 'black' ? -score : score);
+  const hintEval = !snap || snap.gameOver
+    ? null
+    : (hints && hints.length && Number.isFinite(hints[0].score) ? hintEvalWhite(hints[0].score) : null);
   // Variation positions read the hint engine's live judgment; the mainline
-  // reads the graph's tier-consistent values.
+  // prefers the graph's tier-consistent value, then the hint engine's live
+  // judgment of THIS position (better than borrowing a neighbor's value
+  // while the scanner is still on its way here).
   const varEval = variation
     ? (snap && snap.gameOver
       ? (snap.winner === 'white' ? 1000 : snap.winner === 'black' ? -1000 : 0)
-      : (hints && hints.length && Number.isFinite(hints[0].score) ? hintEvalWhite(hints[0].score) : null))
+      : hintEval)
     : null;
-  const exactEval = variation ? varEval : evalAt(bounded);
+  const exactEval = variation ? varEval : (evalAt(bounded) ?? hintEval);
   const currentEval = exactEval !== null && exactEval !== undefined
     ? exactEval
     : variation ? 0 : nearestEval(bounded);
