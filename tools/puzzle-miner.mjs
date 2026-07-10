@@ -36,6 +36,7 @@ import {
   clonePieces,
   computePositionSignature,
   evaluateTerminalAfterMove,
+  generateLegalReplies,
   listCheckThreats,
   simulateCastle,
   simulateEnPassant,
@@ -79,6 +80,7 @@ const CFG = {
   balanceBand: Number(argVal('balanceBand', 1.25)), // |eval| <= band counts as balanced
   balanceStreak: Number(argVal('balanceStreak', 2)), // consecutive balanced white-to-move probes required before the swing
   swingMin: Number(argVal('swingMin', 2.5)), // post-mistake advantage floor (deep eval)
+  swingDelta: Number(argVal('swingDelta', 2.0)), // and the JUMP from the last balanced eval must be at least this
   // Perishability: an advantage that survives lazy play is no puzzle. The
   // MEDIAN legal move must keep less than this fraction of the best move's
   // advantage — most moves must leak the win.
@@ -89,11 +91,14 @@ const CFG = {
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), 'mined')),
 };
 
-const PREFILTER_WIDTHS = [64, 10, 8]; // narrow: 24% of positions timed out at [64,14,10]
-const PROBE_WIDTHS = [40, 8, 6]; // balance probes: speed over precision — 42/98 timed out at [64,10,8], and a timed-out probe breaks the streak
-const MINE_WIDTHS = [64, 16, 12, 9, 7]; // certification beams — a beam too narrow can miss a refutation
-const CONFIRM_WIDTHS = [48, 10, 8, 6, 6]; // depth+1 stability check: narrower or it times out
-const VERIFY_WIDTHS = [64, 16, 12, 10, 8, 6];
+// Root widths must NEVER truncate — quantum midgames reach 60-80 legal
+// moves, and a root-pruned move silently corrupts evals (a graph point drew
+// 0.8 where the true value was 3.45 because the root beam was 40).
+const PREFILTER_WIDTHS = [128, 10, 8];
+const PROBE_WIDTHS = [128, 8, 6]; // balance probes: full root, narrow tail — speed comes from the inner beams
+const MINE_WIDTHS = [128, 16, 12, 9, 7]; // certification beams — a beam too narrow can miss a refutation
+const CONFIRM_WIDTHS = [128, 10, 8, 6, 6]; // depth+1 stability check: narrow inner beams or it times out
+const VERIFY_WIDTHS = [128, 16, 12, 10, 8, 6];
 
 // ------------------------------------------------- determinism (seeded rng)
 
@@ -176,10 +181,11 @@ function minerBot(rosterBot) {
   };
 }
 
-// The strong end of the roster: 'hard' tier (1820+). Swing mining needs
-// balanced games with subtle mistakes, not blowouts.
-const STRONG_POOL = BOTS.filter((b) => b.tier === 'hard');
-if (STRONG_POOL.length < 2) throw new Error('need at least two hard-tier bots');
+// The ABSOLUTE strongest bots only (top 4 by rating): swing mining needs
+// games that stay balanced past minPly, and the lower hard-tier bots were
+// losing the thread by ply 8-12 (seed-2 traces).
+const STRONG_POOL = [...BOTS].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 4);
+if (STRONG_POOL.length < 2) throw new Error('need at least two bots');
 
 function playGame(gameIdx, botW, botB) {
   let state = {
@@ -528,13 +534,22 @@ function detectSwingChain(rec, preEval, stats) {
   if (probe === null || probe < CFG.swingMin - 1) return { probe, chain: null };
   stats.funnelSurvivors++;
 
+  // Size gate BEFORE the deep analysis: counting legal moves is ~30ms while
+  // a wasted deep search on a 60-move position is minutes (seed-5 burned
+  // both its deep-timeout budget slots on positions the gate would reject).
+  const moveCount = generateLegalReplies(rec.pieces, 'white', rec.captureCounter, rec.lastMove).length;
+  if (moveCount < CFG.minChoices || moveCount >= CFG.maxChoices) { stats.sizeRejects++; return { probe, chain: null }; }
+
   const t0 = performance.now();
   const analysis = analyzePosition(rec, CFG.mineDepth, MINE_WIDTHS, CFG.mineMs);
   stats.mineMsTotal += performance.now() - t0;
   if (!analysis) { stats.timeouts++; return { probe, chain: null }; }
   const spread = spreadOf(analysis);
-  if (spread.numChoices < CFG.minChoices || spread.numChoices >= CFG.maxChoices) { stats.sizeRejects++; return { probe, chain: null }; }
-  if (spread.best < CFG.swingMin) return { probe, chain: null };
+  if (spread.best < CFG.swingMin || spread.best - preEval < CFG.swingDelta) {
+    stats.weakSwingRejects++;
+    console.log(`  near-miss @ply ${rec.ply}: pre ${preEval} -> deep best ${spread.best.toFixed(2)} (need >=${CFG.swingMin} and jump >=${CFG.swingDelta})`);
+    return { probe, chain: null };
+  }
   if (spread.medianFrac >= CFG.perishFrac) { stats.perishRejects++; return { probe, chain: null }; }
 
   // Depth-stability confirm (the engine-as-referee guard from the only-move
@@ -684,16 +699,22 @@ function mineGame(game, stats) {
     }
     stats.scanned++;
 
-    const recent = probes.slice(-CFG.balanceStreak);
-    const preBalanced = recent.length >= CFG.balanceStreak
-      && recent.every((e) => e !== null && Math.abs(e) <= CFG.balanceBand);
+    // The balance stretch may sit one probe back: two-ply mistakes (seed-3
+    // near-misses: 1.0 -> 2.2 -> 4.2) put one developing, out-of-band value
+    // between the stretch and the candidate. Core = the stretch; the newest
+    // probe may be anything.
+    const recent = probes.slice(-(CFG.balanceStreak + 1));
+    const core = recent.slice(0, CFG.balanceStreak);
+    const preBalanced = core.length >= CFG.balanceStreak
+      && core.every((e) => e !== null && Math.abs(e) <= CFG.balanceBand);
     const classicalStart = !rec.pieces.some((p) => !p.captured && (p.possibleTypes || []).length > 1);
     if (classicalStart) stats.filteredClassical++;
 
     if (!found && rec.ply >= CFG.minPly && preBalanced && !classicalStart && rec.lastMove) {
       balancedEligible++;
       stats.balancedEligible++;
-      const preEval = recent[recent.length - 1];
+      const inBand = recent.filter((e) => e !== null && Math.abs(e) <= CFG.balanceBand);
+      const preEval = inBand.length ? inBand[inBand.length - 1] : core[core.length - 1];
       const { probe, chain } = detectSwingChain(rec, preEval, stats);
       probes.push(probe);
       if (probe !== null) evals.push({ ply: rec.ply, eval: probe, side: 'white' });
@@ -749,9 +770,9 @@ function verifyParPly(entry, stats) {
 // -------------------------------------------------------------------- main
 
 console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
-console.log(`swing bar: balanced |eval|<=${CFG.balanceBand} for ${CFG.balanceStreak} probes, then best>=${CFG.swingMin}, medianFrac<${CFG.perishFrac}, ${CFG.minChoices}<=choices<${CFG.maxChoices}, ply>=${CFG.minPly}; par line: ${CFG.parPlies} white moves, every ply trickiness>=${CFG.minPlyTrick}; filters: plain recaptures, classical/inert lines\n`);
+console.log(`swing bar: balanced |eval|<=${CFG.balanceBand} for ${CFG.balanceStreak} probes (one developing probe allowed), then best>=${CFG.swingMin} & jump>=${CFG.swingDelta}, medianFrac<${CFG.perishFrac}, ${CFG.minChoices}<=choices<${CFG.maxChoices}, ply>=${CFG.minPly}; par line: ${CFG.parPlies} white moves, every ply trickiness>=${CFG.minPlyTrick}; filters: plain recaptures, classical/inert lines\n`);
 
-const stats = { scanned: 0, swings: 0, balancedEligible: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
+const stats = { scanned: 0, swings: 0, balancedEligible: 0, weakSwingRejects: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
 const verifiable = []; // { gameIdx, startPly, entry } for the gate
@@ -833,6 +854,7 @@ const report = {
     swingsConfirmed: stats.swings,
     chains: allChains.length,
     rejects: {
+      weakSwing: stats.weakSwingRejects,
       size: stats.sizeRejects,
       perishability: stats.perishRejects,
       depthConfirm: stats.confirmRejects,
@@ -867,7 +889,7 @@ fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
 console.log(`\n=== SUMMARY ===`);
 console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgMineMsPerPosition}ms each; probe survivors: ${stats.funnelSurvivors}; timeouts: ${stats.prefilterTimeouts} probe / ${stats.timeouts} deep)`);
 console.log(`balance-window positions: ${stats.balancedEligible}; swings confirmed: ${stats.swings}  -> chains kept: ${allChains.length} (all ${CFG.parPlies}-movers)`);
-console.log(`rejects: ${stats.perishRejects} not perishable, ${stats.sizeRejects} size, ${stats.confirmRejects} depth-confirm, ${stats.dullRejects} dull ply, ${stats.shortLineRejects} short line, ${stats.filteredRecapture} plain recaptures, ${stats.filteredClassical} classical/inert`);
+console.log(`rejects: ${stats.weakSwingRejects} weak swing, ${stats.perishRejects} not perishable, ${stats.sizeRejects} size, ${stats.confirmRejects} depth-confirm, ${stats.dullRejects} dull ply, ${stats.shortLineRejects} short line, ${stats.filteredRecapture} plain recaptures, ${stats.filteredClassical} classical/inert`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
 console.log(`GATE — par holds at depth ${CFG.verifyDepth}: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);
 console.log(`report: ${outFile}`);

@@ -18,6 +18,8 @@ export async function loadMinedGame(idx) {
   return {
     game: {
       headline: `${g.white} vs ${g.black} · ${g.result.winner || 'draw'} (${g.result.reason})`,
+      whiteName: g.white,
+      blackName: g.black,
       user_side: 'white',
       result: g.result.winner || 'draw',
     },

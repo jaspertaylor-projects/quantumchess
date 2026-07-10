@@ -11,30 +11,44 @@ import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import {
-  X as XIcon, ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope,
+  X as XIcon, ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
+import PlayerBar from '../components/PlayerBar.jsx';
+import { getBotById, getBotAvatarUrl } from '../ai/bots.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { buildReviewTimeline } from './replayCore.js';
 
 const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
 const HIGHLIGHT_TO = 'rgba(246, 196, 69, 0.55)';
-const HIGHLIGHT_HINT = 'rgba(126, 231, 135, 0.6)';
 
 // Mover-perspective eval drop (in pawns) that earns a mark in the move list.
 const MISTAKE_DROP = 1.5;
 const BLUNDER_DROP = 3;
 
 function formatEval(v) {
-  if (v >= 900) return '#'; // mate-magnitude
-  if (v <= -900) return '#';
+  // Mate scores are ply-adjusted (1000 = mate on the board). Show the
+  // distance while it's coming — M1, M2 — and '#' once it's delivered, so a
+  // game ends "... M1, #" instead of "#, +23.1".
+  if (Math.abs(v) >= 999.5) return v > 0 ? '#' : '-#';
+  if (Math.abs(v) >= 900) {
+    const movesLeft = Math.max(1, Math.ceil((1000 - Math.abs(v)) / 2));
+    return `${v > 0 ? '' : '-'}M${movesLeft}`;
+  }
   return `${v >= 0 ? '+' : ''}${v.toFixed(1)}`;
 }
 
 function describeHintMove(mv) {
   if (!mv) return '';
-  if (mv.type === 'castle' && mv.plan) return `castle ${mv.plan.piece1_from}+${mv.plan.piece2_from}`;
-  return `${mv.from} → ${mv.to}${mv.type === 'enpassant' ? ' (en passant)' : ''}`;
+  if (mv.castle) return `castle ${mv.from}+…`;
+  return `${mv.from} → ${mv.to}${mv.enPassant ? ' (en passant)' : ''}`;
+}
+
+function capturedOf(pieces, side, pawns) {
+  return (pieces || [])
+    .filter((p) => p.captured && p.side === side && Array.isArray(p.possibleTypes)
+      && (pawns ? p.possibleTypes[0] === 'p' : p.possibleTypes[0] !== 'p'))
+    .sort((a, b) => (a.captureIndex ?? -Infinity) - (b.captureIndex ?? -Infinity));
 }
 
 // Dev/mined-game strip: the full game's eval story as a clickable seek
@@ -44,14 +58,19 @@ function describeHintMove(mv) {
 // every ply and saws the curve: the mover always looks a tempo better.
 // Only rendered when showEvalGraph is set — live premium reviews are
 // untouched.
-function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening }) {
+function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening, lineTier }) {
   const W = 560;
   const H = 96;
   const PAD = 8;
   const maxPly = Math.max(1, count - 1);
   const x = (ply) => PAD + (ply / maxPly) * (W - 2 * PAD);
   const y = (v) => H / 2 - (Math.max(-8, Math.min(8, v)) / 8) * (H / 2 - 10);
-  const pts = [...trace].sort((a, b) => a.ply - b.ply);
+  const sorted = [...trace].sort((a, b) => a.ply - b.ply);
+  // The whole curve draws from ONE tier (chosen by the modal — the deepest
+  // one complete at every point). Mixed-tier neighbors draw phantom swings.
+  const pts = sorted
+    .map((p) => ({ ply: p.ply, side: p.side, eval: p.vals[lineTier] }))
+    .filter((p) => p.eval !== undefined);
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.ply).toFixed(1)} ${y(p.eval).toFixed(1)}`).join(' ');
   const seek = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -71,18 +90,26 @@ function EvalTraceGraph({ trace, count, idx, onSeek, pendingCount, deepening }) 
       <rect x={PAD} y={y(1)} width={W - 2 * PAD} height={y(-1) - y(1)} fill="rgba(126,231,135,0.07)" />
       <line x1={PAD} y1={y(0)} x2={W - PAD} y2={y(0)} stroke="rgba(128,128,128,0.5)" strokeWidth="1" />
       <path d={path} fill="none" stroke="#39e6ff" strokeWidth="1.6" />
-      {pts.map((p) => (
+      {pts.map((p) => (lineTier === 'fast' ? (
         <circle
-          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={p.side === 'white' ? 2.4 : 1.6}
-          fill={p.side === 'white' ? '#39e6ff' : 'rgba(57,230,255,0.5)'}
+          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={2.2}
+          fill="none" stroke="rgba(57,230,255,0.7)" strokeWidth="1"
         />
-      ))}
+      ) : (
+        <circle
+          key={`pt-${p.ply}`} cx={x(p.ply)} cy={y(p.eval)} r={lineTier === 'deep' ? 2.4 : 1.9}
+          fill={lineTier === 'deep' ? '#39e6ff' : 'rgba(57,230,255,0.7)'}
+        />
+      )))}
       <line x1={x(idx)} y1={6} x2={x(idx)} y2={H - 6} stroke="#ffd166" strokeWidth="1.5" />
       <text x={PAD + 2} y={12} fontSize="9" fill="rgba(255,255,255,0.5)">+8</text>
+      <text x={W / 2} y={12} fontSize="9" textAnchor="middle" fill="rgba(255,255,255,0.45)">
+        {`curve: ${lineTier === 'deep' ? 'd6/d5' : lineTier === 'mid' ? 'd4/d3' : 'd2/d1'}`}
+      </text>
       <text x={PAD + 2} y={H - 5} fontSize="9" fill="rgba(255,255,255,0.5)">-8</text>
       {pendingCount > 0 ? (
         <text x={W - PAD} y={12} fontSize="9" textAnchor="end" fill="rgba(255,255,255,0.5)">
-          {deepening ? `deepening (d6/d5)… ${pendingCount} left` : `scanning… ${pendingCount} left`}
+          {deepening ? `deepening (${deepening})… ${pendingCount} left` : `scanning… ${pendingCount} left`}
         </text>
       ) : null}
     </svg>
@@ -106,8 +133,9 @@ export default function ReviewModal({
   const snapshots = timeline ? timeline.snapshots : [];
   const [idx, setIdx] = useState(0);
 
-  // Static eval per snapshot (white-positive, pawn units) — cheap enough to
-  // compute for the whole game up front; powers the eval bar and the marks.
+  // Static eval per snapshot (white-positive, pawn units) — the instant
+  // fallback for the bar/marks/move list until the graph's parity-matched
+  // search values land, which then take over everywhere.
   const evals = useMemo(
     () => snapshots.map((s) => evaluatePosition(s.pieces)),
     [snapshots],
@@ -126,97 +154,152 @@ export default function ReviewModal({
   // (6,5) replacing values as they land; deep timeouts keep the fast value.
   const [graphTrace, setGraphTrace] = useState([]);
   const [graphPending, setGraphPending] = useState(0);
-  const [graphDeepening, setGraphDeepening] = useState(false);
+  const [graphDeepening, setGraphDeepening] = useState(false); // false | 'd4/d3' | 'd6/d5'
   useEffect(() => {
     if (!open || !showEvalGraph || !timeline || timeline.snapshots.length <= 1) return undefined;
     const snaps = timeline.snapshots;
     setGraphTrace([]);
     setGraphDeepening(false);
     let stopped = false;
-    const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
+    // Long games sample every other ply — the curve reads the same and the
+    // deep pass finishes in this lifetime.
+    const step = snaps.length > 64 ? 2 : 1;
     const jobs = [];
-    for (const phase of [
-      { depthW: 2, depthB: 1, widths: [40, 8, 6], timeMs: 6000, deep: false },
-      { depthW: 6, depthB: 5, widths: [28, 10, 7, 5, 4, 3], timeMs: 25000, deep: true },
-    ]) {
+    let nextId = 0;
+    // Root beams are FULL WIDTH on the deep passes: a pruned root move is
+    // exactly how a false "eval jumped after the move" seam gets drawn.
+    // Root width 128 = never truncate: these midgames reach 60-80 legal
+    // moves, and a root-pruned move is a phantom seam in the curve (found
+    // the hard way: d1->d7 pruned at root width 40 drew 0.8 where the true
+    // matched-tier value was 3.45).
+    const PHASES = {
+      fast: { tier: 'fast', depthW: 2, depthB: 1, widths: [128, 8, 6], timeMs: 8000, deep: false },
+      mid: { tier: 'mid', depthW: 4, depthB: 3, widths: [128, 12, 8, 6], timeMs: 20000, deep: true },
+      deep: { tier: 'deep', depthW: 6, depthB: 5, widths: [128, 12, 8, 6, 5, 4], timeMs: 45000, deep: true },
+    };
+    for (const phase of [PHASES.fast, PHASES.mid, PHASES.deep]) {
       const seen = new Set();
-      for (const stride of [8, 4, 2, 1]) {
+      for (const stride of [8 * step, 4 * step, 2 * step, step]) {
         for (let k = 0; k < snaps.length; k += stride) {
-          if (!seen.has(k)) { seen.add(k); jobs.push({ id: jobs.length, k, ...phase }); }
+          if (!seen.has(k)) { seen.add(k); jobs.push({ id: nextId++, k, ...phase }); }
         }
       }
     }
     setGraphPending(jobs.length);
-    let cur = null;
-    const next = () => {
+    // A small pool: graph evals are embarrassingly parallel and the browser
+    // has cores to spare even with the hint worker running.
+    const POOL = 2; // leave headroom for the hint worker — arrows must feel instant
+    const workers = [];
+    const takeJob = (worker, state) => {
       if (stopped) return;
-      if (!jobs.length) { worker.terminate(); return; }
-      cur = jobs.shift();
-      setGraphDeepening(cur.deep);
-      const snap = snaps[cur.k];
-      if (!snap || snap.gameOver) { setGraphPending((n) => Math.max(0, n - 1)); next(); return; }
+      const job = jobs.shift();
+      if (!job) { worker.terminate(); return; }
+      state.job = job;
+      setGraphDeepening(job.deep ? (job.tier === 'deep' ? 'd6/d5' : 'd4/d3') : false);
+      const snap = snaps[job.k];
+      if (!snap || snap.gameOver) {
+        setGraphPending((n) => Math.max(0, n - 1));
+        takeJob(worker, state);
+        return;
+      }
       worker.postMessage({
         type: 'analyze',
-        id: cur.id,
+        id: job.id,
         payload: {
           pieces: snap.pieces,
           sideToMove: snap.sideToMove,
           lastMove: snap.lastMove || null,
-          depth: snap.sideToMove === 'white' ? cur.depthW : cur.depthB,
-          widths: cur.widths,
-          timeMs: cur.timeMs,
+          depth: snap.sideToMove === 'white' ? job.depthW : job.depthB,
+          widths: job.widths,
+          timeMs: job.timeMs,
         },
       });
     };
-    worker.onmessage = (e) => {
-      const d = e.data || {};
-      if (d.type !== 'analysis' || !cur || d.id !== cur.id) return;
-      if (d.moves && d.moves.length) {
-        const side = snaps[cur.k].sideToMove;
-        const v = side === 'white' ? d.moves[0].score : -d.moves[0].score;
-        const point = { ply: cur.k, eval: Number(v.toFixed(2)), side };
-        setGraphTrace((t) => [...t.filter((p) => p.ply !== cur.k), point]);
-      } // timeout: the earlier (shallow) value stands
-      setGraphPending((n) => Math.max(0, n - 1));
-      next();
-    };
-    worker.onerror = () => { setGraphPending((n) => Math.max(0, n - 1)); next(); };
-    next();
-    return () => { stopped = true; worker.terminate(); };
+    for (let w = 0; w < POOL; w++) {
+      const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
+      const state = { job: null };
+      worker.onmessage = (e) => {
+        const d = e.data || {};
+        if (d.type !== 'analysis' || !state.job || d.id !== state.job.id) return;
+        const job = state.job;
+        if (d.moves && d.moves.length) {
+          const side = snaps[job.k].sideToMove;
+          const v = Number((side === 'white' ? d.moves[0].score : -d.moves[0].score).toFixed(2));
+          setGraphTrace((t) => {
+            const prev = t.find((p) => p.ply === job.k);
+            const point = { ply: job.k, side, vals: { ...(prev ? prev.vals : {}), [job.tier]: v } };
+            return [...t.filter((p) => p.ply !== job.k), point];
+          });
+        }
+        // Timeouts keep the previous tier's value: the ladder runs the full
+        // mid pass before deep, so the curve is uniformly d4/d3 quickly and
+        // d6/d5 upgrades land wherever the budget allows.
+        setGraphPending((n) => Math.max(0, n - 1));
+        takeJob(worker, state);
+      };
+      worker.onerror = () => { setGraphPending((n) => Math.max(0, n - 1)); takeJob(worker, state); };
+      workers.push(worker);
+      takeJob(worker, state);
+    }
+    return () => { stopped = true; workers.forEach((w) => w.terminate()); };
   }, [open, showEvalGraph, timeline]);
+
+  // One tier rules everywhere: the deepest tier complete at every graphed
+  // point. The move list, eval bar, and mistake marks all read these values
+  // (falling back to the static eval for plies the graph hasn't reached),
+  // so the numbers beside the moves always agree with the curve.
+  const lineTier = useMemo(
+    () => ['deep', 'mid', 'fast'].find((t) => graphTrace.length && graphTrace.every((p) => p.vals[t] !== undefined)) || 'fast',
+    [graphTrace],
+  );
+  const graphVals = useMemo(() => {
+    const m = new Map();
+    for (const p of graphTrace) if (p.vals[lineTier] !== undefined) m.set(p.ply, p.vals[lineTier]);
+    return m;
+  }, [graphTrace, lineTier]);
+  const evalAt = (k) => {
+    const s2 = snapshots[k];
+    if (s2 && s2.gameOver) {
+      if (s2.winner === 'white') return 1000;
+      if (s2.winner === 'black') return -1000;
+      return 0; // stalemate/draw endings
+    }
+    return graphVals.has(k) ? graphVals.get(k) : evals[k];
+  };
 
   const bounded = Math.max(0, Math.min(idx, snapshots.length - 1));
   const snap = snapshots[bounded] || null;
 
-  // Engine suggestion for the viewed position, computed off-thread. A fresh
-  // worker per position keeps this dead simple; stale replies are ignored.
-  const [hint, setHint] = useState(null); // { move, score, depth, settled }
+  // Engine suggestions for the viewed position, computed off-thread: the
+  // THREE strongest moves drawn as layered green arrows — the best one
+  // boldest. Two stages in one worker so arrows appear in ~a second (full
+  // root, depth 2) and then refine at depth 4. Stale replies are ignored.
+  const [hints, setHints] = useState(null); // [{ from, to, enPassant, castle, score }] best-first
   const reqIdRef = useRef(0);
   useEffect(() => {
-    setHint(null);
+    setHints(null);
     if (!open || !snap || snap.gameOver) return undefined;
     const reqId = ++reqIdRef.current;
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
-    worker.addEventListener('message', (e) => {
-      const data = e.data || {};
-      if (reqId !== reqIdRef.current) return;
-      if (data.type === 'baseline' && data.move) {
-        setHint((prev) => (prev && prev.settled ? prev : { move: data.move, score: data.score, depth: data.depth, settled: false }));
-      } else if (data.type === 'best' && data.move) {
-        setHint({ move: data.move, score: data.score, depth: data.depth, settled: true });
-      }
-    });
-    worker.postMessage({
-      type: 'think',
-      id: reqId,
+    const post = (stage, depth, widths, timeMs) => worker.postMessage({
+      type: 'analyze',
+      id: `${reqId}:${stage}`,
       payload: {
         pieces: snap.pieces,
         sideToMove: snap.sideToMove,
-        difficulty: 'hard',
-        botId: null,
         lastMove: snap.lastMove || null,
+        depth,
+        widths,
+        timeMs,
       },
     });
+    worker.addEventListener('message', (e) => {
+      const data = e.data || {};
+      if (reqId !== reqIdRef.current || data.type !== 'analysis') return;
+      if (data.moves) setHints(data.moves.slice(0, 3));
+      if (data.id === `${reqId}:quick`) post('deep', 4, [128, 12, 8, 6], 25000);
+    });
+    post('quick', 2, [128, 10, 8], 8000);
     return () => { worker.terminate(); };
   }, [open, snap]);
 
@@ -238,7 +321,7 @@ export default function ReviewModal({
 
   const styles = {
     panel: {
-      width: 'min(96vw, 900px)', maxHeight: '92vh', overflowY: 'auto',
+      width: 'min(96vw, 1040px)', maxHeight: '92vh', overflowY: 'auto',
       borderRadius: 12, border: `1px solid ${theme.border}`, backgroundColor: theme.cardBackground,
       boxShadow: `0 12px 32px ${theme.shadow}`, color: theme.textPrimary, padding: 16,
       boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 10,
@@ -246,25 +329,43 @@ export default function ReviewModal({
     header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
     title: { margin: 0, fontSize: '1.05rem', fontWeight: 900, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 8 },
     sub: { fontSize: 12, color: theme.textSecondary },
-    content: { display: 'flex', gap: 14, flexWrap: 'wrap' },
-    boardCol: { flex: '1 1 340px', minWidth: 300, display: 'flex', flexDirection: 'column', gap: 8 },
-    sideCol: { flex: '1 1 220px', minWidth: 220, display: 'flex', flexDirection: 'column', gap: 8 },
-    evalBarOuter: {
-      height: 14, borderRadius: 7, overflow: 'hidden', border: `1px solid ${theme.border}`,
-      background: '#20242c', position: 'relative',
+    // Two firm columns: board+bars left, hints/moves/graph right.
+    content: { display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(280px, 400px)', gap: 14, alignItems: 'stretch' },
+    boardCol: { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 },
+    // The right column spans exactly the eval bar's extent: both start at
+    // the top player bar and finish at the bottom player bar's baseline.
+    sideCol: { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0, minHeight: 0 },
+    // Vertical eval bar: hugs the board's left edge, spanning board + both
+    // player bars. White's share fills from the bottom, like a thermometer.
+    evalBarVertical: {
+      width: 28, borderRadius: 8, overflow: 'hidden', border: `1px solid ${theme.border}`,
+      background: '#20242c', position: 'relative', alignSelf: 'stretch', flexShrink: 0,
+    },
+    evalBarNumber: (whiteHigh) => ({
+      position: 'absolute', top: 5, left: 0, right: 0, textAlign: 'center',
+      fontSize: 9.5, fontWeight: 800, fontVariantNumeric: 'tabular-nums',
+      color: whiteHigh ? '#15181d' : '#e8e6e1', pointerEvents: 'none',
+    }),
+    hintHead: {
+      display: 'flex', alignItems: 'center', gap: 6,
+      fontSize: 11.5, fontWeight: 900, letterSpacing: '0.14em', textTransform: 'uppercase',
+      color: '#7ee787', textShadow: '0 0 12px rgba(126,231,135,0.45)', marginBottom: 5,
     },
     hintBox: {
       border: '1px solid rgba(126,231,135,0.5)', borderRadius: 8, padding: '8px 10px',
       background: 'rgba(126,231,135,0.08)', fontSize: 12.5, lineHeight: 1.5,
     },
     nav: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 },
+    // Two move columns: number | white's move | black's move.
     moveList: {
-      display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto',
-      maxHeight: 380, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 6,
+      display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr)', alignItems: 'center',
+      alignContent: 'start', columnGap: 6, rowGap: 3, overflowY: 'auto', overflowX: 'hidden',
+      flex: '1 1 0', minHeight: 160, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 6,
     },
-    moveRow: (active) => ({
-      display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 6,
-      cursor: 'pointer', fontSize: 12.5,
+    moveNo: { color: theme.textSecondary, fontSize: 12, minWidth: 22, textAlign: 'right' },
+    moveCell: (active) => ({
+      display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6,
+      cursor: 'pointer', fontSize: 12.5, minWidth: 0,
       background: active ? 'rgba(79,195,247,0.15)' : 'transparent',
       border: `1px solid ${active ? 'rgba(79,195,247,0.5)' : 'transparent'}`,
     }),
@@ -275,16 +376,27 @@ export default function ReviewModal({
   };
 
   // Move rows: snapshots[k] is reached by entries[k-1].
+  const rowsToPairs = (rws) => {
+    const pairs = [];
+    for (const r of rws) {
+      if (r.mover === 'white' || !pairs.length || pairs[pairs.length - 1].black) {
+        pairs.push({ moveNo: pairs.length + 1, white: r.mover === 'white' ? r : null, black: r.mover === 'black' ? r : null });
+      } else {
+        pairs[pairs.length - 1].black = r;
+      }
+    }
+    return pairs;
+  };
   const rows = snapshots.slice(1).map((s, i) => {
     const entry = timeline.entries[i] || null;
     const mover = s.lastMove ? s.lastMove.side : (i % 2 === 0 ? 'white' : 'black');
-    const whiteDelta = evals[i + 1] - evals[i];
+    const whiteDelta = evalAt(i + 1) - evalAt(i);
     const moverDrop = mover === 'white' ? -whiteDelta : whiteDelta;
     const mark = moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
     const label = entry && entry.type === 'castle'
-      ? `castle ${entry.piece1_from}+${entry.piece2_from}`
+      ? `${entry.piece1_from} ⇄ ${entry.piece2_from}`
       : s.lastMove ? `${s.lastMove.from} → ${s.lastMove.to}${entry && entry.enPassant ? ' ep' : ''}` : '?';
-    return { snapIdx: i + 1, mover, label, mark, evalAfter: evals[i + 1] };
+    return { snapIdx: i + 1, mover, label, mark, evalAfter: evalAt(i + 1) };
   });
 
   const highlights = [];
@@ -292,25 +404,48 @@ export default function ReviewModal({
     highlights.push({ square: snap.lastMove.from, color: HIGHLIGHT_FROM });
     highlights.push({ square: snap.lastMove.to, color: HIGHLIGHT_TO });
   }
-  if (hint && hint.move) {
-    if (hint.move.type === 'castle' && hint.move.plan) {
-      highlights.push({ square: hint.move.plan.piece1_from, color: HIGHLIGHT_HINT });
-      highlights.push({ square: hint.move.plan.piece2_from, color: HIGHLIGHT_HINT });
-    } else {
-      highlights.push({ square: hint.move.from, color: HIGHLIGHT_HINT });
-      highlights.push({ square: hint.move.to, color: HIGHLIGHT_HINT });
-    }
-  }
 
-  const currentEval = evals[bounded] ?? 0;
+  const currentEval = evalAt(bounded) ?? 0;
   // Squash white-positive pawn eval into a 0..100% bar position.
   const evalPct = 100 / (1 + Math.exp(-currentEval / 3));
-  // Engine hint score is mover-relative; show it white-positive to match the bar.
-  const hintEvalWhite = hint && Number.isFinite(hint.score)
-    ? (snap && snap.sideToMove === 'black' ? -hint.score : hint.score)
-    : null;
+  // The number lives in the bar's top band. The fill boundary must never
+  // cross it (half-dark half-light digits): near-saturated fills clamp just
+  // below the band, and only a truly total fill covers it — flipping the
+  // digits to dark exactly when the band's background is white.
+  const evalFillPct = evalPct >= 99.9 ? 100 : Math.min(evalPct, 96.5);
+  const evalTextDark = evalFillPct >= 99.9;
+  // Engine scores are mover-relative; show them white-positive to match the bar.
+  const hintEvalWhite = (score) => (snap && snap.sideToMove === 'black' ? -score : score);
+  // The three strongest moves as arrows: best is boldest, the others fade.
+  const HINT_OPACITIES = [0.8, 0.38, 0.28];
+  const hintArrows = (hints || [])
+    .filter((m) => m.from && m.to && !m.castle)
+    .map((m, i) => ({ from: m.from, to: m.to, opacity: HINT_OPACITIES[i] ?? 0.25 }));
 
   const orientation = game && game.user_side === 'black' ? 'black' : 'white';
+  const bottomSide = orientation;
+  const topSide = bottomSide === 'white' ? 'black' : 'white';
+  const botOf = (side) => {
+    const id = side === 'white' ? game && game.whiteName : game && game.blackName;
+    return id ? getBotById(id) : null;
+  };
+  const nameOf = (side) => {
+    const bot = botOf(side);
+    if (bot) return bot.name;
+    if (game && game.whiteName && side === 'white') return game.whiteName;
+    if (game && game.blackName && side === 'black') return game.blackName;
+    return side === bottomSide ? 'You' : (game && game.opponent) || 'Opponent';
+  };
+  const avatarOf = (side) => {
+    const bot = botOf(side);
+    if (!bot) return null;
+    const initials = (bot.name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    return { initials, hue: bot.hue ?? 200, imageUrl: getBotAvatarUrl(bot), name: bot.name, tagline: bot.tagline || '' };
+  };
+  const ratingOf = (side) => {
+    const bot = botOf(side);
+    return bot && Number.isFinite(bot.rating) ? bot.rating : '????';
+  };
   const headline = game && game.headline ? game.headline : game
     ? `vs ${game.opponent || 'unknown'}${game.opponent_rating ? ` (${game.opponent_rating})` : ''} · ${game.result || ''}`
     : '';
@@ -352,6 +487,124 @@ export default function ReviewModal({
             ) : null}
             <div style={styles.content}>
               <div className="qc-review-board" style={styles.boardCol}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
+                <div style={styles.evalBarVertical} title={`Eval ${formatEval(currentEval)} (white)`}>
+                  <div style={{
+                    position: 'absolute', left: 0, right: 0, bottom: 0, height: `${evalFillPct}%`,
+                    background: '#e8e8e8', transition: 'height 200ms ease',
+                    // follow the bar's rounding: bottom always, top only when total
+                    borderRadius: evalTextDark ? 'inherit' : '0 0 7px 7px',
+                  }} />
+                  <div style={{
+                    position: 'absolute', left: 0, right: 0, top: '50%', height: 1,
+                    background: 'rgba(120,120,120,0.8)',
+                  }} />
+                  <span style={styles.evalBarNumber(evalTextDark)}>{formatEval(currentEval)}</span>
+                </div>
+                <div style={{ width: 'min(60vmin, 440px)', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <PlayerBar
+                  side={topSide}
+                  playerName={nameOf(topSide)}
+                  rating={ratingOf(topSide)}
+                  avatar={avatarOf(topSide)}
+                  tagline={avatarOf(topSide) ? avatarOf(topSide).tagline : null}
+                  playerBarColors={{ background: '#000', text: '#fff' }}
+                  svgStyles={pieceSvgStyles || { white: {}, black: {} }}
+                  showClock={false}
+                  capturedPawns={capturedOf(snap.pieces, topSide === 'white' ? 'black' : 'white', true)}
+                  capturedOthers={capturedOf(snap.pieces, topSide === 'white' ? 'black' : 'white', false)}
+                />
+                <Board
+                  orientation={orientation}
+                  showCoordinates={false}
+                  highlights={highlights}
+                  arrows={hintArrows}
+                  pieces={snap.pieces}
+                  indicators={indicators}
+                  maxVisualSize="100%"
+                  borderColor="transparent"
+                  shadow="rgba(0, 0, 0, 0.15)"
+                  pieceSvgStyles={pieceSvgStyles}
+                  squareColors={squareColors}
+                  ariaLabel="Review board"
+                />
+                <PlayerBar
+                  side={bottomSide}
+                  playerName={nameOf(bottomSide)}
+                  rating={ratingOf(bottomSide)}
+                  avatar={avatarOf(bottomSide)}
+                  tagline={avatarOf(bottomSide) ? avatarOf(bottomSide).tagline : null}
+                  playerBarColors={{ background: '#000', text: '#fff' }}
+                  svgStyles={pieceSvgStyles || { white: {}, black: {} }}
+                  showClock={false}
+                  capturedPawns={capturedOf(snap.pieces, bottomSide === 'white' ? 'black' : 'white', true)}
+                  capturedOthers={capturedOf(snap.pieces, bottomSide === 'white' ? 'black' : 'white', false)}
+                />
+                </div>
+                </div>
+              </div>
+
+              <div className="qc-review-side" style={styles.sideCol}>
+                <div>
+                  <div style={styles.hintHead}>
+                    <Sparkles size={13} strokeWidth={2.5} />
+                    {snap.gameOver ? 'Final position' : hints && hints.length ? 'Engine suggests' : 'Engine is thinking…'}
+                  </div>
+                  <div style={styles.hintBox}>
+                    {snap.gameOver ? (
+                      <span>
+                        {snap.gameOverReason}
+                        {snap.winner ? ` — ${snap.winner} wins` : ''}.
+                      </span>
+                    ) : hints && hints.length ? (
+                      <span>
+                        {hints.map((m, i) => (
+                          <span key={`hint-${i}`} style={{ display: 'block', opacity: i === 0 ? 1 : 0.65 }}>
+                            {`${i + 1}. `}
+                            <strong>{describeHintMove(m)}</strong>
+                            {Number.isFinite(m.score) ? ` · ${formatEval(hintEvalWhite(m.score))}` : ''}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span style={{ opacity: 0.6 }}>scanning the position…</span>
+                    )}
+                  </div>
+                </div>
+                <div className="qc-review-moves" style={styles.moveList}>
+                  <div
+                    style={{ ...styles.moveCell(bounded === 0), gridColumn: '1 / -1' }}
+                    onClick={() => setIdx(0)}
+                    role="button" tabIndex={0}
+                  >
+                    <span style={{ flex: 1 }}>Starting position</span>
+                  </div>
+                  {rowsToPairs(rows).map((pair) => (
+                    <React.Fragment key={`mv-${pair.moveNo}`}>
+                      <span style={styles.moveNo}>{pair.moveNo}.</span>
+                      {[pair.white, pair.black].map((r, col) => (r ? (
+                        <div
+                          key={`cell-${r.snapIdx}`}
+                          className="qc-review-move-row"
+                          style={styles.moveCell(bounded === r.snapIdx)}
+                          onClick={() => setIdx(r.snapIdx)}
+                          role="button" tabIndex={0}
+                        >
+                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+                          <span style={styles.mark(r.mark)}>{r.mark}</span>
+                          <span style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}>{formatEval(r.evalAfter)}</span>
+                        </div>
+                      ) : (
+                        <span key={`cell-empty-${pair.moveNo}-${col}`} />
+                      )))}
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: theme.textSecondary, lineHeight: 1.5 }}>
+                  ? = mistake, ?? = blunder (eval drop for the mover). Evals are
+                  the engine's static judgment, positive is better for white.
+                  Use ← → to step through moves.
+                </div>
                 {showEvalGraph ? (
                   <EvalTraceGraph
                     trace={graphTrace}
@@ -360,89 +613,19 @@ export default function ReviewModal({
                     onSeek={setIdx}
                     pendingCount={graphPending}
                     deepening={graphDeepening}
+                    lineTier={lineTier}
                   />
                 ) : null}
-                <div style={styles.evalBarOuter} title={`Eval ${formatEval(currentEval)} (white)`}>
-                  <div style={{ position: 'absolute', inset: 0, width: `${evalPct}%`, background: '#e8e8e8', transition: 'width 200ms ease' }} />
-                  <div style={{
-                    position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1,
-                    background: 'rgba(120,120,120,0.8)',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: theme.textSecondary }}>
-                  <span>Eval: <strong style={{ color: theme.textPrimary }}>{formatEval(currentEval)}</strong> (white)</span>
-                  <span>Move {bounded} / {snapshots.length - 1}</span>
-                </div>
-                <Board
-                  orientation={orientation}
-                  showCoordinates={true}
-                  highlights={highlights}
-                  pieces={snap.pieces}
-                  indicators={indicators}
-                  maxVisualSize="min(60vmin, 440px)"
-                  borderColor="transparent"
-                  shadow="rgba(0, 0, 0, 0.15)"
-                  pieceSvgStyles={pieceSvgStyles}
-                  squareColors={squareColors}
-                  ariaLabel="Review board"
-                />
-                <div style={styles.nav}>
-                  <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={() => setIdx(0)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronLeft} size={18} title="Previous move" ariaLabel="Previous move" onClick={() => setIdx((i) => Math.max(0, i - 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronRight} size={18} title="Next move" ariaLabel="Next move" onClick={() => setIdx((i) => Math.min(snapshots.length - 1, i + 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-                  <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={() => setIdx(snapshots.length - 1)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-                </div>
               </div>
-
-              <div className="qc-review-side" style={styles.sideCol}>
-                <div style={styles.hintBox}>
-                  {snap.gameOver ? (
-                    <span>
-                      Final position — {snap.gameOverReason}
-                      {snap.winner ? `, ${snap.winner} wins` : ''}.
-                    </span>
-                  ) : hint && hint.move ? (
-                    <span>
-                      Engine{hint.settled ? '' : ' (thinking…)'} suggests{' '}
-                      <strong>{describeHintMove(hint.move)}</strong>
-                      {hintEvalWhite !== null ? ` · eval ${formatEval(hintEvalWhite)}` : ''}
-                      {hint.depth ? ` · depth ${hint.depth}` : ''}
-                    </span>
-                  ) : (
-                    <span>Engine is thinking…</span>
-                  )}
-                </div>
-                <div className="qc-review-moves" style={styles.moveList}>
-                  <div
-                    style={styles.moveRow(bounded === 0)}
-                    onClick={() => setIdx(0)}
-                    role="button" tabIndex={0}
-                  >
-                    <span style={styles.mark('')}>·</span>
-                    <span style={{ flex: 1 }}>Starting position</span>
-                  </div>
-                  {rows.map((r) => (
-                    <div
-                      key={r.snapIdx}
-                      className="qc-review-move-row"
-                      style={styles.moveRow(bounded === r.snapIdx)}
-                      onClick={() => setIdx(r.snapIdx)}
-                      role="button" tabIndex={0}
-                    >
-                      <span style={{ color: theme.textSecondary, minWidth: 26 }}>{r.snapIdx}.</span>
-                      <span style={{ minWidth: 42, color: r.mover === 'white' ? '#e8e8e8' : '#9aa4b2', fontWeight: 700 }}>{r.mover}</span>
-                      <span style={{ flex: 1 }}>{r.label}</span>
-                      <span style={styles.mark(r.mark)}>{r.mark}</span>
-                      <span style={{ color: theme.textSecondary, minWidth: 40, textAlign: 'right' }}>{formatEval(r.evalAfter)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 11, color: theme.textSecondary, lineHeight: 1.5 }}>
-                  ? = mistake, ?? = blunder (eval drop for the mover). Evals are
-                  the engine's static judgment, positive is better for white.
-                  Use ← → to step through moves.
-                </div>
-              </div>
+            </div>
+            <div style={styles.nav}>
+              <span style={{ fontSize: 12, color: theme.textSecondary, marginRight: 8 }}>
+                Move {bounded} / {snapshots.length - 1}
+              </span>
+              <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={() => setIdx(0)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={ChevronLeft} size={18} title="Previous move" ariaLabel="Previous move" onClick={() => setIdx((i) => Math.max(0, i - 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={ChevronRight} size={18} title="Next move" ariaLabel="Next move" onClick={() => setIdx((i) => Math.min(snapshots.length - 1, i + 1))} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
+              <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={() => setIdx(snapshots.length - 1)} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
             </div>
           </>
         )}

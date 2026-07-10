@@ -57,7 +57,11 @@ have probed within ±band for streak consecutive white-to-move plies —
 "mistake FROM BALANCE", which also absorbs bots that drift and recover;
 probes use fast narrow beams and their own `--probeMs 8000` budget because
 a timed-out probe breaks the streak — the first diagnostic run lost 42/98
-probes to timeouts and never opened a single balance window),
+probes to timeouts and never opened a single balance window; one
+out-of-band probe is allowed between the stretch and the candidate, since
+seed-3's near-misses showed mistakes developing over two plies),
+`--swingDelta 2.0` (the swing must also be a JUMP from the last balanced
+eval, not a drift past an absolute line),
 `--swingMin 2.5` (post-mistake advantage floor), `--perishFrac 0.34`
 (median legal move must keep less than this fraction of the advantage),
 `--minChoices 10 --maxChoices 50`, `--minPly 16` ("over 15 moves played"),
@@ -409,12 +413,18 @@ client's 30-cap mate ruler at load).
 
 **Dev game viewer (2026-07-08):** `?minedGame=N` opens miner game N —
 bot names + result in the headline, full replay, and a clickable EVAL
-GRAPH of the whole game (the miner's per-ply probe evals, white-positive,
-balance band tinted; click to seek) — in the existing premium
-`ReviewModal` via two opt-in props (`evalTrace`, `game.headline`); the
-live product surface is unchanged when they're absent. Fixture:
-`frontend/src/puzzle/minedGamesData.json`, extracted from a report's
-`games` array (each game now carries stored-format `moves` + `evals`).
+GRAPH of the whole game (white-positive, balance band tinted; click to
+seek) — in the existing premium `ReviewModal` via two opt-in props
+(`showEvalGraph`, `game.headline`); the live product surface is unchanged
+when they're absent. The graph computes CLIENT-SIDE in a 3-worker pool so
+the modal pops immediately and the curve fills coarse-to-fine: a fast
+pass at parity-matched depths (white-to-move d2 / black-to-move d1 —
+every lookahead ends after a Black move, killing the tempo sawtooth a
+fixed depth produces), then a deep pass at d6/d5 replaces each point
+(timeouts keep the fast value; games over 64 plies sample every other
+ply). Fixture: `frontend/src/puzzle/minedGamesData.json`, extracted from
+a report's `games` array (each game carries stored-format `moves`; the
+miner's own probe evals stay in the report for miner-side tuning only).
 The graph is the knob-tuning instrument: one glance shows where games sit
 relative to the balance band and where the swings are.
 

@@ -1,5 +1,5 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a captured pieces area; captures render inline (right third of the bar) or, via capturedPosition, as a fixed-height strip above/below the bar (mobile).
+// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a captured pieces area; captures render inline (a slant-edged panel painted with the captured side's band fill, glyphs in that side's icon ink) or, via capturedPosition, as a fixed-height strip above/below the bar (mobile).
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
@@ -168,9 +168,13 @@ function CapturedIcon({ piece, svgStyles, sizePx = 22 }) {
   const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
   const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
+  // The captured area's background is this side's band fill, so the glyph
+  // silhouette (the band-fill path) is inked with the side's icon color —
+  // the same fill/ink contrast pair the piece wears on the board.
   const capturedSideVars = useMemo(
     () => ({
-      ...sideVars,
+      ['--band-fill']: sideVars['--icon-color'] || 'currentColor',
+      ['--band-stroke']: sideVars['--icon-color'] || 'currentColor',
       ['--icon-color']: 'rgba(0,0,0,0)',
     }),
     [sideVars]
@@ -233,6 +237,11 @@ export default function PlayerBar({
   capturedPosition = 'inline',
 }) {
   const capturedOutside = capturedPosition === 'above' || capturedPosition === 'below';
+  // The captured zone wears the CAPTURED side's band fill (this bar holds the
+  // opponent pieces this player took), so the user's chosen piece contrast
+  // doubles as the taken-pieces contrast.
+  const capturedSide = side === 'white' ? 'black' : 'white';
+  const capturedBg = (svgStyles[capturedSide] || {})['--band-fill'] || 'rgba(255,255,255,0.08)';
   // The captured area owns the right third of the bar; icon size adapts to
   // the space and the longest row so pieces only shrink when they must.
   // An empty row cedes its height to the other, and overlap means a row of
@@ -355,18 +364,32 @@ export default function PlayerBar({
       boxShadow: clockActive ? '0 1px 6px rgba(0,0,0,0.25) inset' : 'none',
       transition: 'background 0.15s ease, color 0.15s ease, border 0.15s ease',
     },
+    // The stylish split: a full-height panel bleeding to the bar's right
+    // edge, its left edge slanted like a piece trapezoid, painted with the
+    // captured side's band fill. The inner box keeps the icon-measuring
+    // geometry (BAR_CONTENT_H, right-aligned rows).
+    capturedShell: {
+      display: 'flex',
+      alignItems: 'center',
+      flex: '0 0 36%',
+      maxWidth: '36%',
+      alignSelf: 'stretch',
+      marginRight: -12,
+      marginLeft: 6,
+      padding: '2px 10px 2px 24px',
+      boxSizing: 'border-box',
+      background: capturedBg,
+      clipPath: 'polygon(18px 0, 100% 0, 100% 100%, 0 100%)',
+      borderRadius: '0 9px 9px 0',
+    },
     capturedArea: {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'flex-end',
       justifyContent: 'center',
       gap: 2,
-      opacity: 0.9,
       fontSize: '0.9rem',
-      flex: '0 0 33%',
-      width: '33%',
-      maxWidth: '33%',
-      alignSelf: 'center',
+      width: '100%',
       height: BAR_CONTENT_H,
       maxHeight: BAR_CONTENT_H,
       overflow: 'hidden',
@@ -392,10 +415,11 @@ export default function PlayerBar({
       height: STRIP_H,
       minHeight: STRIP_H,
       maxHeight: STRIP_H,
-      padding: '0 6px',
+      padding: '0 10px',
       boxSizing: 'border-box',
       overflow: 'hidden',
-      opacity: 0.9,
+      background: capturedBg,
+      borderRadius: 8,
     },
   };
 
@@ -483,11 +507,15 @@ export default function PlayerBar({
       </div>
       {!capturedOutside ? (
         <div
-          className={`qc-captured-area qc-captured-area--${side}`}
-          style={styles.capturedArea}
+          className={`qc-captured-shell qc-captured-shell--${side}`}
+          style={styles.capturedShell}
           aria-label={`${side[0].toUpperCase()}${side.slice(1)} captured pieces area`}
-          ref={capRef}
         >
+          <div
+            className={`qc-captured-area qc-captured-area--${side}`}
+            style={styles.capturedArea}
+            ref={capRef}
+          >
           {capturedPawns.length > 0 ? (
             <div className="qc-captured-row qc-captured-row--pawns" style={styles.capturedRow}>
               {capturedPawns.map((p, i) => (
@@ -506,6 +534,7 @@ export default function PlayerBar({
               ))}
             </div>
           ) : null}
+          </div>
         </div>
       ) : null}
     </div>

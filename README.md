@@ -163,6 +163,12 @@ docker exec prefix) and say so in the commit.
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
 - Search/eval engine: `frontend/src/ai/alphaBetaEngine.js`
 - Avatars: `frontend/public/bots/<id>.png` (drop-in; initials tile otherwise)
+- **Characters are fictional parody composites** (scientist × chess legend);
+  the disclaimer lives on `/about.html` ("The characters"). Keep it that way:
+  never use a real person's full name, and steer avatar art away from real
+  people's likenesses — the sensitive ones are living chess pros (Magnus,
+  Hikaru, Fabiano, Anand, Kramnik, Polgar, Krush) and the Einstein estate
+  (Hebrew University licenses the name aggressively).
 
 ---
 

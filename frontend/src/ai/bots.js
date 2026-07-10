@@ -3,6 +3,10 @@
 // plus 12 premium-only bots, each a scientist × chess-legend mashup with a
 // made-up rating and a personality expressed as search-config and
 // evaluation-weight overrides for the engine.
+// Legal guardrail: every character is a fictional parody composite. Never a
+// real person's full name (first + surname always come from two different
+// people), and avatar art must not depict a real person's likeness. The
+// public disclaimer is on /about.html under "The characters".
 // Avatar source of truth: this roster owns bot ids and tiers. Drop a PNG at
 // frontend/public/bots/<id>.png and getBotAvatarUrl() will use it; otherwise
 // the player bar falls back to procedural initials. Run `pnpm audit:avatars`

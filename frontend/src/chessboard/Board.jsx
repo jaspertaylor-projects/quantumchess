@@ -32,6 +32,7 @@ export default function Board({
   selectedId = null,
   measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
   attractSquare = null, // square whose piece breathes light, inviting a first pickup
+  arrows = [], // suggestion arrows: [{ from, to, opacity }] — fat translucent green, layered by opacity
   guideSquare = null, // destination of a choreographed move: a pulsing gold target
   indicators = DEFAULT_INDICATORS, // visibility toggles for the visual reminders
   legalMoves = [], // legal moves for the currently-selected piece id
@@ -525,6 +526,53 @@ export default function Board({
                 </circle>
               );
             }) : null}
+          </svg>
+        ) : null}
+
+        {/* Suggestion arrows: fat translucent green, best-first layering */}
+        {arrows.length > 0 ? (
+          <svg
+            className="qc-hint-arrows"
+            style={styles.checkOverlay}
+            viewBox={`0 0 ${dimensions.width || 0} ${dimensions.height || 0}`}
+            aria-hidden="true"
+          >
+            {[...arrows].reverse().map((a, i) => {
+              const from = squareCenterPx(a.from);
+              const to = squareCenterPx(a.to);
+              if (!from || !to) return null;
+              const cell = dimensions.cell || 0;
+              const dx = to.x - from.x;
+              const dy = to.y - from.y;
+              const len = Math.hypot(dx, dy) || 1;
+              const ux = dx / len;
+              const uy = dy / len;
+              const tipInset = cell * 0.22;
+              let startInset = cell * 0.34;
+              let headLen = cell * 0.3;
+              const headHalf = cell * 0.19;
+              if (len - tipInset - startInset < headLen) {
+                startInset = Math.max(cell * 0.08, len - tipInset - headLen - cell * 0.05);
+                headLen = Math.min(headLen, Math.max(cell * 0.14, len - tipInset - startInset));
+              }
+              const tipX = to.x - ux * tipInset;
+              const tipY = to.y - uy * tipInset;
+              const baseX = tipX - ux * headLen;
+              const baseY = tipY - uy * headLen;
+              const x1 = from.x + ux * startInset;
+              const y1 = from.y + uy * startInset;
+              const px = -uy;
+              const py = ux;
+              const headPoints = `${tipX},${tipY} ${baseX + px * headHalf},${baseY + py * headHalf} ${baseX - px * headHalf},${baseY - py * headHalf}`;
+              const op = a.opacity ?? 0.5;
+              const w = Math.max(5, cell * 0.17);
+              return (
+                <g key={`hint-arrow-${a.from}-${a.to}-${i}`} opacity={op}>
+                  <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke="#2ea043" strokeWidth={w} strokeLinecap="round" />
+                  <polygon points={headPoints} fill="#2ea043" strokeLinejoin="round" />
+                </g>
+              );
+            })}
           </svg>
         ) : null}
 

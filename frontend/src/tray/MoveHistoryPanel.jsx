@@ -95,18 +95,33 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
   }, [moves.length, externalIndex]);
 
   const pairs = useMemo(() => {
-    const out = [];
-    let current = null;
+    // Castling records two half-moves (one per piece). Display merges the
+    // duo into a single one-line cell — "f8 ⇄ h8" — that seeks to the
+    // completed castle when clicked.
+    const entries = [];
     for (let i = 0; i < moves.length; i++) {
       const m = moves[i];
       const side = m && (m.side === 'white' || m.side === 'black') ? m.side : i % 2 === 0 ? 'white' : 'black';
+      const nxt = moves[i + 1];
+      if (m && m.castle && nxt && nxt.castle && nxt.side === m.side) {
+        entries.push({ side, label: `${m.from} ⇄ ${nxt.from}`, firstIndex: i, index: i + 1 });
+        i++;
+      } else {
+        entries.push({ side, label: m ? `${m.from} - ${m.to}` : '', firstIndex: i, index: i });
+      }
+    }
+    const out = [];
+    let current = null;
+    for (let k = 0; k < entries.length; k++) {
+      const m = entries[k];
+      const side = m.side;
       if (side === 'white') {
         if (!current || current.white !== null || current.black !== null) {
           current = { white: null, black: null, whiteIndex: null, blackIndex: null };
           out.push(current);
         }
         current.white = m;
-        current.whiteIndex = i;
+        current.whiteIndex = m.index;
       } else {
         if (!current || (current.white === null && current.black === null)) {
           current = { white: null, black: null, whiteIndex: null, blackIndex: null };
@@ -114,12 +129,12 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         }
         if (current.black === null) {
           current.black = m;
-          current.blackIndex = i;
+          current.blackIndex = m.index;
         } else {
           current = { white: null, black: null, whiteIndex: null, blackIndex: null };
           out.push(current);
           current.black = m;
-          current.blackIndex = i;
+          current.blackIndex = m.index;
         }
       }
     }
@@ -275,23 +290,14 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
     clearRef.current();
   };
 
+  const cellActive = (entry) => Boolean(entry) && index >= entry.firstIndex && index <= entry.index;
   const isRowActive = (rowIdx) => {
     const row = pairs[rowIdx];
     if (!row) return false;
-    return index === row.whiteIndex || index === row.blackIndex;
+    return cellActive(row.white) || cellActive(row.black);
   };
-  const isWhiteActive = (rowIdx) => {
-    const row = pairs[rowIdx];
-    if (!row) return false;
-    return index === row.whiteIndex;
-  };
-  const isBlackActive = (rowIdx) => {
-    const row = pairs[rowIdx];
-    if (!row) return false;
-    return index === row.blackIndex;
-  };
-
-  const formatMove = (m) => (m ? `${m.from} - ${m.to}` : '');
+  const isWhiteActive = (rowIdx) => cellActive(pairs[rowIdx] && pairs[rowIdx].white);
+  const isBlackActive = (rowIdx) => cellActive(pairs[rowIdx] && pairs[rowIdx].black);
 
   const listRef = useRef(null);
   useEffect(() => {
@@ -393,10 +399,10 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                   className="qc-move-history-cell-white"
                   style={styles.cell(isWhiteActive(rowIdx), !!pair.white)}
                   onClick={pair.white ? () => setIndexAndSeek(pair.whiteIndex) : undefined}
-                  aria-label={pair.white ? `White move ${formatMove(pair.white)}` : 'No move'}
+                  aria-label={pair.white ? `White move ${pair.white.label}` : 'No move'}
                 >
                   {pair.white ? (
-                    <span className="qc-move-history-cell-text">{formatMove(pair.white)}</span>
+                    <span className="qc-move-history-cell-text">{pair.white.label}</span>
                   ) : (
                     <span className="qc-move-history-cell-text-muted" style={styles.cellTextMuted}>—</span>
                   )}
@@ -405,10 +411,10 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                   className="qc-move-history-cell-black"
                   style={styles.cell(isBlackActive(rowIdx), !!pair.black)}
                   onClick={pair.black ? () => setIndexAndSeek(pair.blackIndex) : undefined}
-                  aria-label={pair.black ? `Black move ${formatMove(pair.black)}` : 'No move'}
+                  aria-label={pair.black ? `Black move ${pair.black.label}` : 'No move'}
                 >
                   {pair.black ? (
-                    <span className="qc-move-history-cell-text">{formatMove(pair.black)}</span>
+                    <span className="qc-move-history-cell-text">{pair.black.label}</span>
                   ) : (
                     <span className="qc-move-history-cell-text-muted" style={styles.cellTextMuted}>—</span>
                   )}
