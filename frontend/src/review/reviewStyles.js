@@ -42,7 +42,18 @@ const reviewStyles = {
     border: '1px solid rgba(126,231,135,0.5)', borderRadius: 8, padding: '8px 10px',
     background: 'rgba(126,231,135,0.08)', fontSize: 12.5, lineHeight: 1.5,
   },
-  nav: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  // Move navigation: a pill group sitting directly under the move list.
+  nav: {
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+    alignSelf: 'stretch', padding: '5px 8px', borderRadius: 12,
+    border: `1px solid ${theme.border}`, background: 'rgba(255,255,255,0.04)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+  },
+  navCounter: {
+    fontSize: 12, fontWeight: 800, fontVariantNumeric: 'tabular-nums',
+    color: theme.textSecondary, letterSpacing: '0.04em',
+    padding: '0 10px', marginRight: 'auto', whiteSpace: 'nowrap',
+  },
   // Two move columns: number | white's move | black's move.
   moveList: {
     display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr)', alignItems: 'center',
@@ -65,9 +76,12 @@ const reviewStyles = {
     background: active ? 'rgba(79,195,247,0.25)' : 'rgba(255,255,255,0.06)',
     border: `1px solid ${active ? 'rgba(79,195,247,0.7)' : 'rgba(255,255,255,0.18)'}`,
   }),
+  // Icon-only "back to game", in its own slot at the strip's right edge so
+  // the variation chips never crowd it.
   variationExit: {
-    fontSize: 11.5, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', marginLeft: 'auto',
-    color: '#ff8f8f', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.45)',
+    marginLeft: 'auto', flexShrink: 0, paddingLeft: 8,
+    borderLeft: '1px dashed rgba(79,195,247,0.35)',
+    display: 'flex', alignItems: 'center',
   },
   moveCell: (active) => ({
     display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', borderRadius: 6,

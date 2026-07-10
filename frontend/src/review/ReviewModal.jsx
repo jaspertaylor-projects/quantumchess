@@ -8,12 +8,13 @@
 // Exported To: ../App.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import './review.css';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import {
-  ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles,
+  ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles, Undo2,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
@@ -127,10 +128,15 @@ export default function ReviewModal({
     const haveBoth = before !== null && after !== null;
     const moverDrop = haveBoth ? (mover === 'white' ? -(after - before) : after - before) : 0;
     const mark = !haveBoth ? '' : moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
+    const markTitle = mark === '??'
+      ? `Blunder — the mover's eval dropped ${moverDrop.toFixed(1)} pawns`
+      : mark === '?'
+        ? `Mistake — the mover's eval dropped ${moverDrop.toFixed(1)} pawns`
+        : '';
     const label = entry && entry.type === 'castle'
       ? `${entry.piece1_from} ⇄ ${entry.piece2_from}`
       : s.lastMove ? `${s.lastMove.from} → ${s.lastMove.to}${entry && entry.enPassant ? ' ep' : ''}` : '?';
-    return { snapIdx: i + 1, mover, label, mark, evalAfter: after };
+    return { snapIdx: i + 1, mover, label, mark, markTitle, evalAfter: after };
   });
 
   const highlights = [];
@@ -333,19 +339,16 @@ export default function ReviewModal({
                         {vs.lastMove ? `${vs.lastMove.from}→${vs.lastMove.to}` : '?'}
                       </button>
                     ))}
-                    <button type="button" style={styles.variationExit} onClick={() => v.goMainline(variation.baseIdx)}>
-                      ✕ back to game
-                    </button>
+                    <span style={styles.variationExit}>
+                      <IconButton
+                        icon={Undo2} size={15} title="Back to game" ariaLabel="Leave the variation and return to the game"
+                        onClick={() => v.goMainline(variation.baseIdx)} width={30} height={26} radius={7}
+                        bg="rgba(255,107,107,0.12)" color="#ff8f8f" hoverInvert shadow="transparent"
+                      />
+                    </span>
                   </div>
                 ) : null}
                 <div className="qc-review-moves" style={styles.moveList}>
-                  <div
-                    style={{ ...styles.moveCell(!variation && bounded === 0), gridColumn: '1 / -1' }}
-                    onClick={() => v.goMainline(0)}
-                    role="button" tabIndex={0}
-                  >
-                    <span style={{ flex: 1 }}>Starting position</span>
-                  </div>
                   {rowsToPairs(rows).map((pair) => (
                     <React.Fragment key={`mv-${pair.moveNo}`}>
                       <span style={styles.moveNo}>{pair.moveNo}.</span>
@@ -354,12 +357,15 @@ export default function ReviewModal({
                           key={`cell-${r.snapIdx}`}
                           className="qc-review-move-row"
                           style={styles.moveCell(!variation && bounded === r.snapIdx)}
-                          onClick={() => v.goMainline(r.snapIdx)}
+                          onClick={(e) => { e.currentTarget.blur(); v.goMainline(r.snapIdx); }}
                           role="button" tabIndex={0}
                         >
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
-                          <span style={styles.mark(r.mark)}>{r.mark}</span>
-                          <span style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}>{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span>
+                          <span style={styles.mark(r.mark)} title={r.markTitle}>{r.mark}</span>
+                          <span
+                            style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}
+                            title="Engine eval after this move (positive is better for White)"
+                          >{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span>
                         </div>
                       ) : (
                         <span key={`cell-empty-${pair.moveNo}-${col}`} />
@@ -367,10 +373,16 @@ export default function ReviewModal({
                     </React.Fragment>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: theme.textSecondary, lineHeight: 1.5 }}>
-                  ? = mistake, ?? = blunder (eval drop for the mover). Evals are
-                  the engine's static judgment, positive is better for white.
-                  Use ← → to step through moves.
+                <div style={styles.nav}>
+                  <span style={styles.navCounter} title="Use ← → to step through moves">
+                    {variation
+                      ? `Variation ${variation.vIdx} / ${variation.snaps.length - 1}`
+                      : `Move ${bounded} / ${snapshots.length - 1}`}
+                  </span>
+                  <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={v.seekStart} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronLeft} size={18} title="Previous move (←)" ariaLabel="Previous move" onClick={v.seekPrev} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronRight} size={18} title="Next move (→)" ariaLabel="Next move" onClick={v.seekNext} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={v.seekEnd} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
                 </div>
                 {showEvalGraph ? (
                   <EvalTraceGraph
@@ -384,17 +396,6 @@ export default function ReviewModal({
                   />
                 ) : null}
               </div>
-            </div>
-            <div style={styles.nav}>
-              <span style={{ fontSize: 12, color: theme.textSecondary, marginRight: 8 }}>
-                {variation
-                  ? `Variation ${variation.vIdx} / ${variation.snaps.length - 1}`
-                  : `Move ${bounded} / ${snapshots.length - 1}`}
-              </span>
-              <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={v.seekStart} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={ChevronLeft} size={18} title="Previous move" ariaLabel="Previous move" onClick={v.seekPrev} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={ChevronRight} size={18} title="Next move" ariaLabel="Next move" onClick={v.seekNext} width={40} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
-              <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={v.seekEnd} width={34} height={30} radius={7} bg={theme.secondary} color={theme.textPrimary} hoverInvert shadow="transparent" />
             </div>
           </>
         )}

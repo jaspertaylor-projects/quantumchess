@@ -1,0 +1,38 @@
+/* frontend/src/review/review.css
+   Purpose: The review modal's stylesheet bits that inline styles can't do —
+   the move list's custom scrollbar and focus-ring handling for the clickable
+   move cells (mouse clicks leave no residual outline; keyboard focus keeps
+   its visible ring).
+   Exported To: ./ReviewModal.jsx */
+
+/* Slim, glowing scrollbar on the move list. */
+.qc-review-moves {
+  scrollbar-width: thin;                                /* Firefox */
+  scrollbar-color: rgba(79, 195, 247, 0.55) rgba(255, 255, 255, 0.04);
+}
+.qc-review-moves::-webkit-scrollbar {
+  width: 8px;
+}
+.qc-review-moves::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+}
+.qc-review-moves::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(79, 195, 247, 0.75), rgba(79, 195, 247, 0.35));
+  border-radius: 8px;
+  border: 1px solid rgba(12, 14, 22, 0.6);
+}
+.qc-review-moves::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(79, 195, 247, 0.95), rgba(79, 195, 247, 0.55));
+  box-shadow: 0 0 8px rgba(79, 195, 247, 0.5);
+}
+
+/* Clicking a move must not leave a residual focus box; keyboard users keep
+   the ring via :focus-visible. */
+.qc-review-move-row:focus:not(:focus-visible) {
+  outline: none;
+}
+.qc-review-move-row:focus-visible {
+  outline: 2px solid rgba(79, 195, 247, 0.8);
+  outline-offset: 1px;
+}
