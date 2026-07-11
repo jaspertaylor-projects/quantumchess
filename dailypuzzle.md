@@ -125,6 +125,37 @@ mop-up conversion gradients, repetition avoidance, and the recoherence
 fresh-start fix. Suggested launch:
 `node tools/puzzle-miner.mjs --games 16 --seed 10 --probeMs 15000 --mineMs 360000 --confirmMs 360000`.
 
+## Seed 11 (2026-07-10): FIRST HARVEST — 5 certified chains from 16 games
+
+All three seed-10 levers landed (mirror passes, minPly 14, strongMs on the
+post-handoff White seat only — raised to 2000ms) plus one live-run change:
+`balanceBand 1.25 -> 1.5` (Jasper, mid-run: seed-11-v1's game 0 ground to
++1.4 and THEN Black collapsed 1.3 -> 10.2 — a mistake from a slight edge is
+exactly the capitalize-now moment; the old band refused it).
+
+Funnel: 1168 positions scanned (both frames), 101 balanced-eligible (seed
+10: 30), 20 probe survivors, 6 swings confirmed, 5 chains kept — one of
+them a [mirror] find (game 5: ERNEST's own mistake from +0.12, the class
+seed 10 was structurally blind to). All five: medianFrac=0, trickiness
+7.3-19.5, every chain carries recohere or seal; four of five open QUIET.
+Games: White 8, Black 2, draws 6 — the 2000ms capitalizer seat works.
+
+GATE CAVEAT — inconclusive, not failed: 15 par plies queued for the
+depth-6 re-search, 14 timed out (120s verifyMs is under-budgeted for
+band-1.5 positions; the d6->d5 fallback also timed out), 1 verified and
+AGREED with room to spare (par 3.19 -> deep 7.71). The 95% number reads
+"100% of 1". Before feeding rotation, re-verify offline: the saved chains
+carry start + bestMoves + blackReplies, so each par ply reconstructs by
+replay — a standalone re-verify script with a real budget (or
+--verifyMs 600000) is the next step.
+
+The five chains are live in the dev preview fixture
+(frontend/src/puzzle/minedPreviewData.json, `?mined=0..4`).
+
+Next-run notes: plateau dedupe still unimplemented (a stable +1.1-1.4
+position re-buys a deep analysis every other ply; game 0-v2 spent 43min
+on 67 positions); verifyMs must scale with the wider band.
+
 ## Seed 10 (2026-07-10): handoff 14 + strongMs 1400 — 0 chains, the windows moved
 
 Launched with the queued config plus two changes: `--handoffPly 14` (the
