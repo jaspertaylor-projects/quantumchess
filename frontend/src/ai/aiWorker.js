@@ -79,6 +79,41 @@ self.addEventListener('message', (e) => {
     return;
   }
 
+  // Iterative-deepening best move with caller-provided search limits. The
+  // mined puzzle uses this for its live reply: unlike analyzeRootMoves, a
+  // timeout preserves the strongest fully completed depth instead of
+  // discarding the whole search.
+  if (data.type === 'bestMove') {
+    const { id, payload } = data;
+    try {
+      const res = searchBestMove({
+        pieces: (payload && payload.pieces) || [],
+        sideToMove: (payload && payload.sideToMove) || 'white',
+        lastMove: (payload && payload.lastMove) || null,
+        openingVariety: false,
+        adaptiveDepth: false,
+        bot: {
+          search: {
+            maxDepth: (payload && payload.depth) || 3,
+            widths: (payload && payload.widths) || [176, 12, 8],
+            timeMs: (payload && payload.timeMs) || 20000,
+            noise: 0,
+          },
+        },
+      });
+      self.postMessage({
+        type: 'bestMove',
+        id,
+        move: res ? minifyMove(res.move) : null,
+        score: res ? res.score : null,
+        depth: res ? res.depth : 0,
+      });
+    } catch (err) {
+      self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });
+    }
+    return;
+  }
+
   if (data.type !== 'think') return;
 
   const { id, payload } = data;

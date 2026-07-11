@@ -64,7 +64,7 @@ export function buildMinedPuzzle(chain, idx) {
   }
 
   return {
-    date: `mined-${idx}`,
+    date: `#${idx}`,
     recipe: {
       key: 'mined-par',
       title: minedTitle(chain),
@@ -78,6 +78,7 @@ export function buildMinedPuzzle(chain, idx) {
     },
     mistake: chain.mistake, // { from, to, evalBefore, evalAfter, swing }
     parEvals: chain.parEvals.map(clampPar),
+    parMoves: chain.steps.map((step) => ({ ...step.bestMove })),
     parFirstMove: { ...chain.steps[0].bestMove }, // revealed after a rough run
     themes: chain.themes,
     trickiness: chain.trickiness,

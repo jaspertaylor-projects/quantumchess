@@ -34,7 +34,7 @@ export default function MiniBoard({
   ranks = 6,
   cell = 48,
   pieces = [], // { sq, side, types, pips, regain, chevrons, ring, mark }
-  arrows = [], // { from, to, side }
+  arrows = [], // { from, to, side } or review-style { from, to, kind: 'hint', opacity }
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
   onSquareClick = null, // enables interaction: called with the algebraic square
@@ -142,27 +142,20 @@ export default function MiniBoard({
         border: '1px solid rgba(0,0,0,0.4)',
         flex: 'none',
         boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+        // One repeating gradient paints the whole checkerboard: per-square
+        // divs seamed at sub-pixel offsets (the modal flex-centers, so odd
+        // content sizes land the board on half pixels).
+        background: `repeating-conic-gradient(${(ranks - 1) % 2 === 0 ? `${lightSq} 0% 25%, ${darkSq} 25% 50%` : `${darkSq} 0% 25%, ${lightSq} 25% 50%`}) top left / ${cell * 2}px ${cell * 2}px`,
       }}
     >
-      {Array.from({ length: files * ranks }, (_, i) => {
-        const col = i % files;
-        const row = Math.floor(i / files);
-        const rank = ranks - 1 - row;
-        const dark = (col + rank) % 2 === 0;
-        return (
-          <div
-            key={`sq-${i}`}
-            style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: dark ? darkSq : lightSq }}
-          />
-        );
-      })}
-
-      {highlights.map((sq) => {
+      {highlights.map((h) => {
+        const sq = typeof h === 'string' ? h : h.sq;
+        const color = typeof h === 'string' ? 'rgba(255, 213, 79, 0.45)' : h.color;
         const { col, row } = sqToRC(sq, ranks);
         return (
           <div
             key={`hl-${sq}`}
-            style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: 'rgba(255, 213, 79, 0.45)' }}
+            style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: color }}
           />
         );
       })}
@@ -195,11 +188,29 @@ export default function MiniBoard({
         {arrows.map((a, i) => {
           const from = center(a.from);
           const to = center(a.to);
-          // Same geometry (and short-arrow guard) as the live board.
-          const { x1, y1, baseX, baseY, headPoints } = arrowGeometry(from, to, cell);
+          const isHint = a.kind === 'hint';
+          // Hint arrows match game review; other tutorial/puzzle arrows retain
+          // the live-board geometry and side-aware coloring.
+          const { x1, y1, baseX, baseY, headPoints } = arrowGeometry(
+            from,
+            to,
+            cell,
+            isHint ? {
+              tipInset: 0.22, startInset: 0.34, headLen: 0.3, headHalf: 0.19,
+              minStartInset: 0.08, minHeadLen: 0.14, headGap: 0.05,
+            } : undefined
+          );
           const hex = bodyHex(a.side || 'white');
           const halo = a.side === 'white' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
-          const w = Math.max(3, cell * 0.08);
+          const w = isHint ? Math.max(5, cell * 0.17) : Math.max(3, cell * 0.08);
+          if (isHint) {
+            return (
+              <g key={`ar-${i}`} opacity={a.opacity ?? 0.8}>
+                <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke="#2ea043" strokeWidth={w} strokeLinecap="round" />
+                <polygon points={headPoints} fill="#2ea043" strokeLinejoin="round" />
+              </g>
+            );
+          }
           return (
             <g key={`ar-${i}`}>
               <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={halo} strokeWidth={w + 2.5} strokeLinecap="round" />

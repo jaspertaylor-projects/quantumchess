@@ -69,13 +69,14 @@ function RankLine({ rank }) {
 }
 
 // Per-move grade vs that ply's certified par eval.
-// g = held >=85% of par, y = >=50%, r = below, x = never reached.
+// g = held >=85% of par; r = the position was actually THROWN — landing at
+// rough equality (or worse), not merely under a par fraction; y = everything
+// between: you kept a real edge, just not par's share. x = never reached.
 function gradeOf(landed, par) {
   if (landed === null || !Number.isFinite(par) || par <= 0) return 'r';
-  const frac = landed / par;
-  if (frac >= 0.85) return 'g';
-  if (frac >= 0.5) return 'y';
-  return 'r';
+  if (landed / par >= 0.85) return 'g';
+  if (landed < 0.75) return 'r';
+  return 'y';
 }
 const GRADE_COLORS = { g: '#2ea043', y: '#d4a72c', r: '#da3633', x: '#30363d' };
 const GRADE_EMOJI = { g: '🟩', y: '🟨', r: '🟥', x: '⬛' };
@@ -94,6 +95,14 @@ function MoveSquares({ grades, total }) {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+function QuantumThinkingIndicator() {
+  return (
+    <div className="qc-quantum-thinking qc-quantum-thinking--board" role="status" aria-label="The Stranger is thinking">
+      <div className="qc-quantum-thinking__sprite" aria-hidden="true" />
     </div>
   );
 }
@@ -308,25 +317,37 @@ export default function MinedPuzzleModal({
       if (replyWorkerRef.current === worker) replyWorkerRef.current = null;
       finish(reply);
     };
-    const timer = setTimeout(() => settle(null), 9000);
+    const timer = setTimeout(() => settle(null), 16000);
     worker.onmessage = (e) => {
       const d = e.data || {};
-      if (d.type !== 'analysis') return;
-      const best = (d.moves || []).find((m) => !m.castle
-        && replies.some((r) => r.from === m.from && r.to === m.to));
-      settle(best ? replies.find((r) => r.from === best.from && r.to === best.to) : null);
+      if (d.type !== 'bestMove') return;
+      const best = d.move && d.move.type !== 'castle'
+        ? replies.find((r) => r.from === d.move.from && r.to === d.move.to)
+        : null;
+      settle(best || null);
     };
     worker.onerror = () => settle(null);
     worker.postMessage({
-      type: 'analyze',
+      type: 'bestMove',
       id: 'black-reply',
-      payload: { pieces: afterMove.after, sideToMove: 'black', lastMove: afterMove.nextLastMove, depth: 3, widths: [176, 12, 8], timeMs: 8000 },
+      payload: {
+        pieces: afterMove.after,
+        sideToMove: 'black',
+        lastMove: afterMove.nextLastMove,
+        depth: 5,
+        widths: [176, 12, 8, 6, 4],
+        timeMs: 15000,
+      },
     });
   });
 
-  const finishPuzzle = (landed) => {
+  const finishPuzzle = (landed, landing = null) => {
     setFinalLanding(landed !== null ? Number(landed.toFixed(2)) : null);
     later(() => {
+      if (landing) {
+        setDisplay(landing.pieces);
+        setMarks(landing.marks || []);
+      }
       setRevealArrowIfRough();
       setPhase('done');
     }, 1400);
@@ -354,10 +375,16 @@ export default function MinedPuzzleModal({
 
     const token = aliveRef.current;
     const roundIdx = round;
+    const parMove = puzzle.parMoves?.[roundIdx]
+      || (roundIdx === 0 ? puzzle.parFirstMove : null);
     const landed = evalOfMove(move);
+    setReplyArrow(null); // the player moved — Black's trail comes off
     moveMadeRef.current = { move, roundIdx };
-    setDisplay(move.after);
-    setMarks(move.measuredSquares || []);
+    // During the landing beat, rewind visually to the decision position so
+    // the certified best-move arrow points at the board the player saw.
+    // The actual result returns as Black begins thinking.
+    setDisplay(parMove ? cur.pieces : move.after);
+    setMarks(parMove ? [] : (move.measuredSquares || []));
     setNeedleValue(landed !== null ? Number(landed.toFixed(2)) : null);
     setMoveRank(rankOfMove(landed));
     setGrades((g) => {
@@ -379,13 +406,15 @@ export default function MinedPuzzleModal({
           return next;
         });
       }
-      finishPuzzle(landed);
+      finishPuzzle(landed, { pieces: move.after, marks: move.measuredSquares || [] });
       return;
     }
 
     // Mid-line: land (1.4s), think, Black answers, re-arm.
     later(() => {
       if (aliveRef.current !== token) return;
+      setDisplay(move.after);
+      setMarks(move.measuredSquares || []);
       setPhase('thinking');
       computeBlackReply(move).then((reply) => {
         if (aliveRef.current !== token || !reply) {
@@ -403,23 +432,30 @@ export default function MinedPuzzleModal({
           if (sim.ok) { afterPieces = sim.pieces; measured = sim.measuredSquares || []; }
         }
         const lastMove = blackLastMove(afterPieces, mover ? mover.id : null, reply.from, reply.to, wasFirstMove, measured);
-        setDisplay(afterPieces);
-        setMarks(measured);
-        setReplyArrow({ from: reply.from, to: reply.to });
+        // Clear the brain first and hold the position Black is moving FROM.
+        // Then commit the reply as a separate beat so captures are visible as
+        // an actual before/after board change, not hidden under the overlay.
         setPhase('replying');
+        setReplyArrow(null);
+        setMarks([]);
         later(() => {
           if (aliveRef.current !== token) return;
-          const nextCur = { pieces: afterPieces, lastMove, cc: move.nextCC };
-          setReplyArrow(null);
-          setMarks([]);
-          setNeedleValue(null);
-          setMoveRank(null);
-          moveMadeRef.current = null;
-          setCur(nextCur);
-          setRound(roundIdx + 1);
           setDisplay(afterPieces);
-          setPhase('playing');
-        }, 1600);
+          setMarks(measured);
+          setReplyArrow({ from: reply.from, to: reply.to });
+          later(() => {
+            if (aliveRef.current !== token) return;
+            const nextCur = { pieces: afterPieces, lastMove, cc: move.nextCC };
+            setMarks([]);
+            setNeedleValue(null);
+            setMoveRank(null);
+            moveMadeRef.current = null;
+            setCur(nextCur);
+            setRound(roundIdx + 1);
+            setDisplay(afterPieces);
+            setPhase('playing');
+          }, 1800);
+        }, 300);
       });
     }, 1400);
   };
@@ -450,7 +486,7 @@ export default function MinedPuzzleModal({
   const cell = Math.max(30, Math.min(
     52,
     Math.floor((Math.min(window.innerWidth * 0.94, 560) - 66) / 8),
-    Math.floor((window.innerHeight * 0.94 - 515) / 8)
+    Math.floor((window.innerHeight * 0.94 - 455) / 8)
   ));
   const styles = {
     card: {
@@ -464,8 +500,21 @@ export default function MinedPuzzleModal({
       fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
       color: theme.textSecondary, display: 'flex', alignItems: 'center', gap: 6,
     },
-    boardWrap: { display: 'flex', justifyContent: 'center', margin: '4px 0' },
-    barWrap: { margin: '4px 0' },
+    boardWrap: { display: 'flex', justifyContent: 'center', margin: '4px 0', position: 'relative' },
+    // The result floats OVER the board (the done-state card was too tall
+    // with banner + share stacked underneath).
+    doneOverlay: {
+      position: 'absolute', inset: 0, zIndex: 55,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 8, pointerEvents: 'none',
+    },
+    doneCard: {
+      pointerEvents: 'auto', width: 'min(88%, 360px)',
+      background: 'rgba(13, 16, 23, 0.93)', border: '1px solid rgba(255,255,255,0.22)',
+      borderRadius: 12, padding: '10px 12px', boxShadow: '0 12px 34px rgba(0,0,0,0.55)',
+      backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
+    },
+    barWrap: { margin: '4px 0', position: 'relative' },
     banner: (kind) => ({
       textAlign: 'center', fontWeight: 700, borderRadius: 10, padding: '8px 12px', margin: '8px 0 0',
       background: kind === 'good' ? 'rgba(126,231,135,0.12)' : kind === 'mid' ? 'rgba(255,209,102,0.12)' : 'rgba(255,107,107,0.12)',
@@ -480,11 +529,24 @@ export default function MinedPuzzleModal({
     },
   };
 
+  // Computer moves read like live play: a from/to trail of highlighted
+  // squares (cyan origin, gold landing), not an arrow. The arrow is reserved
+  // for the par-line HINT revealed after a rough run.
+  const landingBestMove = phase === 'landing'
+    ? (puzzle.parMoves?.[round] || (round === 0 ? puzzle.parFirstMove : null))
+    : null;
   const arrows = revealArrow ? [{ ...revealArrow, side: 'white' }]
-    : replyArrow ? [{ ...replyArrow, side: 'black' }]
-      : phase === 'playing' && round === 0 && puzzle.mistake
-        ? [{ from: puzzle.mistake.from, to: puzzle.mistake.to, side: 'black' }]
-        : [];
+    : landingBestMove ? [{ ...landingBestMove, kind: 'hint', opacity: 0.8 }]
+      : [];
+  const trail = replyArrow
+    || (phase === 'playing' && round === 0 && puzzle.mistake ? puzzle.mistake : null);
+  const boardHighlights = [
+    ...(selectedSq ? [selectedSq] : []),
+    ...(trail && !revealArrow ? [
+      { sq: trail.from, color: 'rgba(79, 195, 247, 0.42)' },
+      { sq: trail.to, color: 'rgba(246, 196, 69, 0.5)' },
+    ] : []),
+  ];
 
   const gaugeLabel = round === 0 && phase === 'playing'
     ? `Black slipped: ${puzzle.mistake.from} → ${puzzle.mistake.to}. Capitalize.`
@@ -532,6 +594,23 @@ export default function MinedPuzzleModal({
         </div>
 
         <div style={styles.boardWrap}>
+          {phase === 'thinking' ? <QuantumThinkingIndicator /> : null}
+          {phase === 'done' ? (
+            <div style={styles.doneOverlay}>
+              <div style={styles.doneCard}>
+                <div style={{ ...styles.banner(bannerKind), margin: 0 }}>
+                  {`Fidelity ${fidelity}% — ${bannerText}`}
+                </div>
+                <div style={{ ...styles.share, margin: '8px auto 0' }}>
+                  {shareText}
+                  <div style={{ marginTop: 8 }}>
+                    <IconButton icon={CopyIcon} label="Copy share text" onClick={copyShare} />
+                    {copied ? <span style={{ marginLeft: 8, fontSize: 12, color: '#7ee787' }}>copied ✓</span> : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <MiniBoard
             files={8}
             ranks={8}
@@ -539,7 +618,7 @@ export default function MinedPuzzleModal({
             squareColors={boardColors}
             pieces={boardPieces}
             arrows={arrows}
-            highlights={selectedSq ? [selectedSq] : []}
+            highlights={boardHighlights}
             targets={targets}
             onSquareClick={handleSquareClick}
             canDrag={phase === 'playing' ? canDragFrom : null}
@@ -568,20 +647,7 @@ export default function MinedPuzzleModal({
         <MoveSquares grades={grades} total={totalMoves} />
         <RankLine rank={moveRank} />
 
-        {phase === 'done' ? (
-          <>
-            <div style={styles.banner(bannerKind)}>
-              {`Fidelity ${fidelity}% — ${bannerText}`}
-            </div>
-            <div style={styles.share}>
-              {shareText}
-              <div style={{ marginTop: 8 }}>
-                <IconButton icon={CopyIcon} label="Copy share text" onClick={copyShare} />
-                {copied ? <span style={{ marginLeft: 8, fontSize: 12, color: '#7ee787' }}>copied ✓</span> : null}
-              </div>
-            </div>
-          </>
-        ) : null}
+
     </ModalShell>
   );
 }

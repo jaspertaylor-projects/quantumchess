@@ -349,7 +349,17 @@ export function analyzeRootMoves({ pieces, sideToMove, lastMove = null, depth = 
 // Iterative-deepening search. Returns { move, score, depth, nodes } where
 // score is from the mover's perspective. onDepthComplete (optional) receives
 // the best move after each completed depth for progressive reporting.
-export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot = null, lastMove = null, onDepthComplete = null, repetitionSigs = null }) {
+export function searchBestMove({
+  pieces,
+  sideToMove,
+  difficulty = 'medium',
+  bot = null,
+  lastMove = null,
+  onDepthComplete = null,
+  repetitionSigs = null,
+  openingVariety = true,
+  adaptiveDepth = true,
+}) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
   const W = { ...DEFAULT_WEIGHTS, ...((bot && bot.weights) || {}) };
@@ -363,7 +373,7 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
   // to take back (and to punish).
   const sideMoveCount = root.reduce((n, p) => (p.side === sideToMove ? n + (p.moveCount || 0) : n), 0);
   const anyCaptures = root.some((p) => p.captured);
-  if (sideMoveCount < 2 && !anyCaptures) {
+  if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
     const replies = generateLegalReplies(root, sideToMove, 0, lastMove);
     const occupied = new Set(root.filter((p) => !p.captured && p.square).map((p) => p.square));
     const quiet = replies.filter((mv) => {
@@ -384,7 +394,7 @@ export function searchBestMove({ pieces, sideToMove, difficulty = 'medium', bot 
   // branching shrinks — spend the same time budget on more depth. Iterative
   // deepening plus the deadline make an optimistic cap safe.
   let maxDepth = cfg.maxDepth;
-  if (difficulty !== 'easy') {
+  if (adaptiveDepth && difficulty !== 'easy') {
     const alive = root.filter((p) => !p.captured && p.square).length;
     let extraTypes = 0;
     for (const p of root) {

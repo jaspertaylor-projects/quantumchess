@@ -209,3 +209,64 @@ button:hover {
   50%  { transform: rotate(180deg); color: #b400ff; filter: drop-shadow(0 0 10px rgba(180, 0, 255, 0.65)); }
   100% { transform: rotate(360deg); color: #ff3b7f; filter: drop-shadow(0 0 10px rgba(255, 59, 127, 0.65)); }
 }
+
+/* The mined daily's live opponent search. The source is a 4 x 3 sheet of
+   square frames; percentages address each exact cell without JS timers. */
+.qc-quantum-thinking {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  transform: translateY(-50%);
+  z-index: 4;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(14, 11, 35, 0.82) 30%, rgba(14, 11, 35, 0.28) 68%, transparent 72%);
+  filter: drop-shadow(0 0 7px rgba(0, 229, 255, 0.42));
+}
+
+.qc-quantum-thinking__sprite {
+  width: 100%;
+  height: 100%;
+  background-image: url('/sprites/quantum-brain-thinking.png');
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+  animation: qc-quantum-brain-frames 1.2s linear infinite;
+}
+
+/* Mined-puzzle variant: the brain thinks in the middle of the board, big —
+   not tucked into the player bar. */
+.qc-quantum-thinking--board {
+  right: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 128px;
+  height: 128px;
+  z-index: 60;
+  filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.55));
+}
+
+@keyframes qc-quantum-brain-frames {
+  0%, 8.332%      { background-position: 0% 0%; }
+  8.333%, 16.665% { background-position: 33.333% 0%; }
+  16.666%, 24.999% { background-position: 66.667% 0%; }
+  25%, 33.332%    { background-position: 100% 0%; }
+  33.333%, 41.665% { background-position: 0% 50%; }
+  41.666%, 49.999% { background-position: 33.333% 50%; }
+  50%, 58.332%    { background-position: 66.667% 50%; }
+  58.333%, 66.665% { background-position: 100% 50%; }
+  66.666%, 74.999% { background-position: 0% 100%; }
+  75%, 83.332%    { background-position: 33.333% 100%; }
+  83.333%, 91.665% { background-position: 66.667% 100%; }
+  91.666%, 100%   { background-position: 100% 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-quantum-thinking__sprite {
+    animation: none;
+    background-position: 33.333% 50%;
+  }
+}
