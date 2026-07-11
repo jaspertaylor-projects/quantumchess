@@ -211,20 +211,39 @@ button:hover {
 }
 
 /* The mined daily's live opponent search. The source is a 4 x 3 sheet of
-   square frames; percentages address each exact cell without JS timers. */
-.qc-quantum-thinking {
+   square frames; the nested axes make it rebound like the old DVD logo. */
+.qc-quantum-thinking-bounds {
   position: absolute;
-  right: 7px;
-  top: 50%;
-  width: 58px;
-  height: 58px;
-  transform: translateY(-50%);
-  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+}
+
+.qc-quantum-thinking-bounce-x {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 88px;
+  height: 100%;
+  animation: qc-quantum-thinking-x 7.1s linear infinite alternate;
+}
+
+.qc-quantum-thinking-bounce-y {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 88px;
+  height: 88px;
+  animation: qc-quantum-thinking-y 5.3s linear infinite alternate;
+}
+
+.qc-quantum-thinking {
+  width: 88px;
+  height: 88px;
   overflow: hidden;
   border-radius: 50%;
   pointer-events: none;
   background: radial-gradient(circle, rgba(14, 11, 35, 0.82) 30%, rgba(14, 11, 35, 0.28) 68%, transparent 72%);
-  filter: drop-shadow(0 0 7px rgba(0, 229, 255, 0.42));
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.48));
 }
 
 .qc-quantum-thinking__sprite {
@@ -236,17 +255,14 @@ button:hover {
   animation: qc-quantum-brain-frames 1.2s linear infinite;
 }
 
-/* Mined-puzzle variant: the brain thinks in the middle of the board, big —
-   not tucked into the player bar. */
-.qc-quantum-thinking--board {
-  right: auto;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 128px;
-  height: 128px;
-  z-index: 60;
-  filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.55));
+@keyframes qc-quantum-thinking-x {
+  from { left: 0; }
+  to { left: calc(100% - 88px); }
+}
+
+@keyframes qc-quantum-thinking-y {
+  from { top: 0; }
+  to { top: calc(100% - 88px); }
 }
 
 @keyframes qc-quantum-brain-frames {
@@ -265,6 +281,12 @@ button:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .qc-quantum-thinking-bounce-x,
+  .qc-quantum-thinking-bounce-y {
+    animation: none;
+  }
+  .qc-quantum-thinking-bounce-x { left: calc(50% - 44px); }
+  .qc-quantum-thinking-bounce-y { top: calc(50% - 44px); }
   .qc-quantum-thinking__sprite {
     animation: none;
     background-position: 33.333% 50%;

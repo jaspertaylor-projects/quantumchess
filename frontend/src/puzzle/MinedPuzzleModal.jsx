@@ -28,6 +28,7 @@ import {
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { capturedPieces } from '../chessboard/boardUtils.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
+import { devDebug } from '../devlog.js';
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
 // static eval alone rates "hangs the queen" as fine. One ply of lookahead
@@ -68,15 +69,15 @@ function RankLine({ rank }) {
   );
 }
 
-// Per-move grade vs that ply's certified par eval.
-// g = held >=85% of par; r = the position was actually THROWN — landing at
-// rough equality (or worse), not merely under a par fraction; y = everything
-// between: you kept a real edge, just not par's share. x = never reached.
-function gradeOf(landed, par) {
-  if (landed === null || !Number.isFinite(par) || par <= 0) return 'r';
-  if (landed / par >= 0.85) return 'g';
-  if (landed < 0.75) return 'r';
-  return 'y';
+// Grade each decision locally, independent of advantage lost on earlier
+// rounds. Near-equivalent moves deserve the same color even when their exact
+// rank differs in a position with dozens of legal choices.
+function gradeOfStanding(standing) {
+  if (!standing) return 'r';
+  const { rank, total, loss } = standing;
+  if (rank === 1 || loss <= 0.35 || (rank === 2 && loss <= 0.6)) return 'g';
+  if (loss <= 1.25 || rank <= Math.max(3, Math.ceil(total * 0.1))) return 'y';
+  return 'r';
 }
 const GRADE_COLORS = { g: '#2ea043', y: '#d4a72c', r: '#da3633', x: '#30363d' };
 const GRADE_EMOJI = { g: '🟩', y: '🟨', r: '🟥', x: '⬛' };
@@ -101,8 +102,14 @@ function MoveSquares({ grades, total }) {
 
 function QuantumThinkingIndicator() {
   return (
-    <div className="qc-quantum-thinking qc-quantum-thinking--board" role="status" aria-label="The Stranger is thinking">
-      <div className="qc-quantum-thinking__sprite" aria-hidden="true" />
+    <div className="qc-quantum-thinking-bounds" role="status" aria-label="The Stranger is thinking">
+      <div className="qc-quantum-thinking-bounce-x">
+        <div className="qc-quantum-thinking-bounce-y">
+          <div className="qc-quantum-thinking">
+            <div className="qc-quantum-thinking__sprite" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -149,18 +156,28 @@ export default function MinedPuzzleModal({
   const [needleValue, setNeedleValue] = useState(null);
   const [moveRank, setMoveRank] = useState(null);
   const [replyArrow, setReplyArrow] = useState(null); // Black's live answer
+  const [suggestedMove, setSuggestedMove] = useState(null); // legal best move for the position just played
   const [revealArrow, setRevealArrow] = useState(null); // par move 1, shown on a rough run
   const [copied, setCopied] = useState(false);
   const aliveRef = useRef(0); // bumps on reset; async work checks it
+  const roundRef = useRef(0);
+  roundRef.current = round;
   // Black's in-flight reply search. computeBlackReply runs in a Promise, not
   // an effect, so the modal closing mid-think would otherwise leave the
-  // worker searching until its own 9s timeout — this ref lets the
+  // worker searching until its own timeout — this ref lets the
   // close/unmount effect kill it immediately.
   const replyWorkerRef = useRef(null);
+  const replyPrefetchRef = useRef(null); // { worker, round, replyKey, map }
   const killReplyWorker = () => {
     if (!replyWorkerRef.current) return;
     try { replyWorkerRef.current.terminate(); } catch (_) {}
     replyWorkerRef.current = null;
+  };
+  const killReplyPrefetch = () => {
+    const active = replyPrefetchRef.current;
+    if (!active) return;
+    try { active.worker.terminate(); } catch (_) {}
+    replyPrefetchRef.current = null;
   };
 
   const {
@@ -188,10 +205,12 @@ export default function MinedPuzzleModal({
     setNeedleValue(null);
     setMoveRank(null);
     setReplyArrow(null);
+    setSuggestedMove(null);
     setRevealArrow(null);
     setCopied(false);
     moveMadeRef.current = null;
-    return () => { clearTimers(); killReplyWorker(); };
+    killReplyPrefetch();
+    return () => { clearTimers(); killReplyWorker(); killReplyPrefetch(); };
   }, [open, puzzle]);
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
@@ -201,6 +220,11 @@ export default function MinedPuzzleModal({
   // depth 3; until it answers, the instant 1-ply reply-aware evals stand in.
   useEffect(() => {
     if (!open || !cur) return undefined;
+    const prefetched = replyPrefetchRef.current;
+    if (prefetched && prefetched.round === round) {
+      setDeepEvals(prefetched.map || null);
+      return undefined;
+    }
     setDeepEvals(null);
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
     worker.onmessage = (e) => {
@@ -217,6 +241,59 @@ export default function MinedPuzzleModal({
     });
     return () => { worker.terminate(); };
   }, [open, cur, round]);
+
+  // Each completed depth of Black's iterative search exposes its current
+  // best reply. Speculatively score White's resulting root moves in a second
+  // worker; if that reply survives as Black's final choice, the next gauge
+  // adopts this work instead of starting cold.
+  const prefetchNextGauge = (afterMove, reply, nextRound, token) => {
+    if (!reply || reply.type === 'castle') return;
+    const replyKey = `${reply.from}>${reply.to}`;
+    const active = replyPrefetchRef.current;
+    if (active && active.round === nextRound && active.replyKey === replyKey) return;
+    killReplyPrefetch();
+
+    const mover = afterMove.after.find((p) =>
+      !p.captured && p.side === 'black' && p.square === reply.from);
+    const wasFirstMove = mover ? (mover.moveCount || 0) === 0 : false;
+    const lastMove = blackLastMove(
+      reply.resultPieces,
+      mover ? mover.id : null,
+      reply.from,
+      reply.to,
+      wasFirstMove,
+      []
+    );
+    const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
+    const record = { worker, round: nextRound, replyKey, map: null };
+    replyPrefetchRef.current = record;
+    worker.onmessage = (e) => {
+      const d = e.data || {};
+      if (d.type !== 'analysis' || d.id !== `prefetch-${nextRound}` || !d.moves) return;
+      if (aliveRef.current !== token || replyPrefetchRef.current !== record) return;
+      const map = {};
+      for (const m of d.moves) map[`${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`] = m.score;
+      record.map = map;
+      if (roundRef.current === nextRound) setDeepEvals(map);
+      try { worker.terminate(); } catch (_) {}
+    };
+    worker.onerror = () => {
+      if (replyPrefetchRef.current === record) replyPrefetchRef.current = null;
+      try { worker.terminate(); } catch (_) {}
+    };
+    worker.postMessage({
+      type: 'analyze',
+      id: `prefetch-${nextRound}`,
+      payload: {
+        pieces: reply.resultPieces,
+        sideToMove: 'white',
+        lastMove,
+        depth: 3,
+        widths: [176, 12, 8],
+        timeMs: 25000,
+      },
+    });
+  };
 
   // Gauge ticks compute progressively (a few moves per frame) so the needle
   // wobbles while the red lines fade in — the dial reads as "scanning".
@@ -258,6 +335,7 @@ export default function MinedPuzzleModal({
   const rankOfMove = (landed) => {
     if (landed === null) return null;
     let better = 0;
+    let best = -Infinity;
     for (let i = 0; i < moves.length; i++) {
       let s;
       if (deepEvals && deepEvals[keyOf(moves[i])] !== undefined) s = deepEvals[keyOf(moves[i])];
@@ -265,9 +343,15 @@ export default function MinedPuzzleModal({
         if (evalRef.current[i] === undefined) evalRef.current[i] = replyAwareEval(moves[i]);
         s = evalRef.current[i];
       }
+      best = Math.max(best, s);
       if (s > landed + 1e-9) better++;
     }
-    return { rank: better + 1, total: moves.length };
+    return {
+      rank: better + 1,
+      total: moves.length,
+      best,
+      loss: Math.max(0, best - landed),
+    };
   };
 
   // The 1-ply evals only stand in until the depth-3 worker answers; if the
@@ -279,12 +363,13 @@ export default function MinedPuzzleModal({
     if (!deepEvals || !made) return;
     const landed = deepEvals[keyOf(made.move)];
     if (landed === undefined) return;
+    const standing = rankOfMove(landed);
     setNeedleValue(Number(landed.toFixed(2)));
-    setMoveRank(rankOfMove(landed));
+    setMoveRank(standing);
     setGrades((g) => {
       const next = [...g];
       if (next[made.roundIdx] && next[made.roundIdx] !== 'x') {
-        next[made.roundIdx] = gradeOf(landed, puzzle.parEvals[made.roundIdx]);
+        next[made.roundIdx] = gradeOfStanding(standing);
       }
       return next;
     });
@@ -300,33 +385,89 @@ export default function MinedPuzzleModal({
   // greedy fallback (min static eval over legal replies — the same ruler the
   // ticks' lookahead uses) covers timeouts and castle-only answers, which
   // this preview doesn't apply.
-  const computeBlackReply = (afterMove) => new Promise((resolve) => {
+  const computeBlackReply = (afterMove, nextRound, token) => new Promise((resolve) => {
     const replies = generateLegalReplies(afterMove.after, 'black', afterMove.nextCC, afterMove.nextLastMove);
     if (!replies.length) { resolve(null); return; }
     const pool = replies.filter((r) => r.type !== 'castle');
     const greedy = () => (pool.length ? pool : replies).reduce((best, r) =>
       (evaluatePosition(r.resultPieces) < evaluatePosition(best.resultPieces) ? r : best));
-    const finish = (reply) => resolve(reply || greedy());
+    const finish = (reply) => {
+      const chosen = reply || greedy();
+      prefetchNextGauge(afterMove, chosen, nextRound, token);
+      resolve(chosen);
+    };
 
     killReplyWorker(); // at most one reply search in flight
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
     replyWorkerRef.current = worker;
+    const searchStartedAt = performance.now();
+    let lastCompletedDepth = 0;
     const settle = (reply) => {
       clearTimeout(timer);
       try { worker.terminate(); } catch (_) {}
       if (replyWorkerRef.current === worker) replyWorkerRef.current = null;
       finish(reply);
     };
-    const timer = setTimeout(() => settle(null), 16000);
+    const timer = setTimeout(() => {
+      devDebug('[Mined puzzle · Black search]', {
+        status: 'safety-timeout',
+        requestedDepth: 5,
+        completedDepth: lastCompletedDepth,
+        elapsedMs: Math.round(performance.now() - searchStartedAt),
+        fallback: 'greedy',
+      });
+      settle(null);
+    }, 16000);
     worker.onmessage = (e) => {
       const d = e.data || {};
+      if (d.type === 'error') {
+        devDebug('[Mined puzzle · Black search]', {
+          status: 'worker-error',
+          requestedDepth: 5,
+          completedDepth: lastCompletedDepth,
+          elapsedMs: Math.round(performance.now() - searchStartedAt),
+          message: d.message,
+          fallback: 'greedy',
+        });
+        settle(null);
+        return;
+      }
+      if (d.type === 'bestMoveProgress') {
+        lastCompletedDepth = Math.max(lastCompletedDepth, d.depth || 0);
+        const candidate = d.move && d.move.type !== 'castle'
+          ? replies.find((r) => r.from === d.move.from && r.to === d.move.to)
+          : null;
+        if (candidate) prefetchNextGauge(afterMove, candidate, nextRound, token);
+        return;
+      }
       if (d.type !== 'bestMove') return;
       const best = d.move && d.move.type !== 'castle'
         ? replies.find((r) => r.from === d.move.from && r.to === d.move.to)
         : null;
+      const completedDepth = d.depth || lastCompletedDepth;
+      devDebug('[Mined puzzle · Black search]', {
+        status: completedDepth >= 5 ? 'depth-complete' : 'search-budget-timeout',
+        requestedDepth: 5,
+        completedDepth,
+        elapsedMs: Math.round(performance.now() - searchStartedAt),
+        nodes: d.nodes || 0,
+        move: d.move ? `${d.move.from || '?'}→${d.move.to || '?'}` : null,
+        fallback: best ? null : 'greedy',
+      });
+      if (best) prefetchNextGauge(afterMove, best, nextRound, token);
       settle(best || null);
     };
-    worker.onerror = () => settle(null);
+    worker.onerror = (error) => {
+      devDebug('[Mined puzzle · Black search]', {
+        status: 'worker-error',
+        requestedDepth: 5,
+        completedDepth: lastCompletedDepth,
+        elapsedMs: Math.round(performance.now() - searchStartedAt),
+        message: error && error.message,
+        fallback: 'greedy',
+      });
+      settle(null);
+    };
     worker.postMessage({
       type: 'bestMove',
       id: 'black-reply',
@@ -375,21 +516,43 @@ export default function MinedPuzzleModal({
 
     const token = aliveRef.current;
     const roundIdx = round;
-    const parMove = puzzle.parMoves?.[roundIdx]
+    const certifiedMove = puzzle.parMoves?.[roundIdx]
       || (roundIdx === 0 ? puzzle.parFirstMove : null);
+    const legalCertifiedMove = certifiedMove && moves.find((m) =>
+      m.from === certifiedMove.from && m.to === certifiedMove.to
+      && Boolean(m.enPassant) === Boolean(certifiedMove.enPassant));
+    // A completed current-position depth-3 analysis outranks the static
+    // certified line. After a divergence, the certified round move may no
+    // longer exist; never draw an arrow unless its move is legal right now.
+    const deepScored = deepEvals ? moves.filter((m) => deepEvals[keyOf(m)] !== undefined) : [];
+    const deepBest = deepScored.length ? deepScored.reduce((best, m) =>
+      (deepEvals[keyOf(m)] > deepEvals[keyOf(best)] ? m : best)) : null;
+    const progressivelyScored = moves.filter((_, i) => evalRef.current[i] !== undefined);
+    const progressiveBest = progressivelyScored.length ? progressivelyScored.reduce((best, m) => {
+      const mi = moves.indexOf(m);
+      const bi = moves.indexOf(best);
+      return evalRef.current[mi] > evalRef.current[bi] ? m : best;
+    }) : null;
+    const positionBest = deepBest || legalCertifiedMove || progressiveBest || null;
     const landed = evalOfMove(move);
+    const standing = rankOfMove(landed);
     setReplyArrow(null); // the player moved — Black's trail comes off
+    setSuggestedMove(positionBest ? {
+      from: positionBest.from,
+      to: positionBest.to,
+      enPassant: Boolean(positionBest.enPassant),
+    } : null);
     moveMadeRef.current = { move, roundIdx };
     // During the landing beat, rewind visually to the decision position so
     // the certified best-move arrow points at the board the player saw.
     // The actual result returns as Black begins thinking.
-    setDisplay(parMove ? cur.pieces : move.after);
-    setMarks(parMove ? [] : (move.measuredSquares || []));
+    setDisplay(positionBest ? cur.pieces : move.after);
+    setMarks(positionBest ? [] : (move.measuredSquares || []));
     setNeedleValue(landed !== null ? Number(landed.toFixed(2)) : null);
-    setMoveRank(rankOfMove(landed));
+    setMoveRank(standing);
     setGrades((g) => {
       const next = [...g];
-      next[roundIdx] = gradeOf(landed, puzzle.parEvals[roundIdx]);
+      next[roundIdx] = gradeOfStanding(standing);
       return next;
     });
     setPhase('landing');
@@ -416,7 +579,7 @@ export default function MinedPuzzleModal({
       setDisplay(move.after);
       setMarks(move.measuredSquares || []);
       setPhase('thinking');
-      computeBlackReply(move).then((reply) => {
+      computeBlackReply(move, roundIdx + 1, token).then((reply) => {
         if (aliveRef.current !== token || !reply) {
           if (aliveRef.current === token) finishPuzzle(landed);
           return;
@@ -532,8 +695,11 @@ export default function MinedPuzzleModal({
   // Computer moves read like live play: a from/to trail of highlighted
   // squares (cyan origin, gold landing), not an arrow. The arrow is reserved
   // for the par-line HINT revealed after a rough run.
-  const landingBestMove = phase === 'landing'
-    ? (puzzle.parMoves?.[round] || (round === 0 ? puzzle.parFirstMove : null))
+  // Keep the review arrow up through Black's search and the short pre-move
+  // beat. It clears when replyArrow appears with Black's completed move.
+  const landingBestMove = (phase === 'landing' || phase === 'thinking'
+    || (phase === 'replying' && !replyArrow))
+    ? suggestedMove
     : null;
   const arrows = revealArrow ? [{ ...revealArrow, side: 'white' }]
     : landingBestMove ? [{ ...landingBestMove, kind: 'hint', opacity: 0.8 }]
@@ -594,7 +760,15 @@ export default function MinedPuzzleModal({
         </div>
 
         <div style={styles.boardWrap}>
-          {phase === 'thinking' ? <QuantumThinkingIndicator /> : null}
+          {phase === 'thinking' ? (
+            <div style={{
+              position: 'absolute', top: 0, left: 'calc(50% + 8px)',
+              width: cell * 8, height: cell * 8, transform: 'translateX(-50%)',
+              zIndex: 60, pointerEvents: 'none', overflow: 'hidden', borderRadius: 8,
+            }}>
+              <QuantumThinkingIndicator />
+            </div>
+          ) : null}
           {phase === 'done' ? (
             <div style={styles.doneOverlay}>
               <div style={styles.doneCard}>

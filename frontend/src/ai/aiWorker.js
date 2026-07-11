@@ -92,6 +92,15 @@ self.addEventListener('message', (e) => {
         lastMove: (payload && payload.lastMove) || null,
         openingVariety: false,
         adaptiveDepth: false,
+        onDepthComplete: (partial) => {
+          self.postMessage({
+            type: 'bestMoveProgress',
+            id,
+            move: minifyMove(partial.move),
+            score: partial.score,
+            depth: partial.depth,
+          });
+        },
         bot: {
           search: {
             maxDepth: (payload && payload.depth) || 3,
@@ -107,6 +116,7 @@ self.addEventListener('message', (e) => {
         move: res ? minifyMove(res.move) : null,
         score: res ? res.score : null,
         depth: res ? res.depth : 0,
+        nodes: res ? res.nodes : 0,
       });
     } catch (err) {
       self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });
