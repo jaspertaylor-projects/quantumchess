@@ -234,12 +234,10 @@ benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
 - Search/eval engine: `frontend/src/ai/alphaBetaEngine.js`
 - Avatars: `frontend/public/bots/<id>.png` (drop-in; initials tile otherwise)
-- **Characters are fictional parody composites** (scientist × chess legend);
-  the disclaimer lives on `/about.html` ("The characters"). Keep it that way:
-  never use a real person's full name, and steer avatar art away from real
-  people's likenesses — the sensitive ones are living chess pros (Magnus,
-  Hikaru, Fabiano, Anand, Kramnik, Polgar, Krush) and the Einstein estate
-  (Hebrew University licenses the name aggressively).
+- **Bots are fictional scientist × chess-legend parody mashups.** Both
+  people supplying a name must be deceased, and avatar art must not depict a
+  real person's likeness or imply endorsement. The public character note
+  lives on `/about.html` under "The characters".
 
 ---
 
@@ -320,7 +318,7 @@ Legend: [ ] not started · [~] in progress · [X] done
         legacy-record translator was removed in the 2026-07-07 cleanup
         (no saved games predate lossless recording).
   - [X] More bots — **built + browser-tested 2026-07-06**: 12 premium bots
-        in `ai/bots.js` (rated 1300–2250; Ernest Anand 2250 is the final
+        in `ai/bots.js` (rated 1300–2250; Ernest Smyslov 2250 is the final
         boss). Browsable by everyone in the roster (🔒 label); Start becomes
         "Unlock Premium" → account modal for free users. Gating is
         client-side (fine: content, not data). Avatar PNGs optional at
@@ -601,7 +599,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       names, ratings, cleared checkmarks and a "next up" highlight. Locks
       are enforced: only cleared bots and the next rung are playable;
       locked rungs render faded with a 🔒 and a hover hint "Beat <previous
-      bot> to unlock", with Magnus Einstein as the final boss at the
+      bot> to unlock", with Emanuel Einstein as the final boss at the
       bottom. Below the ladder, subscribers get the premium roster
       appended; free players get "★ 12 more bots available to monthly
       subscribers" which routes into the premium/account flow. First win
@@ -625,20 +623,20 @@ Legend: [ ] not started · [~] in progress · [X] done
         Line". Signed-out players see "Sign in free to save bot unlocks."
         Premium bots remain premium and are NOT part of this mode.
   - [ ] **Unstable Line map**: a route map, not a blind random queue. The
-        player charts a 4-fight course toward Magnus Einstein. Each node
+        player charts a 4-fight course toward Emanuel Einstein. Each node
         shows a bot avatar/name/rating; the main boss is fixed as
-        `magnus-einstein`. With the current 12-free-bot roster, the first 2
+        `emanuel-einstein`. With the current 12-free-bot roster, the first 2
         beginner clears unlock the mode, then every run places the remaining
-        9 non-boss free bots somewhere on the map plus Magnus Einstein as the
+        9 non-boss free bots somewhere on the map plus Emanuel Einstein as the
         collapse point. The shortest route to the boss is 3 bot fights +
-        Magnus Einstein for a 4-game run. Longer routes are allowed for
+        Emanuel Einstein for a 4-game run. Longer routes are allowed for
         players who want extra pickups or to target specific bot unlocks. This
         lets players choose the bot problems they want to carry instead of
         praying a blind pool serves them.
   - [ ] **Double-slit theme**: visually frame the map as a double-slit
         experiment. The run begins as one beam, splits into two or more
         possible paths, interferes across branching bot choices, and collapses
-        into the chosen route toward Magnus Einstein. Unchosen nodes can stay
+        into the chosen route toward Emanuel Einstein. Unchosen nodes can stay
         faint/ghosted as "paths not observed yet"; chosen fights become the
         measured timeline. This should feel quantumy without making the map
         harder to understand.
@@ -646,7 +644,7 @@ Legend: [ ] not started · [~] in progress · [X] done
         in-between spaces add the upside. Both should generally stick for the
         whole run, so the player is not just picking the next fight; they are
         deciding which problems to carry and which tools to accumulate before
-        Magnus Einstein.
+        Emanuel Einstein.
   - [ ] **Pickup spaces**: mix non-fight nodes into the map so the player is
         not only choosing opponents. Good first pickups: +1 takeback for the
         run, one free "observe" hint, restore a collapsed pawn at the start of

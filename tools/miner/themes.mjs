@@ -1,6 +1,6 @@
 // tools/miner/themes.mjs
 // Purpose: Quantum theme tagging over mined moves (the composed generator's
-// SUBGOALS recast as detectors: measure3, censusCollapse, seal, unmask,
+// SUBGOALS recast as detectors: measure3, censusCollapse, unmask,
 // epCheck, mate, promo/quiet) and the trickiness score that rates how hard a
 // solution is to FIND. Split out of puzzle-miner.mjs.
 // Imports From: ../../frontend/src/chessboard/*
@@ -8,7 +8,6 @@
 
 import {
   applyQuantumConstraints,
-  canPieceRecohere,
   evaluateTerminalAfterMove,
   listCheckThreats,
   simulateCastle,
@@ -80,15 +79,9 @@ function tagThemes(position, moveSim) {
     }
   }
 
-  for (const prev of before) {
-    if (prev.captured || !prev.square) continue;
-    const now = after.find((p) => p.id === prev.id);
-    if (!now || now.captured || now.possibleTypes.length > 2) continue;
-    if (prev.possibleTypes.length > 1 && canPieceRecohere(before, prev.id) && !canPieceRecohere(after, prev.id)) {
-      themes.push('seal'); // The Seal
-      break;
-    }
-  }
+  // ('seal' detector deleted with the classic ruleset — recoherence clocks
+  // no longer exist; heal-based lock themes belong to the contact-native
+  // redesign.)
 
   const holdersBefore = before.filter((p) => !p.captured && p.side === 'black' && p.square && p.possibleTypes.includes('k'));
   const holdersAfter = after.filter((p) => !p.captured && p.side === 'black' && p.square && p.possibleTypes.includes('k'));

@@ -1,12 +1,10 @@
 // frontend/src/ai/bots.js
 // Purpose: The bot roster — 12 free opponents (4 easy, 4 medium, 4 hard)
-// plus 12 premium-only bots, each a scientist × chess-legend mashup with a
-// made-up rating and a personality expressed as search-config and
+// plus 12 premium-only bots, each a physicist/scientist × chess-legend
+// mashup with a made-up rating and a personality expressed as search-config and
 // evaluation-weight overrides for the engine.
-// Legal guardrail: every character is a fictional parody composite. Never a
-// real person's full name (first + surname always come from two different
-// people), and avatar art must not depict a real person's likeness. The
-// public disclaimer is on /about.html under "The characters".
+// Legal guardrail: both halves of every mashup must be deceased, and avatar
+// art must not depict a real person's likeness or imply endorsement.
 // Avatar source of truth: this roster owns bot ids and tiers. Drop a PNG at
 // frontend/public/bots/<id>.png and getBotAvatarUrl() will use it; otherwise
 // the player bar falls back to procedural initials. Run `pnpm audit:avatars`
@@ -104,17 +102,17 @@ export const BOTS = [
     weights: {},
   },
   {
-    id: 'marie-polgar',
-    name: 'Marie Polgar',
+    id: 'marie-pillsbury',
+    name: 'Marie Pillsbury',
     rating: 1590,
     tier: 'medium',
-    tagline: 'Twice decorated, radiating tactics.',
+    tagline: 'A reactor-hearted tactician glowing three moves ahead.',
     sayings: {
       win: 'Radiant, isn\'t it?',
       loss: 'A rare decay indeed.',
       draw: 'A stable isotope of a game.',
-      capture: 'Extracted, like radium from ore.',
-      collapse: 'I\'ve irradiated every last uncertainty.',
+      capture: 'Extracted from the reaction chamber.',
+      collapse: 'Every last uncertainty is glowing now.',
     },
     hue: 150,
     search: { noise: 0.15 },
@@ -151,19 +149,19 @@ export const BOTS = [
       collapse: 'Every box on your side is open.',
     },
     hue: 265,
-    search: { noise: 0, widths: [40, 14], timeMs: 6000 },
+    search: { noise: 0, widths: [40, 16], timeMs: 6000 },
     weights: { kingHunt: 0.25, extraType: 0.11 },
   },
 
   // ------------------------------ HARD ------------------------------
   {
-    id: 'gary-oppenheimer',
-    name: 'Gary Oppenheimer',
+    id: 'akiba-oppenheimer',
+    name: 'Akiba Oppenheimer',
     rating: 1820,
     tier: 'hard',
-    tagline: 'Now I am become decoherence, destroyer of superpositions.',
+    tagline: 'Turns quiet positions into controlled chain reactions.',
     sayings: {
-      win: 'Now I am become victory.',
+      win: 'Containment held. Yours did not.',
       loss: 'A chain reaction I couldn\'t stop.',
       draw: 'Critical mass, never reached.',
       capture: 'Vaporized.',
@@ -174,13 +172,13 @@ export const BOTS = [
     weights: { hangUndefended: 1.0, hangBadTrade: 0.65, kingSpread: 0.36 },
   },
   {
-    id: 'werner-karpov',
-    name: 'Werner Karpov',
+    id: 'werner-lasker',
+    name: 'Werner Lasker',
     rating: 1890,
     tier: 'hard',
-    tagline: 'The more precisely he fixes your position, the less momentum you keep.',
+    tagline: 'Pins every coordinate until your momentum disappears.',
     sayings: {
-      win: 'You knew my position or my plan. Never both.',
+      win: 'Your last free coordinate is gone.',
       loss: 'I was certain. That was the problem.',
       draw: 'Precisely uncertain to the end.',
       capture: 'Located. Precisely. Fatally.',
@@ -204,24 +202,24 @@ export const BOTS = [
       collapse: 'Your whole grid is lit.',
     },
     hue: 285,
-    search: { widths: [22, 12, 9] },
+    search: { widths: [24, 14, 11] },
     weights: { kingHunt: 0.32, soleKingAttacked: 5.5, hangUndefended: 0.7 },
   },
   {
-    id: 'magnus-einstein',
-    name: 'Magnus Einstein',
+    id: 'emanuel-einstein',
+    name: 'Emanuel Einstein',
     rating: 2080,
     tier: 'hard',
-    tagline: 'The final boss. God does not play dice — and neither does he.',
+    tagline: 'The final boss. Carries every variation at once.',
     sayings: {
-      win: 'God does not play dice. Neither do I.',
-      loss: 'Spooky. Action at a distance indeed.',
-      draw: 'Relatively even.',
+      win: 'I carried every branch to the same ending.',
+      loss: 'One world slipped off my shoulders.',
+      draw: 'Two worlds, perfectly balanced.',
       capture: 'That piece was pure energy. Was.',
       collapse: 'Everything observable has been observed.',
     },
     hue: 215,
-    search: { timeMs: 13500, widths: [24, 12, 10] },
+    search: { timeMs: 13500, widths: [26, 14, 12] },
     weights: { kingHunt: 0.2, mobility: 0.016, center: 0.04 },
   },
 
@@ -248,16 +246,16 @@ export const BOTS = [
     weights: { kingHunt: 0.28, soleKingAttacked: 5.2, development: 0.08 },
   },
   {
-    id: 'fabiano-feynman',
-    name: 'Fabiano Feynman',
+    id: 'paul-feynman',
+    name: 'Paul Feynman',
     rating: 1450,
     tier: 'medium',
-    tagline: 'Surely you’re joking — there’s plenty of room at the bottom of your position.',
+    tagline: 'Sketches every tactic, including the arrows you missed.',
     sayings: {
-      win: 'Surely you\'re joking about that defense.',
-      loss: 'Nature cannot be fooled. I can, apparently.',
-      draw: 'Nature cannot be beaten today, either.',
-      capture: 'Plenty of room at the bottom for that piece.',
+      win: 'The winning line fit in the margin.',
+      loss: 'My diagram omitted one important arrow.',
+      draw: 'Two diagrams, same conclusion.',
+      capture: 'Adding that piece to the diagram.',
       collapse: 'I\'ve drawn diagrams of your entire army.',
     },
     hue: 20,
@@ -266,13 +264,13 @@ export const BOTS = [
     weights: { extraType: 0.13, mobility: 0.018 },
   },
   {
-    id: 'nona-franklin',
-    name: 'Nona Franklin',
+    id: 'vera-franklin',
+    name: 'Vera Franklin',
     rating: 1550,
     tier: 'medium',
     tagline: 'Photographed the structure of your position long before you saw it.',
     sayings: {
-      win: 'The structure was clear from photo 51.',
+      win: 'The structure was visible in every turn.',
       loss: 'You read my diffraction pattern.',
       draw: 'Two helices, perfectly parallel.',
       capture: 'Crystallized and claimed.',
@@ -284,8 +282,8 @@ export const BOTS = [
     weights: { development: 0.085, kingSpread: 0.3, hangBadTrade: 0.62 },
   },
   {
-    id: 'paul-penrose',
-    name: 'Paul Penrose',
+    id: 'savielly-dirac',
+    name: 'Savielly Dirac',
     rating: 1650,
     tier: 'medium',
     tagline: 'Draws impossible staircases. Your king climbs them forever.',
@@ -302,8 +300,8 @@ export const BOTS = [
     weights: { extraType: 0.14, kingHunt: 0.22 },
   },
   {
-    id: 'james-kramnik',
-    name: 'James Kramnik',
+    id: 'james-rubinstein',
+    name: 'James Rubinstein',
     rating: 1750,
     tier: 'medium',
     tagline: 'Unified your kingside and queenside weaknesses into one field.',
@@ -320,8 +318,8 @@ export const BOTS = [
     weights: { development: 0.09, center: 0.05, extraType: 0.1 },
   },
   {
-    id: 'hikaru-hawking',
-    name: 'Hikaru Hawking',
+    id: 'stephen-tal',
+    name: 'Stephen Tal',
     rating: 1850,
     tier: 'hard',
     tagline: 'Your king’s escape squares end at the event horizon.',
@@ -374,8 +372,8 @@ export const BOTS = [
     weights: { kingHunt: 0.24, mobility: 0.018, center: 0.045 },
   },
   {
-    id: 'vera-krush',
-    name: 'Vera Krush',
+    id: 'vera-botvinnik',
+    name: 'Vera Botvinnik',
     rating: 2000,
     tier: 'hard',
     tagline: 'Found your position’s missing mass. It’s aimed at your king.',
@@ -406,12 +404,12 @@ export const BOTS = [
     },
     hue: 130,
     premium: true,
-    search: { widths: [22, 12, 9] },
+    search: { widths: [24, 14, 11] },
     weights: { kingHunt: 0.24, development: 0.075 },
   },
   {
-    id: 'alexandra-payne',
-    name: 'Alexandra Payne',
+    id: 'cecilia-alekhine',
+    name: 'Cecilia Alekhine',
     rating: 2150,
     tier: 'hard',
     tagline: 'Worked out what your attack is made of. Mostly hydrogen.',
@@ -424,12 +422,12 @@ export const BOTS = [
     },
     hue: 75,
     premium: true,
-    search: { timeMs: 13500, widths: [24, 12, 10] },
+    search: { timeMs: 13500, widths: [26, 14, 12] },
     weights: { kingHunt: 0.26, hangUndefended: 0.8 },
   },
   {
-    id: 'ernest-anand',
-    name: 'Ernest Anand',
+    id: 'ernest-smyslov',
+    name: 'Ernest Smyslov',
     rating: 2250,
     tier: 'hard',
     tagline: 'The premium final boss. Your defense is mostly empty space — he fires straight through it.',
@@ -442,7 +440,7 @@ export const BOTS = [
     },
     hue: 110,
     premium: true,
-    search: { timeMs: 15000, widths: [26, 14, 10] },
+    search: { timeMs: 15000, widths: [28, 16, 12] },
     weights: { kingHunt: 0.26, soleKingAttacked: 5.5, mobility: 0.017, hangUndefended: 0.8 },
   },
 ];

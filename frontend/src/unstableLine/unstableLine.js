@@ -11,7 +11,7 @@
 import { FREE_BOTS, getBotById } from '../ai/bots.js';
 import { supabase } from '../account/supabaseClient.js';
 
-export const UNSTABLE_BOSS_ID = 'magnus-einstein';
+export const UNSTABLE_BOSS_ID = 'emanuel-einstein';
 export const UNSTABLE_UNLOCK_COUNT = 2;
 export const UNSTABLE_DEV_UNLOCK_KEY = 'qcDevUnlockUnstableLine';
 export const UNSTABLE_DEV_USER = { id: 'dev-local-unstable-line', devOnly: true };

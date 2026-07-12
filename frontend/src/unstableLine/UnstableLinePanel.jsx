@@ -538,7 +538,7 @@ export default function UnstableLinePanel({
     const lockedText = !effectiveUser
       ? 'Sign in free to save bot unlocks.'
       : unlocked
-        ? `Route map ready: ${mapBots.length} bots plus Magnus Einstein.`
+        ? `Route map ready: ${mapBots.length} bots plus Emanuel Einstein.`
         : 'Locked until you beat the two beginner bots.';
     return (
       <section style={{ display: 'grid', gap: 10 }}>
@@ -635,7 +635,7 @@ export default function UnstableLinePanel({
           <span style={{ fontSize: 11, color: '#7fe7ff', fontWeight: 900, whiteSpace: 'nowrap' }}>3 + boss</span>
         </div>
         <div style={{ fontSize: 12.5, color: theme.textSecondary, lineHeight: 1.4 }}>
-          A double-slit map with {mapBots.length} target bots plus Magnus Einstein. Bot nodes add lasting downsides; pickup spaces add lasting upsides.
+          A double-slit map with {mapBots.length} target bots plus Emanuel Einstein. Bot nodes add lasting downsides; pickup spaces add lasting upsides.
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
@@ -702,7 +702,7 @@ export default function UnstableLinePanel({
       ) : (
         <button type="button" onClick={ensureRun} disabled={busy} style={{ ...baseButton, cursor: busy ? 'default' : 'pointer' }}>
           <span style={{ fontWeight: 950 }}>Build Double-Slit Map</span>
-          <span style={{ fontSize: 12.5, color: theme.textSecondary }}>Place every eligible bot and chart a route to Magnus Einstein.</span>
+          <span style={{ fontSize: 12.5, color: theme.textSecondary }}>Place every eligible bot and chart a route to Emanuel Einstein.</span>
         </button>
       )}
     </section>

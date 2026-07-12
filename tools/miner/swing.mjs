@@ -13,7 +13,13 @@ import {
   generateLegalReplies,
 } from '../../frontend/src/chessboard/quantumEngine.js';
 import { countPossibilities } from '../../frontend/src/chessboard/advanceCore.js';
-import { analyzeRootMoves, evaluatePosition, searchBestMove } from '../../frontend/src/ai/alphaBetaEngine.js';
+import { evaluatePosition } from '../../frontend/src/ai/alphaBetaEngine.js';
+// Fast packed engine — verified bit-identical to alphaBetaEngine's search
+// (frontend/tests/fastEngineDiff.test.js), ~13-17x faster mining.
+import {
+  analyzeRootMovesFast as analyzeRootMoves,
+  searchBestMoveFast as searchBestMove,
+} from '../../frontend/src/ai/fast/fastSearch.js';
 import { CFG, PROBE_WIDTHS, MINE_WIDTHS, CONFIRM_WIDTHS, VERIFY_WIDTHS } from './config.mjs';
 import { applyReply } from './gameplay.mjs';
 import { simulateAnalysisMove, tagThemes, pieceInFlux, quantumBaseline, plyTrickiness } from './themes.mjs';

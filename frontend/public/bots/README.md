@@ -20,3 +20,7 @@ Human players use the same drop-in scheme:
   stranger.png  — the second player in Local 2 Player
 
 Recommended: 128x128 or larger, square. Files here are served at /bots/<id>.png.
+
+Legal/art guardrail: both halves of every scientist × chess-player mashup
+must be deceased. Portraits must remain fantastical and must not depict a
+real person's likeness or imply endorsement.

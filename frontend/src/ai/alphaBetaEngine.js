@@ -60,10 +60,15 @@ export const DEFAULT_WEIGHTS = {
 };
 const KING_SPREAD_CAP = 5;
 
+// Widths nudged +2 after the fast-engine rewrite (2026-07-11): the packed
+// engine searches ~13-17x faster, so a slightly wider beam costs a fraction
+// of the old budgets while making "the best move wasn't in the beam" misses
+// rarer. Per-bot width overrides in bots.js got the same +2 so the strength
+// ladder ordering is unchanged.
 export const DIFFICULTY_CONFIG = {
   easy: { maxDepth: 1, widths: [40], timeMs: 800, noise: 1.2 },
-  medium: { maxDepth: 2, widths: [40, 12], timeMs: 5000, noise: 0 },
-  hard: { maxDepth: 3, widths: [20, 12, 8], timeMs: 12000, noise: 0 },
+  medium: { maxDepth: 2, widths: [40, 14], timeMs: 5000, noise: 0 },
+  hard: { maxDepth: 3, widths: [22, 14, 10], timeMs: 12000, noise: 0 },
 };
 
 // Per-side attack info: which squares each side attacks, and the cheapest

@@ -17,7 +17,9 @@ import {
   simulateStandardMove,
 } from '../../frontend/src/chessboard/quantumEngine.js';
 import { moveOutcome } from '../../frontend/src/chessboard/advanceCore.js';
-import { searchBestMove } from '../../frontend/src/ai/alphaBetaEngine.js';
+// Fast packed engine — verified bit-identical to alphaBetaEngine's search
+// (frontend/tests/fastEngineDiff.test.js), ~13-17x faster mining.
+import { searchBestMoveFast as searchBestMove } from '../../frontend/src/ai/fast/fastSearch.js';
 import { BOTS } from '../../frontend/src/ai/bots.js';
 import { CFG } from './config.mjs';
 
