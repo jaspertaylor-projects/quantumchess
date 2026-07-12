@@ -11,9 +11,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, 'frontend', 'src', 'assets')
 OUT = os.path.join(ROOT, 'ChessPiecePNGS', 'preview.html')
 
-WHITE = {'--icon-color': '#111827', '--band-fill': '#e5e7eb', '--band-stroke': '#111827'}
-BLACK = {'--icon-color': '#ffffff', '--band-fill': '#254065', '--band-stroke': '#f2f2f2'}
-BOARD_LIGHT, BOARD_DARK = '#f0d9b5', '#b58863'
+WHITE = {
+    '--icon-color': '#343b35', '--band-fill': '#e8e3d8',
+    '--band-stroke': '#343b35', '--piece-outline': '#000000',
+}
+BLACK = {
+    '--icon-color': '#f0eadf', '--band-fill': '#39454f',
+    '--band-stroke': '#d6d0c5', '--piece-outline': '#d6d0c5',
+}
+BOARD_LIGHT, BOARD_DARK = '#cbd5c0', '#71866f'
 
 SINGLES = ['p', 'n', 'b', 'r', 'q', 'k']
 PAIRS = ['bk', 'bq', 'br', 'nb', 'nk', 'nq', 'nr',

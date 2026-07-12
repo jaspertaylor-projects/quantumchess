@@ -8,7 +8,7 @@
 // Imports From: ./gameConstants.js
 // Exported To: ./quantumEngine.js, ./engineConservation.js
 
-import { DEFAULT_COHERENCE, PIECE_TYPES } from './gameConstants.js';
+import { PIECE_TYPES } from './gameConstants.js';
 
 function orderTypes(list) {
   const set = new Set(list);
@@ -38,34 +38,6 @@ export function restrictTypes(piece, allowedTypes) {
     getBaseTypes(piece).filter((t) => allowed.has(t)),
     getPromoTypes(piece).filter((t) => allowed.has(t))
   );
-}
-
-// Any collapse is a fresh start: whenever a piece's possibility set shrank
-// during a move's resolution (its own collapse, solver pruning, check
-// pruning, sheds), its coherence resets to full. If the shrink
-// leaves the piece nearly defined (<= 2 possibilities), its recoherence
-// clock restarts empty: the dots show zero the moment it collapses, and each
-// of the owner's subsequent moves ticks the clock (0 -> 1 -> 2 -> 3). This
-// runs AFTER applyOwnerTurnEffects, so a piece never earns a dot on the very
-// move that collapsed it. Mutates finalPieces in place.
-export function resetCoherenceOnCollapse(prevPieces, finalPieces) {
-  const before = new Map(prevPieces.map((p) => [p.id, (p.possibleTypes || []).length]));
-  for (const p of finalPieces) {
-    if (p.captured || !p.square) continue;
-    const prevLen = before.get(p.id);
-    if (prevLen !== undefined && (p.possibleTypes || []).length < prevLen) {
-      p.coherence = DEFAULT_COHERENCE;
-      if ((p.possibleTypes || []).length <= 2) p.recohere = 0;
-    }
-  }
-}
-
-// End-of-turn king pruning helper: returns a copy of the piece with King
-// removed from its possibilities, origins preserved.
-export function cloneWithoutKing(p) {
-  const clone = { ...p };
-  restrictTypes(clone, p.possibleTypes.filter((t) => t !== 'k'));
-  return clone;
 }
 
 export function clonePieces(pieces) {

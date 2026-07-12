@@ -20,8 +20,6 @@ import TutorialModal from '../tutorial/TutorialModal.jsx';
 import AccountModal from '../account/AccountModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
 import ReviewModal from '../review/ReviewModal.jsx';
-import DailyPuzzleModal from '../puzzle/DailyPuzzleModal.jsx';
-import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
 
 export default function AppModals({
   // game end
@@ -41,12 +39,9 @@ export default function AppModals({
   reviewGame, onCloseReview,
   // confirm
   confirmState, setConfirmState,
-  // puzzles
-  puzzleLinks, svgStyles,
+  svgStyles,
   // sayings
   localSayings, onSaveLocalSayings,
-  // bars (mined puzzle identity)
-  bars,
 }) {
   const { whiteColors, blackColors, boardColors, playerBarColors } = colors;
   return (
@@ -150,24 +145,6 @@ export default function AppModals({
         onOpenRules={onOpenRulesPage}
       />
 
-      <DailyPuzzleModal
-        open={puzzleLinks.dailyPuzzleOpen}
-        onClose={puzzleLinks.handleClosePuzzle}
-        svgStyleBySide={svgStyles}
-        previewDate={puzzleLinks.puzzlePreviewDate}
-      />
-
-      <MinedPuzzleModal
-        open={Boolean(puzzleLinks.minedPreviewPuzzle)}
-        onClose={() => puzzleLinks.setMinedPreviewPuzzle(null)}
-        puzzle={puzzleLinks.minedPreviewPuzzle}
-        svgStyleBySide={svgStyles}
-        boardColors={boardColors}
-        playerBarColors={playerBarColors}
-        selfAvatar={bars.selfAvatar}
-        selfRating={bars.selfRating}
-        strangerAvatar={bars.strangerAvatar}
-      />
     </>
   );
 }

@@ -118,7 +118,7 @@ export const BOTS = [
     },
     hue: 150,
     search: { noise: 0.15 },
-    weights: { kingHunt: 0.22, oppDamage: 0.055, hangBadTrade: 0.6 },
+    weights: { kingHunt: 0.22, hangBadTrade: 0.6 },
   },
   {
     id: 'enrico-capablanca',
@@ -152,7 +152,7 @@ export const BOTS = [
     },
     hue: 265,
     search: { noise: 0, widths: [40, 14], timeMs: 6000 },
-    weights: { kingHunt: 0.25, oppDamage: 0.06, extraType: 0.11 },
+    weights: { kingHunt: 0.25, extraType: 0.11 },
   },
 
   // ------------------------------ HARD ------------------------------
@@ -205,7 +205,7 @@ export const BOTS = [
     },
     hue: 285,
     search: { widths: [22, 12, 9] },
-    weights: { kingHunt: 0.32, soleKingAttacked: 5.5, oppDamage: 0.06, hangUndefended: 0.7 },
+    weights: { kingHunt: 0.32, soleKingAttacked: 5.5, hangUndefended: 0.7 },
   },
   {
     id: 'magnus-einstein',
@@ -263,7 +263,7 @@ export const BOTS = [
     hue: 20,
     premium: true,
     search: { noise: 0.4 },
-    weights: { oppDamage: 0.065, extraType: 0.13, mobility: 0.018 },
+    weights: { extraType: 0.13, mobility: 0.018 },
   },
   {
     id: 'nona-franklin',
@@ -299,7 +299,7 @@ export const BOTS = [
     hue: 300,
     premium: true,
     search: { noise: 0.1 },
-    weights: { extraType: 0.14, oppDamage: 0.06, kingHunt: 0.22 },
+    weights: { extraType: 0.14, kingHunt: 0.22 },
   },
   {
     id: 'james-kramnik',
@@ -371,7 +371,7 @@ export const BOTS = [
     hue: 255,
     premium: true,
     search: {},
-    weights: { kingHunt: 0.24, mobility: 0.018, center: 0.045, oppDamage: 0.055 },
+    weights: { kingHunt: 0.24, mobility: 0.018, center: 0.045 },
   },
   {
     id: 'vera-krush',
@@ -407,7 +407,7 @@ export const BOTS = [
     hue: 130,
     premium: true,
     search: { widths: [22, 12, 9] },
-    weights: { kingHunt: 0.24, oppDamage: 0.06, development: 0.075 },
+    weights: { kingHunt: 0.24, development: 0.075 },
   },
   {
     id: 'alexandra-payne',
@@ -425,7 +425,7 @@ export const BOTS = [
     hue: 75,
     premium: true,
     search: { timeMs: 13500, widths: [24, 12, 10] },
-    weights: { kingHunt: 0.26, oppDamage: 0.06, hangUndefended: 0.8 },
+    weights: { kingHunt: 0.26, hangUndefended: 0.8 },
   },
   {
     id: 'ernest-anand',
@@ -443,7 +443,7 @@ export const BOTS = [
     hue: 110,
     premium: true,
     search: { timeMs: 15000, widths: [26, 14, 10] },
-    weights: { kingHunt: 0.26, soleKingAttacked: 5.5, oppDamage: 0.06, mobility: 0.017, hangUndefended: 0.8 },
+    weights: { kingHunt: 0.26, soleKingAttacked: 5.5, mobility: 0.017, hangUndefended: 0.8 },
   },
 ];
 
@@ -458,6 +458,19 @@ export function getBotAvatarUrl(botOrId) {
 
 export const FREE_BOTS = BOTS.filter((b) => !b.premium);
 export const PREMIUM_BOTS = BOTS.filter((b) => b.premium);
+
+// Dev-only playtest override: open the app with ?allbots to make every rung
+// AND the premium roster pickable (ladder + premium gates skipped). Hard-dead
+// in production builds, like the puzzle preview params.
+export function devUnlockAllBots() {
+  try {
+    return Boolean(import.meta.env.DEV)
+      && typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).has('allbots');
+  } catch (_) {
+    return false;
+  }
+}
 
 export function getBotById(id) {
   return BOTS.find((b) => b.id === id) || null;

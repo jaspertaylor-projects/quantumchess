@@ -7,7 +7,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import ChevronBadge from '../components/ChevronBadge.jsx';
-import { DEFAULT_BOT_ID, getBotById } from '../ai/bots.js';
+import { DEFAULT_BOT_ID, getBotById, devUnlockAllBots } from '../ai/bots.js';
 import BotLadderPanel from '../ladder/BotLadderPanel.jsx';
 
 function OptionButton({ label, selected, onClick }) {
@@ -189,13 +189,15 @@ export default function NewGamePanel({
   const [timeControl, setTimeControl] = useState('5+0'); // '3+0', '5+0', '10+0'
 
   const selectedBot = getBotById(aiBotId);
-  const premiumLocked = Boolean(gameMode === 'ai' && selectedBot && selectedBot.premium && !isPaid);
+  // Dev playtest override (?allbots) skips the premium gate too.
+  const unlockAll = devUnlockAllBots();
+  const premiumLocked = Boolean(gameMode === 'ai' && selectedBot && selectedBot.premium && !isPaid && !unlockAll);
 
   const handleStart = () => {
     const bot = getBotById(aiBotId);
     // Premium bots are browsable by everyone (that's the pitch) but only
     // playable on the paid tier — the block lands here, not in the list.
-    if (gameMode === 'ai' && bot && bot.premium && !isPaid) {
+    if (gameMode === 'ai' && bot && bot.premium && !isPaid && !unlockAll) {
       if (onRequirePremium) onRequirePremium();
       return;
     }
@@ -211,8 +213,14 @@ export default function NewGamePanel({
 
   const handleStartRef = useRef(handleStart);
   handleStartRef.current = handleStart;
+  // Only bumps AFTER mount count as "go": the tray keeps its signal counter
+  // across games, so a remounting panel must not fire on a stale value
+  // (clicking the green Play Game button after a game would instantly start
+  // one instead of showing this options page).
+  const lastSubmitSignalRef = useRef(submitSignal);
   useEffect(() => {
-    if (submitSignal > 0) handleStartRef.current();
+    if (submitSignal > lastSubmitSignalRef.current) handleStartRef.current();
+    lastSubmitSignalRef.current = submitSignal;
   }, [submitSignal]);
 
   const styles = useMemo(
@@ -308,6 +316,7 @@ export default function NewGamePanel({
     ],
     []
   );
+
 
   return (
     <div className="qc-new-game-panel" style={styles.panel}>

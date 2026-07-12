@@ -24,8 +24,8 @@ const theme = {
   // Modal backdrop — every modal overlay uses the same scrim
   scrim: 'rgba(0, 0, 0, 0.55)',
   // Default board squares (the user can override via Settings → Board Colors)
-  boardLight: '#f0d9b5',
-  boardDark: '#b58863',
+  boardLight: '#cbd5c0', // Muted sage — bright enough for clarity without glare
+  boardDark: '#71866f', // Desaturated forest green for comfortable contrast
   globalBackground: '#242424',
   globalText: 'rgba(255, 255, 255, 0.87)',
   // Board area background surrounding the chessboard

@@ -6,7 +6,6 @@
 import React, { useMemo } from 'react';
 import theme from '../theme.js';
 import StyledSvgImg from './StyledSvgImg.jsx';
-import { DEFAULT_COHERENCE, RECOHERE_THRESHOLD } from './gameConstants.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 
 // Single-type assets
@@ -74,7 +73,9 @@ const quantumUrlMap = {
   p: qUrlP,
   n: qUrlN,
   b: qUrlB,
-  r: qUrlR,
+  // Explicit art revision keeps Vite's stable dev URL from reusing a
+  // pre-stylish in-memory/data-URL render of the quantum rook.
+  r: `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`,
   q: qUrlQ,
   k: qUrlK,
 };
@@ -95,10 +96,7 @@ export default function QuantumPiece({
   ariaLabel,
   svgStyleBySide = { white: {}, black: {} },
   rotate180 = false,
-  coherence = DEFAULT_COHERENCE,
-  recohere = 0,
   promoted = false,
-  sealed = false,
   indicators = DEFAULT_INDICATORS,
 }) {
   const types = Array.isArray(possibleTypes) ? possibleTypes.slice() : [];
@@ -181,128 +179,30 @@ export default function QuantumPiece({
       pointerEvents: 'none',
       zIndex: 20,
     },
-    pipCenter: {
-      position: 'absolute',
-      left: '50%',
-      top: '50%',
-      width: 0,
-      height: 0,
-      pointerEvents: 'none',
-      zIndex: 20,
-    },
-    pip: (filled, inkHex) => {
-      const d = Math.max(3, Math.round(size * 0.09));
-      return {
-        width: d,
-        height: d,
-        borderRadius: 999,
-        backgroundColor: filled ? inkHex : 'rgba(255,255,255,0.28)',
-        border: '1px solid rgba(0,0,0,0.4)',
-        boxSizing: 'border-box',
-      };
-    },
-    pipAtAngle: (angleDeg, filled, inkHex) => {
-      const d = Math.max(3, Math.round(size * 0.09));
-      const radius = Math.max(4, Math.round(size * 0.13));
-      const rad = (angleDeg * Math.PI) / 180;
-      return {
-        ...baseStyles.pip(filled, inkHex),
-        position: 'absolute',
-        left: Math.round(Math.cos(rad) * radius) - d / 2,
-        top: Math.round(Math.sin(rad) * radius) - d / 2,
-      };
-    },
   };
 
-  // Every insignia and dot on a piece — coherence pips, recoherence row,
-  // promo braces, castle link, sealed line — draws in ONE ink: the piece's
-  // own border (band stroke) color, so the marks always read as part of the
-  // piece and follow any custom piece colors automatically.
+  // Every insignia on a piece draws in ONE ink: the piece's own border
+  // (band stroke) color, so the marks always read as part of the piece and
+  // follow any custom piece colors automatically.
   const sideVars = (svgStyleBySide && svgStyleBySide[side]) || {};
   const ink = sideVars['--band-stroke'] || (side === 'white' ? '#111827' : '#f2f2f2');
-  const effectiveCoherence = Number.isFinite(coherence) ? coherence : DEFAULT_COHERENCE;
-  const TRIANGLE_ANGLES = [-90, 30, 150];
 
-  // Promotion insignia: bra-ket braces in the owner's indicator color — the
-  // same fill as its dots — wrapped around whichever dot cluster the piece
-  // carries (bottom recoherence row, or the center triangle on 3+ pieces).
-  const showPromoBraces = promoted && indicators.promoted;
-  const brace = (open, h, key) => (
-    <svg
-      key={key}
-      width={Math.max(4, Math.ceil(h * 0.55))}
-      height={h}
-      viewBox="0 0 6 10"
-      style={{ display: 'block', flex: 'none', filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }}
-      aria-hidden="true"
-    >
-      <path
-        d={open ? 'M5 1 L1.6 5 L5 9' : 'M1 1 L4.4 5 L1 9'}
-        fill="none"
-        stroke={ink}
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+  // Promotion insignia: a straight bar under the piece — its promotion was
+  // publicly observed.
+  const barW = Math.max(9, Math.round(size * 0.31));
+  const barH = Math.max(2, Math.round(size * 0.05));
+  const promoBar = promoted && indicators.promoted ? (
+    <div className="qc-promo-bar" style={baseStyles.pipRow} aria-hidden="true">
+      <span
+        style={{
+          width: barW,
+          height: barH,
+          borderRadius: 999,
+          backgroundColor: ink,
+          border: '1px solid rgba(0,0,0,0.4)',
+          boxSizing: 'border-box',
+        }}
       />
-    </svg>
-  );
-
-  const dotD = Math.max(3, Math.round(size * 0.09));
-  const bottomBraceH = Math.max(6, Math.round(dotD * 1.9));
-
-  const pips = tCount > 2 && (indicators.coherence || showPromoBraces) ? (
-    <div className="qc-coherence-pips qc-coherence-pips--triangle" style={baseStyles.pipCenter} aria-hidden="true">
-      {indicators.coherence
-        ? TRIANGLE_ANGLES.map((angle, i) => (
-            <span key={`pip-${i}`} style={baseStyles.pipAtAngle(angle, i < effectiveCoherence, ink)} />
-          ))
-        : null}
-      {showPromoBraces ? (
-        <>
-          <div style={{ position: 'absolute', left: -Math.round(size * 0.26), top: -Math.round(size * 0.15) }}>
-            {brace(true, Math.max(8, Math.round(size * 0.3)))}
-          </div>
-          <div style={{ position: 'absolute', left: Math.round(size * 0.26) - Math.ceil(Math.max(8, Math.round(size * 0.3)) * 0.55), top: -Math.round(size * 0.15) }}>
-            {brace(false, Math.max(8, Math.round(size * 0.3)))}
-          </div>
-        </>
-      ) : null}
-    </div>
-  ) : null;
-
-  // Recoherence progress on nearly-defined pieces: a bottom row of dots in the
-  // OWNER's color counting toward regaining a possibility. Always shown on
-  // <= 2 type pieces, empty until the clock starts (a fresh collapse sits at
-  // zero for one full turn — recohere -1/0 both render as empty). Entangled
-  // castle partners never recohere, so they carry a chain-link mark instead
-  // of a clock that would never fill. A SEALED piece (conservation leaves it
-  // nothing to regain — the position's piece set is final for it) shows a
-  // solid line instead of a clock that would cycle forever.
-  const regainProgress = Math.max(0, Math.min(RECOHERE_THRESHOLD, recohere || 0));
-  const nearlyDefined = tCount >= 1 && tCount <= 2;
-  const bottomDots = sealed ? (
-    <span
-      key="sealed-line"
-      className="qc-sealed-line"
-      style={{
-        width: dotD * 3 + 4,
-        height: Math.max(2, Math.round(dotD * 0.55)),
-        borderRadius: 999,
-        backgroundColor: ink,
-        border: '1px solid rgba(0,0,0,0.4)',
-        boxSizing: 'border-box',
-      }}
-    />
-  ) : (
-    Array.from({ length: RECOHERE_THRESHOLD }, (_, i) => (
-      <span key={`regain-${i}`} style={baseStyles.pip(i < regainProgress, ink)} />
-    ))
-  );
-  const regainPips = nearlyDefined && (indicators.recohere || showPromoBraces) ? (
-    <div className="qc-recohere-pips" style={baseStyles.pipRow} aria-hidden="true">
-      {showPromoBraces ? brace(true, bottomBraceH, 'brace-open') : null}
-      {indicators.recohere ? bottomDots : null}
-      {showPromoBraces ? brace(false, bottomBraceH, 'brace-close') : null}
     </div>
   ) : null;
 
@@ -347,7 +247,7 @@ export default function QuantumPiece({
           style={baseStyles.rasterImg}
           alt=""
         />
-        {regainPips}
+        {promoBar}
       </div>
     );
   }
@@ -377,7 +277,7 @@ export default function QuantumPiece({
             style={baseStyles.rasterImg}
             alt=""
           />
-          {regainPips}
+          {promoBar}
         </div>
       );
     }
@@ -416,7 +316,7 @@ export default function QuantumPiece({
       aria-label={ariaLabel || `Quantum piece: ${types.join('/')}`}
     >
       <div className="qc-quantum-overlay-stack" style={baseStyles.overlayStack}>{overlays}</div>
-      {pips}
+      {promoBar}
     </div>
   );
 }

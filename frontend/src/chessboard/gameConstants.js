@@ -62,9 +62,6 @@ export function createStartingPieces() {
       captured: false,
       moveCount: 0,
       wasPromoted: false,
-      coherence: DEFAULT_COHERENCE,
-      recohere: 0,
-      observed: false,
       castled: false,
     });
   });
@@ -80,9 +77,6 @@ export function createStartingPieces() {
       captured: false,
       moveCount: 0,
       wasPromoted: false,
-      coherence: DEFAULT_COHERENCE,
-      recohere: 0,
-      observed: false,
       castled: false,
     });
   });
@@ -93,24 +87,17 @@ export function createStartingPieces() {
 // Capture collapse priority: lowest valuable non-king first (P < N < B < R < Q)
 export const CAPTURE_COLLAPSE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
-// Measurement (decoherence) shed priority: the LEAST valuable possibility is
-// lost first — symmetric with recoherence (gain LVP, lose LVP). Losing the
-// cheap identities raises the piece's capture-collapse value and strips its
-// cheap threats. King is last and sheds stop at two possibilities, so
-// measurement can never remove King.
-export const DECOHERENCE_SHED_ORDER = ['p', 'n', 'b', 'r', 'q', 'k'];
+// A zap sheds the MOST valuable possibility it can lose cleanly — King
+// included, so stripping the last king possibility from a side is the win by
+// wave-function collapse.
+export const CONTACT_ZAP_ORDER = ['k', 'q', 'r', 'b', 'n', 'p'];
 
-// Coherence points a superposed piece can absorb before shedding a type.
-// Moving a piece restores it to this value.
-export const DEFAULT_COHERENCE = 3;
+// Least valuable first — the mover's contact reach projects from the first
+// type here it still holds, and heals walk it to pick the regained identity.
+export const LEAST_VALUABLE_ORDER = ['p', 'n', 'b', 'r', 'q', 'k'];
 
-// Recoherence: a piece with two or fewer possibilities regains one feasible
-// possibility after this many of its owner's moves without being observed.
-// Any measurement pulse that touches it resets the progress (quantum Zeno).
-export const RECOHERE_THRESHOLD = 3;
-
-// Regain order: least valuable first. King never comes back once excluded.
-export const RECOHERE_GAIN_ORDER = ['p', 'n', 'b', 'r', 'q'];
+// Heal regain order: least valuable first. King never comes back.
+export const HEAL_GAIN_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
 export function isSide(value) {
   return value === SIDES.WHITE || value === SIDES.BLACK;

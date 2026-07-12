@@ -92,8 +92,8 @@ export default function SettingsModal({
   const PRESET_HINTS = {
     total: 'Every visual hint on.',
     amateur: 'Hides check arrows. The default.',
-    master: 'Also hides red check rings and weak-measurement circles.',
-    grandmaster: 'Also hides decoherence dots and all insignia (promotion, recoherence).',
+    master: 'Also hides the red check rings.',
+    grandmaster: 'Also hides the promotion insignia.',
     goat: 'Also hides the piece icons inside 3+ possibility bands. Bands only.',
   };
 
@@ -347,6 +347,33 @@ export default function SettingsModal({
                 aria-label="White band stroke color"
               />
             </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-white-piece-outline" style={styles.label}>Piece Outline</label>
+              <input
+                id="qc-white-piece-outline"
+                type="color"
+                className="qc-color-input qc-color-input--white-piece-outline"
+                style={{ ...styles.colorInput, opacity: localWhite.pieceOutlineEnabled ? 1 : 0.45 }}
+                value={localWhite.pieceOutline}
+                onChange={handleWhite('pieceOutline')}
+                disabled={!localWhite.pieceOutlineEnabled}
+                aria-label="White piece outline color"
+              />
+            </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-white-piece-outline-enabled" style={styles.label}>Show Piece Outline</label>
+              <input
+                id="qc-white-piece-outline-enabled"
+                type="checkbox"
+                className="qc-checkbox-input qc-checkbox-input--white-piece-outline"
+                style={styles.checkboxInput}
+                checked={localWhite.pieceOutlineEnabled}
+                onChange={(e) => setLocalWhite((p) => ({ ...p, pieceOutlineEnabled: e.target.checked }))}
+                aria-label="Show white piece outline"
+              />
+            </div>
           </>)}
 
           {renderSection('black', 'Black Team', <>
@@ -386,6 +413,33 @@ export default function SettingsModal({
                 value={localBlack.bandStroke}
                 onChange={handleBlack('bandStroke')}
                 aria-label="Black band stroke color"
+              />
+            </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-black-piece-outline" style={styles.label}>Piece Outline</label>
+              <input
+                id="qc-black-piece-outline"
+                type="color"
+                className="qc-color-input qc-color-input--black-piece-outline"
+                style={{ ...styles.colorInput, opacity: localBlack.pieceOutlineEnabled ? 1 : 0.45 }}
+                value={localBlack.pieceOutline}
+                onChange={handleBlack('pieceOutline')}
+                disabled={!localBlack.pieceOutlineEnabled}
+                aria-label="Black piece outline color"
+              />
+            </div>
+
+            <div className="qc-settings-row" style={styles.row}>
+              <label htmlFor="qc-black-piece-outline-enabled" style={styles.label}>Show Piece Outline</label>
+              <input
+                id="qc-black-piece-outline-enabled"
+                type="checkbox"
+                className="qc-checkbox-input qc-checkbox-input--black-piece-outline"
+                style={styles.checkboxInput}
+                checked={localBlack.pieceOutlineEnabled}
+                onChange={(e) => setLocalBlack((p) => ({ ...p, pieceOutlineEnabled: e.target.checked }))}
+                aria-label="Show black piece outline"
               />
             </div>
           </>)}

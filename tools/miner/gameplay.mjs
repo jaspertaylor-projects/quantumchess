@@ -25,7 +25,7 @@ import { CFG } from './config.mjs';
 
 
 // Re-simulate a reply from generateLegalReplies so we recover didCapture and
-// measuredSquares (the reply list drops them), then advance through the
+// zap/heal contact squares (the reply list drops them), then advance through the
 // shared moveOutcome — the same tail live play and review replay use.
 function applyReply(state, reply) {
   const { pieces, sideToMove, captureCounter, halfmoveClock } = state;
@@ -74,7 +74,7 @@ function applyReply(state, reply) {
       lastMove: outcome.nextLastMove,
       halfmoveClock: outcome.nextHalfmoveClock,
     },
-    moveRec: { type: reply.type, from, to, didCapture: outcome.didCapture, measuredSquares: outcome.nextLastMove.measuredSquares },
+    moveRec: { type: reply.type, from, to, didCapture: outcome.didCapture, zappedSquares: outcome.nextLastMove.zappedSquares, healedSquares: outcome.nextLastMove.healedSquares },
     gameOver: outcome.gameOver, winner: outcome.winner, reason: outcome.gameOverReason,
   };
 }
@@ -196,7 +196,8 @@ function mirrorLastMove(lm) {
     from: mirrorSquare(lm.from),
     to: mirrorSquare(lm.to),
     crossedSquare: lm.crossedSquare ? mirrorSquare(lm.crossedSquare) : lm.crossedSquare,
-    measuredSquares: (lm.measuredSquares || []).map(mirrorSquare),
+    zappedSquares: (lm.zappedSquares || []).map(mirrorSquare),
+    healedSquares: (lm.healedSquares || []).map(mirrorSquare),
   };
 }
 

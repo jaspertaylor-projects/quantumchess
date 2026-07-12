@@ -8,6 +8,7 @@ import { devLog } from '../devlog.js';
 // In-memory caches to avoid duplicate work during a session
 const dataUrlCache = new Map(); // key -> dataURL
 const promiseCache = new Map(); // key -> Promise<string>
+const isDev = Boolean(import.meta.env?.DEV);
 
 function safeJsonStringify(obj) {
   try {
@@ -122,7 +123,10 @@ export function getCachedSvgUrl({ srcUrl, cssVarMap }) {
   const key = `v3|${srcUrl}|${sig}`;
   if (dataUrlCache.has(key)) return dataUrlCache.get(key);
   const storageKey = `qcSvgCacheV1:${hashString(key)}`;
-  const persisted = storageGet(storageKey);
+  // Vite dev asset URLs are stable across file edits, so a persisted entry
+  // can otherwise hide regenerated piece artwork indefinitely. Production
+  // assets are content-hashed and remain safe to persist.
+  const persisted = isDev ? null : storageGet(storageKey);
   if (persisted) {
     dataUrlCache.set(key, persisted);
     return persisted;
@@ -139,7 +143,7 @@ export async function getStyledSvgUrl({ srcUrl, cssVarMap, idPrefix }) {
   if (dataUrlCache.has(key)) return dataUrlCache.get(key);
   if (promiseCache.has(key)) return promiseCache.get(key);
 
-  const persisted = storageGet(storageKey);
+  const persisted = isDev ? null : storageGet(storageKey);
   if (persisted) {
     dataUrlCache.set(key, persisted);
     return persisted;
@@ -147,7 +151,7 @@ export async function getStyledSvgUrl({ srcUrl, cssVarMap, idPrefix }) {
 
   const promise = (async () => {
     try {
-      const res = await fetch(srcUrl, { cache: 'force-cache' });
+      const res = await fetch(srcUrl, { cache: isDev ? 'no-store' : 'force-cache' });
       const text = await res.text();
       const prefixed = prefixSvgIds(text, idPrefix || 'qsvg');
       const styled = injectStyleIntoSvg(prefixed, buildRootStyle(cssVarMap));
@@ -156,7 +160,7 @@ export async function getStyledSvgUrl({ srcUrl, cssVarMap, idPrefix }) {
       const dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(styled);
       if (dataUrl) {
         dataUrlCache.set(key, dataUrl);
-        storageSet(storageKey, dataUrl);
+        if (!isDev) storageSet(storageKey, dataUrl);
         devLog(`[SvgStyler] Cached SVG -> key:${storageKey}`);
       } else {
         console.warn('[SvgStyler] Empty data URL generated for', { srcUrl });

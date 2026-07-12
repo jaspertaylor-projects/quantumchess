@@ -12,15 +12,19 @@ const STORAGE_KEYS = {
 };
 
 export const DEFAULT_WHITE = {
-  icon: '#111827',
-  bandFill: '#e5e7eb',
-  bandStroke: '#111827',
+  icon: '#343b35',
+  bandFill: '#e8e3d8',
+  bandStroke: '#343b35',
+  pieceOutline: '#000000',
+  pieceOutlineEnabled: true,
 };
 
 export const DEFAULT_BLACK = {
-  icon: '#ffffff',
-  bandFill: '#254065',
-  bandStroke: '#f2f2f2',
+  icon: '#f0eadf',
+  bandFill: '#39454f',
+  bandStroke: '#d6d0c5',
+  pieceOutline: '#d6d0c5',
+  pieceOutlineEnabled: true,
 };
 
 export default function usePieceColors() {
@@ -36,11 +40,13 @@ export default function usePieceColors() {
     white: {
       ['--band-fill']: whiteColors.bandFill,
       ['--band-stroke']: whiteColors.bandStroke,
+      ['--piece-outline']: whiteColors.pieceOutlineEnabled ? whiteColors.pieceOutline : 'transparent',
       ['--icon-color']: whiteColors.icon,
     },
     black: {
       ['--band-fill']: blackColors.bandFill,
       ['--band-stroke']: blackColors.bandStroke,
+      ['--piece-outline']: blackColors.pieceOutlineEnabled ? blackColors.pieceOutline : 'transparent',
       ['--icon-color']: blackColors.icon,
     },
   }), [whiteColors, blackColors]);

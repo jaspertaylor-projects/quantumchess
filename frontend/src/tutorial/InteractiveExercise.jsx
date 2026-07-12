@@ -1,9 +1,9 @@
 // frontend/src/tutorial/InteractiveExercise.jsx
 // Purpose: A hands-on tutorial step: the player makes real moves on a small
-// position and the REAL game engine resolves them — collapses, pulses,
-// en passant, promotion and check threats all behave exactly
+// position and the REAL game engine resolves them — collapses, zaps, heals,
+// shields, en passant, promotion and revealed-king checks all behave exactly
 // as in a live game. Supports scripted Black replies (autoReply) so lessons
-// can demonstrate deferred measurement damage and the Zeno lock.
+// can land an enemy zap right before the player's eyes.
 // Imports From: ./MiniBoard.jsx, ../theme.js, ../chessboard/quantumEngine.js
 // Exported To: ./TutorialModal.jsx
 
@@ -18,33 +18,39 @@ import {
   generateLegalReplies,
   listEnPassantCaptures,
   listCheckThreats,
-  canPieceRecohere,
 } from '../chessboard/quantumEngine.js';
 
 function buildPieces(specs) {
-  return specs.map((s) => ({
-    id: s.id,
+  return specs.map((s, i) => ({
+    id: s.id || `cap-${i}`,
     side: s.side,
-    square: s.square,
+    // Captured spec pieces let a lesson pin the census (e.g. a shield needs
+    // the right pieces already off the board).
+    square: s.captured ? null : s.square,
     possibleTypes: s.types.split(''),
     // A promoted piece carries its identities as pawn-funded branches.
     baseTypes: s.promoted ? [] : s.types.split(''),
     promoTypes: s.promoted ? s.types.split('') : [],
-    captured: false,
-    moveCount: s.moved ? 1 : 0,
+    captured: Boolean(s.captured),
+    captureIndex: s.captured ? i : null,
+    moveCount: s.moved || s.captured ? 1 : 0,
     wasPromoted: Boolean(s.promoted),
-    coherence: Number.isFinite(s.pips) ? s.pips : 3,
-    recohere: Number.isFinite(s.regain) ? s.regain : 0,
     castled: Boolean(s.castled),
-    observed: false,
   }));
 }
+
+const EMPTY_MARKS = { zaps: [], heals: [], shields: [] };
+const marksFromSim = (sim) => ({
+  zaps: sim.zappedSquares || [],
+  heals: sim.healedSquares || [],
+  shields: sim.fizzledSquares || [],
+});
 
 export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
   const [pieces, setPieces] = useState(() => buildPieces(spec.pieces));
   const [lastMove, setLastMove] = useState(() => spec.lastMove || null);
   const [selectedId, setSelectedId] = useState(null);
-  const [marks, setMarks] = useState([]);
+  const [marks, setMarks] = useState(EMPTY_MARKS);
   const [status, setStatus] = useState('ready'); // ready | wrong | done
   const [msg, setMsg] = useState(spec.prompt);
 
@@ -67,7 +73,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     setPieces(buildPieces(spec.pieces));
     setLastMove(spec.lastMove || null);
     setSelectedId(null);
-    setMarks([]);
+    setMarks(EMPTY_MARKS);
     setStatus('ready');
     setMsg(spec.prompt);
   };
@@ -91,7 +97,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
           return;
         }
         setPieces(sim.pieces);
-        setMarks(sim.measuredSquares || []);
+        setMarks(marksFromSim(sim));
         setLastMove(null);
         setSelectedId(null);
         setStatus('done');
@@ -134,7 +140,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
       (g.kind === 'move' && g.from === fromSq && g.to === sq && (!g.ep || usedEp));
 
     let finalPieces = sim.pieces;
-    let finalMarks = sim.measuredSquares || [];
+    let finalMarks = marksFromSim(sim);
 
     // Scripted Black reply: lessons use it to land deferred measurement
     // damage or a Zeno reset right before the player's eyes.
@@ -144,7 +150,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
         const sim2 = simulateStandardMove(finalPieces, bp.id, spec.autoReply.to, 0);
         if (sim2.ok) {
           finalPieces = sim2.pieces;
-          finalMarks = sim2.measuredSquares || [];
+          finalMarks = marksFromSim(sim2);
         }
       }
     }
@@ -166,13 +172,10 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     sq: p.square,
     side: p.side,
     types: p.possibleTypes.join(''),
-    pips: p.coherence,
-    regain: Math.max(0, p.recohere || 0),
     chevrons: Boolean(p.wasPromoted),
-    sealed:
-      p.possibleTypes.length <= 2 &&
-      !canPieceRecohere(pieces, p.id),
-    mark: marks.includes(p.square),
+    zap: marks.zaps.includes(p.square),
+    heal: marks.heals.includes(p.square),
+    shield: marks.shields.includes(p.square),
     ring: threats.some((t) => t.to === p.square),
   }));
   const arrows = threats.map((t) => ({ from: t.from, to: t.to, side: t.side }));

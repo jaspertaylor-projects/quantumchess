@@ -67,6 +67,15 @@ export default function useQuantumGameState(resetKey = 0) {
 
   const occupancy = useMemo(() => buildOccupancy(pieces), [pieces]);
 
+  // Check applies only to a DEFINITE king (possibleTypes === ['k']) — the
+  // revealed-last-holder endgame — so the quantum midgame stays checkless
+  // while the finale gets real checkmate. Must match generateLegalReplies,
+  // or live play diverges from the AI and terminal evaluation.
+  const leavesKingCapturable = useCallback(
+    (ps, side) => hasCollapsedKingCapturable(ps, side),
+    []
+  );
+
   const getPieceAtSquare = useCallback((square) => {
     return occupancy.get(square) || null;
   }, [occupancy]);
@@ -83,12 +92,12 @@ export default function useQuantumGameState(resetKey = 0) {
     for (const toSq of merged) {
       const sim = simulateStandardMove(pieces, piece.id, toSq, captureCounter);
       if (!sim.ok) continue;
-      if (hasCollapsedKingCapturable(sim.pieces, piece.side)) continue;
+      if (leavesKingCapturable(sim.pieces, piece.side)) continue;
       legal.push(toSq);
     }
 
     return legal;
-  }, [pieces, occupancy, sideToMove, captureCounter]);
+  }, [pieces, occupancy, sideToMove, captureCounter, leavesKingCapturable]);
 
   const checkingSquaresBySide = useMemo(() => {
     const whiteThreats = computeThreatenedSquaresForSide(pieces, 'white');
@@ -107,9 +116,9 @@ export default function useQuantumGameState(resetKey = 0) {
     return candidates.filter((ep) => {
       const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
       if (!sim.ok) return false;
-      return !hasCollapsedKingCapturable(sim.pieces, sideToMove);
+      return !leavesKingCapturable(sim.pieces, sideToMove);
     });
-  }, [pieces, sideToMove, lastMove, captureCounter, gameOver]);
+  }, [pieces, sideToMove, lastMove, captureCounter, gameOver, leavesKingCapturable]);
 
   const getEnPassantMoves = useCallback((pieceId) => {
     return enPassantMovesForSide.filter((ep) => ep.pieceId === pieceId);
@@ -140,7 +149,7 @@ export default function useQuantumGameState(resetKey = 0) {
     }
     if (!sim.ok) return { success: false, reason: sim.reason || 'Illegal move.' };
 
-    if (hasCollapsedKingCapturable(sim.pieces, moving.side)) {
+    if (leavesKingCapturable(sim.pieces, moving.side)) {
       return { success: false, reason: 'Move would leave a collapsed King capturable.' };
     }
 
@@ -167,7 +176,7 @@ export default function useQuantumGameState(resetKey = 0) {
       success: true,
       records: [{ from: fromSquareAlg, to: toSquare, side: sideToMove, enPassant: Boolean(enPassant) }],
     };
-  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, enPassantMovesForSide, halfmoveClock]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, enPassantMovesForSide, halfmoveClock, leavesKingCapturable]);
 
   // Rebuild the whole timeline from a relayed move list — used when rejoining
   // an online game after a reload. Entries are the server's history records:
@@ -201,12 +210,12 @@ export default function useQuantumGameState(resetKey = 0) {
     const sim = simulateCastle(pieces, result.plan);
     if (!sim.ok) return { canCastle: false, reason: sim.reason || 'Castling simulation failed.' };
     const moverSide = pieces.find((p) => p.id === result.plan.piece1_id)?.side || sideToMove;
-    if (hasCollapsedKingCapturable(sim.pieces, moverSide)) {
+    if (leavesKingCapturable(sim.pieces, moverSide)) {
       return { canCastle: false, reason: 'Castling would leave a collapsed King capturable.' };
     }
 
     return result;
-  }, [pieces, sideToMove]);
+  }, [pieces, sideToMove, leavesKingCapturable]);
 
   const castlePieces = useCallback((idA, idB) => {
     if (!canMakeMove) return { success: false, reason: gameOver ? 'Game over.' : 'Cannot make moves while viewing history.' };
@@ -221,7 +230,7 @@ export default function useQuantumGameState(resetKey = 0) {
     if (!sim.ok) return { success: false, reason: sim.reason || 'Castling failed.' };
 
     const moverSide = pieces.find((p) => p.id === plan.piece1_id)?.side || sideToMove;
-    if (hasCollapsedKingCapturable(sim.pieces, moverSide)) {
+    if (leavesKingCapturable(sim.pieces, moverSide)) {
       return { success: false, reason: 'Castling would leave a collapsed King capturable.' };
     }
 
@@ -243,7 +252,7 @@ export default function useQuantumGameState(resetKey = 0) {
         { from: plan.piece2_from, to: plan.piece2_to, side: sideToMove, castle: true },
       ],
     };
-  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, halfmoveClock]);
+  }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, halfmoveClock, leavesKingCapturable]);
 
   // Position-signature counts across the timeline: the AI passes these to
   // the search so a winning bot avoids shuffling into threefold repetition.

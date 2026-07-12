@@ -36,6 +36,8 @@ import qUrlR from '../assets/quantum_r.svg?url';
 import qUrlQ from '../assets/quantum_q.svg?url';
 import qUrlK from '../assets/quantum_k.svg?url';
 
+const qUrlRStylish = `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`;
+
 const SINGLE_ASSET_URLS = [imgP, imgN, imgB, imgR, imgQ, imgK].filter(Boolean);
 
 const RAW_URLS = [
@@ -44,7 +46,7 @@ const RAW_URLS = [
   // Pairs
   imgBK, imgBQ, imgBR, imgNB, imgNK, imgNQ, imgNR, imgPB, imgPK, imgPN, imgPQ, imgPR, imgQK, imgRK, imgRQ,
   // Overlays
-  qUrlP, qUrlN, qUrlB, qUrlR, qUrlQ, qUrlK,
+  qUrlP, qUrlN, qUrlB, qUrlRStylish, qUrlQ, qUrlK,
 ];
 
 const ALL_ASSET_URLS = Array.from(new Set(RAW_URLS.filter(Boolean)));

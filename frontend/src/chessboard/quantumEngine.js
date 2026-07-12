@@ -1,28 +1,25 @@
 // frontend/src/chessboard/quantumEngine.js
 // Purpose: The Quantum Chess rules engine facade — move simulation
-// (standard / en passant / castling), the measurement pulse and end-of-turn
-// effects, threat maps, legal-reply generation, terminal evaluation, and
-// position signatures. The piece type-set shape, movement geometry, and the
-// conservation solver live in ./engineTypes.js, ./engineGeometry.js and
-// ./engineConservation.js; their public API is re-exported here so consumers
-// import one module.
+// (standard / en passant / castling), the contact zap/heal resolution,
+// legal-reply generation, terminal evaluation (wave-function collapse +
+// revealed-king checkmate), and position signatures. The piece type-set
+// shape, movement geometry, and the conservation solver live in
+// ./engineTypes.js, ./engineGeometry.js and ./engineConservation.js; their
+// public API is re-exported here so consumers import one module.
 // Imports From: ./boardUtils.js, ./gameConstants.js, ./engineTypes.js, ./engineGeometry.js, ./engineConservation.js
-// Exported To: ./useQuantumGameState.js, ./advanceCore.js, ../ai/alphaBetaEngine.js, ../puzzle/puzzleGenerator.js
+// Exported To: ./useQuantumGameState.js, ./advanceCore.js, ../ai/alphaBetaEngine.js
 
 import { fromAlgebraic, toAlgebraic } from './boardUtils.js';
 import {
   CAPTURE_COLLAPSE_ORDER,
-  DECOHERENCE_SHED_ORDER,
-  DEFAULT_COHERENCE,
-  RECOHERE_GAIN_ORDER,
-  RECOHERE_THRESHOLD,
+  CONTACT_ZAP_ORDER,
+  HEAL_GAIN_ORDER,
+  LEAST_VALUABLE_ORDER,
 } from './gameConstants.js';
 import {
-  cloneWithoutKing,
   clonePieces,
   getBaseTypes,
   getPromoTypes,
-  resetCoherenceOnCollapse,
   restrictTypes,
   withTypes,
 } from './engineTypes.js';
@@ -69,22 +66,31 @@ export function computeThreatenedSquaresForSide(pieces, side) {
   return threatened;
 }
 
-// List active check threats: every nearly-defined (<= 2 type) piece whose
-// attacks reach an enemy king-holder's square — the same attackers the
-// end-of-turn king pruning respects. Returns [{ from, to, side }] where
-// side is the ATTACKER's side. Used by the board's check-ray overlay.
+// List active check threats for the board's check-ray overlay. Two kinds of
+// target, matching the rules that consume them:
+//  - superposed king-holders are threatened by nearly-defined (<= 2 type)
+//    attackers — the same attackers classic end-of-turn king pruning
+//    respects;
+//  - a DEFINITE king (possibleTypes === ['k'], the revealed endgame king)
+//    is in check from an attacker of ANY width, exactly like
+//    canSideCaptureSquare scores it — otherwise the overlay under-reports
+//    real mate threats.
+// Returns [{ from, to, side }] where side is the ATTACKER's side.
 export function listCheckThreats(pieces) {
   const occ = buildOccupancy(pieces);
   const holders = pieces.filter((p) => !p.captured && p.square && (p.possibleTypes || []).includes('k'));
   if (holders.length === 0) return [];
   const holderBySquare = new Map(holders.map((h) => [h.square, h]));
+  const definiteKing = (h) => (h.possibleTypes || []).length === 1;
 
   const threats = [];
   const seen = new Set();
   for (const p of pieces) {
     if (p.captured || !p.square) continue;
     const types = p.possibleTypes || [];
-    if (types.length === 0 || types.length > 2) continue;
+    if (types.length === 0) continue;
+    const narrowAttacker = types.length <= 2;
+    if (!narrowAttacker && !holders.some((h) => definiteKing(h) && h.side !== p.side)) continue;
     const pos = fromAlgebraic(p.square);
     if (!pos) continue;
     for (const t of types) {
@@ -92,6 +98,7 @@ export function listCheckThreats(pieces) {
       for (const sq of atk) {
         const h = holderBySquare.get(sq);
         if (!h || h.side === p.side) continue;
+        if (!narrowAttacker && !definiteKing(h)) continue;
         const key = `${p.square}>${sq}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -140,28 +147,18 @@ export function isLostInCheck(pieces, side) {
   return holders.length === 1 && canSideCaptureSquare(pieces, otherSide(side), holders[0].square);
 }
 
-// The resolution tail every move simulation shares once the mover has landed:
-// run conservation, prune mover-side King possibilities standing on threatened
-// squares (never a piece already collapsed to the King), re-run conservation,
-// fire the measurement pulse from the mover(s), apply the owner's end-of-turn
-// effects, and reset coherence on anything that collapsed.
-function resolveMoveTail(next, moverSide, moverIds, prevPieces) {
+// The resolution tail every move simulation shares once the mover has
+// landed: run conservation, then the contact effects — zap every enemy in
+// reach, heal every friendly.
+function resolveMoveTail(next, moverSide, moverIds) {
   const constrained = applyQuantumConstraints(next);
-  const oppThreats = computeThreatenedSquaresForSide(constrained, otherSide(moverSide));
-
-  const afterCheck = constrained.map((p) => {
-    if (p.captured || p.side !== moverSide || !p.square) return p;
-    if (!p.possibleTypes.includes('k')) return p;
-    if (!oppThreats.has(p.square)) return p;
-    if (p.possibleTypes.length === 1) return p;
-    return cloneWithoutKing(p);
-  });
-
-  const prePulse = applyQuantumConstraints(afterCheck);
-  const pulse = applyMeasurementPulse(prePulse, moverIds);
-  const finalPieces = applyOwnerTurnEffects(pulse.pieces, moverSide, moverIds, prevPieces);
-  resetCoherenceOnCollapse(prevPieces, finalPieces);
-  return { pieces: finalPieces, measuredSquares: pulse.measuredSquares };
+  const contact = applyContactZapHeal(constrained, moverSide, moverIds);
+  return {
+    pieces: contact.pieces,
+    zappedSquares: contact.zappedSquares,
+    healedSquares: contact.healedSquares,
+    fizzledSquares: contact.fizzledSquares,
+  };
 }
 
 export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCounter) {
@@ -195,10 +192,12 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     targetPiece.square = null;
     // Collapse the captured piece's type; its origin stays as ambiguous as the
     // type allows (a captured promoted knight still consumes a pawn slot).
+    // A piece with no non-king possibility IS the king — capturing it ends
+    // the game.
     if (least) {
       restrictTypes(targetPiece, [least]);
     } else {
-      withTypes(targetPiece, ['p'], []);
+      withTypes(targetPiece, ['k'], []);
     }
     targetPiece.captureIndex = captureCounter;
     didCapture = true;
@@ -207,8 +206,6 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
   moving.square = toSquare;
   restrictTypes(moving, subset);
   moving.moveCount = (moving.moveCount || 0) + 1;
-  moving.coherence = DEFAULT_COHERENCE;
-  moving.observed = false;
 
   const promotionRank = moving.side === 'white' ? 7 : 0;
   // Promotion fires at most once per piece: a piece that already carries
@@ -229,214 +226,146 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     }
   }
 
-  const tail = resolveMoveTail(next, moving.side, [moving.id], prevPieces);
-  return { ok: true, pieces: tail.pieces, didCapture, measuredSquares: tail.measuredSquares };
+  const tail = resolveMoveTail(next, moving.side, [moving.id]);
+  return {
+    ok: true,
+    pieces: tail.pieces,
+    didCapture,
+    zappedSquares: tail.zappedSquares,
+    healedSquares: tail.healedSquares,
+    fizzledSquares: tail.fizzledSquares,
+  };
 }
 
-// --- Measurement (targeted decoherence) ---
-
-// Sheds the next type in DECOHERENCE_SHED_ORDER (least valuable first).
-function shedNextType(piece) {
-  if (!Array.isArray(piece.possibleTypes) || piece.possibleTypes.length <= 1) return false;
-  const shed = DECOHERENCE_SHED_ORDER.find((t) => piece.possibleTypes.includes(t));
-  if (!shed) return false;
-  restrictTypes(piece, piece.possibleTypes.filter((t) => t !== shed));
+// A shed is LOCAL when the constrained board differs from the pre-shed board
+// in exactly one way: the target lost the shed type and nothing else — no
+// other piece's possibility set changed, and the target was not narrowed
+// beyond the shed itself. This is the zap guard's cleanliness test.
+function shedIsLocal(before, after, targetId, shedType) {
+  const afterById = new Map(after.map((p) => [p.id, p]));
+  for (const b of before) {
+    const a = afterById.get(b.id);
+    if (!a) return false;
+    const bTypes = (b.possibleTypes || []).join('');
+    const aTypes = (a.possibleTypes || []).join('');
+    if (b.id === targetId) {
+      const expected = (b.possibleTypes || []).filter((t) => t !== shedType).join('');
+      if (aTypes !== expected) return false;
+    } else if (aTypes !== bTypes) {
+      return false;
+    }
+  }
   return true;
 }
 
-// Measurement pulse: when a piece completes a move, it soft-measures every
-// enemy piece it could capture from its final square (using any of its
-// remaining possible types). To observe something, you must be able to touch
-// it — and the act of moving is the observation.
+// --- Zap + heal on contact ---
 //
-// Observation is a MARK, not instant damage: the marked piece loses a
-// coherence point at ITS OWNER's next move — unless the owner moves that very
-// piece, which dodges the hit and resets it entirely (self-measurement on
-// your own terms). Returns { pieces, measuredSquares }.
-export function applyMeasurementPulse(pieces, moverIds) {
-  const occ = buildOccupancy(pieces);
-  const measured = new Set();
-
-  for (const moverId of moverIds) {
-    const mover = pieces.find((p) => p.id === moverId && !p.captured && p.square);
-    if (!mover) continue;
-    const reach = mergedDestinations(mover, occ, { isFirstMove: false });
-    for (const sq of reach) {
-      const target = occ.get(sq);
-      if (!target || target.side === mover.side || target.captured) continue;
-      if (!Array.isArray(target.possibleTypes)) continue;
-      if (target.possibleTypes.length <= 2) {
-        // Quantum Zeno: observing a nearly-defined piece cannot narrow it
-        // further, but it freezes any recoherence in progress — the clock
-        // resets to empty, exactly like a fresh collapse, and restarts on
-        // the owner's next move.
-        if ((target.recohere || 0) > 0) {
-          target.recohere = 0;
-          measured.add(sq);
-        }
-        continue;
-      }
-      target.observed = true;
-      measured.add(sq);
-    }
-  }
-
-  return { pieces, measuredSquares: Array.from(measured) };
-}
-
-// Shed the target's least valuable possibility, guarded: soft measurement can
-// never fully define a piece — not even indirectly. If, after the team
-// constraints resolve, ANY piece would end up with a single definite identity
-// it did not already have, the measurement dissipates instead (the target
-// keeps its possibilities and its coherence simply resets).
-function attemptGuardedShed(current, targetId) {
-  const dissipate = () => {
-    const cur = current.find((p) => p.id === targetId);
-    if (cur) cur.coherence = DEFAULT_COHERENCE;
-    return current;
-  };
-
-  const liveTarget = current.find((p) => p.id === targetId && !p.captured);
-  if (!liveTarget || liveTarget.possibleTypes.length <= 2) return dissipate();
-
-  const trial = clonePieces(current);
-  const trialTarget = trial.find((p) => p.id === targetId);
-  shedNextType(trialTarget);
-  trialTarget.coherence = DEFAULT_COHERENCE;
-  const constrained = applyQuantumConstraints(trial);
-
-  const beforeCounts = new Map(current.map((p) => [p.id, (p.possibleTypes || []).length]));
-  const overDefined = constrained.some(
-    (p) => !p.captured && (p.possibleTypes || []).length === 1 && (beforeCounts.get(p.id) || 1) > 1
-  );
-
-  return overDefined ? dissipate() : constrained;
-}
-
-// End-of-turn effects for the side that just moved:
-//
-// 1. Deferred measurement damage: pieces the opponent marked (observed) lose
-//    one coherence point now — unless the owner just moved that very piece,
-//    which dodges the hit. At zero coherence the piece sheds its least
-//    valuable possibility (guarded against over-defining the position).
-//
-// 2. Recoherence: pieces with two or fewer possibilities diffuse back toward
-//    superposition. Each of the owner's moves advances every such piece by
-//    one step; at RECOHERE_THRESHOLD the piece regains its least valuable
-//    feasible possibility (never King, never Pawn on promoted pieces or the
-//    promotion rank, never anything conservation rules out). Pulses reset
-//    the progress (quantum Zeno).
-export function applyOwnerTurnEffects(pieces, moverSide, movedIds = [], prevPieces = null) {
+// The moved piece(s) touch everything within capture reach of their LEAST
+// valuable remaining possibility ONLY (p < n < b < r < q < k) — a fresh
+// superposition pokes like a pawn, a confirmed queen sweeps like one, so
+// collapsing a piece is what arms its contact. Attack squares, so
+// friendly-occupied squares count — that is protection. Every enemy piece in
+// contact is ZAPPED: it sheds the most valuable possibility it can lose
+// CLEANLY, King included, trying k -> q -> r -> b -> n -> p. A shed is clean
+// when, after conservation settles, the board's only change is that single
+// type leaving that single piece — a shed whose census cascade would strip
+// possibilities from ANY other piece (or narrow the target further) is
+// skipped and the zap walks down to the next type; if nothing sheds cleanly
+// the zap dissipates (no mark). One exception outranks the guard: a shed
+// that leaves the target's side with no possible King anywhere is the win by
+// wave-function collapse and always lands, cascade and all. A fully measured
+// piece (one possibility) has nothing left to shed. Every friendly piece in
+// contact is HEALED: it regains its least valuable feasible possibility
+// (never King; Pawn never returns to promoted pieces or on the promotion
+// rank; conservation must accept the regain — with two knights captured, a
+// lone pawn heals into a pawn-bishop).
+// Deterministic: contacts resolve in algebraic square order, zaps before
+// heals. Returns { pieces, zappedSquares, healedSquares }.
+export function applyContactZapHeal(pieces, moverSide, moverIds) {
   let current = pieces;
-  const movedSet = new Set(movedIds);
-  // Pre-move possibility counts: a piece whose set shrank DURING this move's
-  // resolution collapsed this turn, and a collapse is a fresh start — its
-  // clock must not tick (let alone pay out a regained identity) in the same
-  // breath. Without this, a piece one tick from recohering could collapse
-  // via en passant and instantly regain the identity, erasing the collapse.
-  const prevLens = prevPieces
-    ? new Map(prevPieces.map((p) => [p.id, (p.possibleTypes || []).length]))
-    : null;
+  const moverSet = new Set(moverIds);
+  const occ = buildOccupancy(current);
 
-  // --- Deferred measurement damage ---
-  const shedDueIds = [];
-  for (const p of current) {
-    if (p.captured || !p.square || p.side !== moverSide) continue;
-    if (!p.observed) continue;
-    p.observed = false;
-    if (movedSet.has(p.id)) continue; // dodged by moving the threatened piece
-    if ((p.possibleTypes || []).length <= 2) continue;
-    const remaining = (p.coherence ?? DEFAULT_COHERENCE) - 1;
-    if (remaining <= 0) {
-      shedDueIds.push(p.id);
-    } else {
-      p.coherence = remaining;
-    }
-  }
-  for (const id of shedDueIds) {
-    current = attemptGuardedShed(current, id);
+  const reach = new Set();
+  for (const moverId of moverIds) {
+    const mover = current.find((p) => p.id === moverId && !p.captured && p.square);
+    if (!mover) continue;
+    const pos = fromAlgebraic(mover.square);
+    if (!pos) continue;
+    // Least valuable possibility only (LEAST_VALUABLE_ORDER is p→k).
+    const contactType = LEAST_VALUABLE_ORDER.find((t) => (mover.possibleTypes || []).includes(t));
+    if (!contactType) continue;
+    for (const sq of attacksForType(contactType, pos.fileIndex, pos.rankIndex, occ, mover.side)) reach.add(sq);
   }
 
-  // --- Recoherence ---
-  const dueIds = [];
+  const contacts = Array.from(reach)
+    .sort()
+    .map((sq) => occ.get(sq))
+    .filter((p) => p && !p.captured && !moverSet.has(p.id));
 
-  for (const p of current) {
-    if (p.captured || !p.square || p.side !== moverSide) continue;
-    const len = (p.possibleTypes || []).length;
-    if (len === 0 || len > 2) {
-      if ((p.recohere || 0) !== 0) p.recohere = 0;
-      continue;
+  // Zaps first: each target sheds the most valuable possibility it can lose
+  // cleanly (see the guard above). Every committed shed is already
+  // conservation-settled, so there is no batch cascade afterward. A target
+  // where NO possibility sheds cleanly is census-locked: the zap fizzles,
+  // and the square is reported so the UI can show a shield instead of
+  // silently doing nothing.
+  const zappedSquares = [];
+  const fizzledSquares = [];
+  for (const target of contacts) {
+    if (target.side === moverSide) continue;
+    const live = current.find((p) => p.id === target.id && !p.captured && p.square);
+    if (!live) continue;
+    const types = live.possibleTypes || [];
+    if (types.length <= 1) continue;
+    let committed = false;
+    for (const shed of CONTACT_ZAP_ORDER) {
+      if (!types.includes(shed)) continue;
+      const trial = clonePieces(current);
+      const trialTarget = trial.find((x) => x.id === live.id);
+      restrictTypes(trialTarget, types.filter((t) => t !== shed));
+      const constrained = applyQuantumConstraints(trial);
+      const winsByCollapse =
+        shed === 'k' &&
+        !constrained.some(
+          (p) => !p.captured && p.square && p.side === live.side && (p.possibleTypes || []).includes('k')
+        );
+      if (!winsByCollapse && !shedIsLocal(current, constrained, live.id, shed)) continue;
+      current = constrained;
+      zappedSquares.push(live.square);
+      committed = true;
+      break;
     }
-    if (prevLens) {
-      const was = prevLens.get(p.id);
-      if (was !== undefined && len < was) { p.recohere = 0; continue; } // collapsed this move
-    }
-    const next = (p.recohere || 0) + 1;
-    if (next >= RECOHERE_THRESHOLD) {
-      p.recohere = 0;
-      dueIds.push(p.id);
-    } else {
-      p.recohere = next;
-    }
+    if (!committed) fizzledSquares.push(live.square);
   }
 
-  for (const id of dueIds) {
-    const live = current.find((x) => x.id === id && !x.captured);
-    if (!live || live.possibleTypes.length > 2) continue;
-    // Pawn never returns to a piece whose promotion was publicly observed,
-    // nor to a piece standing on its own promotion rank (an unpromoted pawn
-    // cannot exist there). The environment forgets quiet histories only.
+  // Heals: every friendly contact regains its least valuable feasible
+  // possibility, whatever its current possibility count.
+  const healedSquares = [];
+  for (const c of contacts) {
+    if (c.side !== moverSide) continue;
+    const live = current.find((p) => p.id === c.id && !p.captured && p.square);
+    if (!live) continue;
     const promoted = getPromoTypes(live).length > 0;
     const pos = fromAlgebraic(live.square);
     const promotionRank = live.side === 'white' ? 7 : 0;
     const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
-    for (const t of RECOHERE_GAIN_ORDER) {
+    for (const t of HEAL_GAIN_ORDER) {
       if (t === 'p' && (promoted || onPromotionRank)) continue;
       if (live.possibleTypes.includes(t)) continue;
       const trial = clonePieces(current);
-      const trialPiece = trial.find((x) => x.id === id);
+      const trialPiece = trial.find((x) => x.id === live.id);
       withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
-      trialPiece.coherence = DEFAULT_COHERENCE;
       const constrained = applyQuantumConstraints(trial);
-      const after = constrained.find((x) => x.id === id);
+      const after = constrained.find((x) => x.id === live.id);
       if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
         current = constrained;
+        healedSquares.push(live.square);
         break;
       }
     }
   }
 
-  return current;
-}
-
-// A nearly-defined piece is SEALED when recoherence has nothing left to give
-// it: every identity it could regain is ruled out by promotion history, its
-// square, or global conservation. Its clock would cycle forever without
-// effect, so the UI replaces the dots with a solid line. Mirrors the gain
-// loop in applyOwnerTurnEffects exactly.
-export function canPieceRecohere(pieces, pieceId) {
-  const live = pieces.find((p) => p.id === pieceId && !p.captured && p.square);
-  if (!live) return false;
-  const len = (live.possibleTypes || []).length;
-  if (len === 0 || len > 2) return false;
-
-  const promoted = getPromoTypes(live).length > 0;
-  const pos = fromAlgebraic(live.square);
-  const promotionRank = live.side === 'white' ? 7 : 0;
-  const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
-  for (const t of RECOHERE_GAIN_ORDER) {
-    if (t === 'p' && (promoted || onPromotionRank)) continue;
-    if (live.possibleTypes.includes(t)) continue;
-    const trial = clonePieces(pieces);
-    const trialPiece = trial.find((x) => x.id === pieceId);
-    withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
-    const constrained = applyQuantumConstraints(trial);
-    const after = constrained.find((x) => x.id === pieceId);
-    if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
-      return true;
-    }
-  }
-  return false;
+  return { pieces: current, zappedSquares, healedSquares, fizzledSquares };
 }
 
 // --- En passant (phantom capture) ---
@@ -495,11 +424,16 @@ export function simulateEnPassant(prevPieces, pieceId, toSquare, victimId, captu
   moving.square = toSquare;
   restrictTypes(moving, ['p']);
   moving.moveCount = (moving.moveCount || 0) + 1;
-  moving.coherence = DEFAULT_COHERENCE;
-  moving.observed = false;
 
-  const tail = resolveMoveTail(next, moving.side, [moving.id], prevPieces);
-  return { ok: true, pieces: tail.pieces, didCapture: true, measuredSquares: tail.measuredSquares };
+  const tail = resolveMoveTail(next, moving.side, [moving.id]);
+  return {
+    ok: true,
+    pieces: tail.pieces,
+    didCapture: true,
+    zappedSquares: tail.zappedSquares,
+    healedSquares: tail.healedSquares,
+    fizzledSquares: tail.fizzledSquares,
+  };
 }
 
 export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
@@ -547,13 +481,6 @@ export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
   for (let f = f1 + 1; f < f2; f++) {
     const sq = toAlgebraic(f, rank);
     if (occupancy.get(sq)) return { canCastle: false, reason: 'The path between pieces must be clear.' };
-  }
-
-  const opponentSide = otherSide(a.side);
-  const oppThreats = computeThreatenedSquaresForSide(pieces, opponentSide);
-  for (let f = f1 + 1; f < f2; f++) {
-    const sq = toAlgebraic(f, rank);
-    if (oppThreats.has(sq)) return { canCastle: false, reason: 'Cannot castle through a threatened square.' };
   }
 
   let plan;
@@ -635,10 +562,6 @@ export function simulateCastle(prevPieces, plan) {
   withTypes(piece2, ['r', 'k'], []);
   piece1.moveCount = (piece1.moveCount || 0) + 1;
   piece2.moveCount = (piece2.moveCount || 0) + 1;
-  piece1.coherence = DEFAULT_COHERENCE;
-  piece2.coherence = DEFAULT_COHERENCE;
-  piece1.observed = false;
-  piece2.observed = false;
 
   // The pair leaves the castle as two ordinary rook-or-king superpositions —
   // no entanglement link (rules change 2026-07-08: single-history is gone,
@@ -647,18 +570,30 @@ export function simulateCastle(prevPieces, plan) {
   piece1.castled = true;
   piece2.castled = true;
 
-  const tail = resolveMoveTail(next, piece1.side, [piece1.id, piece2.id], prevPieces);
-  return { ok: true, pieces: tail.pieces, measuredSquares: tail.measuredSquares };
+  const tail = resolveMoveTail(next, piece1.side, [piece1.id, piece2.id]);
+  return {
+    ok: true,
+    pieces: tail.pieces,
+    zappedSquares: tail.zappedSquares,
+    healedSquares: tail.healedSquares,
+    fizzledSquares: tail.fizzledSquares,
+  };
 }
 
 export function generateLegalReplies(pieces, side, captureCounter, lastMove = null) {
   const occ = buildOccupancy(pieces);
   const legal = [];
+  // Check exists only for a DEFINITE king (possibleTypes === ['k']), and the
+  // census makes that exactly the last-holder endgame state: superposed
+  // kings roam checkless through the quantum midgame, but once a side's king
+  // stands revealed the classical rules return — it may not be left
+  // capturable, and mate ends the game.
+  const leavesKingCapturable = (ps) => hasCollapsedKingCapturable(ps, side);
 
   for (const ep of listEnPassantCaptures(pieces, side, lastMove)) {
     const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
     if (!sim.ok) continue;
-    if (hasCollapsedKingCapturable(sim.pieces, side)) continue;
+    if (leavesKingCapturable(sim.pieces)) continue;
     const mover = pieces.find((p) => p.id === ep.pieceId);
     legal.push({ type: 'enpassant', from: mover ? mover.square : null, to: ep.to, victimId: ep.victimId, resultPieces: sim.pieces });
   }
@@ -670,7 +605,7 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
     for (const toSq of merged) {
       const sim = simulateStandardMove(pieces, p.id, toSq, captureCounter);
       if (!sim.ok) continue;
-      if (hasCollapsedKingCapturable(sim.pieces, side)) continue;
+      if (leavesKingCapturable(sim.pieces)) continue;
       legal.push({ type: 'move', from: p.square, to: toSq, resultPieces: sim.pieces });
     }
   }
@@ -682,7 +617,7 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
       if (!canCastle || !plan) continue;
       const sim = simulateCastle(pieces, plan);
       if (!sim.ok) continue;
-      if (hasCollapsedKingCapturable(sim.pieces, side)) continue;
+      if (leavesKingCapturable(sim.pieces)) continue;
       legal.push({ type: 'castle', plan, resultPieces: sim.pieces });
     }
   }
@@ -694,6 +629,15 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
 // Returns 'checkmate', 'stalemate', or null (game continues).
 export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove = null) {
   const opponent = otherSide(moverSide);
+
+  // Kingless is an immediate loss — no reply could matter (the caller names
+  // it "wave function collapse"). Checking it
+  // first also skips the reply search on decided boards.
+  const hasKingHolder = finalPieces.some(
+    (p) => !p.captured && p.square && p.side === opponent && (p.possibleTypes || []).includes('k')
+  );
+  if (!hasKingHolder) return 'checkmate';
+
   const replies = generateLegalReplies(finalPieces, opponent, captureCounter, lastMove);
 
   if (replies.length === 0) {
@@ -712,7 +656,7 @@ export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter
 
 // Canonical signature of a position for repetition detection. Includes
 // everything the rules can depend on: occupancy, tagged possibility sets,
-// first-move rights, coherence, castling state, the side to move, and any
+// first-move rights, castling state, the side to move, and any
 // live en passant window.
 export function computePositionSignature(pieces, sideToMove, lastMove = null) {
   const parts = pieces
@@ -722,9 +666,6 @@ export function computePositionSignature(pieces, sideToMove, lastMove = null) {
       getBaseTypes(p).join(''),
       getPromoTypes(p).join(''),
       (p.moveCount || 0) === 0 ? 'f' : 'm',
-      (p.possibleTypes || []).length > 1 ? String(p.coherence ?? '') : '',
-      String(p.recohere || 0),
-      p.observed ? 'o' : '',
       p.castled ? 'c' : '',
     ].join(':'))
     .sort()

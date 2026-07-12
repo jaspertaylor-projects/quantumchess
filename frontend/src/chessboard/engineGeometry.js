@@ -101,7 +101,7 @@ function stepAttacks(file, rank, steps) {
   return out;
 }
 
-function pawnMoves(file, rank, occ, side, isFirstMove = false) {
+function pawnMoves(file, rank, occ, side) {
   const dir = side === 'white' ? 1 : -1;
   const out = [];
 
@@ -111,8 +111,14 @@ function pawnMoves(file, rank, occ, side, isFirstMove = false) {
     if (!occ.get(oneSq)) out.push(oneSq);
   }
 
+  // Double step: legal from anywhere in the side's own first two ranks —
+  // the rule was never "on the pawn's first move". Classically identical
+  // (pawns are born on rank two and can never move backward), but a quantum
+  // maybe-pawn genuinely stands on the back rank, and it inherits the same
+  // right. The old isFirstMove gate is retired.
+  const onHomeRanks = side === 'white' ? rank <= 1 : rank >= 6;
   const two = [file, rank + 2 * dir];
-  if (isFirstMove && inBounds(two[0], two[1])) {
+  if (onHomeRanks && inBounds(two[0], two[1])) {
     const midSq = keySquare(file, rank + dir);
     const twoSq = keySquare(two[0], two[1]);
     if (!occ.get(midSq) && !occ.get(twoSq)) out.push(twoSq);
@@ -146,11 +152,12 @@ function pawnAttacks(file, rank, side) {
   return out;
 }
 
+// `options.isFirstMove` is still accepted from callers but no longer
+// consulted — pawn double-step rights are positional now (see pawnMoves).
 export function movesForType(t, file, rank, occ, side, options = {}) {
-  const { isFirstMove = false } = options;
   switch (t) {
     case 'p':
-      return pawnMoves(file, rank, occ, side, isFirstMove);
+      return pawnMoves(file, rank, occ, side);
     case 'n':
       return stepMoves(file, rank, KNIGHT_STEPS, occ, side);
     case 'b':

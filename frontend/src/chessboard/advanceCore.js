@@ -50,10 +50,11 @@ export function countPossibilities(pieces) {
 }
 
 // Build the lastMove record for a move that just landed: identity, the
-// squares the measurement pulse touched, and double-step detection so the
-// opponent's en passant window opens. A double-step is a first move, two
-// ranks straight ahead, by a piece that can still be a pawn.
-export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, usedEnPassant = false, wasFirstMove = false, measuredSquares = [] }) {
+// squares its contacts zapped/healed/fizzled, and double-step detection so the
+// opponent's en passant window opens. A double-step is a two-rank straight
+// advance by a piece that can still be a pawn (geometry restricts it to the
+// side's own first two ranks — back-rank maybe-pawns included).
+export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, usedEnPassant = false, wasFirstMove = false, zappedSquares = [], healedSquares = [], fizzledSquares = [] }) {
   const lastMove = {
     side,
     pieceId: moverId,
@@ -61,9 +62,17 @@ export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, used
     to,
     isDoubleStep: false,
     crossedSquare: null,
-    measuredSquares: measuredSquares || [],
+    zappedSquares: zappedSquares || [],
+    healedSquares: healedSquares || [],
+    fizzledSquares: fizzledSquares || [],
   };
-  if (!usedEnPassant && wasFirstMove) {
+  // Double-step detection is positional, not first-move: any two-rank
+  // straight advance whose mover can still be a pawn WAS a pawn double-step
+  // in the pawn worlds (geometry only allows it from the side's own first
+  // two ranks), so the en passant window opens. wasFirstMove is no longer
+  // consulted here; castles never move two ranks straight, so they skip
+  // this branch naturally.
+  if (!usedEnPassant) {
     const fromPos = fromAlgebraic(from);
     const toPos = fromAlgebraic(to);
     const dir = side === 'white' ? 1 : -1;
@@ -107,9 +116,11 @@ export function moveOutcome(prev, sim, info) {
     to,
     side,
     usedEnPassant,
-    wasFirstMove, // castles pass false, so the double-step check is skipped
+    wasFirstMove, // legacy field; double-step detection is positional now
 
-    measuredSquares: sim.measuredSquares || [],
+    zappedSquares: sim.zappedSquares || [],
+    healedSquares: sim.healedSquares || [],
+    fizzledSquares: sim.fizzledSquares || [],
   });
   const movedFinal = finalPieces.find((p) => p.id === moverId && !p.captured) || null;
 
@@ -133,7 +144,17 @@ export function moveOutcome(prev, sim, info) {
   let gameOver = false;
   let winner = null;
   let gameOverReason = null;
-  if (terminal === 'checkmate') { gameOver = true; winner = side; gameOverReason = 'checkmate'; }
+  if (terminal === 'checkmate') {
+    gameOver = true;
+    winner = side;
+    // A mate where the opponent has NO possible king left is the zap win —
+    // name it for what it is.
+    const opponent = side === 'white' ? 'black' : 'white';
+    const opponentKingless = !finalPieces.some(
+      (p) => !p.captured && p.square && p.side === opponent && (p.possibleTypes || []).includes('k')
+    );
+    gameOverReason = opponentKingless ? 'wave function collapse' : 'checkmate';
+  }
   else if (terminal === 'stalemate') { gameOver = true; gameOverReason = 'stalemate'; }
   else if (nextHalfmoveClock >= FIFTY_MOVE_HALFMOVES) { gameOver = true; gameOverReason = 'fifty-move rule'; }
 

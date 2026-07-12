@@ -19,8 +19,8 @@ const LIGHT = theme.boardLight;
 const DARK = theme.boardDark;
 
 const DEFAULT_SVG_STYLES = {
-  white: { '--band-fill': DEFAULT_WHITE.bandFill, '--band-stroke': DEFAULT_WHITE.bandStroke, '--icon-color': DEFAULT_WHITE.icon },
-  black: { '--band-fill': DEFAULT_BLACK.bandFill, '--band-stroke': DEFAULT_BLACK.bandStroke, '--icon-color': DEFAULT_BLACK.icon },
+  white: { '--band-fill': DEFAULT_WHITE.bandFill, '--band-stroke': DEFAULT_WHITE.bandStroke, '--piece-outline': DEFAULT_WHITE.pieceOutlineEnabled ? DEFAULT_WHITE.pieceOutline : 'transparent', '--icon-color': DEFAULT_WHITE.icon },
+  black: { '--band-fill': DEFAULT_BLACK.bandFill, '--band-stroke': DEFAULT_BLACK.bandStroke, '--piece-outline': DEFAULT_BLACK.pieceOutlineEnabled ? DEFAULT_BLACK.pieceOutline : 'transparent', '--icon-color': DEFAULT_BLACK.icon },
 };
 
 function sqToRC(sq, ranks) {
@@ -33,7 +33,7 @@ export default function MiniBoard({
   files = 6,
   ranks = 6,
   cell = 48,
-  pieces = [], // { sq, side, types, pips, regain, chevrons, ring, mark }
+  pieces = [], // { sq, side, types, chevrons, ring, mark, zap, heal, shield }
   arrows = [], // { from, to, side } or review-style { from, to, kind: 'hint', opacity }
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
@@ -173,10 +173,7 @@ export default function MiniBoard({
               side={p.side}
               possibleTypes={(p.types || '').split('')}
               size={cell}
-              coherence={Number.isFinite(p.pips) ? p.pips : 3}
-              recohere={Number.isFinite(p.regain) ? p.regain : 0}
               promoted={Boolean(p.chevrons)}
-              sealed={Boolean(p.sealed)}
               svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}
               ariaLabel={`Tutorial piece at ${p.sq}`}
             />
@@ -248,6 +245,27 @@ export default function MiniBoard({
             />
           );
         })}
+        {pieces.filter((p) => p.zap).map((p) => {
+          const c = center(p.sq);
+          return (
+            <circle key={`zap-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.42} fill="none"
+              stroke="rgba(255,64,64,0.95)" strokeWidth={3} strokeDasharray="6 4" />
+          );
+        })}
+        {pieces.filter((p) => p.heal).map((p) => {
+          const c = center(p.sq);
+          return (
+            <circle key={`heal-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.42} fill="none"
+              stroke="rgba(46,204,113,0.9)" strokeWidth={3} />
+          );
+        })}
+        {pieces.filter((p) => p.shield).map((p) => {
+          const c = center(p.sq);
+          return (
+            <circle key={`shield-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.46} fill="none"
+              stroke="rgba(246,196,69,0.95)" strokeWidth={3.5} />
+          );
+        })}
         {targets.map((sq) => {
           const c = center(sq);
           return <circle key={`tg-${sq}`} cx={c.x} cy={c.y} r={cell * 0.13} fill="rgba(30,30,30,0.4)" />;
@@ -313,10 +331,7 @@ export default function MiniBoard({
             side={dragPiece.side}
             possibleTypes={(dragPiece.types || '').split('')}
             size={cell}
-            coherence={Number.isFinite(dragPiece.pips) ? dragPiece.pips : 3}
-            recohere={Number.isFinite(dragPiece.regain) ? dragPiece.regain : 0}
             promoted={Boolean(dragPiece.chevrons)}
-            sealed={Boolean(dragPiece.sealed)}
             svgStyleBySide={svgStyleBySide || DEFAULT_SVG_STYLES}
             ariaLabel={`Dragging piece from ${drag.from}`}
           />

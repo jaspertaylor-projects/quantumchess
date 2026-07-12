@@ -35,18 +35,37 @@ ASSETS_DIR = os.path.join(ROOT, 'frontend', 'src', 'assets')
 # Targets are in the 1024x1024 design space (the g wrapper scales by 0.5
 # into the 512 viewBox). box=(maxW,maxH) fit box, bottom=baseline y of the
 # lowest pixel, mult=extra scale love, dx=horizontal nudge.
-PAIR_BOX = (600, 820)
-PAIR_BOTTOM = 928
+# Pair icons are a distinct, full-standing family. Give them a denser frame
+# than the solo and trapezoid artwork so a future border does not magnify dead
+# space, while retaining enough breathing room for crowns, crosses, and ears.
+PAIR_BOX = (720, 860)
+PAIR_BOTTOM = 950
 
 # all solo pieces sit on one shared baseline
 SINGLE_BOTTOM = 888
 
 SINGLE_DEFAULTS = {
     # keep the old set's size hierarchy (measured from the previous assets)
-    'p': dict(box=(506, 684), bottom=SINGLE_BOTTOM),
+    'p': dict(
+        box=(506, 684),
+        bottom=SINGLE_BOTTOM,
+        src='p-stylish.png',
+        quantum_src='p-stylish.png',
+    ),
     'n': dict(box=(638, 808), bottom=SINGLE_BOTTOM, mult=0.92),
-    'b': dict(box=(584, 760), bottom=SINGLE_BOTTOM),
-    'r': dict(box=(502, 716), bottom=SINGLE_BOTTOM, mult=0.90),
+    'b': dict(
+        box=(584, 760),
+        bottom=SINGLE_BOTTOM,
+        src='b-stylish.png',
+        quantum_src='b-stylish.png',
+    ),
+    'r': dict(
+        box=(502, 716),
+        bottom=SINGLE_BOTTOM,
+        mult=0.95,
+        src='r-stylish-v2.png',
+        quantum_src='r-stylish-v2.png',
+    ),
     'q': dict(box=(762, 654), bottom=SINGLE_BOTTOM, mult=0.90),
     'k': dict(box=(516, 678), bottom=SINGLE_BOTTOM),
 }
@@ -58,7 +77,13 @@ PIECES = {}
 for _s, _cfg in SINGLE_DEFAULTS.items():
     PIECES[_s] = dict({'mult': 1.0, 'dx': 0.0}, **_cfg)
 for _p in PAIRS:
-    PIECES[_p] = dict(box=PAIR_BOX, bottom=PAIR_BOTTOM, mult=1.0, dx=0.0)
+    PIECES[_p] = dict(
+        box=PAIR_BOX,
+        bottom=PAIR_BOTTOM,
+        mult=1.0,
+        dx=0.0,
+        src=f'{_p}-stylish.png',
+    )
 
 # ---------------------------------------------------------------- masking
 
@@ -208,7 +233,7 @@ def bbox(loops):
     ys = [y for l in loops for _, y in l]
     return min(xs), min(ys), max(xs), max(ys)
 
-BASE_STYLE = '<style>:root{--band-fill:#000;--icon-color:#000;}</style>'
+BASE_STYLE = '<style>:root{--band-fill:#000;--piece-outline:transparent;--icon-color:#000;}</style>'
 
 def write_base_svg(name, loops, cfg):
     x0, y0, x1, y1 = bbox(loops)
@@ -222,10 +247,14 @@ def write_base_svg(name, loops, cfg):
         return ((x - (x0 + x1) / 2) * s + cx, (y - y1) * s + bot)
 
     d = path_d(loops, fn)
-    # single-color pieces: just the band-fill silhouette, no outline pass
+    # Singles and pairs get a configurable outline beneath the solid fill.
+    # Quantum trapezoids use write_quantum_svg and never receive this layer.
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" '
            f'viewBox="0 0 512 512">{BASE_STYLE}\n'
            f'<g transform="translate(0.00,0.00) scale(0.500000)">\n'
+           f'<path d="{d}" fill="none" stroke="var(--piece-outline, transparent)" '
+           f'stroke-width="18" stroke-linejoin="round" stroke-linecap="round" '
+           f'fill-rule="evenodd" />\n'
            f'<path d="{d}" fill="var(--band-fill, currentColor)" fill-rule="evenodd" />\n'
            f'</g>\n</svg>\n')
     with open(os.path.join(ASSETS_DIR, f'{name}.svg'), 'w') as f:
@@ -272,18 +301,23 @@ def write_quantum_svg(name, loops):
 
 # ------------------------------------------------------------------ main
 
+def trace_png(filename):
+    mask = piece_mask(os.path.join(PNG_DIR, filename))
+    eps = 1.2 * max(mask.shape) / 1024.0
+    return trace(mask, eps), mask.shape
+
 def main():
     for name, cfg in sorted(PIECES.items()):
-        png = os.path.join(PNG_DIR, f'{name}.png')
-        mask = piece_mask(png)
-        src = max(mask.shape)
-        eps = 1.2 * src / 1024.0
-        loops = trace(mask, eps)
+        # src selects the standalone artwork. quantum_src can opt the
+        # trapezoid slice into that stylish source independently.
+        loops, shape = trace_png(cfg.get('src', f'{name}.png'))
         npts = sum(len(l) for l in loops)
         write_base_svg(name, loops, cfg)
         if name in TRAP_ROT:
-            write_quantum_svg(name, loops)
-        print(f'{name}: {mask.shape[1]}x{mask.shape[0]} -> {len(loops)} loops, {npts} pts')
+            quantum_source = cfg.get('quantum_src', f'{name}.png')
+            qloops = loops if quantum_source == cfg.get('src', f'{name}.png') else trace_png(quantum_source)[0]
+            write_quantum_svg(name, qloops)
+        print(f'{name}: {shape[1]}x{shape[0]} -> {len(loops)} loops, {npts} pts')
 
 if __name__ == '__main__':
     main()

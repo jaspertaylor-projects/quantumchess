@@ -1,7 +1,10 @@
 // frontend/src/tutorial/lessons.js
 // Purpose: The tutorial curriculum — ordered lessons of illustrated steps.
 // Each lesson points at its rulebook section (by page title) so the player
-// can jump between playing a lesson and reading the fine print.
+// can jump between playing a lesson and reading the fine print. Every
+// interactive exercise runs on the REAL engine, so zaps, heals, shields,
+// the census, and the win conditions behave exactly as in a live game
+// (positions verified by tests/tutorial-exercises-verify.mjs).
 // Imports From: None
 // Exported To: ./TutorialModal.jsx, ../tray/RulesModal.jsx
 
@@ -33,8 +36,8 @@ export const LESSONS = [
           files: 4,
           ranks: 4,
           pieces: [
-            { sq: 'b2', side: 'white', types: 'pnbrqk', pips: 3 },
-            { sq: 'c3', side: 'black', types: 'pnbrqk', pips: 3 },
+            { sq: 'b2', side: 'white', types: 'pnbrqk' },
+            { sq: 'c3', side: 'black', types: 'pnbrqk' },
           ],
         },
       },
@@ -78,7 +81,7 @@ export const LESSONS = [
             { id: 'B1', side: 'black', square: 'e8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'c1', to: 'g5' },
-          success: 'A partial collapse: Bishop and Queen both slide diagonally, so the piece is now exactly that pair — and nothing else. Note its fresh empty recoherence dots.',
+          success: 'A partial collapse: Bishop and Queen both slide diagonally, so the piece is now exactly that pair — and nothing else.',
         },
         board: {
           files: 5,
@@ -110,7 +113,7 @@ export const LESSONS = [
           ranks: 5,
           pieces: [
             { sq: 'b1', side: 'white', types: 'prqk' },
-            { sq: 'd2', side: 'white', types: 'pnbrqk', pips: 3 },
+            { sq: 'd2', side: 'white', types: 'pnbrqk' },
           ],
           arrows: [{ from: 'd2', to: 'd4', side: 'white' }],
         },
@@ -118,356 +121,401 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'pulses',
-    title: 'Moving Is Observing',
-    blurb: 'Every move soft-measures everything it could capture.',
-    rulesPage: 'Measurement Pulses',
+    id: 'the-zap',
+    title: 'The Zap',
+    blurb: 'Everything you touch loses its best self.',
+    rulesPage: 'The Zap',
     steps: [
       {
-        title: 'The measurement pulse',
+        title: 'Touch is a zap',
         text: [
-          'When your piece finishes a move, it performs a soft measurement on every enemy piece it could capture from its new square — using any of its remaining types.',
-          'This knight just landed on d4. Dashed rings mark everything its pulse touched. To observe, you must be able to touch.',
+          'When your piece finishes a move, it TOUCHES every square it could capture on. Every enemy piece it touches is ZAPPED: it loses the most valuable possibility it can cleanly give up — King first, then Queen, and on down.',
+          'A red ring marks each zap. Attack a fresh superposition and its maybe-King is usually the first thing to die.',
         ],
-        physics: "Landing a piece couples it to every enemy system inside its interaction range — capture reach is the coupling term. Each touched piece undergoes a weak (soft) measurement.",
+        physics: "Landing a piece couples it to every system in its interaction range. For enemy systems the coupling is dissipative: the highest-value amplitude that can decay without disturbing the rest of the board is projected out.",
         interactive: {
-          prompt: 'Hop your Knight from d2 to f3 and watch the pulse land.',
+          prompt: 'Hop your Knight from d2 to f3 — its landing touches the black piece on e5.',
           pieces: [
             { id: 'WN', side: 'white', square: 'd2', types: 'n', moved: true },
             { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'e5', types: 'pnbrq' },
-            { id: 'B2', side: 'black', square: 'g5', types: 'pnbrq' },
-            { id: 'B3', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'e5', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'h8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'd2', to: 'f3' },
-          success: 'Your landing soft-measured both pieces it could capture — the dashed rings. They are marked: each loses one coherence pip at Black’s next move, unless it moves itself and dodges.',
+          success: 'Zap! Your knight touches e5, and e5 loses the best thing it could have been — its King possibility is gone. Five identities left, and none of them royal.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
             { sq: 'd4', side: 'white', types: 'n' },
-            { sq: 'c6', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
-            { sq: 'e6', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
-            { sq: 'f5', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
+            { sq: 'c6', side: 'black', types: 'pnbrq', zap: true },
+            { sq: 'e6', side: 'black', types: 'pnbrq', zap: true },
           ],
         },
       },
       {
-        title: 'Marks, not instant damage',
+        title: 'The zap walks down',
         text: [
-          'A pulsed piece is MARKED, not hurt. The damage lands at its owner\'s next move: the marked piece loses one point from its triangle gauge.',
-          'Unless the owner moves that very piece — that dodges the hit completely and resets it. A threatened piece is a piece being told to move.',
+          'A zap tries to remove King, then Queen, then Rook, Bishop, Knight, Pawn — and takes the FIRST one it can remove cleanly, without forcing any other piece on the board to change.',
+          'A piece that is fully known (one possibility) has nothing left to lose: zaps pass through it.',
         ],
-        physics: "A weak measurement does not collapse the state; it entangles it with the environment. The mark is a pending readout — moving the marked piece is unitary evasion before the record becomes permanent.",
+        physics: "The zap is a guarded projection: it scans the value ladder top-down and removes the first amplitude whose loss leaves every other system's state invariant. A pure state has no amplitude to shed.",
         interactive: {
-          prompt: 'Hop your Knight to f3 to mark the e5 piece. Black will ignore the mark — watch e5’s gauge.',
+          prompt: 'Zap a wounded piece: hop d2 → f3 and touch the Rook-or-Queen on e5.',
           pieces: [
             { id: 'WN', side: 'white', square: 'd2', types: 'n', moved: true },
             { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'e5', types: 'pnbrqk' },
-            { id: 'B2', side: 'black', square: 'b7', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'e5', types: 'rq', moved: true },
+            { id: 'B2', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'B3', side: 'black', square: 'a8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'd2', to: 'f3' },
-          autoReply: { from: 'b7', to: 'b6' },
-          success: 'Black moved a DIFFERENT piece, so the marked e5 piece paid the deferred hit: one coherence pip gone. Moving e5 itself would have dodged the hit completely.',
-        },
-        board: {
-          files: 5,
-          ranks: 5,
-          pieces: [{ sq: 'c3', side: 'black', types: 'pnbrqk', pips: 2 }],
-        },
-      },
-      {
-        title: 'Risk buys information',
-        text: [
-          'The pulse is as wide as your reach: a piece planted in a busy center measures several enemies at once, while a quiet retreat measures nothing.',
-          'But standing in capture-contact means your instrument is itself attackable. Passivity earns no information; aggression is how you learn.',
-        ],
-        physics: "Information gain is bounded by coupling strength: to extract which-type information you must interact, and interaction exposes the probe to back-action.",
-        interactive: {
-          prompt: 'Slide your Bishop-Queen from b2 into the busy center at d4.',
-          pieces: [
-            { id: 'WB', side: 'white', square: 'b2', types: 'bq', moved: true },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'b6', types: 'pnbrqk' },
-            { id: 'B2', side: 'black', square: 'f6', types: 'pnbrqk' },
-            { id: 'B3', side: 'black', square: 'f2', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'b2', to: 'd4' },
-          success: 'One landing, three dashed rings: from d4 your piece could capture all three, so it soft-measured all three. But planted in the center, your instrument is now attackable itself.',
+          success: 'It had no King to lose, so the zap walked down the ladder and took the Queen. What is left on e5 is exactly a Rook — you measured it into a lesser piece.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
-            { sq: 'd4', side: 'white', types: 'bq' },
-            { sq: 'b6', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
-            { sq: 'f6', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
-            { sq: 'f2', side: 'black', types: 'pnbrqk', pips: 3, mark: true },
+            { sq: 'f3', side: 'white', types: 'n' },
+            { sq: 'e5', side: 'black', types: 'r', zap: true },
+          ],
+          arrows: [{ from: 'f3', to: 'e5', side: 'white' }],
+        },
+      },
+      {
+        title: 'You touch as your cheapest self',
+        text: [
+          'Your reach comes from the CHEAPEST thing you might still be. A fresh six-type blur pokes like a pawn. Collapse it to a bishop pair and it sweeps whole diagonals.',
+          'Collapsing your own pieces is what arms them. Identity is ammunition.',
+        ],
+        physics: "The interaction range is set by the lowest-value amplitude in the mover's state — the cheapest identity dominates the coupling. Purifying the state upward extends its reach.",
+        interactive: {
+          prompt: 'Slide c1 → g5, a long diagonal. Your piece becomes Bishop-or-Queen — and touches as a bishop.',
+          pieces: [
+            { id: 'W1', side: 'white', square: 'c1', types: 'pnbrqk' },
+            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'e7', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'b8', types: 'pnbrqk' },
+          ],
+          goal: { kind: 'move', from: 'c1', to: 'g5' },
+          success: 'Your Bishop-or-Queen touches along BISHOP lines — the cheapest self it still holds — and its ray zapped e7 from across the board. That piece can no longer be the king.',
+        },
+        board: {
+          files: 6,
+          ranks: 6,
+          pieces: [
+            { sq: 'c2', side: 'white', types: 'prq' },
+            { sq: 'd3', side: 'black', types: 'pnbrq' },
+            { sq: 'f5', side: 'white', types: 'bq' },
+            { sq: 'd5', side: 'black', types: 'pnbrq', zap: true },
+          ],
+          arrows: [{ from: 'f5', to: 'd5', side: 'white' }],
+        },
+      },
+    ],
+  },
+  {
+    id: 'the-heal',
+    title: 'The Heal',
+    blurb: 'Protect a piece and it grows back.',
+    rulesPage: 'The Heal',
+    steps: [
+      {
+        title: 'Protection regrows possibility',
+        text: [
+          'The same touch that zaps enemies HEALS friends. Every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen. Never King.',
+          'A green ring marks each heal. Defended pieces do not just survive here — they recover.',
+        ],
+        physics: "For friendly systems the contact coupling is restorative: the lowest-value amplitude missing from the state is re-populated, provided global conservation admits it.",
+        interactive: {
+          prompt: 'Your e4 piece was zapped down to Pawn-or-Rook. Protect it: jump b1 → c3.',
+          pieces: [
+            { id: 'W1', side: 'white', square: 'e4', types: 'pr', moved: true },
+            { id: 'W2', side: 'white', square: 'b1', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'a8', types: 'pnbrqk' },
+          ],
+          goal: { kind: 'move', from: 'b1', to: 'c3' },
+          success: 'Healed! Your knight lands touching e4, and e4 regains its cheapest missing self: it can be a Knight again. Keep touching it and it keeps growing.',
+        },
+        board: {
+          files: 6,
+          ranks: 6,
+          pieces: [
+            { sq: 'c3', side: 'white', types: 'n' },
+            { sq: 'e4', side: 'white', types: 'npr', heal: true },
+          ],
+          arrows: [{ from: 'c3', to: 'e4', side: 'white' }],
+        },
+      },
+      {
+        title: 'Heals obey the ledger',
+        text: [
+          'A heal can only return an identity the conservation ledger still allows. King never comes back. Pawn never returns to a promoted piece, or to any piece standing on its promotion rank.',
+          'And if an identity is fully claimed elsewhere — say both your knights are known — the heal skips it and gives the next one up the ladder.',
+        ],
+        physics: "Recovery is constrained repopulation: an amplitude returns only if a consistent global assignment exists. Fully-claimed sectors are excluded; the royal amplitude, once lost, never refills.",
+        interactive: {
+          prompt: 'Both black knights are pinned down on this board. Heal your bare pawn anyway: d2 → d3 touches e4.',
+          pieces: [
+            { id: 'W1', side: 'white', square: 'e4', types: 'p', moved: true },
+            { id: 'W2', side: 'white', square: 'd2', types: 'pbrqk' },
+            { id: 'WN1', side: 'white', square: 'c3', types: 'n', moved: true },
+            { id: 'WN2', side: 'white', square: 'g1', types: 'n', moved: true },
+            { id: 'B1', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'a8', types: 'pnbrqk' },
+          ],
+          goal: { kind: 'move', from: 'd2', to: 'd3' },
+          success: 'The heal wanted to return Knight — but both your knights are already claimed, so it OVERFLOWED to the next rung: your pawn is now a Pawn-Bishop. The census bends every heal around it.',
+        },
+        board: {
+          files: 6,
+          ranks: 6,
+          pieces: [
+            { sq: 'd3', side: 'white', types: 'prqk' },
+            { sq: 'e4', side: 'white', types: 'pb', heal: true },
+            { sq: 'c3', side: 'white', types: 'n' },
+            { sq: 'f1', side: 'white', types: 'n' },
           ],
         },
       },
     ],
   },
   {
-    id: 'decoherence',
-    title: 'The Triangle Gauge',
-    blurb: 'Three points of coherence, then something is lost.',
-    rulesPage: 'Measurement Pulses',
+    id: 'captures',
+    title: 'Capturing & Being Captured',
+    blurb: 'A taken piece resolves as the least it could be.',
+    rulesPage: 'Captures',
     steps: [
       {
-        title: 'Coherence',
+        title: 'The pessimistic collapse',
         text: [
-          'Every superposed piece carries 3 coherence points — the triangle in its center, drawn in the enemy\'s color. Filled dots are what remains.',
-          'Each landed measurement hit removes one.',
+          'When a piece is captured, it collapses to the LEAST valuable thing it could still be — and dies as that. Capture a fresh superposition and you usually just killed a pawn.',
+          'This is why zaps matter: strip a piece down FIRST, and it has to die as something expensive.',
         ],
-        physics: "Coherence measures how much superposition survives environmental monitoring. Each landed readout removes one quantum of coherence from the system.",
+        physics: "Capture is a destructive measurement resolved pessimistically for the owner: the annihilated system collapses to its minimum-value eigenstate. Pre-measurement raises the floor.",
         interactive: {
-          prompt: 'Slide your Rook up to a5 — it will mark the c5 piece. Watch c5’s triangle gauge as Black replies.',
+          prompt: 'This black piece is Knight, Bishop or Queen — its pawn worlds are gone. Take it: a1 → a8.',
           pieces: [
             { id: 'WR', side: 'white', square: 'a1', types: 'r', moved: true },
             { id: 'W2', side: 'white', square: 'h1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'c5', types: 'pnbrqk' },
-            { id: 'B2', side: 'black', square: 'g7', types: 'pnbrqk' },
+            { id: 'BV', side: 'black', square: 'a8', types: 'nbq', moved: true },
+            { id: 'B2', side: 'black', square: 'd8', types: 'pnbrqk' },
+            { id: 'B3', side: 'black', square: 'h8', types: 'pnbrqk' },
           ],
-          goal: { kind: 'move', from: 'a1', to: 'a5' },
-          autoReply: { from: 'g7', to: 'g6' },
-          success: 'The mark landed at Black’s move: c5 dropped from three filled pips to two. Two more landed hits and it must shed an identity.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [
-            { sq: 'b3', side: 'black', types: 'pnbrqk', pips: 3 },
-            { sq: 'c2', side: 'black', types: 'pnbrqk', pips: 1 },
-          ],
-        },
-      },
-      {
-        title: 'The shed: lose cheap',
-        text: [
-          'At zero coherence the piece sheds its LEAST valuable remaining possibility — Pawn first, then Knight, Bishop, Rook, Queen. King is never shed.',
-          'Losing your cheap identities is real pain: the piece becomes expensive to hang and loses its cheap capture threats. Gain cheap, lose cheap — the mirror of recoherence.',
-        ],
-        physics: "At zero coherence the environment traces out the lightest branch: the lowest-value amplitude decoheres away, and the reduced state loses one dimension.",
-        interactive: {
-          prompt: 'The d4 piece is down to ONE pip. Mark it with your Knight (d2 → b3) and watch the shed land.',
-          pieces: [
-            { id: 'WN', side: 'white', square: 'd2', types: 'n', moved: true },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'd4', types: 'pnbrqk', pips: 1 },
-            { id: 'B2', side: 'black', square: 'g7', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'd2', to: 'b3' },
-          autoReply: { from: 'g7', to: 'g6' },
-          success: 'Zero coherence: it shed Pawn, its least valuable identity. Its cheap threats are gone, it is pricier to hang — and the fresh five-type identity starts a fresh full gauge.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [{ sq: 'b3', side: 'black', types: 'nbrqk', pips: 3 }],
-        },
-      },
-      {
-        title: 'Collapse is a fresh start',
-        text: [
-          'Whenever a piece\'s possibilities shrink — by moving, shedding, or the global solver pruning it from afar — its gauge resets to full. A new identity starts a new clock.',
-          'Soft measurement can never fully define a piece. Only its own moves, captures, and check pruning finish the job.',
-        ],
-        physics: "Every collapse prepares a fresh pure state. Accumulated decoherence is not a property the new state inherits — the clock belongs to the identity, not the piece.",
-        interactive: {
-          prompt: 'This battered piece has one pip left. Let it escape its history: step it diagonally, c2 → d3.',
-          pieces: [
-            { id: 'W1', side: 'white', square: 'c2', types: 'pnbrqk', pips: 1 },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'c2', to: 'd3' },
-          success: 'Collapse is a fresh start: the new Bishop-Queen-King identity carries a brand-new full gauge. The damage belonged to the old identity, not to the piece.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [{ sq: 'c3', side: 'white', types: 'rq', regain: 0 }],
-        },
-      },
-    ],
-  },
-  {
-    id: 'recoherence',
-    title: 'Growing Back',
-    blurb: 'Unwatched pieces re-blur into superposition.',
-    rulesPage: 'Measurement Pulses',
-    steps: [
-      {
-        title: 'The bottom dots',
-        text: [
-          'A piece with two or fewer possibilities starts diffusing back toward superposition. Its clock is the row of dots beneath it, in its own side\'s color.',
-          'The dots appear empty the moment it collapses — and every one of your moves after that fills one dot.',
-        ],
-        physics: "An unmonitored open system relaxes back toward superposition: recoherence. Each tick of the clock is amplitude rebuilding while the environment forgets its record.",
-        interactive: {
-          prompt: 'Your collapsed Knight on b3 wants its mystery back. Move your OTHER piece (d1 → d2) and watch the Knight’s clock.',
-          pieces: [
-            { id: 'WN', side: 'white', square: 'b3', types: 'n', moved: true },
-            { id: 'W2', side: 'white', square: 'd1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'd1', to: 'd2' },
-          success: 'Every one of your moves ticks the clock of every unwatched, nearly-defined piece you own: the Knight’s bottom row just went from zero to one.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [
-            { sq: 'b3', side: 'white', types: 'n', regain: 0 },
-            { sq: 'c2', side: 'white', types: 'nb', regain: 2 },
-          ],
-        },
-      },
-      {
-        title: 'Regain cheap',
-        text: [
-          'At three dots the piece regains its least valuable FEASIBLE possibility — never King, never a Pawn on promoted pieces or the promotion rank, never anything conservation has ruled out.',
-          'Your collapsed knight can become a maybe-pawn again. Mystery is a resource that regrows — if you protect it.',
-        ],
-        physics: "The regained amplitude is the cheapest branch permitted by the selection rules — global conservation forbids King, and forbidden Pawn states stay forbidden.",
-        interactive: {
-          prompt: 'The c3 piece sits at two of three dots. One more of your moves fills its clock: play a1 → a2.',
-          pieces: [
-            { id: 'WC', side: 'white', square: 'c3', types: 'nb', moved: true, regain: 2 },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'move', from: 'a1', to: 'a2' },
-          success: 'The clock filled and the piece regained its least valuable feasible identity: maybe-Pawn is back, and your Knight-Bishop is a three-type mystery again.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [{ sq: 'b3', side: 'white', types: 'pn', regain: 0 }],
-        },
-      },
-      {
-        title: 'The Zeno lock',
-        text: [
-          'Any pulse that touches a nearly-defined piece freezes its recoherence back to zero. A watched piece never re-blurs.',
-          'Keep your attackers trained on their collapsed pieces to lock them classical; slip your own out of sight to let them recover.',
-        ],
-        physics: "The quantum Zeno effect: sufficiently frequent observation freezes evolution. A watched wavefunction never re-spreads.",
-        interactive: {
-          prompt: 'Your b5 Knight’s clock is about to tick. Move d1 → d2 — and watch Black’s Rook slam the clock back to zero.',
-          pieces: [
-            { id: 'WN', side: 'white', square: 'b5', types: 'n', moved: true },
-            { id: 'W2', side: 'white', square: 'd1', types: 'pnbrqk' },
-            { id: 'BR', side: 'black', square: 'h8', types: 'r', moved: true },
-          ],
-          goal: { kind: 'move', from: 'd1', to: 'd2' },
-          autoReply: { from: 'h8', to: 'h5' },
-          success: 'The Zeno lock: the Rook’s landing pulse touched your Knight and froze its recoherence back to zero. A watched piece never re-blurs.',
+          goal: { kind: 'move', from: 'a1', to: 'a8' },
+          success: 'Captured — and it resolved as the least it could be: a Knight, because its cheaper selves were already gone. Notice your rook’s landing also zapped the next piece down the rank.',
         },
         board: {
           files: 5,
           ranks: 5,
           pieces: [
-            { sq: 'e4', side: 'black', types: 'r' },
-            { sq: 'b4', side: 'white', types: 'n', regain: 0, mark: true },
+            { sq: 'c4', side: 'white', types: 'r' },
+            { sq: 'e4', side: 'black', types: 'nbq' },
           ],
-          arrows: [{ from: 'e4', to: 'b4', side: 'black' }],
+          arrows: [{ from: 'c4', to: 'e4', side: 'white' }],
         },
       },
       {
-        title: 'The solid line: sealed',
+        title: 'Kings die two ways',
         text: [
-          'Sometimes the census is complete: every identity a collapsed piece could regain is already confirmed elsewhere, or forbidden by its square. Its clock would tick forever and never deliver.',
-          'The board replaces those dots with a SOLID LINE: the piece is sealed. What it is now is all it will ever be — no watching required.',
+          'There is no check for a superposed king — a maybe-King is just a possibility, and possibilities cannot be threatened, only zapped away.',
+          'Kings leave the game exactly two ways: their possibility is zapped off a piece, or the piece holding it is captured like any other piece. Guard your maybe-Kings by keeping them plural.',
         ],
-        physics: "When conservation laws leave no state for amplitude to flow back into, relaxation has no target: the reduced state is stationary. The environment cannot return what the bookkeeping forbids.",
+        physics: "Royalty in superposition is not an observable a threat operator can act on. Only dissipation (zaps) or annihilation (capture) move royal amplitude — so redundancy IS the defense.",
+      },
+    ],
+  },
+  {
+    id: 'the-census',
+    title: 'The Census',
+    blurb: 'One army, one ledger — claims strip everyone else.',
+    rulesPage: 'The Census (Conservation)',
+    steps: [
+      {
+        title: 'Claims propagate',
+        text: [
+          'Your side owns exactly 8 pawns, 2 knights, 2 bishops, 2 rooks, 1 queen, 1 king — across all worlds. The moment two of your pieces are KNOWN knights, no other piece of yours can be one: the census strips Knight from all of them, instantly.',
+          'Watch your opponent’s definite pieces: every one of them quietly rewrites the rest of their army.',
+        ],
+        physics: "The army is one entangled state with fixed occupation numbers per type sector. Confirming occupancy in a sector projects that sector out of every other subsystem — conservation does the bookkeeping.",
         interactive: {
-          prompt: 'Black’s c1 piece is Rook-or-Queen on its own promotion rank, with every Knight and Bishop confirmed. Make any move — its solid line never ticks.',
+          prompt: 'One knight is known. Claim the second: jump g1 → f3 and watch e4 and a1.',
           pieces: [
-            { id: 'BS', side: 'black', square: 'c1', types: 'rq', moved: true },
-            { id: 'BN1', side: 'black', square: 'a1', types: 'n', moved: true },
-            { id: 'BN2', side: 'black', square: 'e1', types: 'n', moved: true },
-            { id: 'BB1', side: 'black', square: 'b1', types: 'b', moved: true },
-            { id: 'BB2', side: 'black', square: 'd1', types: 'b', moved: true },
-            { id: 'W1', side: 'white', square: 'b4', types: 'pnbrqk' },
+            { id: 'WN1', side: 'white', square: 'c3', types: 'n', moved: true },
+            { id: 'W1', side: 'white', square: 'g1', types: 'pnbrqk' },
+            { id: 'W2', side: 'white', square: 'e4', types: 'npr', moved: true },
+            { id: 'W3', side: 'white', square: 'a1', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'a8', types: 'pnbrqk' },
           ],
-          goal: { kind: 'any' },
-          success: 'Sealed: Pawn is impossible on its promotion rank, both Knights and both Bishops are confirmed elsewhere, and it already holds Rook and Queen. The solid line says nothing is coming back.',
+          goal: { kind: 'move', from: 'g1', to: 'f3' },
+          success: 'Your second knight is claimed — and the census swept the board: e4 and a1 both lost their Knight possibility in the same instant. One ledger, one army.',
+        },
+        board: {
+          files: 6,
+          ranks: 6,
+          pieces: [
+            { sq: 'b2', side: 'white', types: 'n' },
+            { sq: 'e2', side: 'white', types: 'n' },
+            { sq: 'd5', side: 'white', types: 'pbrqk' },
+          ],
+        },
+      },
+      {
+        title: 'The ledger giveth back',
+        text: [
+          'The census runs both ways. Captured pieces sit in the bins as DEFINITE types — they pin the ledger from the outside. And when a claim is released (a known knight dies), Knight can flow back into heals again.',
+          'Reading both bins tells you what your opponent’s blurs can still secretly be.',
+        ],
+        physics: "The bins are the environment's classical record: each captured piece is a completed measurement that permanently constrains the remaining entangled state. The reachable state space shrinks with every entry.",
+      },
+    ],
+  },
+  {
+    id: 'the-shield',
+    title: 'The Shield',
+    blurb: 'Some pieces cannot be zapped — yet.',
+    rulesPage: 'Shields',
+    steps: [
+      {
+        title: 'Census-locked',
+        text: [
+          'Sometimes a zap finds NOTHING it can remove cleanly — every possibility the target holds is load-bearing, and removing any of them would force other pieces to change. The zap fizzles against a shield.',
+          'A gold ring marks the shield. These pieces are locked into a closed group: N pieces sharing exactly N identities. Break the group — capture one, or force a collapse — and the shield drops.',
+        ],
+        physics: "A maximally-entangled closed subgroup admits no local projection: removing any amplitude from one member forces a global rearrangement. The guarded zap refuses non-local action and dissipates instead.",
+        interactive: {
+          prompt: 'Black’s three survivors share exactly three identities. Push e3 → e4 and try to zap d5.',
+          pieces: [
+            { id: 'WP', side: 'white', square: 'e3', types: 'p', moved: true },
+            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
+            { id: 'BA', side: 'black', square: 'e8', types: 'qk', moved: true },
+            { id: 'BB', side: 'black', square: 'd5', types: 'rk', moved: true },
+            { id: 'BC', side: 'black', square: 'a8', types: 'rq', moved: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'p', captured: true },
+            { side: 'black', types: 'n', captured: true },
+            { side: 'black', types: 'n', captured: true },
+            { side: 'black', types: 'b', captured: true },
+            { side: 'black', types: 'b', captured: true },
+            { side: 'black', types: 'r', captured: true },
+          ],
+          goal: { kind: 'move', from: 'e3', to: 'e4' },
+          success: 'SHIELDED. Removing King from d5 would force e8 to be THE king; removing Rook would collapse d5 outright and rearrange the rest. No clean shed exists, so the zap dissipated against the gold ring.',
+        },
+        board: {
+          files: 6,
+          ranks: 6,
+          pieces: [
+            { sq: 'e4', side: 'white', types: 'p' },
+            { sq: 'd5', side: 'black', types: 'rk', shield: true },
+          ],
         },
       },
     ],
   },
   {
-    id: 'check',
-    title: 'Check, Quantum Style',
-    blurb: 'Only nearly-defined pieces project real threats.',
-    rulesPage: 'Checks and Threats',
+    id: 'winning',
+    title: 'Winning the Game',
+    blurb: 'Erase every maybe-King — or corner a revealed one.',
+    rulesPage: 'Winning: Collapse & Checkmate',
     steps: [
       {
-        title: 'Who can give check',
+        title: 'Wave function collapse',
         text: [
-          'A piece starts checking once it has two or fewer possibilities. A six-type blur "could" be a rook — but that is too uncertain to be a threat. A collapsed rook IS one.',
-          'When a check is live, an arrow in the attacker\'s color runs from the checker to the checked piece, and the target wears a pulsing red ring.',
+          'You win the moment your opponent has NO piece that could still be the King. Zap the royal possibility off their last maybe-King and their army collapses — the game ends instantly.',
+          'This is the win the zap was built for. The only exception to the clean-shed guard: a zap that erases the LAST maybe-King always lands, cascade and all.',
         ],
-        physics: "Threat is which-type information. A six-type state has near-maximal entropy — too little certainty to act on. A two-type state is nearly pure: its attack operators have definite support.",
+        physics: "Victory is the vanishing of royal amplitude across the entire enemy state: ⟨K|ψ_army⟩ = 0 in every branch. The guarded projection waives locality for the terminal measurement.",
         interactive: {
-          prompt: 'Slide your collapsed Rook from a1 to e1, onto the open e-file.',
+          prompt: 'Black’s only maybe-King is the Queen-or-King on e5. Jump d2 → f3 and touch it.',
           pieces: [
-            { id: 'WR', side: 'white', square: 'a1', types: 'r', moved: true },
-            { id: 'W2', side: 'white', square: 'h2', types: 'pnbrqk' },
-            { id: 'BK', side: 'black', square: 'e8', types: 'k', moved: true },
-            { id: 'B2', side: 'black', square: 'b8', types: 'pnbrq' },
+            { id: 'WN', side: 'white', square: 'd2', types: 'n', moved: true },
+            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
+            { id: 'BA', side: 'black', square: 'e5', types: 'qk', moved: true },
+            { id: 'BB', side: 'black', square: 'h8', types: 'r', moved: true },
           ],
-          goal: { kind: 'move', from: 'a1', to: 'e1' },
-          success: 'Check! A nearly-defined piece projects real threats: the arrow runs from your Rook up the file to the Black King, which wears the pulsing red ring.',
+          goal: { kind: 'move', from: 'd2', to: 'f3' },
+          success: 'WAVE FUNCTION COLLAPSE. Your zap took the last King possibility Black had — no piece of theirs can be royal, so there is nothing left to play for. The game ends on the spot.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
-            { sq: 'e5', side: 'black', types: 'rq' },
-            { sq: 'e1', side: 'white', types: 'k', ring: true },
+            { sq: 'f3', side: 'white', types: 'n' },
+            { sq: 'e5', side: 'black', types: 'q', zap: true },
+            { sq: 'h6', side: 'black', types: 'r' },
           ],
-          arrows: [{ from: 'e5', to: 'e1', side: 'black' }],
         },
       },
       {
-        title: 'King pruning',
+        title: 'The revealed king',
         text: [
-          'After your move resolves, any of your pieces left standing on threatened squares silently lose King from their possibilities — you can never end your turn possibly-in-check.',
-          'So a red ring means pruning had nowhere to hide: a definite King, or your very last King-holder, is genuinely under fire. Deal with it.',
+          'When the census leaves a side exactly one maybe-King and it collapses to a KNOWN King, the classical rules return for it: it cannot be left capturable, and cornering it is checkmate.',
+          'The quantum midgame is checkless; the endgame is chess. Arrows and the red ring mark a revealed king under fire.',
         ],
-        physics: "King pruning is postselection: after each move, branches in which your King stands inside enemy capture support are projected out of your side's wavefunction.",
+        physics: "Once royal amplitude is confined to a single pure state, threat operators act on it classically. The endgame inherits the classical game's boundary conditions — check, mate, stalemate.",
         interactive: {
-          prompt: 'Step your f5 piece down-left onto e4 — straight into the collapsed Knight’s line of fire.',
+          prompt: 'A revealed king on h8, boxed in by its own pawns. Finish it: a1 → a8.',
           pieces: [
-            { id: 'W1', side: 'white', square: 'f5', types: 'pnbrqk' },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
-            { id: 'BN', side: 'black', square: 'd6', types: 'n', moved: true },
-            { id: 'B2', side: 'black', square: 'h8', types: 'pnbrqk' },
+            { id: 'WR', side: 'white', square: 'a1', types: 'r', moved: true },
+            { id: 'WK', side: 'white', square: 'c3', types: 'k', moved: true },
+            { id: 'BK', side: 'black', square: 'h8', types: 'k', moved: true },
+            { id: 'BP1', side: 'black', square: 'g7', types: 'p', moved: true },
+            { id: 'BP2', side: 'black', square: 'h7', types: 'p', moved: true },
           ],
-          goal: { kind: 'move', from: 'f5', to: 'e4' },
-          success: 'The step collapsed it to Bishop-Queen-King — then king pruning silently removed King, leaving exactly Bishop-or-Queen. You can never end your turn possibly-in-check on a threatened square.',
+          goal: { kind: 'move', from: 'a1', to: 'a8' },
+          success: 'Checkmate — the classic back-rank mate, alive and well. Once a king stands revealed, four hundred years of chess technique apply unchanged.',
         },
         board: {
-          files: 6,
-          ranks: 6,
+          files: 5,
+          ranks: 5,
           pieces: [
-            { sq: 'd6', side: 'black', types: 'n' },
-            { sq: 'e4', side: 'white', types: 'nbrq' },
-            { sq: 'c4', side: 'white', types: 'pnbrqk', pips: 3 },
+            { sq: 'd5', side: 'black', types: 'k', ring: true },
+            { sq: 'b5', side: 'white', types: 'r' },
           ],
-          arrows: [{ from: 'd6', to: 'e4', side: 'black' }],
+          arrows: [{ from: 'b5', to: 'd5', side: 'white' }],
+        },
+      },
+      {
+        title: 'Draws',
+        text: [
+          'Stalemate: no legal move for a side that is not lost — drawn. Fifty quiet moves with no capture, no definite pawn move, no promotion, and no information gained — drawn. The same FULL quantum state three times — drawn.',
+          'Collapsing and zapping count as progress, so active play never runs the clock down. Now go play. Your pieces do not know who they are — teach them the hard way.',
+        ],
+        physics: "Positions repeat only if their full quantum states are identical — possibility sets and all. Equality of the classical shadow is not equality of the state.",
+        interactive: {
+          prompt: 'Last exercise. Make any move at all — then go play a real game.',
+          pieces: [
+            { id: 'W1', side: 'white', square: 'c2', types: 'pnbrqk' },
+            { id: 'W2', side: 'white', square: 'f2', types: 'pnbrqk' },
+            { id: 'B1', side: 'black', square: 'd6', types: 'pnbrqk' },
+          ],
+          goal: { kind: 'any' },
+          success: 'That collapse counted as progress — information gained resets the fifty-move clock, so active quantum play never runs it down. Class dismissed: your pieces await their identities.',
+        },
+        board: {
+          files: 4,
+          ranks: 4,
+          pieces: [
+            { sq: 'b2', side: 'white', types: 'pnbrqk' },
+            { sq: 'c3', side: 'black', types: 'pnbrqk' },
+          ],
         },
       },
     ],
   },
   {
     id: 'castling',
-    title: 'Castling & Entanglement',
+    title: 'Quantum Castling',
     blurb: 'Any two unmoved pieces that might be Rook and King.',
     rulesPage: 'Castling (Rook–King Pairing)',
     steps: [
@@ -475,7 +523,7 @@ export const LESSONS = [
         title: 'Anyone can castle',
         text: [
           'Castling works between ANY two of your unmoved pieces whose possibilities still include both Rook and King — on any rank, with a clear path between them. Normal chess is just one arrangement.',
-          'Drag one onto the other. They slide toward each other and meet in the middle. Once per game.',
+          'Click one, then the other. They slide toward each other and meet in the middle. Once per game.',
         ],
         physics: "Castling is a joint measurement of two systems onto the {|R⟩, |K⟩} subspace — performed on any pair whose amplitudes still overlap it.",
         interactive: {
@@ -486,14 +534,14 @@ export const LESSONS = [
             { id: 'B1', side: 'black', square: 'h8', types: 'pnbrqk' },
           ],
           goal: { kind: 'castle' },
-          success: 'Castled! Both partners collapsed to Rook-or-King and met in the middle. Which is which stays an open question — conservation will settle it the moment the King is confirmed anywhere.',
+          success: 'Castled! Both partners collapsed to Rook-or-King and met in the middle. Which is which stays an open question — the census will settle it the moment the King is confirmed anywhere.',
         },
         board: {
           files: 8,
           ranks: 3,
           pieces: [
-            { sq: 'b1', side: 'white', types: 'pnbrqk', pips: 3 },
-            { sq: 'g1', side: 'white', types: 'pnbrqk', pips: 3 },
+            { sq: 'b1', side: 'white', types: 'pnbrqk' },
+            { sq: 'g1', side: 'white', types: 'pnbrqk' },
           ],
           highlights: ['d1', 'e1'],
         },
@@ -501,10 +549,10 @@ export const LESSONS = [
       {
         title: 'Two maybe-kings',
         text: [
-          'Both pieces collapse to exactly Rook-or-King. No special bond ties them afterward — team conservation alone keeps the story straight: the moment ANY piece is confirmed as the King, every other piece loses King from its possibilities.',
-          'And like any nearly-defined piece, a castled partner recoheres: its clock fills, and it can blur back toward superposition.',
+          'Both pieces collapse to exactly Rook-or-King. No special bond ties them afterward — the census alone keeps the story straight: the moment ANY piece is confirmed as the King, every other piece loses King from its possibilities.',
+          'A castled pair is also two extra maybe-Kings — real cover against wave function collapse.',
         ],
-        physics: "The castle is a projective measurement onto the rook-king subspace — nothing more. Which piece is which stays undetermined, and the environment is free to re-mix each partner's amplitudes over time.",
+        physics: "The castle is a projective measurement onto the rook-king subspace — nothing more. Which piece is which stays undetermined until the census resolves it.",
         interactive: {
           prompt: 'Resolve one partner: slide d1 up the board like a Rook (d1 → d5) and watch e1.',
           pieces: [
@@ -513,14 +561,14 @@ export const LESSONS = [
             { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'd1', to: 'd5' },
-          success: 'Only a Rook slides four squares, so d1 IS the Rook. Its old partner keeps both faces — nothing snapped. Its recoherence clock is running, and if the KING is ever confirmed anywhere, every other piece sheds King on its own.',
+          success: 'Only a Rook slides four squares, so d1 IS the Rook. Its old partner keeps both faces — and protecting it can still HEAL it back toward a wider superposition.',
         },
         board: {
           files: 8,
           ranks: 3,
           pieces: [
-            { sq: 'd1', side: 'white', types: 'rk', regain: 0 },
-            { sq: 'e1', side: 'white', types: 'rk', regain: 0 },
+            { sq: 'd1', side: 'white', types: 'rk' },
+            { sq: 'e1', side: 'white', types: 'rk' },
           ],
         },
       },
@@ -552,7 +600,7 @@ export const LESSONS = [
           ranks: 5,
           pieces: [
             { sq: 'b4', side: 'black', types: 'prqk' },
-            { sq: 'c4', side: 'white', types: 'pnbrqk', pips: 3 },
+            { sq: 'c4', side: 'white', types: 'pnbrqk' },
           ],
           arrows: [{ from: 'b2', to: 'b4', side: 'black' }],
           highlights: ['b3'],
@@ -608,7 +656,7 @@ export const LESSONS = [
             { id: 'B1', side: 'black', square: 'g5', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'c7', to: 'c8' },
-          success: 'Only a pawn steps straight ahead, so it promoted: now Knight, Bishop, Rook or Queen, funded by one of your pawn slots — and wearing the ⟨…⟩ promotion braces. Pawn is gone forever.',
+          success: 'Only a pawn steps straight ahead, so it promoted: now Knight, Bishop, Rook or Queen, funded by one of your pawn slots — and wearing the promotion bar beneath it. Pawn is gone forever.',
         },
         board: {
           files: 5,
@@ -620,91 +668,25 @@ export const LESSONS = [
       {
         title: 'The service stripe',
         text: [
-          'A promoted piece wears bra-ket braces ⟨…⟩ around its dots — the mark of an identity funded by a pawn slot. Promotion fires once per piece, and recoherence never returns Pawn to it.',
+          'A promoted piece wears a solid bar beneath it — the mark of an identity funded by a pawn slot. Promotion fires once per piece, and heals never return Pawn to it.',
           'Whether the promotion "really happened" stays entangled with your pawn pool: if your other pieces are later all confirmed as pawns, the promotion branch dies and the piece snaps back to its surviving identities.',
         ],
         physics: "The promotion branch remains entangled with the shared pawn pool. Confirm eight pawns elsewhere and the branch destructively interferes: the piece snaps back to its surviving amplitudes.",
         interactive: {
-          prompt: 'This promoted Knight-or-Queen’s clock is at two dots. Move a1 → a2 to fill it — and see what does NOT come back.',
+          prompt: 'Protect this promoted Knight-or-Queen: step d3 → d4 to touch it — and see what does NOT come back.',
           pieces: [
-            { id: 'WP', side: 'white', square: 'c4', types: 'nq', moved: true, promoted: true, regain: 2 },
-            { id: 'W2', side: 'white', square: 'a1', types: 'pnbrqk' },
+            { id: 'WP', side: 'white', square: 'c5', types: 'nq', moved: true, promoted: true },
+            { id: 'W2', side: 'white', square: 'd3', types: 'prqk', moved: true },
             { id: 'B1', side: 'black', square: 'g8', types: 'pnbrqk' },
+            { id: 'B2', side: 'black', square: 'a8', types: 'pnbrqk' },
           ],
-          goal: { kind: 'move', from: 'a1', to: 'a2' },
-          success: 'It regained Bishop — skipping Pawn entirely. Recoherence never returns Pawn to a promoted piece: the braces are a permanent service stripe.',
+          goal: { kind: 'move', from: 'd3', to: 'd4' },
+          success: 'The heal returned Bishop — skipping Pawn entirely. A heal never gives Pawn back to a promoted piece: the bar is a permanent service stripe.',
         },
         board: {
           files: 4,
           ranks: 4,
-          pieces: [{ sq: 'b4', side: 'white', types: 'nq', chevrons: true, regain: 1 }],
-        },
-      },
-    ],
-  },
-  {
-    id: 'endgame',
-    title: 'Winning and Drawing',
-    blurb: 'Kill every world where their King survives.',
-    rulesPage: 'Checkmate',
-    steps: [
-      {
-        title: 'Checkmate',
-        text: [
-          'You win when, after your move resolves, every legal reply leaves your opponent either with NO piece that could still be the King — or with a single known King you can capture next move no matter what.',
-          'You are not hunting a piece; you are exterminating the possibility of a surviving King across all worlds.',
-        ],
-        physics: "Checkmate is the vanishing of survival amplitude: over every branch of the opponent's reply superposition, ⟨King survives|ψ⟩ = 0.",
-        interactive: {
-          prompt: 'Finish it: slide your Rook to a8 and erase the last world where the Black King survives.',
-          pieces: [
-            { id: 'WR', side: 'white', square: 'a1', types: 'r', moved: true },
-            { id: 'W2', side: 'white', square: 'c3', types: 'pnbrqk' },
-            { id: 'BK', side: 'black', square: 'h8', types: 'k', moved: true },
-            { id: 'BP1', side: 'black', square: 'g7', types: 'p', moved: true },
-            { id: 'BP2', side: 'black', square: 'h7', types: 'p', moved: true },
-          ],
-          goal: { kind: 'move', from: 'a1', to: 'a8' },
-          success: 'Checkmate. Every legal Black reply still leaves the King capturable — the survival amplitude is zero in every world. The classic back-rank mate works here too.',
-        },
-        board: {
-          files: 5,
-          ranks: 5,
-          pieces: [
-            { sq: 'd5', side: 'black', types: 'k', ring: true },
-            { sq: 'b5', side: 'white', types: 'r' },
-            { sq: 'c3', side: 'white', types: 'q' },
-          ],
-          arrows: [
-            { from: 'b5', to: 'd5', side: 'white' },
-            { from: 'c3', to: 'd4', side: 'white' },
-          ],
-        },
-      },
-      {
-        title: 'Draws',
-        text: [
-          'Stalemate: no legal move and not in check — drawn. Fifty quiet moves with no capture, no definite pawn move, no promotion, and no information gained — drawn. The same FULL quantum state three times — drawn.',
-          'Collapsing superpositions counts as progress, so active quantum play never runs the clock down. Now go play. Your pieces do not know who they are — teach them the hard way.',
-        ],
-        physics: "Positions repeat only if their full quantum states are identical — possibility sets, coherence, clocks and all. Equality of the classical shadow is not equality of the state.",
-        interactive: {
-          prompt: 'Last exercise. Make any move at all — then go play a real game.',
-          pieces: [
-            { id: 'W1', side: 'white', square: 'c2', types: 'pnbrqk' },
-            { id: 'W2', side: 'white', square: 'f2', types: 'pnbrqk' },
-            { id: 'B1', side: 'black', square: 'd6', types: 'pnbrqk' },
-          ],
-          goal: { kind: 'any' },
-          success: 'That collapse counted as progress — information gained resets the fifty-move draw clock, so active quantum play never runs it down. Class dismissed: your pieces await their identities.',
-        },
-        board: {
-          files: 4,
-          ranks: 4,
-          pieces: [
-            { sq: 'b2', side: 'white', types: 'pnbrqk', pips: 3 },
-            { sq: 'c3', side: 'black', types: 'pnbrqk', pips: 3 },
-          ],
+          pieces: [{ sq: 'b4', side: 'white', types: 'nbq', chevrons: true, heal: true }],
         },
       },
     ],

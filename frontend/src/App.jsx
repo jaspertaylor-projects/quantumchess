@@ -1,7 +1,7 @@
 // frontend/src/App.jsx
 // Purpose: The composition root — wires the engine timeline, board input,
 // and the extracted feature hooks (online play, intro choreography, player
-// bars, sayings, monetization, daily-puzzle links, layout) into the rendered
+// bars, sayings, monetization, layout) into the rendered
 // app. The feature logic itself lives in hooks/ and the sibling modules.
 // Imports From: ./chessboard/*, ./hooks/*, ./components/*, ./tray/*, ./account/*, ./puzzle/*, ./sayings/*, ./settings/*, ./ai/*, ./store/*
 // Exported To: None
@@ -9,13 +9,13 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import './App.css';
 import Board from './chessboard/Board.jsx';
 import useQuantumGameState from './chessboard/useQuantumGameState.js';
-import { hexToRgbString } from './settings/useMeasurementColors.js';
 import useIndicatorSettings from './settings/useIndicatorSettings.js';
 import usePieceColors from './settings/usePieceColors.js';
 import useBoardColors from './settings/useBoardColors.js';
 import usePlayerBarColors from './settings/usePlayerBarColors.js';
 import SideTray from './tray/SideTray.jsx';
 import ConsentBanner from './components/ConsentBanner.jsx';
+import HoverTip from './components/HoverTip.jsx';
 import useAuth from './account/useAuth.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMove, resetGame, setUserTeam } from './store/gameSlice.js';
@@ -40,12 +40,10 @@ import useGameRecording from './hooks/useGameRecording.js';
 import useEffectiveClock from './hooks/useEffectiveClock.js';
 import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
-import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 
 export default function App() {
   // Increment this to reset the engine timeline (fresh game state)
   const [gameInstanceId, setGameInstanceId] = useState(0);
-
   const {
     pieces,
     sideToMove,
@@ -248,8 +246,6 @@ export default function App() {
     moves,
   });
 
-  const puzzleLinks = usePuzzleDeepLinks({ dismissOnboarding, setReviewGame });
-
   useEffect(() => {
     if (gameOver) setShowWinPopup(true);
   }, [gameOver]);
@@ -306,6 +302,8 @@ export default function App() {
     canCastleBetween,
     castlePieces,
     checkingSquaresBySide,
+    // Contact games do get check — but only once a definite king exists
+    // (the revealed-last-holder endgame), which is when the overlay matters.
     showCheckOverlay,
     commitEngineResult,
     online,
@@ -326,15 +324,29 @@ export default function App() {
     clearSelection: input.clearSelection,
   });
 
-  // Rings on every piece the last move's measurement pulse touched, in the
-  // measuring side's piece-border color (same ink as that side's insignia).
-  // Cleared naturally when the next move lands.
-  const measuredMarks = useMemo(() => {
-    if (!lastMove || !Array.isArray(lastMove.measuredSquares) || lastMove.measuredSquares.length === 0) return [];
-    const sideColors = lastMove.side === 'black' ? blackColors : whiteColors;
-    const rgb = hexToRgbString(sideColors.bandStroke);
-    return lastMove.measuredSquares.map((sq) => ({ square: sq, rgb }));
-  }, [lastMove, whiteColors, blackColors]);
+  // One-shot circles on the last move's contacts — red
+  // spin-out on zapped enemies, green bloom on healed friendlies. Keyed by
+  // the timeline length so back-to-back hits on the same square replay.
+  const zapMarks = useMemo(
+    () => (lastMove && Array.isArray(lastMove.zappedSquares) ? lastMove.zappedSquares : []),
+    [lastMove]
+  );
+  const healMarks = useMemo(
+    () => (lastMove && Array.isArray(lastMove.healedSquares) ? lastMove.healedSquares : []),
+    [lastMove]
+  );
+  // Census-locked zap targets: contacted, but no possibility could shed
+  // without collateral collapse elsewhere — shown as a shield, not silence.
+  const fizzleMarks = useMemo(
+    () => (lastMove && Array.isArray(lastMove.fizzledSquares) ? lastMove.fizzledSquares : []),
+    [lastMove]
+  );
+  // Where the pulse came from: the moved piece's landing square, so the
+  // board can fly particles from the mover to each contacted square.
+  const pulseOrigin = useMemo(
+    () => (lastMove && (zapMarks.length || healMarks.length || fizzleMarks.length) ? lastMove.to : null),
+    [lastMove, zapMarks, healMarks, fizzleMarks]
+  );
 
   // Engaging with a glowing onboarding button also retires the glow.
   const handleOpenSettings = useCallback(() => { setSettingsOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
@@ -386,7 +398,11 @@ export default function App() {
 
   function colorsEqual(a, b) {
     if (!a || !b) return false;
-    return a.icon === b.icon && a.bandFill === b.bandFill && a.bandStroke === b.bandStroke;
+    return a.icon === b.icon
+      && a.bandFill === b.bandFill
+      && a.bandStroke === b.bandStroke
+      && a.pieceOutline === b.pieceOutline
+      && a.pieceOutlineEnabled === b.pieceOutlineEnabled;
   }
 
   const handleAcceptSettings = useCallback(async (settings) => {
@@ -414,11 +430,13 @@ export default function App() {
       white: {
         ['--band-fill']: effectiveWhite.bandFill,
         ['--band-stroke']: effectiveWhite.bandStroke,
+        ['--piece-outline']: effectiveWhite.pieceOutlineEnabled ? effectiveWhite.pieceOutline : 'transparent',
         ['--icon-color']: effectiveWhite.icon,
       },
       black: {
         ['--band-fill']: effectiveBlack.bandFill,
         ['--band-stroke']: effectiveBlack.bandStroke,
+        ['--piece-outline']: effectiveBlack.pieceOutlineEnabled ? effectiveBlack.pieceOutline : 'transparent',
         ['--icon-color']: effectiveBlack.icon,
       },
     };
@@ -582,7 +600,11 @@ export default function App() {
                   onDragHover={input.handleDragHover}
                   pieces={pieces}
                   selectedId={selectedId}
-                  measureTargetMarks={measuredMarks}
+                  zapMarks={zapMarks}
+                  healMarks={healMarks}
+                  fizzleMarks={fizzleMarks}
+                  pulseOrigin={pulseOrigin}
+                  effectKey={historyLength}
                   indicators={indicators}
                   legalMoves={input.selectedMoves}
                   maxVisualSize={boardSize > 0 ? `${boardSize}px` : 'min(85vmin, 720px)'}
@@ -627,8 +649,6 @@ export default function App() {
                   isPaid={isPaidUser}
                   onRequirePremium={handleRequirePremium}
                   attentionSignal={startCtaPulse}
-                  onOpenPuzzle={puzzleLinks.handleOpenPuzzle}
-                  puzzleUnsolved={puzzleLinks.puzzleUnsolved}
                   onOpenTutorial={handleOpenTutorial}
                 />
               ) : null}
@@ -657,6 +677,7 @@ export default function App() {
       </footer>
 
       <ConsentBanner />
+      <HoverTip />
 
       {isNarrow ? (
         <>
@@ -678,8 +699,6 @@ export default function App() {
             onResign={handleResign}
             onOfferDraw={handleOfferDraw}
             onCancelSearch={online.handleCancelSearch}
-            onOpenPuzzle={puzzleLinks.handleOpenPuzzle}
-            puzzleUnsolved={puzzleLinks.puzzleUnsolved}
           />
           <MobileNewGameSheet
             open={mobileNewGameOpen}
@@ -745,7 +764,6 @@ export default function App() {
         onCloseReview={() => setReviewGame(null)}
         confirmState={confirmState}
         setConfirmState={setConfirmState}
-        puzzleLinks={puzzleLinks}
         svgStyles={svgStyles}
         localSayings={localSayings}
         onSaveLocalSayings={handleSaveLocalSayings}

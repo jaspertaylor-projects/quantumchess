@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import theme from '../theme.js';
 import { Lock as LockIcon } from 'lucide-react';
 import ChevronBadge from '../components/ChevronBadge.jsx';
-import { FREE_BOTS, PREMIUM_BOTS, getBotById, getBotAvatarUrl } from '../ai/bots.js';
+import { FREE_BOTS, PREMIUM_BOTS, getBotById, getBotAvatarUrl, devUnlockAllBots } from '../ai/bots.js';
 import { fetchBotProgress, BOT_PROGRESS_EVENT } from '../account/botProgress.js';
 
 const TIER_TAG = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
@@ -170,6 +170,9 @@ export default function BotLadderPanel({
   onRequirePremium = null,
 }) {
   const user = auth && auth.user ? auth.user : null;
+  // Dev playtest override (?allbots): treat everything as unlocked.
+  const unlockAll = devUnlockAllBots();
+  const showPremiumRoster = isPaid || unlockAll;
   // Easiest rung first; the free final boss is the last free rung.
   const ladder = useMemo(() => [...FREE_BOTS].sort((a, b) => a.rating - b.rating), []);
   const premiumLadder = useMemo(() => [...PREMIUM_BOTS].sort((a, b) => a.rating - b.rating), []);
@@ -228,10 +231,11 @@ export default function BotLadderPanel({
 
   const isUnlocked = useCallback(
     (bot) => {
+      if (unlockAll) return true;
       if (bot.premium) return isPaid;
       return clearedIds.has(bot.id) || bot.id === nextBotId;
     },
-    [clearedIds, nextBotId, isPaid]
+    [clearedIds, nextBotId, isPaid, unlockAll]
   );
 
   // Keep the selection playable: if progress says the chosen bot is locked
@@ -313,7 +317,7 @@ export default function BotLadderPanel({
               );
             })}
           </div>
-          {isPaid ? (
+          {showPremiumRoster ? (
             <>
               <div
                 style={{

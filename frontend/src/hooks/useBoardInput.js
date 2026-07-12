@@ -155,18 +155,28 @@ export default function useBoardInput({
   // A second click on one of the mover's own pieces: try the quantum castle
   // with the current selection, then (castle or not) select the clicked
   // piece. Shared by the square- and piece-click handlers.
+  // While a guide is up, castling is allowed ONLY when it IS the guided move
+  // (the intro's quantum-castle beat); any other pair nudges back on script.
+  const guideAllowsCastle = useCallback((sqA, sqB) => {
+    if (!introGuide || !introGuide.castle) return false;
+    const pair = [sqA, sqB].sort().join(',');
+    return pair === [introGuide.from, introGuide.to].sort().join(',');
+  }, [introGuide]);
+
   const selectOwnPiece = useCallback((clickedId, clickedSide) => {
     if (selectedId && selectedId !== clickedId) {
       const left = pieces.find((p) => p.id === selectedId);
       if (left && ownsPiece(left)) {
-        if (introGuide) {
-          // Castling would sidestep the choreography; nudge back to it.
+        const clicked = pieces.find((p) => p.id === clickedId);
+        if (introGuide && !(clicked && guideAllowsCastle(left.square, clicked.square))) {
+          // Off-script castling would sidestep the choreography.
           intro.nudgeOffScript();
           setSelectedId(clickedId);
           setTrayHighlights([]);
           return;
         }
         if (tryCastle(selectedId, clickedId, clickedSide)) {
+          if (introGuide) intro.onGuidedMovePlayed();
           setSelectedId(null);
           setTrayHighlights([]);
           return;
@@ -177,7 +187,7 @@ export default function useBoardInput({
     }
     setSelectedId(clickedId);
     setTrayHighlights([]);
-  }, [selectedId, pieces, ownsPiece, introGuide, intro, tryCastle, setInfoMessage]);
+  }, [selectedId, pieces, ownsPiece, introGuide, intro, tryCastle, setInfoMessage, guideAllowsCastle]);
 
   // Move the current selection to a destination square (click paths).
   const moveSelectionTo = useCallback((toSquare) => {
@@ -301,11 +311,11 @@ export default function useBoardInput({
 
     const targetAtDest = getPieceAtSquare(to);
     if (targetAtDest && targetAtDest.side === movingPiece.side && targetAtDest.id !== id) {
-      if (introGuide) {
-        // Castling would sidestep the choreography; nudge back to it.
+      if (introGuide && !guideAllowsCastle(movingPiece.square, targetAtDest.square)) {
+        // Off-script castling would sidestep the choreography.
         intro.nudgeOffScript();
-      } else {
-        tryCastle(id, targetAtDest.id, movingPiece.side);
+      } else if (tryCastle(id, targetAtDest.id, movingPiece.side)) {
+        if (introGuide) intro.onGuidedMovePlayed();
       }
       setSelectedId(null);
       return;
@@ -315,7 +325,7 @@ export default function useBoardInput({
       setInfoMessage('Illegal move.');
       setSelectedId(null);
     }
-  }, [pieces, getPieceAtSquare, tryCastle, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame, intro, introGuide, isOnlineGameRef, aiEnabledRef, setInfoMessage]);
+  }, [pieces, getPieceAtSquare, tryCastle, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame, intro, introGuide, guideAllowsCastle, isOnlineGameRef, aiEnabledRef, setInfoMessage]);
 
   const handleDragHover = useCallback(() => {}, []);
   const handleSquareRightClick = useCallback(() => {}, []);

@@ -19,7 +19,7 @@ import { buildLastMoveRecord } from '../../frontend/src/chessboard/advanceCore.j
 
 // ------------------------------------------------------------ theme tagging
 
-// Re-simulate an analysis move to recover measuredSquares + resolved pieces.
+// Re-simulate an analysis move to recover zap/heal contacts + resolved pieces.
 function simulateAnalysisMove(position, move) {
   const { pieces, captureCounter } = position;
   if (move.type === 'castle') {
@@ -27,7 +27,8 @@ function simulateAnalysisMove(position, move) {
     if (!sim.ok) return null;
     return {
       after: applyQuantumConstraints(sim.pieces),
-      measuredSquares: sim.measuredSquares || [],
+      zappedSquares: sim.zappedSquares || [],
+      healedSquares: sim.healedSquares || [],
       didCapture: false,
       moverId: move.plan.piece1_id,
       from: move.plan.piece1_from,
@@ -44,7 +45,8 @@ function simulateAnalysisMove(position, move) {
   if (!sim.ok) return null;
   return {
     after: sim.pieces,
-    measuredSquares: sim.measuredSquares || [],
+    zappedSquares: sim.zappedSquares || [],
+    healedSquares: sim.healedSquares || [],
     didCapture: Boolean(sim.didCapture),
     moverId: mover.id,
     from: move.from,
@@ -59,12 +61,15 @@ function simulateAnalysisMove(position, move) {
 // exhibits. Names match the daily-puzzle themes for continuity.
 function tagThemes(position, moveSim) {
   const before = position.pieces;
-  const { after, measuredSquares } = moveSim;
+  const { after } = moveSim;
+  const zappedSquares = moveSim.zappedSquares || [];
+  const healedSquares = moveSim.healedSquares || [];
   const themes = [];
 
-  if (measuredSquares.length >= 3) themes.push('measure3'); // The Instrument
+  if (zappedSquares.length >= 3) themes.push('zap3'); // The Storm
+  if (healedSquares.length >= 2) themes.push('heal2'); // The Medic
 
-  const touched = new Set([moveSim.to, moveSim.from, ...measuredSquares]);
+  const touched = new Set([moveSim.to, moveSim.from, ...zappedSquares, ...healedSquares]);
   for (const prev of before) {
     if (prev.captured || !prev.square || prev.side !== 'black') continue;
     const now = after.find((p) => p.id === prev.id);
@@ -104,7 +109,8 @@ function tagThemes(position, moveSim) {
     side: 'white',
     usedEnPassant: moveSim.enPassant,
     wasFirstMove: (before.find((p) => p.id === moveSim.moverId)?.moveCount || 0) === 0,
-    measuredSquares,
+    zappedSquares,
+    healedSquares,
   });
   if (givesCheck && evaluateTerminalAfterMove(after, 'white', moveSim.nextCC, lastMove) === 'checkmate') {
     themes.push('mate'); // Collapse Mate

@@ -1,5 +1,5 @@
 // frontend/src/components/PlayerBar.jsx
-// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a captured pieces area; captures render inline (a slant-edged panel painted with the captured side's band fill, glyphs in that side's icon ink) or, via capturedPosition, as a fixed-height strip above/below the bar (mobile).
+// Purpose: Display a player's info bar with name/rating, an optional chess clock, and a captured pieces area; captures render inline (a neutral slant-edged shelf holding true-color miniatures of the pieces this player took) or, via capturedPosition, as a fixed-height strip above/below the bar (mobile).
 // Imports From: ../theme.js, ../chessboard/RasterizedSvgImg.jsx
 // Exported To: ../App.jsx
 
@@ -168,14 +168,15 @@ function CapturedIcon({ piece, svgStyles, sizePx = 22 }) {
   const srcSvg = TYPE_TO_SVG[t] || TYPE_TO_SVG.p;
   const sideVars = piece.side === 'white' ? (svgStyles.white || {}) : (svgStyles.black || {});
 
-  // The captured area's background is this side's band fill, so the glyph
-  // silhouette (the band-fill path) is inked with the side's icon color —
-  // the same fill/ink contrast pair the piece wears on the board.
+  // Captured pieces are miniatures in their TRUE board colors (band fill +
+  // stroke + icon ink). The old icon-ink silhouette inverted perceived
+  // ownership: a captured black piece was drawn in black's LIGHT icon color,
+  // so the pieces you took read as your own pieces sitting in your bin.
   const capturedSideVars = useMemo(
     () => ({
-      ['--band-fill']: sideVars['--icon-color'] || 'currentColor',
-      ['--band-stroke']: sideVars['--icon-color'] || 'currentColor',
-      ['--icon-color']: 'rgba(0,0,0,0)',
+      ['--band-fill']: sideVars['--band-fill'] || 'currentColor',
+      ['--band-stroke']: sideVars['--band-stroke'] || 'currentColor',
+      ['--icon-color']: sideVars['--icon-color'] || 'currentColor',
     }),
     [sideVars]
   );
@@ -237,11 +238,12 @@ export default function PlayerBar({
   capturedPosition = 'inline',
 }) {
   const capturedOutside = capturedPosition === 'above' || capturedPosition === 'below';
-  // The captured zone wears the CAPTURED side's band fill (this bar holds the
-  // opponent pieces this player took), so the user's chosen piece contrast
-  // doubles as the taken-pieces contrast.
+  // The bin holds the opponent pieces this player took, drawn as true-color
+  // miniatures; its shelf is painted with the CAPTURED side's icon-ink color,
+  // so the minis sit on the same fill-vs-ink contrast the pieces carry on
+  // the board (dark-bodied pieces on their light ink, and vice versa).
   const capturedSide = side === 'white' ? 'black' : 'white';
-  const capturedBg = (svgStyles[capturedSide] || {})['--band-fill'] || 'rgba(255,255,255,0.08)';
+  const capturedBg = (svgStyles[capturedSide] || {})['--icon-color'] || 'rgba(255,255,255,0.10)';
   // The captured area owns the right third of the bar; icon size adapts to
   // the space and the longest row so pieces only shrink when they must.
   // An empty row cedes its height to the other, and overlap means a row of

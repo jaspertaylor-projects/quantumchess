@@ -39,7 +39,6 @@ function collapseValue(piece) {
 export const DEFAULT_WEIGHTS = {
   mobility: 0.012, // per attacked square
   extraType: 0.09, // option value per extra possibility on own pieces
-  oppDamage: 0.04, // per coherence point knocked off enemy pieces
   kingSpread: 0.28, // per king-holder up to a cap: ambiguity shields the king
   soleKingAttacked: 4.0, // unique king holder standing in capture range
   soleKingCollapsedAttacked: 8.0, // and it is a known king
@@ -139,11 +138,6 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
     // Option value of remaining ambiguity.
     if (types.length > 1) score += sign * W.extraType * (types.length - 1);
 
-    // Decoherence damage already inflicted on this piece favors the opponent.
-    if (types.length > 2) {
-      const damage = Math.max(0, 3 - (p.coherence ?? 3));
-      score -= sign * W.oppDamage * damage;
-    }
 
     // Hanging / bad-trade exposure, in collapse-value terms.
     if (enemy.squares.has(p.square) && riskValue > 0.01) {
@@ -264,7 +258,8 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
 class SearchTimeout extends Error {}
 
 // Score a no-legal-replies node from `side`'s perspective, mirroring the
-// game's terminal rules: checkmate if lost-in-check, else stalemate (draw).
+// game's terminal rules: lost when kingless (wave-function collapse) or when
+// the revealed king stands in capture range (checkmate); else stalemate.
 function noReplyScore(pieces, side, ply) {
   return isLostInCheck(pieces, side) ? -MATE + ply : 0;
 }

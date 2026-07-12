@@ -15,53 +15,53 @@ import { addMove, setUserTeam } from '../store/gameSlice.js';
 // magical, not punishing.
 const INTRO_BOT_ID = 'isaac-steinitz';
 
-// Black's scripted opening for the intro game: two knight leaps that vacate
-// the back rank, then a quantum castle through the empty square — a first
-// minute that shows off the game's strangest rule. Each step tries its
-// candidates in order against the live position (the visitor's play can block
-// them); if none is legal the script yields to the real engine. `delay` gives
-// the visitor time to read the payoff card their own move just earned.
+// Black's scripted opening for the intro game — every beat of the zap/heal
+// rules on cue, verified move-by-move against the real engine:
+//   B1 Nf6 zaps e4 (queen bleeds out) · B2 Nc6 claims both knights (census)
+//   · B3 b5 zaps the c4 bishop-queen down to a bishop · B4 xc4 captures it
+//   (least-valuable capture) · B5 d5 heals the capturer PAST the claimed
+//   knights (pawn-bishop overflow) and zaps e4 to a bare pawn.
+// Each step tries its candidates in order against the live position (the
+// visitor's play can block them); if none is legal the script yields to the
+// real engine. `delay` gives the visitor time to read the payoff card their
+// own move just earned.
 const INTRO_SCRIPT = [
   { moves: [['g8', 'f6'], ['g8', 'h6']], stage: 'reply1', delay: 1100 },
   { moves: [['b8', 'c6'], ['b8', 'a6']], stage: 'reply2', delay: 4500 },
-  { castles: [['f8', 'h8'], ['a8', 'c8']], stage: 'castle', delay: 4500 },
-  { moves: [['d7', 'd5']], stage: 'reply3', delay: 4500 },
-  { moves: [['e7', 'e5']], stage: 'reply4', delay: 4500 },
-  { moves: [['e5', 'e4']], stage: 'reply5', delay: 4500 },
+  { moves: [['b7', 'b5']], stage: 'reply3', delay: 4500 },
+  { moves: [['b5', 'c4']], stage: 'reply4', delay: 4500 },
+  { moves: [['d7', 'd5']], stage: 'reply5', delay: 4500 },
 ];
 
 // White's choreographed moves: entry i is offered once Black has made i
 // scripted replies — the piece glows, the destination lights up, and other
-// moves are gently refused. The line is picked so the pips tell their story
-// on cue: e4 stays a watched 3-type piece whose coherence pips drain (Nf6
-// observes it), and b1-c3 collapses to a knight whose recoherence clock
-// then fills move by move.
+// moves are gently refused. The line walks the visitor through their own
+// side of the rules: heal by protecting (Nc3), zap with the cheapest self
+// (Bc4), give a possibility back to the census (Nh3), quantum-castle, and
+// finally recapture.
 const INTRO_GUIDE = [
   { candidates: [['e2', 'e4']], stage: null },
-  { candidates: [['d2', 'd4']], stage: 'guide1' },
-  { candidates: [['b1', 'c3']], stage: 'guide2' },
-  { candidates: [['a2', 'a3']], stage: 'guide3' },
-  { candidates: [['g2', 'g3']], stage: 'guide4' },
-  { candidates: [['a3', 'a4']], stage: 'guide5' },
-  { candidates: [['d4', 'e4']], stage: 'guide6' },
+  { candidates: [['b1', 'c3']], stage: 'guide1' },
+  { candidates: [['f1', 'c4']], stage: 'guide2' },
+  { candidates: [['g1', 'h3']], stage: 'guide3' },
+  { castles: [['e1', 'h1']], stage: 'guide4' },
+  { candidates: [['e4', 'd5']], stage: 'guide6' },
 ];
 
 // Spoken in the top player bar's speech bubble (welcome by the Stranger,
 // the rest by the intro bot), so keep each line bubble-sized.
 const INTRO_DIALOGUE = {
-  welcome: 'Every piece is every piece — until it’s observed. Move the glowing pawn to the lit square.',
-  reply1: 'A leap only a knight could make… so a knight it becomes.',
-  guide1: 'The pips on your e4 pawn are coherence. My knight is watching it — one pip just went dark.',
-  reply2: 'Both my knights are out — no other piece of mine can be one now.',
-  guide2: 'Your leap fully collapsed that piece — a knight, nothing else. The dots beneath it are a recoherence clock.',
-  castle: 'A quantum castle: two pieces, each maybe king, maybe rook — and free to blur again.',
-  guide3: 'The clock fills as you move — full, a piece regains a possibility. Keep an eye on your knight.',
-  reply3: 'My pawn steps out — and takes another look at your e4. Watched pieces wear down.',
-  guide4: 'A second look landed — your e4 is down to its last pip. One more and it breaks.',
-  reply4: 'A third look, straight down the file. Your e4 cannot absorb another.',
-  guide5: 'Three measurements — e4 broke. It was never a pawn: rook or queen now. And your knight’s clock just filled.',
-  reply5: 'Captured — a taken piece resolves as the least it could be. A rook. And my rings now claim your maybe-kings.',
-  guide6: 'Answered — take the checker and the claim dies. A maybe-king left under a ring stops being one. The board is yours.',
+  welcome: 'Every piece is every piece — until it moves. Slide the glowing pawn to the lit square.',
+  reply1: 'A leap only a knight makes. Its touch ZAPS your pawn — the queen it might have been is gone.',
+  guide1: 'Your knight lands touching e4 — friends you touch HEAL. It just grew knight back.',
+  reply2: 'Both my knights are claimed now — no other piece of mine can be one. The census keeps count.',
+  guide2: 'You touch as the cheapest thing you still might be — a bishop here. Its ray zapped f7: never their king now.',
+  reply3: 'My pawn brushes your bishop-queen — and the queen bleeds out of it. Zaps take the best self first.',
+  guide3: 'Your second knight is claimed, so e4 handed its knight back. The census runs both ways.',
+  reply4: 'Captured — a taken piece resolves as the LEAST it could be. Strip a piece down before you take it.',
+  guide4: 'A quantum castle: two pieces, each maybe king, maybe rook. Strip ALL my maybe-kings and I collapse.',
+  reply5: 'My knights are spoken for — so my heal overflowed: that pawn is a pawn-BISHOP now. And your e4? Just a pawn.',
+  guide6: 'Taken back. Zap every maybe-king to win by wave function collapse — or corner a revealed king the old way. The board is yours.',
 };
 
 export default function useIntroSequence({
@@ -166,14 +166,24 @@ export default function useIntroSequence({
     if (!introChoreo || gameOver || sideToMove !== 'white') return null;
     const g = INTRO_GUIDE[introGuideStep];
     if (!g) return null;
-    for (const [from, to] of g.candidates) {
+    for (const [from, to] of g.candidates || []) {
       const piece = getPieceAtSquare(from);
       if (piece && piece.side === 'white' && getLegalMoves(piece.id).includes(to)) {
         return { from, to, stage: g.stage };
       }
     }
+    // A guided quantum castle: glow one partner, light the other; the input
+    // layer accepts exactly this pair while the guide is up.
+    for (const [sqA, sqB] of g.castles || []) {
+      const a = getPieceAtSquare(sqA);
+      const b = getPieceAtSquare(sqB);
+      if (!a || !b || a.side !== 'white' || b.side !== 'white') continue;
+      if (canCastleBetween(a.id, b.id).canCastle) {
+        return { from: sqA, to: sqB, castle: true, stage: g.stage };
+      }
+    }
     return null;
-  }, [introChoreo, gameOver, sideToMove, introGuideStep, getPieceAtSquare, getLegalMoves]);
+  }, [introChoreo, gameOver, sideToMove, introGuideStep, getPieceAtSquare, getLegalMoves, canCastleBetween]);
 
   // The choreography is all-or-nothing: it retires explicitly — last guided
   // move played, game somehow over, or no candidate playable on a guided

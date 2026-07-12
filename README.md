@@ -1,8 +1,10 @@
 # Quantum Chess
 
 Chess where every piece begins as a superposition of all six piece types and
-collapses as it moves. Measurement pulses, decoherence, quantum castling,
-quantum promotion, recoherence — deterministic throughout, no dice anywhere.
+collapses as it moves. Every move zaps the enemies it touches and heals the
+friends it protects; win by wave function collapse (erase every maybe-king)
+or classical checkmate on a revealed king. Quantum castling, quantum
+promotion, census conservation — deterministic throughout, no dice anywhere.
 
 - **Live:** https://quantumchess.ninja
 - **Status:** launched, but there are **no real users or paying customers
@@ -14,6 +16,62 @@ quantum promotion, recoherence — deterministic throughout, no dice anywhere.
   accounts add a rating and saved games.
 
 ---
+
+## ⚡ THE RULES — Contact Zap/Heal (adopted 2026-07-11)
+
+The 2026-07-10 "Contact Zap/Heal" experiment won: it is now THE game, and the
+old classic ruleset (measurement pulses, coherence points, recoherence
+clocks, Zeno, sealed pieces, superposed-king check) is **deleted**, not
+dormant. One engine, one ruleset.
+
+- **On every move, the moved piece touches every square it could capture
+  on** — reach projects from its LEAST valuable remaining type (p<n<b<r<q<k):
+  a fresh blur pokes like a pawn, a confirmed queen sweeps like one.
+  - Enemy contacts are **zapped**: each sheds the most valuable possibility
+    it can lose CLEANLY (King first), walking down k→q→r→b→n→p. A shed whose
+    census cascade would rewrite any other piece is skipped; if nothing sheds
+    cleanly the target is **shielded** (gold ring, fizzle).
+  - Friendly contacts are **healed**: each regains its cheapest missing
+    feasible identity (never King; never Pawn on promoted pieces/promotion
+    rank; census-claimed types are skipped — the pawn-bishop overflow).
+- **Win by wave function collapse**: a side with zero maybe-kings loses
+  instantly (the terminal zap ignores the clean-shed guard). **Check exists
+  only for a revealed king** (possibleTypes === ['k']): the quantum midgame
+  is checkless, the endgame is classical chess — real checkmate, stalemate.
+- Captures collapse the victim to its least valuable identity; capturing a
+  pure-king piece ends the game. Castling/en passant/promotion carry over
+  (castle-through-threat is gone with the check rule).
+- UI: red spin-out circle = zap, green bloom = heal, gold ring = shield;
+  promoted pieces wear a solid bar. The coherence pips/recoherence dots and
+  measurement rings are gone.
+
+Where things stand after the adoption commit:
+
+- **Engine**: single ruleset in `chessboard/quantumEngine.js`
+  (`applyContactZapHeal`); no variant plumbing anywhere.
+- **Intro game**: fully re-choreographed to teach zap → heal → census →
+  cheapest-self reach → least-valuable capture → quantum castle →
+  pawn-bishop overflow (`hooks/useIntroSequence.js`, line verified
+  move-by-move by `frontend/tmp`-era script, now baked into the constants).
+- **Tutorial**: 10 lessons / 21 live-engine exercises rebuilt for the new
+  rules; `tests/tutorial-exercises-verify.mjs` re-verifies every exercise's
+  success-text claims against the engine.
+- **Rulebook**: `tray/RulesModal.jsx` pages rewritten (Zap/Heal/Shields/
+  Census/Winning pages; lesson → rules-page links intact).
+- **Fixtures**: `tests/fixtures/engine-games.json` regenerated under the new
+  rules (140-halfmove cap — random games reach wave-function collapse around
+  ply 90); `tests/contact-variant-smoke.mjs` is the rules smoke.
+- **Daily puzzle: PARKED.** The composed generator + weekly arc were built
+  on classic semantics and are unreachable (entry buttons, deep links, and
+  modals unhooked — same pattern as `unstableLine/`). Redesign it for
+  contact-native goals (zap chains, heal saves, WFC finishes) before
+  re-wiring; `dailypuzzle.md` still describes the classic-era system.
+- **Miner**: pipeline runs on the new rules; theme tagging now keys on
+  zaps/heals (`zap3`, `heal2`). All previously mined data
+  (`tools/mined/*`, `src/puzzle/mined*Data.json`) is classic-era and must be
+  re-harvested before the mined-daily plan resumes.
+- **Old saved games** in `qc_games` replay under the new rules and will NOT
+  reproduce (zero real users — nuke the rows whenever convenient).
 
 ## Architecture at a glance
 

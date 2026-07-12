@@ -17,7 +17,18 @@ import QuantumPiece from './QuantumPiece.jsx';
 import { hexToRgbString } from '../settings/useMeasurementColors.js';
 import { arrowGeometry } from './arrowGeometry.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
-import { listCheckThreats, canPieceRecohere } from './quantumEngine.js';
+import { listCheckThreats } from './quantumEngine.js';
+
+// Deterministic 0..1 jitter for particle spreads: stable across re-renders
+// (Math.random would re-roll mid-animation), varied across squares/indices.
+function jitter01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 8) & 0xffff) / 0x10000;
+}
 
 export default function Board({
   orientation = 'white',
@@ -31,7 +42,11 @@ export default function Board({
   highlights = [], // [{ square: 'e4', color: 'rgba(255,255,0,0.4)' }]
   pieces = [], // [{ id, side, square, possibleTypes }]
   selectedId = null,
-  measureTargetMarks = [], // [{ square, rgb }] persistent targets, one per side
+  zapMarks = [], // contact variant: squares zapped by the last move (red spin-out circle)
+  healMarks = [], // contact variant: squares healed by the last move (green bloom circle)
+  fizzleMarks = [], // contact variant: census-locked zap targets (shield pop, nothing shed)
+  pulseOrigin = null, // contact variant: the mover's landing square — particles fly from here to each mark
+  effectKey = 0, // bumps per move so zap/heal animations replay on repeat squares
   attractSquare = null, // square whose piece breathes light, inviting a first pickup
   arrows = [], // suggestion arrows: [{ from, to, opacity }] — fat translucent green, layered by opacity
   guideSquare = null, // destination of a choreographed move: a pulsing gold target
@@ -88,21 +103,6 @@ export default function Board({
     if (!indicators.checkGlow && !indicators.checkRing) return [];
     return listCheckThreats(pieces);
   }, [pieces, indicators.checkGlow, indicators.checkRing]);
-
-  // Sealed pieces: nearly-defined pieces that can never regain a possibility
-  // (conservation has settled every question). Their recoherence clock would
-  // cycle forever, so QuantumPiece draws a solid line instead of the dots.
-  const sealedIds = useMemo(() => {
-    if (!indicators.recohere) return new Set();
-    const out = new Set();
-    for (const p of pieces) {
-      if (p.captured || !p.square) continue;
-      const len = (p.possibleTypes || []).length;
-      if (len === 0 || len > 2) continue;
-      if (!canPieceRecohere(pieces, p.id)) out.add(p.id);
-    }
-    return out;
-  }, [pieces, indicators.recohere]);
 
   const styles = {
     root: {
@@ -202,16 +202,43 @@ export default function Board({
       pointerEvents: 'none',
       zIndex: 7,
     },
-    measureTargetRing: (rgb) => ({
+    zapCircle: {
       position: 'absolute',
-      inset: '6%',
-      border: `2.5px dashed rgba(${rgb}, 0.95)`,
+      inset: '10%',
+      border: '3px dashed rgba(255, 64, 64, 0.95)',
       borderRadius: '50%',
-      boxShadow: `0 0 10px rgba(${rgb}, 0.55), inset 0 0 8px rgba(${rgb}, 0.35)`,
+      boxShadow: '0 0 12px rgba(255, 64, 64, 0.6), inset 0 0 10px rgba(255, 64, 64, 0.35)',
       pointerEvents: 'none',
-      zIndex: 6,
+      zIndex: 8,
       boxSizing: 'border-box',
-    }),
+    },
+    healCircle: {
+      position: 'absolute',
+      inset: '10%',
+      border: '3px solid rgba(46, 204, 113, 0.9)',
+      borderRadius: '50%',
+      boxShadow: '0 0 12px rgba(46, 204, 113, 0.55), inset 0 0 10px rgba(46, 204, 113, 0.3)',
+      pointerEvents: 'none',
+      zIndex: 8,
+      boxSizing: 'border-box',
+    },
+    fizzleShield: {
+      position: 'absolute',
+      inset: '18%',
+      pointerEvents: 'none',
+      zIndex: 9,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      filter: 'drop-shadow(0 0 8px rgba(170, 190, 220, 0.75))',
+    },
+    particleLayer: {
+      position: 'absolute',
+      inset: 0,
+      pointerEvents: 'none',
+      overflow: 'hidden',
+      zIndex: 9,
+    },
     floatingLayer: {
       position: 'absolute',
       inset: 0,
@@ -346,6 +373,47 @@ export default function Board({
     return { x: (col + 0.5) * cell, y: (row + 0.5) * cell };
   }, [orientation, dimensions.cell]);
 
+  // Contact-pulse particles: a few soft motes per contacted square, flying
+  // from the mover's landing square outward — red to zaps, green to heals,
+  // steel to census-locked shields. Purely decorative; deterministic jitter.
+  const pulseParticles = useMemo(() => {
+    if (!pulseOrigin || !dimensions.cell) return [];
+    const origin = squareCenterPx(pulseOrigin);
+    if (!origin) return [];
+    const cell = dimensions.cell;
+    const groups = [
+      { squares: zapMarks, cls: 'qc-particle--zap' },
+      { squares: healMarks, cls: 'qc-particle--heal' },
+      { squares: fizzleMarks, cls: 'qc-particle--fizzle' },
+    ];
+    const out = [];
+    for (const g of groups) {
+      for (const sq of g.squares) {
+        if (sq === pulseOrigin) continue;
+        const target = squareCenterPx(sq);
+        if (!target) continue;
+        for (let i = 0; i < 4; i++) {
+          const ja = jitter01(`${sq}:${i}:a`);
+          const jb = jitter01(`${sq}:${i}:b`);
+          const jc = jitter01(`${sq}:${i}:c`);
+          const x0 = origin.x + (ja - 0.5) * cell * 0.4;
+          const y0 = origin.y + (jb - 0.5) * cell * 0.4;
+          out.push({
+            key: `${g.cls}-${sq}-${i}-${effectKey}`,
+            cls: g.cls,
+            x0,
+            y0,
+            tx: target.x + (jb - 0.5) * cell * 0.3 - x0,
+            ty: target.y + (ja - 0.5) * cell * 0.3 - y0,
+            delay: Math.round(jc * 150),
+            dur: Math.round(430 + ja * 240),
+          });
+        }
+      }
+    }
+    return out;
+  }, [pulseOrigin, zapMarks, healMarks, fizzleMarks, squareCenterPx, dimensions.cell, effectKey]);
+
   return (
     <div
       className="chessboard-root"
@@ -406,26 +474,55 @@ export default function Board({
               ) : null}
 
 
-              {(indicators.pulseRings ? measureTargetMarks : [])
-                .filter((m) => m && m.square === squareAlg)
-                .map((m, mi) => (
-                  <div
-                    key={`target-ring-${squareAlg}-${mi}`}
-                    className="qc-measure-target-ring"
-                    style={styles.measureTargetRing(m.rgb || '186, 85, 211')}
-                    aria-label={`Measurement target at ${squareAlg}`}
-                  />
-                ))}
+              {zapMarks.includes(squareAlg) ? (
+                <div
+                  key={`zap-${squareAlg}-${effectKey}`}
+                  className="qc-zap-circle"
+                  style={styles.zapCircle}
+                  aria-hidden="true"
+                />
+              ) : null}
+
+              {healMarks.includes(squareAlg) ? (
+                <div
+                  key={`heal-${squareAlg}-${effectKey}`}
+                  className="qc-heal-circle"
+                  style={styles.healCircle}
+                  aria-hidden="true"
+                />
+              ) : null}
+
+              {fizzleMarks.includes(squareAlg) ? (
+                <div
+                  key={`fizzle-${squareAlg}-${effectKey}`}
+                  className="qc-fizzle-shield"
+                  style={styles.fizzleShield}
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" width="100%" height="100%">
+                    <path
+                      d="M12 2 L20 5 V11 C20 16.5 16.7 20.6 12 22 C7.3 20.6 4 16.5 4 11 V5 Z"
+                      fill="rgba(170, 190, 220, 0.28)"
+                      stroke="rgba(200, 215, 235, 0.95)"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M8.2 11.2 L15.8 11.2"
+                      stroke="rgba(200, 215, 235, 0.95)"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+              ) : null}
 
               {piece && !isDraggingThis ? (
                 <QuantumPiece
                   id={piece.id}
                   side={piece.side}
                   possibleTypes={piece.possibleTypes}
-                  coherence={piece.coherence}
-                  recohere={piece.recohere}
                   promoted={Boolean(piece.wasPromoted)}
-                  sealed={sealedIds.has(piece.id)}
                   indicators={indicators}
                   size={pieceSize}
                   isSelected={selectedId === piece.id}
@@ -537,6 +634,26 @@ export default function Board({
           </svg>
         ) : null}
 
+        {/* Contact-pulse particles: mover -> contacted squares */}
+        {pulseParticles.length > 0 ? (
+          <div className="qc-pulse-particle-layer" style={styles.particleLayer} aria-hidden="true">
+            {pulseParticles.map((pt) => (
+              <span
+                key={pt.key}
+                className={`qc-pulse-particle ${pt.cls}`}
+                style={{
+                  left: pt.x0,
+                  top: pt.y0,
+                  ['--qc-tx']: `${pt.tx}px`,
+                  ['--qc-ty']: `${pt.ty}px`,
+                  animationDelay: `${pt.delay}ms`,
+                  animationDuration: `${pt.dur}ms`,
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+
         {/* Floating drag preview */}
         {draggingPiece ? (
           <div className="chessboard-floating-layer" ref={overlayRef} style={styles.floatingLayer} aria-hidden="true">
@@ -548,10 +665,7 @@ export default function Board({
                 id={draggingPiece.id}
                 side={draggingPiece.side}
                 possibleTypes={draggingPiece.possibleTypes}
-                coherence={draggingPiece.coherence}
-                recohere={draggingPiece.recohere}
                 promoted={Boolean(draggingPiece.wasPromoted)}
-                sealed={sealedIds.has(draggingPiece.id)}
                 indicators={indicators}
                 size={pieceSize}
                 isSelected={true}
