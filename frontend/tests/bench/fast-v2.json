@@ -1,0 +1,322 @@
+{
+  "when": "2026-07-12T07:25:00.898Z",
+  "corpusPositions": 114,
+  "layers": [
+    {
+      "name": "generateLegalReplies",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 46.164,
+          "callsPerSec": 22,
+          "unitsPerIter": 3040
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 42.143,
+          "callsPerSec": 24,
+          "unitsPerIter": 3121
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 7.909,
+          "callsPerSec": 126,
+          "unitsPerIter": 1121
+        }
+      }
+    },
+    {
+      "name": "fast:legalReplies",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 2.688,
+          "callsPerSec": 372,
+          "unitsPerIter": 3040
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 2.843,
+          "callsPerSec": 352,
+          "unitsPerIter": 3121
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 0.571,
+          "callsPerSec": 1750,
+          "unitsPerIter": 1121
+        }
+      }
+    },
+    {
+      "name": "applyQuantumConstraints",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 0.101,
+          "callsPerSec": 9935,
+          "unitsPerIter": 26
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 0.067,
+          "callsPerSec": 15016,
+          "unitsPerIter": 52
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 0.017,
+          "callsPerSec": 60028,
+          "unitsPerIter": 36
+        }
+      }
+    },
+    {
+      "name": "fast:constraints",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 0.014,
+          "callsPerSec": 73804,
+          "unitsPerIter": 26
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 0.013,
+          "callsPerSec": 75805,
+          "unitsPerIter": 52
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 0.001,
+          "callsPerSec": 714487,
+          "unitsPerIter": 36
+        }
+      }
+    },
+    {
+      "name": "evaluatePosition",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 0.092,
+          "callsPerSec": 10910,
+          "unitsPerIter": 26
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 0.044,
+          "callsPerSec": 22672,
+          "unitsPerIter": 52
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 0.022,
+          "callsPerSec": 44512,
+          "unitsPerIter": 36
+        }
+      }
+    },
+    {
+      "name": "fast:evaluate",
+      "perPhase": {
+        "opening": {
+          "positions": 26,
+          "msPerPosition": 0.018,
+          "callsPerSec": 55799,
+          "unitsPerIter": 26
+        },
+        "midgame": {
+          "positions": 52,
+          "msPerPosition": 0.01,
+          "callsPerSec": 101427,
+          "unitsPerIter": 52
+        },
+        "endgame": {
+          "positions": 36,
+          "msPerPosition": 0.003,
+          "callsPerSec": 297864,
+          "unitsPerIter": 36
+        }
+      }
+    }
+  ],
+  "search": [
+    {
+      "id": "seed1@8",
+      "phase": "opening",
+      "ms": 9333,
+      "nodes": 517,
+      "nodesPerSec": 55,
+      "depth": 3,
+      "score": 0.362,
+      "move": {
+        "type": "move",
+        "from": "g1",
+        "to": "h2"
+      }
+    },
+    {
+      "id": "seed1@32",
+      "phase": "midgame",
+      "ms": 1794,
+      "nodes": 227,
+      "nodesPerSec": 127,
+      "depth": 3,
+      "score": 2.267,
+      "move": {
+        "type": "move",
+        "from": "e1",
+        "to": "f2"
+      }
+    },
+    {
+      "id": "seed1@72",
+      "phase": "endgame",
+      "ms": 507,
+      "nodes": 419,
+      "nodesPerSec": 826,
+      "depth": 3,
+      "score": -12.542,
+      "move": {
+        "type": "move",
+        "from": "f4",
+        "to": "d5"
+      }
+    },
+    {
+      "id": "seed2@8",
+      "phase": "opening",
+      "ms": 6765,
+      "nodes": 314,
+      "nodesPerSec": 46,
+      "depth": 3,
+      "score": 22.703,
+      "move": {
+        "type": "move",
+        "from": "b1",
+        "to": "c3"
+      }
+    },
+    {
+      "id": "seed2@32",
+      "phase": "midgame",
+      "ms": 2463,
+      "nodes": 227,
+      "nodesPerSec": 92,
+      "depth": 3,
+      "score": 999,
+      "move": {
+        "type": "move",
+        "from": "d2",
+        "to": "d7"
+      }
+    },
+    {
+      "id": "seed2@72",
+      "phase": "endgame",
+      "ms": 370,
+      "nodes": 312,
+      "nodesPerSec": 844,
+      "depth": 3,
+      "score": -14.365,
+      "move": {
+        "type": "move",
+        "from": "g2",
+        "to": "g4"
+      }
+    }
+  ],
+  "searchFast": [
+    {
+      "id": "seed1@8",
+      "phase": "opening",
+      "ms": 648,
+      "nodes": 517,
+      "nodesPerSec": 798,
+      "depth": 3,
+      "score": 0.362,
+      "move": {
+        "type": "move",
+        "from": "g1",
+        "to": "h2"
+      }
+    },
+    {
+      "id": "seed1@32",
+      "phase": "midgame",
+      "ms": 100,
+      "nodes": 227,
+      "nodesPerSec": 2269,
+      "depth": 3,
+      "score": 2.267,
+      "move": {
+        "type": "move",
+        "from": "e1",
+        "to": "f2"
+      }
+    },
+    {
+      "id": "seed1@72",
+      "phase": "endgame",
+      "ms": 35,
+      "nodes": 419,
+      "nodesPerSec": 11888,
+      "depth": 3,
+      "score": -12.542,
+      "move": {
+        "type": "move",
+        "from": "f4",
+        "to": "d5"
+      }
+    },
+    {
+      "id": "seed2@8",
+      "phase": "opening",
+      "ms": 442,
+      "nodes": 314,
+      "nodesPerSec": 711,
+      "depth": 3,
+      "score": 22.703,
+      "move": {
+        "type": "move",
+        "from": "b1",
+        "to": "c3"
+      }
+    },
+    {
+      "id": "seed2@32",
+      "phase": "midgame",
+      "ms": 195,
+      "nodes": 227,
+      "nodesPerSec": 1165,
+      "depth": 3,
+      "score": 999,
+      "move": {
+        "type": "move",
+        "from": "d2",
+        "to": "d7"
+      }
+    },
+    {
+      "id": "seed2@72",
+      "phase": "endgame",
+      "ms": 27,
+      "nodes": 312,
+      "nodesPerSec": 11563,
+      "depth": 3,
+      "score": -14.365,
+      "move": {
+        "type": "move",
+        "from": "g2",
+        "to": "g4"
+      }
+    }
+  ],
+  "searchTotals": {
+    "ms": 21232,
+    "nodes": 2016,
+    "fastMs": 1447,
+    "fastNodes": 2016
+  }
+}

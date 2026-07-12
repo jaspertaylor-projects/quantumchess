@@ -216,6 +216,19 @@ push (`.github/workflows/ci.yml`). If an intentional rules change breaks it,
 regenerate fixtures with `node tests/generate-engine-fixtures.mjs` (same
 docker exec prefix) and say so in the commit.
 
+**The AI searches on a separate FAST engine** (`src/ai/fast/` — packed Int32
+boards, journaled make/unmake, ~13–17× the reference) that must stay
+BIT-IDENTICAL to the rules engine: `tests/fastEngineDiff.test.js` pins move
+lists, resulting positions, eval scores and full search results (move/score/
+node counts) against the reference at every sampled fixture position, and
+runs in the same `pnpm test`. Any rules change in `chessboard/` must be
+mirrored in `src/ai/fast/` (mirror points are marked with `REF:` comments) —
+the diff net failing against regenerated fixtures is the reminder. Wider
+checks: the random-game soak (`node tests/fast-soak.mjs 20`) and the perf
+benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
+`tests/bench/`). The worker falls back to the reference engine by flipping
+`USE_FAST_ENGINE` in `src/ai/aiWorker.js`.
+
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
@@ -675,7 +688,8 @@ Legend: [ ] not started · [~] in progress · [X] done
       solve), offer a share card or replay link that shows the actual board
       story. Text-only is fine for v1; best version is a tiny animated replay
       or generated card built for Reddit/Twitter/Discord.
-
+- [ ] **Shareable replay / Strategy**: donate to popular streamers and ask them to challenge me on my site in the donation.  If they do clip it and post on socials.
+- [ ]  Have a few bots deployed that will seem as if they are users to fillqueues for  awhile and possibly permanently during low periods of activity.
 #### Later
 - [ ] Replay saved games from stored move lists (moves are already saved;
       the engine is deterministic, so this is a UI feature)

@@ -60,7 +60,7 @@ export const DEFAULT_WEIGHTS = {
 };
 const KING_SPREAD_CAP = 5;
 
-const DIFFICULTY_CONFIG = {
+export const DIFFICULTY_CONFIG = {
   easy: { maxDepth: 1, widths: [40], timeMs: 800, noise: 1.2 },
   medium: { maxDepth: 2, widths: [40, 12], timeMs: 5000, noise: 0 },
   hard: { maxDepth: 3, widths: [20, 12, 8], timeMs: 12000, noise: 0 },

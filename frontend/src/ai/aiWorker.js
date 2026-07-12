@@ -5,9 +5,17 @@
 // Imports From: ./alphaBetaEngine.js, ../devlog.js
 // Exported To: ./useLocalAi.js
 
-import { searchBestMove, analyzeRootMoves } from './alphaBetaEngine.js';
+import { searchBestMove as refSearchBestMove, analyzeRootMoves as refAnalyzeRootMoves } from './alphaBetaEngine.js';
+import { searchBestMoveFast, analyzeRootMovesFast } from './fast/fastSearch.js';
 import { getBotById } from './bots.js';
 import { devDebug } from '../devlog.js';
+
+// The packed/journaled engine is a verified drop-in for the reference search
+// (tests/fastEngineDiff.test.js pins move/score/node equality). Flip this off
+// to fall back to the reference implementation.
+const USE_FAST_ENGINE = true;
+const searchBestMove = USE_FAST_ENGINE ? searchBestMoveFast : refSearchBestMove;
+const analyzeRootMoves = USE_FAST_ENGINE ? analyzeRootMovesFast : refAnalyzeRootMoves;
 
 function minifyMove(mv) {
   if (!mv || typeof mv !== 'object') return null;
