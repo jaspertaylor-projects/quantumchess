@@ -1,5 +1,5 @@
 /* frontend/src/App.css */
-/* Purpose: Defines global styles for the application, disables zoom-related gestures, keeps the page non-scrollable, and sizes the root to the viewport. Global scrollbar styling for component-specific areas has been moved to dedicated stylesheets.
+/* Purpose: Defines global styles for the application, disables zoom-related gestures, keeps the page non-scrollable, and sizes the root to the viewport. Scrollbars are styled ONCE, globally, in Styles/scrollbar.css (imported by main.jsx).
    Imports From: None
    Exported To: frontend/src/App.jsx */
 

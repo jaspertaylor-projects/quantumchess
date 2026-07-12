@@ -11,6 +11,7 @@ import './errors/clientErrorReporter.js';
 import ErrorBoundary from './errors/ErrorBoundary.jsx';
 import App from './App.jsx';
 import './App.css';
+import './Styles/scrollbar.css';
 import { Provider } from 'react-redux';
 import store from './store/index.js';
 

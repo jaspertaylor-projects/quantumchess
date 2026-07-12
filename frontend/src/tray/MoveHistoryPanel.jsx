@@ -1,6 +1,6 @@
 // frontend/src/tray/MoveHistoryPanel.jsx
 // Purpose: Displays the move list with responsive toolbar; avoids horizontal scrolling by wrapping controls and clamping text.
-// Imports From: ../theme.js, ../store/index.js, ../components/IconButton.jsx, ../Styles/scrollbar.css
+// Imports From: ../theme.js, ../store/index.js, ../components/IconButton.jsx
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,7 +14,6 @@ import {
   XCircle as XCircleIcon,
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
-import '../Styles/scrollbar.css';
 
 export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {}, externalIndex = undefined }) {
   const moves = useSelector((s) => s.game.moves);
