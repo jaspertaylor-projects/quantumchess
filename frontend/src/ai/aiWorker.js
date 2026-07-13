@@ -7,6 +7,7 @@
 
 import { searchBestMove as refSearchBestMove, analyzeRootMoves as refAnalyzeRootMoves } from './alphaBetaEngine.js';
 import { searchBestMoveFast, analyzeRootMovesFast } from './fast/fastSearch.js';
+import { searchBestMoveV2 } from './fast/fastSearch2.js';
 import { getBotById } from './bots.js';
 import { devDebug } from '../devlog.js';
 
@@ -16,6 +17,17 @@ import { devDebug } from '../devlog.js';
 const USE_FAST_ENGINE = true;
 const searchBestMove = USE_FAST_ENGINE ? searchBestMoveFast : refSearchBestMove;
 const analyzeRootMoves = USE_FAST_ENGINE ? analyzeRootMovesFast : refAnalyzeRootMoves;
+
+// Bot play ('think') uses the V2 engine (TT + PVS + quiescence + adaptive
+// beams) for medium/hard tiers: bot-vs-bot matches put V2 ahead from ~1s
+// budgets upward (+89 Elo at 1s), which is where those tiers live. Easy
+// stays on V1 — at sub-second budgets V1 is stronger AND easy must stay
+// beatable. Analyze/bestMove/bestScore stay on V1: the miner certified its
+// puzzles with that exact ruler.
+const USE_V2_FOR_BOTS = true;
+function thinkEngine(tier) {
+  return USE_V2_FOR_BOTS && tier !== 'easy' ? searchBestMoveV2 : searchBestMove;
+}
 
 function minifyMove(mv) {
   if (!mv || typeof mv !== 'object') return null;
@@ -142,10 +154,12 @@ self.addEventListener('message', (e) => {
 
   const { pieces, sideToMove, difficulty, botId, lastMove } = payload;
   const bot = botId ? getBotById(botId) : null;
+  const tier = (bot && bot.tier) || difficulty;
+  const search = thinkEngine(tier);
 
   try {
     let baselineSent = false;
-    const result = searchBestMove({
+    const result = search({
     repetitionSigs: payload.repetitionSigs || null,
       pieces: pieces || [],
       sideToMove,

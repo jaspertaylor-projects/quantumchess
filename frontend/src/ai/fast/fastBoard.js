@@ -92,6 +92,67 @@ export function setFastDebug(v) {
   FAST_DEBUG = Boolean(v);
 }
 
+// --- Zobrist hashing (two 32-bit halves; JS has no cheap u64) ---
+// Per piece INDEX: square-or-captured (65), base mask (64), promo mask (64),
+// rule flags (moved | castled<<1 | wasPromoted<<2 → 8). Maintained
+// incrementally by setWord/rollback; V1 search ignores it, the V2
+// transposition table keys on it. Piece ids are not hashed: two positions
+// with identical words are rules-identical regardless of identity strings.
+function makeZobrist() {
+  // Deterministic PRNG (mulberry32, fixed seed) so hashes are stable across
+  // sessions — useful when diffing search traces.
+  let a = 0x9e3779b9;
+  const rnd = () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return (t ^ (t >>> 14)) | 0;
+  };
+  const fill = (n) => {
+    const arr = new Int32Array(n);
+    for (let i = 0; i < n; i++) arr[i] = rnd();
+    return arr;
+  };
+  return {
+    sqLo: fill(32 * 65), sqHi: fill(32 * 65),
+    baseLo: fill(32 * 64), baseHi: fill(32 * 64),
+    promoLo: fill(32 * 64), promoHi: fill(32 * 64),
+    flagLo: fill(32 * 8), flagHi: fill(32 * 8),
+    epLo: fill(64), epHi: fill(64),
+    sideLo: rnd(), sideHi: rnd(),
+  };
+}
+export const ZOB = makeZobrist();
+
+// From-scratch hash of the current words — the invariant the incremental
+// maintenance must match (tests compare after make/rollback storms).
+export function rehash(bd) {
+  let lo = 0;
+  let hi = 0;
+  for (let i = 0; i < bd.n; i++) {
+    lo ^= zContribLo(i, bd.words[i]);
+    hi ^= zContribHi(i, bd.words[i]);
+  }
+  return { lo, hi };
+}
+
+const zIdxSq = (i, w) => i * 65 + ((w & CAPTURED) ? 64 : (w & 63));
+const zIdxFlag = (i, w) => i * 8 + (((w & HAS_MOVED) ? 1 : 0) | ((w & WAS_PROMOTED) ? 2 : 0) | ((w & CASTLED) ? 4 : 0));
+
+function zContribLo(i, w) {
+  return ZOB.sqLo[zIdxSq(i, w)]
+    ^ ZOB.baseLo[i * 64 + ((w >> BASE_SHIFT) & 63)]
+    ^ ZOB.promoLo[i * 64 + ((w >> PROMO_SHIFT) & 63)]
+    ^ ZOB.flagLo[zIdxFlag(i, w)];
+}
+function zContribHi(i, w) {
+  return ZOB.sqHi[zIdxSq(i, w)]
+    ^ ZOB.baseHi[i * 64 + ((w >> BASE_SHIFT) & 63)]
+    ^ ZOB.promoHi[i * 64 + ((w >> PROMO_SHIFT) & 63)]
+    ^ ZOB.flagHi[zIdxFlag(i, w)];
+}
+
 // --- Board struct ---
 // words: Int32Array(n) piece words, in the SAME order as the source pieces
 // array (reference iteration order = array order, so order is semantics).
@@ -108,6 +169,8 @@ export function packBoard(pieces) {
     captureIdxs: new Array(n),
     journal: [],
     debug: FAST_DEBUG,
+    hashLo: 0,
+    hashHi: 0,
   };
   for (let i = 0; i < n; i++) {
     const p = pieces[i];
@@ -127,6 +190,8 @@ export function packBoard(pieces) {
     if (p.castled) w |= CASTLED;
     bd.words[i] = w;
     if (!captured) bd.occ[sq] = i;
+    bd.hashLo ^= zContribLo(i, w);
+    bd.hashHi ^= zContribHi(i, w);
   }
   return bd;
 }
@@ -137,6 +202,8 @@ export function setWord(bd, i, w) {
   if (old === w) return;
   bd.journal.push(i, old);
   bd.words[i] = w;
+  bd.hashLo ^= zContribLo(i, old) ^ zContribLo(i, w);
+  bd.hashHi ^= zContribHi(i, old) ^ zContribHi(i, w);
   if ((old ^ w) & (SQ_MASK | CAPTURED)) {
     // Guarded vacate: during a castle the partner may already have claimed
     // this square in the same make — only clear an occ entry we still own.
@@ -154,6 +221,8 @@ export function rollback(bd, mark) {
     const i = j.pop();
     const cur = bd.words[i];
     bd.words[i] = old;
+    bd.hashLo ^= zContribLo(i, cur) ^ zContribLo(i, old);
+    bd.hashHi ^= zContribHi(i, cur) ^ zContribHi(i, old);
     if ((cur ^ old) & (SQ_MASK | CAPTURED)) {
       if (!(cur & CAPTURED) && bd.occ[cur & SQ_MASK] === i) bd.occ[cur & SQ_MASK] = -1;
       if (!(old & CAPTURED)) bd.occ[old & SQ_MASK] = i;

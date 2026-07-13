@@ -40,10 +40,12 @@ export default function EvalGauge({
   width = 330,
   label = null, // small caption under the pivot once landed
 }) {
+  // Margins leave room for the graduation labels (outside the rim) and the
+  // unit plate above the apex — no reliance on overflow.
   const W = width;
-  const R = W / 2 - 8;
+  const R = W / 2 - 18;
   const cx = W / 2;
-  const cy = R + 8;
+  const cy = R + 28;
   const H = cy + 26;
 
   const reduceMotion = useMemo(
@@ -78,8 +80,8 @@ export default function EvalGauge({
       viewBox={`0 0 ${W} ${H}`}
       role="img"
       aria-label={value === null
-        ? 'Evaluation gauge, waiting for your move'
-        : `Evaluation gauge: ${value >= 0 ? 'White' : 'Black'} ${Math.abs(value).toFixed(1)}`}
+        ? 'Evaluation gauge in pawns, waiting for your move'
+        : `Evaluation gauge: ${value >= 0 ? 'White' : 'Black'} ${Math.abs(value).toFixed(1)} pawns`}
       style={{ display: 'block', margin: '0 auto', overflow: 'visible' }}
     >
       {/* Halves: Black's side of the dial on the left, White's on the right. */}
@@ -87,6 +89,52 @@ export default function EvalGauge({
       <path d={sectorPath(cx, cy, R, 90, 0)} fill="#e8e6e1" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
       {/* Center seam */}
       <line x1={cx} y1={cy} x2={cx} y2={cy - R} stroke="rgba(128,128,128,0.45)" strokeWidth="1" />
+
+      {/* Graduations: pawn units marked like a real dial — 0 at the apex,
+          1/3/6 down each half, ∞ at the rails (the sqrt compression makes
+          the mid-range wide and the mate zone a sliver). */}
+      {[
+        { v: 0, label: '0' },
+        { v: 1, label: '1' }, { v: -1, label: '1' },
+        { v: 3, label: '3' }, { v: -3, label: '3' },
+        { v: 6, label: '6' }, { v: -6, label: '6' },
+        { v: 12, label: '∞' }, { v: -12, label: '∞' },
+      ].map((g) => {
+        const d = angleFor(g.v, range);
+        const a = polar(cx, cy, R * 0.92, d);
+        const b = polar(cx, cy, R * 0.995, d);
+        const t = polar(cx, cy, R + 9, d);
+        const stroke = g.v === 0 ? 'rgba(128,138,150,0.8)'
+          : g.v > 0 ? 'rgba(20, 24, 30, 0.5)' : 'rgba(255,255,255,0.4)';
+        return (
+          <g key={`grad-${g.v}`}>
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={stroke} strokeWidth="1.6" strokeLinecap="round" />
+            <text
+              x={t.x}
+              y={t.y + 3}
+              fontSize="9"
+              fontWeight="700"
+              textAnchor="middle"
+              fill="rgba(255,255,255,0.55)"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {g.label}
+            </text>
+          </g>
+        );
+      })}
+      {/* Unit plate above the apex — the dial's make and model. */}
+      <text
+        x={cx}
+        y={cy - R - 20}
+        fontSize="8.5"
+        fontWeight="800"
+        letterSpacing="0.22em"
+        textAnchor="middle"
+        fill="rgba(255,255,255,0.42)"
+      >
+        ADVANTAGE · PAWNS
+      </text>
 
       {/* A faint neon-red line at every legal move's evaluation. */}
       {ticks.map((t, i) => {

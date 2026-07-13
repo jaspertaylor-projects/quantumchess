@@ -372,6 +372,130 @@ export function listEnPassant(bd, side, ep) {
 const seenStamp = new Int32Array(64);
 let seenGen = 0;
 
+// --- Candidate collection WITHOUT make (V2 search) ---
+// Returns pseudo-legal move descriptors: destinations from the merged move
+// sets, en passant, castle plans. Legality (collapsed-king filter) is only
+// known after make — V2 makes lazily in ordering order and skips illegal
+// candidates. Descriptor: { kind: 0 move | 1 enpassant | 2 castle, pieceIdx,
+// from, to, victimIdx, plan }.
+export function collectCandidates(bd, side, ep) {
+  const out = [];
+  for (const c of listEnPassant(bd, side, ep)) {
+    out.push({ kind: 1, pieceIdx: c.pieceIdx, from: sqOf(bd.words[c.pieceIdx]), to: c.to, victimIdx: c.victimIdx, plan: null });
+  }
+  const dests = [];
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if ((w & CAPTURED) || sideBit(w) !== side) continue;
+    const from = sqOf(w);
+    const poss = possibleOf(w);
+    dests.length = 0;
+    seenGen += 1;
+    for (let b = 1; b <= TK; b <<= 1) {
+      if (!(poss & b)) continue;
+      const before = dests.length;
+      emitMovesForType(bd, b, from, side, dests);
+      let write = before;
+      for (let k = before; k < dests.length; k++) {
+        const sq = dests[k];
+        if (seenStamp[sq] !== seenGen) {
+          seenStamp[sq] = seenGen;
+          dests[write] = sq;
+          write += 1;
+        }
+      }
+      dests.length = write;
+    }
+    for (let d = 0; d < dests.length; d++) {
+      const to = dests[d];
+      const victim = bd.occ[to];
+      out.push({
+        kind: 0, pieceIdx: i, from, to,
+        victimIdx: victim >= 0 && sideBit(bd.words[victim]) !== side ? victim : -1,
+        plan: null,
+      });
+    }
+  }
+  const sidePieces = [];
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if (!(w & CAPTURED) && sideBit(w) === side) sidePieces.push(i);
+  }
+  for (let a = 0; a < sidePieces.length; a++) {
+    for (let b = a + 1; b < sidePieces.length; b++) {
+      const plan = computeCastlePlan(bd, side, sidePieces[a], sidePieces[b]);
+      if (plan) out.push({ kind: 2, pieceIdx: plan.i1, from: plan.from1, to: plan.to1, victimIdx: -1, plan });
+    }
+  }
+  return out;
+}
+
+// Capture-only candidates for quiescence: en passant plus merged
+// destinations landing on enemy pieces. Castles never capture.
+export function collectCaptureCandidates(bd, side, ep) {
+  const out = [];
+  for (const c of listEnPassant(bd, side, ep)) {
+    out.push({ kind: 1, pieceIdx: c.pieceIdx, from: sqOf(bd.words[c.pieceIdx]), to: c.to, victimIdx: c.victimIdx, plan: null });
+  }
+  const dests = [];
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if ((w & CAPTURED) || sideBit(w) !== side) continue;
+    const from = sqOf(w);
+    const poss = possibleOf(w);
+    dests.length = 0;
+    seenGen += 1;
+    for (let b = 1; b <= TK; b <<= 1) {
+      if (!(poss & b)) continue;
+      const before = dests.length;
+      emitMovesForType(bd, b, from, side, dests);
+      let write = before;
+      for (let k = before; k < dests.length; k++) {
+        const sq = dests[k];
+        if (seenStamp[sq] !== seenGen) {
+          seenStamp[sq] = seenGen;
+          dests[write] = sq;
+          write += 1;
+        }
+      }
+      dests.length = write;
+    }
+    for (let d = 0; d < dests.length; d++) {
+      const to = dests[d];
+      const victim = bd.occ[to];
+      if (victim >= 0 && sideBit(bd.words[victim]) !== side) {
+        out.push({ kind: 0, pieceIdx: i, from, to, victimIdx: victim, plan: null });
+      }
+    }
+  }
+  return out;
+}
+
+// The en-passant window a just-made standard move opens (reference
+// buildLastMoveRecord semantics: two-rank straight advance by a piece that
+// can still be a pawn). `desc` must be the descriptor just made.
+export function epWindowAfter(bd, desc) {
+  if (desc.kind !== 0) return null;
+  const w = bd.words[desc.pieceIdx];
+  if (w & CAPTURED) return null;
+  if (!(possibleOf(w) & TP)) return null;
+  const df = (desc.to & 7) - (desc.from & 7);
+  const dr = (desc.to >> 3) - (desc.from >> 3);
+  if (df !== 0 || Math.abs(dr) !== 2) return null;
+  return {
+    victimIdx: desc.pieceIdx,
+    to: desc.to,
+    crossed: (desc.from + desc.to) >> 1,
+    side: sideBit(w),
+  };
+}
+
+export function makeCandidate(bd, desc) {
+  if (desc.kind === 0) return makeStandardMove(bd, desc.pieceIdx, desc.to);
+  if (desc.kind === 1) return makeEnPassant(bd, desc.pieceIdx, desc.to, desc.victimIdx);
+  return makeCastle(bd, desc.plan);
+}
+
 export function forEachLegalReply(bd, side, ep, visit) {
   // En passant first.
   const eps = listEnPassant(bd, side, ep);
