@@ -33,7 +33,11 @@ const CFG = {
   mineMs: Number(argVal('mineMs', QUICK ? 10000 : 45000)), // deep budget, only for probe survivors
   confirmMs: Number(argVal('confirmMs', QUICK ? 30000 : 120000)), // depth-stability confirm
   verifyDepth: Number(argVal('verifyDepth', 6)), // gate must sit above confirm (mineDepth+1); falls back one level on timeout
-  verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 120000)),
+  // 120000 -> 480000 (2026-07-12): on the fast engine 120s still timed out
+  // 11/18 verify plies in the seed-2 run (per-depth budget: the depth-6 ->
+  // depth-5 fallback each gets verifyMs). 8 min per attempt keeps the gate
+  // honest instead of quietly grading only the easy plies.
+  verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 480000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max par plies to re-verify
   minChoices: Number(argVal('minChoices', 10)), // fewer legal moves = not a real search
   maxChoices: Number(argVal('maxChoices', 10000)), // no hard cap (2026-07-09: seed-8 swings sat at 78-158 moves — width is inherent to winning quantum positions); numChoices is curation metadata
