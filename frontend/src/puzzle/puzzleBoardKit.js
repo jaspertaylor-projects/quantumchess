@@ -14,6 +14,9 @@ import {
   toAlgebraic,
 } from '../chessboard/boardUtils.js';
 import { buildLastMoveRecord } from '../chessboard/advanceCore.js';
+// Live-surface scanner moved to ./whiteMoves.js (this kit is PARKED
+// classic-era code; the live mined-puzzle path must not import through it).
+import { buildLastMove, enumerateWhiteMoves } from './whiteMoves.js';
 import {
   applyQuantumConstraints,
   buildOccupancy,
@@ -123,69 +126,6 @@ const KNIGHT_OFFS = [[-1, -2], [1, -2], [-2, -1], [2, -1], [-2, 1], [2, 1], [-1,
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
 // ------------------------------------------------------------- move scanner
-
-// buildLastMoveRecord signature adapter for the scanner's call sites.
-function buildLastMove(afterPieces, mover, from, to, enPassant, measuredSquares, side = 'white') {
-  return buildLastMoveRecord({
-    finalPieces: afterPieces,
-    moverId: mover.id,
-    from,
-    to,
-    side,
-    usedEnPassant: enPassant,
-    wasFirstMove: (mover.moveCount || 0) === 0,
-    measuredSquares,
-  });
-}
-
-// Every legal white move with its fully-resolved result. Mirrors the game's
-// legality (including the collapsed-king filter); castling is omitted —
-// recipes mark pieces moved, so none exists.
-function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0) {
-  const out = [];
-
-  for (const ep of listEnPassantCaptures(pieces, 'white', lastMove)) {
-    const sim = simulateEnPassant(pieces, ep.pieceId, ep.to, ep.victimId, captureCounter);
-    if (!sim.ok) continue;
-    if (hasCollapsedKingCapturable(sim.pieces, 'white')) continue;
-    const mover = pieces.find((p) => p.id === ep.pieceId);
-    out.push({
-      from: mover.square,
-      to: ep.to,
-      enPassant: true,
-      pieceId: mover.id,
-      after: sim.pieces,
-      didCapture: true,
-      nextCC: captureCounter + 1,
-      measuredSquares: sim.measuredSquares || [],
-      nextLastMove: buildLastMove(sim.pieces, mover, mover.square, ep.to, true, sim.measuredSquares),
-    });
-  }
-
-  const occ = buildOccupancy(pieces);
-  for (const p of pieces) {
-    if (p.captured || p.side !== 'white' || !p.square) continue;
-    const merged = mergedDestinations(p, occ, { isFirstMove: (p.moveCount || 0) === 0 });
-    for (const to of merged) {
-      const sim = simulateStandardMove(pieces, p.id, to, captureCounter);
-      if (!sim.ok) continue;
-      if (hasCollapsedKingCapturable(sim.pieces, 'white')) continue;
-      out.push({
-        from: p.square,
-        to,
-        enPassant: false,
-        pieceId: p.id,
-        after: sim.pieces,
-        didCapture: Boolean(sim.didCapture),
-        nextCC: captureCounter + (sim.didCapture ? 1 : 0),
-        measuredSquares: sim.measuredSquares || [],
-        nextLastMove: buildLastMove(sim.pieces, p, p.square, to, false, sim.measuredSquares),
-      });
-    }
-  }
-
-  return out;
-}
 
 // Apply a scripted Black reply. Returns { pieces, lastMove } or null when the
 // reply is illegal in this position — which rejects the whole candidate.

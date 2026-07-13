@@ -21,6 +21,7 @@ import PlayerBar from '../components/PlayerBar.jsx';
 import EvalGauge from './EvalGauge.jsx';
 import usePuzzleBoard from './usePuzzleBoard.js';
 import {
+  computePositionSignature,
   generateLegalReplies,
   evaluateTerminalAfterMove,
   simulateStandardMove,
@@ -215,11 +216,29 @@ export default function MinedPuzzleModal({
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
 
+  // Mined chains ship precomputed gauge tables (tools/miner/swing.mjs
+  // buildEvalTable — SAME depth/widths ruler as the worker request below),
+  // keyed by position signature. A hit loads the certified evals instantly;
+  // a miss (player diverged from the recorded line) falls through to the
+  // worker.
+  const savedTableFor = (pos) => {
+    const tables = puzzle && puzzle.evalTables;
+    if (!tables || !tables.length || !pos) return null;
+    const sig = computePositionSignature(pos.pieces, 'white', pos.lastMove || null);
+    const hit = tables.find((t) => t && t.sig === sig);
+    return hit ? hit.evals : null;
+  };
+
   // Ruler alignment: the miner certifies par at search depth, so the gauge
   // must measure with a comparable ruler. A worker scores every root move at
   // depth 3; until it answers, the instant 1-ply reply-aware evals stand in.
   useEffect(() => {
     if (!open || !cur) return undefined;
+    const saved = savedTableFor(cur);
+    if (saved) {
+      setDeepEvals(saved);
+      return undefined;
+    }
     const prefetched = replyPrefetchRef.current;
     if (prefetched && prefetched.round === round) {
       setDeepEvals(prefetched.map || null);
@@ -264,6 +283,9 @@ export default function MinedPuzzleModal({
       wasFirstMove,
       []
     );
+    // A saved table already covers this reply position (the recorded line):
+    // the round effect will load it instantly — no speculative worker needed.
+    if (savedTableFor({ pieces: reply.resultPieces, lastMove })) return;
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
     const record = { worker, round: nextRound, replyKey, map: null };
     replyPrefetchRef.current = record;

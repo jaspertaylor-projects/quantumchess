@@ -8,7 +8,7 @@
 // Imports From: ./puzzleGenerator.js, ../chessboard/quantumEngine.js
 // Exported To: ../App.jsx (dynamic import, dev builds only)
 
-import { enumerateWhiteMoves } from './puzzleGenerator.js';
+import { enumerateWhiteMoves } from './whiteMoves.js';
 import { simulateStandardMove } from '../chessboard/quantumEngine.js';
 
 const THEME_TITLES = {
@@ -77,6 +77,9 @@ export function buildMinedPuzzle(chain, idx) {
       captureCounter: chain.start.captureCounter || 0,
     },
     mistake: chain.mistake, // { from, to, evalBefore, evalAfter, swing }
+    // Instant-gauge tables mined alongside the chain (may be absent on old
+    // fixtures): [{ sig, evals }] keyed by position signature.
+    evalTables: chain.evalTables || [],
     parEvals: chain.parEvals.map(clampPar),
     parMoves: chain.steps.map((step) => ({ ...step.bestMove })),
     parFirstMove: { ...chain.steps[0].bestMove }, // revealed after a rough run

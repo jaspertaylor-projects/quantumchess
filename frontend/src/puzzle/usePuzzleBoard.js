@@ -9,8 +9,8 @@
 // Exported To: ./DailyPuzzleModal.jsx, ./MinedPuzzleModal.jsx
 
 import { useMemo, useRef, useState } from 'react';
-import { canPieceRecohere, listCheckThreats } from '../chessboard/quantumEngine.js';
-import { enumerateWhiteMoves } from './puzzleGenerator.js';
+import { listCheckThreats } from '../chessboard/quantumEngine.js';
+import { enumerateWhiteMoves } from './whiteMoves.js';
 
 // ply: the current puzzle ply ({ pieces, lastMove, ... }) or null.
 // playing: true while the player may move (each modal's phase === 'playing').
@@ -87,7 +87,9 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     pips: p.coherence,
     regain: Math.max(0, p.recohere || 0),
     chevrons: Boolean(p.wasPromoted),
-    sealed: p.possibleTypes.length <= 2 && !canPieceRecohere(display, p.id),
+    // Sealed (recoherence-starved) pieces died with the classic ruleset —
+    // contact rules have no recoherence clock, so no solid-line pips.
+    sealed: false,
     mark: marks.includes(p.square),
     ring: threats.some((t) => t.to === p.square),
   })), [live, display, marks, threats]);

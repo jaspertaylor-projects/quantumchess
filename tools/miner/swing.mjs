@@ -10,6 +10,7 @@
 import {
   applyQuantumConstraints,
   clonePieces,
+  computePositionSignature,
   generateLegalReplies,
 } from '../../frontend/src/chessboard/quantumEngine.js';
 import { countPossibilities } from '../../frontend/src/chessboard/advanceCore.js';
@@ -107,6 +108,42 @@ function regainedIdentity(before, after) {
 
 // Analyze one par ply: full root analysis (reused if the caller already has
 // it), theme tags, spread, and per-ply trickiness.
+// --- Instant-gauge eval tables ---
+// The modal's gauge scores every root move at depth 3 / widths [176,12,8]
+// (MinedPuzzleModal.jsx — the two rulers MUST stay in sync). Precompute that
+// exact table for every white-to-move position on the certified line, keyed
+// by position signature: the modal looks the current position up and, on a
+// hit, loads certified evals instantly instead of running a 176-wide
+// analyze in the browser. A miss (player diverged, or the live black reply
+// differed from the recorded one) falls back to the worker as before.
+const GAUGE_DEPTH = 3;
+const GAUGE_WIDTHS = [176, 12, 8];
+
+export function buildEvalTable(position) {
+  const analysis = analyzeRootMoves({
+    pieces: position.pieces,
+    sideToMove: 'white',
+    lastMove: position.lastMove || null,
+    depth: GAUGE_DEPTH,
+    widths: GAUGE_WIDTHS,
+    timeMs: 120000,
+  });
+  if (!analysis || !analysis.moves.length) return null;
+  const evals = {};
+  for (const { move, score } of analysis.moves) {
+    // Key format mirrors the modal's keyOf/worker mapping exactly:
+    // castle keys by piece1's from>to, en passant appends 'ep'.
+    const from = move.type === 'castle' ? move.plan.piece1_from : move.from;
+    const to = move.type === 'castle' ? move.plan.piece1_to : move.to;
+    const ep = move.type === 'enpassant';
+    evals[`${from}>${to}${ep ? 'ep' : ''}`] = Number(score.toFixed(3));
+  }
+  return {
+    sig: computePositionSignature(position.pieces, 'white', position.lastMove || null),
+    evals,
+  };
+}
+
 function parStep(rec, stats, analysis = null) {
   if (!analysis) {
     const t0 = performance.now();
@@ -309,6 +346,9 @@ function detectSwingChain(rec, preEval, stats) {
       captureCounter: rec.captureCounter,
       sideToMove: 'white',
     },
+    // One instant-gauge table per par position (start + each follow-up the
+    // recorded line reaches) — see buildEvalTable.
+    evalTables: steps.map((s) => buildEvalTable(s.position)).filter(Boolean),
     _verify: steps.map((s) => ({ parEval: s.parEval, position: s.position, plyIdx: steps.indexOf(s) })),
   };
   return { probe, chain };

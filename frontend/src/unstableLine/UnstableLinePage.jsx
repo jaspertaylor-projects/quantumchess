@@ -99,7 +99,7 @@ export default function UnstableLinePage({
                 lineHeight: 1.5,
               }}
             >
-              Pick the branch. Carry the bot instability. Collect enough run tools to collapse the line at Emanuel Einstein.
+              Pick the branch. Carry the bot instability. Collect enough run tools to collapse the line at Rudolf Einstein.
             </p>
           </div>
 

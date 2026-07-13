@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BOTS } from '../src/ai/bots.js';
+import { BOTS, BOT_INSPIRATIONS } from '../src/ai/bots.js';
 import { CHARACTERS } from '../src/characters/characterCatalog.js';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,6 +56,16 @@ const duplicateCharacterIds = CHARACTERS
   .map((c) => c.id)
   .filter((id, idx, arr) => arr.indexOf(id) !== idx);
 
+const missingBotInspirations = BOTS
+  .map((b) => b.id)
+  .filter((id) => !BOT_INSPIRATIONS[id]);
+const extraBotInspirations = Object.keys(BOT_INSPIRATIONS)
+  .filter((id) => !BOTS.some((b) => b.id === id));
+const inspirationPeople = Object.values(BOT_INSPIRATIONS)
+  .flatMap(({ scientist, chess }) => [scientist, chess]);
+const duplicateInspirationPeople = inspirationPeople
+  .filter((name, idx, arr) => arr.indexOf(name) !== idx);
+
 function printList(label, items) {
   if (!items.length) return;
   console.log(`\n${label}`);
@@ -74,6 +84,9 @@ printList('Missing character avatar pngs:', missingCharacterImages);
 printList('Unexpected character avatar pngs:', extraCharacterImages);
 printList('Duplicate bot ids:', [...new Set(duplicateBotIds)]);
 printList('Duplicate character ids:', [...new Set(duplicateCharacterIds)]);
+printList('Bots missing inspiration pairs:', missingBotInspirations);
+printList('Inspiration pairs without bots:', extraBotInspirations);
+printList('Historical people reused across bots:', [...new Set(duplicateInspirationPeople)]);
 
 const failed = [
   missingBotPngs,
@@ -83,6 +96,9 @@ const failed = [
   extraCharacterImages,
   duplicateBotIds,
   duplicateCharacterIds,
+  missingBotInspirations,
+  extraBotInspirations,
+  duplicateInspirationPeople,
 ].some((items) => items.length > 0);
 
 if (failed) {

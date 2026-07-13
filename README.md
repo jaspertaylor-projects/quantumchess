@@ -66,10 +66,15 @@ Where things stand after the adoption commit:
   modals unhooked — same pattern as `unstableLine/`). Redesign it for
   contact-native goals (zap chains, heal saves, WFC finishes) before
   re-wiring; `dailypuzzle.md` still describes the classic-era system.
-- **Miner**: pipeline runs on the new rules; theme tagging now keys on
-  zaps/heals (`zap3`, `heal2`). All previously mined data
-  (`tools/mined/*`, `src/puzzle/mined*Data.json`) is classic-era and must be
-  re-harvested before the mined-daily plan resumes.
+- **Miner**: pipeline runs on the new rules (and on the FAST engine, ~15x);
+  theme tagging keys on zaps/heals (`zap3`, `heal2`). First contact-rules
+  harvest landed 2026-07-12 (seed-2: 24 games at playMs 500/strongMs 1000,
+  6 chains, **gate 7/7 = 100% at depth 6** — the 95% go-signal, though 11/18
+  verify plies still timed out). Chains now carry `evalTables` — per-par-
+  position root-move scores at the modal's exact gauge ruler, sig-keyed —
+  so the mined-puzzle gauge loads instantly instead of running a 176-wide
+  analyze in the browser. `src/puzzle/mined*Data.json` refreshed from that
+  run (`?mined=N` / `?minedGame=N` dev previews).
 - **Old saved games** in `qc_games` replay under the new rules and will NOT
   reproduce (zero real users — nuke the rows whenever convenient).
 
@@ -599,7 +604,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       names, ratings, cleared checkmarks and a "next up" highlight. Locks
       are enforced: only cleared bots and the next rung are playable;
       locked rungs render faded with a 🔒 and a hover hint "Beat <previous
-      bot> to unlock", with Emanuel Einstein as the final boss at the
+      bot> to unlock", with Rudolf Einstein as the final boss at the
       bottom. Below the ladder, subscribers get the premium roster
       appended; free players get "★ 12 more bots available to monthly
       subscribers" which routes into the premium/account flow. First win
@@ -623,20 +628,20 @@ Legend: [ ] not started · [~] in progress · [X] done
         Line". Signed-out players see "Sign in free to save bot unlocks."
         Premium bots remain premium and are NOT part of this mode.
   - [ ] **Unstable Line map**: a route map, not a blind random queue. The
-        player charts a 4-fight course toward Emanuel Einstein. Each node
+        player charts a 4-fight course toward Rudolf Einstein. Each node
         shows a bot avatar/name/rating; the main boss is fixed as
-        `emanuel-einstein`. With the current 12-free-bot roster, the first 2
+        `rudolf-einstein`. With the current 12-free-bot roster, the first 2
         beginner clears unlock the mode, then every run places the remaining
-        9 non-boss free bots somewhere on the map plus Emanuel Einstein as the
+        9 non-boss free bots somewhere on the map plus Rudolf Einstein as the
         collapse point. The shortest route to the boss is 3 bot fights +
-        Emanuel Einstein for a 4-game run. Longer routes are allowed for
+        Rudolf Einstein for a 4-game run. Longer routes are allowed for
         players who want extra pickups or to target specific bot unlocks. This
         lets players choose the bot problems they want to carry instead of
         praying a blind pool serves them.
   - [ ] **Double-slit theme**: visually frame the map as a double-slit
         experiment. The run begins as one beam, splits into two or more
         possible paths, interferes across branching bot choices, and collapses
-        into the chosen route toward Emanuel Einstein. Unchosen nodes can stay
+        into the chosen route toward Rudolf Einstein. Unchosen nodes can stay
         faint/ghosted as "paths not observed yet"; chosen fights become the
         measured timeline. This should feel quantumy without making the map
         harder to understand.
@@ -644,7 +649,7 @@ Legend: [ ] not started · [~] in progress · [X] done
         in-between spaces add the upside. Both should generally stick for the
         whole run, so the player is not just picking the next fight; they are
         deciding which problems to carry and which tools to accumulate before
-        Emanuel Einstein.
+        Rudolf Einstein.
   - [ ] **Pickup spaces**: mix non-fight nodes into the map so the player is
         not only choosing opponents. Good first pickups: +1 takeback for the
         run, one free "observe" hint, restore a collapsed pawn at the start of
@@ -691,8 +696,6 @@ Legend: [ ] not started · [~] in progress · [X] done
 #### Later
 - [ ] Replay saved games from stored move lists (moves are already saved;
       the engine is deterministic, so this is a UI feature)
-- [ ] Paid-tier custom avatar upload UI (storage bucket + policies already
-      exist in the schema)
 - [ ] Rewarded ad placement (opt-in, ~3-5x interstitial CPM) — e.g. "watch
       to see full post-game analysis"
 

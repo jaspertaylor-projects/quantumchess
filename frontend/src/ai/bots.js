@@ -102,8 +102,8 @@ export const BOTS = [
     weights: {},
   },
   {
-    id: 'marie-pillsbury',
-    name: 'Marie Pillsbury',
+    id: 'marie-lane',
+    name: 'Marie Lane',
     rating: 1590,
     tier: 'medium',
     tagline: 'A reactor-hearted tactician glowing three moves ahead.',
@@ -206,8 +206,8 @@ export const BOTS = [
     weights: { kingHunt: 0.32, soleKingAttacked: 5.5, hangUndefended: 0.7 },
   },
   {
-    id: 'emanuel-einstein',
-    name: 'Emanuel Einstein',
+    id: 'rudolf-einstein',
+    name: 'Rudolf Einstein',
     rating: 2080,
     tier: 'hard',
     tagline: 'The final boss. Carries every variation at once.',
@@ -246,8 +246,8 @@ export const BOTS = [
     weights: { kingHunt: 0.28, soleKingAttacked: 5.2, development: 0.08 },
   },
   {
-    id: 'paul-feynman',
-    name: 'Paul Feynman',
+    id: 'david-feynman',
+    name: 'David Feynman',
     rating: 1450,
     tier: 'medium',
     tagline: 'Sketches every tactic, including the arrows you missed.',
@@ -264,8 +264,8 @@ export const BOTS = [
     weights: { extraType: 0.13, mobility: 0.018 },
   },
   {
-    id: 'vera-franklin',
-    name: 'Vera Franklin',
+    id: 'edith-franklin',
+    name: 'Edith Franklin',
     rating: 1550,
     tier: 'medium',
     tagline: 'Photographed the structure of your position long before you saw it.',
@@ -300,8 +300,8 @@ export const BOTS = [
     weights: { extraType: 0.14, kingHunt: 0.22 },
   },
   {
-    id: 'james-rubinstein',
-    name: 'James Rubinstein',
+    id: 'james-euwe',
+    name: 'James Euwe',
     rating: 1750,
     tier: 'medium',
     tagline: 'Unified your kingside and queenside weaknesses into one field.',
@@ -318,8 +318,8 @@ export const BOTS = [
     weights: { development: 0.09, center: 0.05, extraType: 0.1 },
   },
   {
-    id: 'stephen-tal',
-    name: 'Stephen Tal',
+    id: 'stephen-reti',
+    name: 'Stephen Reti',
     rating: 1850,
     tier: 'hard',
     tagline: 'Your king’s escape squares end at the event horizon.',
@@ -372,8 +372,8 @@ export const BOTS = [
     weights: { kingHunt: 0.24, mobility: 0.018, center: 0.045 },
   },
   {
-    id: 'vera-botvinnik',
-    name: 'Vera Botvinnik',
+    id: 'vera-graf',
+    name: 'Vera Graf',
     rating: 2000,
     tier: 'hard',
     tagline: 'Found your position’s missing mass. It’s aimed at your king.',
@@ -390,8 +390,8 @@ export const BOTS = [
     weights: { pawnRace: 0.05, center: 0.05, mobility: 0.017, extraType: 0.11 },
   },
   {
-    id: 'mikhail-faraday',
-    name: 'Mikhail Faraday',
+    id: 'efim-faraday',
+    name: 'Efim Faraday',
     rating: 2050,
     tier: 'hard',
     tagline: 'Induces a threat along every line you leave open.',
@@ -408,8 +408,8 @@ export const BOTS = [
     weights: { kingHunt: 0.24, development: 0.075 },
   },
   {
-    id: 'cecilia-alekhine',
-    name: 'Cecilia Alekhine',
+    id: 'cecilia-chigorin',
+    name: 'Cecilia Chigorin',
     rating: 2150,
     tier: 'hard',
     tagline: 'Worked out what your attack is made of. Mostly hydrogen.',
@@ -444,6 +444,36 @@ export const BOTS = [
     weights: { kingHunt: 0.26, soleKingAttacked: 5.5, mobility: 0.017, hangUndefended: 0.8 },
   },
 ];
+
+// Source ledger for the parody names and portraits. Every historical person
+// appears exactly once; scripts/audit-avatars.mjs enforces coverage and
+// uniqueness so later roster edits cannot silently reuse an inspiration.
+export const BOT_INSPIRATIONS = {
+  'isaac-steinitz': { scientist: 'Isaac Newton', chess: 'Wilhelm Steinitz' },
+  'emmy-menchik': { scientist: 'Emmy Noether', chess: 'Vera Menchik' },
+  'galileo-greco': { scientist: 'Galileo Galilei', chess: 'Gioachino Greco' },
+  'wolfgang-nimzowitsch': { scientist: 'Wolfgang Pauli', chess: 'Aron Nimzowitsch' },
+  'boris-bohr': { scientist: 'Niels Bohr', chess: 'Boris Spassky' },
+  'marie-lane': { scientist: 'Marie Curie', chess: 'Lisa Lane' },
+  'enrico-capablanca': { scientist: 'Enrico Fermi', chess: 'José Raúl Capablanca' },
+  'erwin-fischer': { scientist: 'Erwin Schrödinger', chess: 'Bobby Fischer' },
+  'akiba-oppenheimer': { scientist: 'J. Robert Oppenheimer', chess: 'Akiba Rubinstein' },
+  'werner-lasker': { scientist: 'Werner Heisenberg', chess: 'Emanuel Lasker' },
+  'nikola-tal': { scientist: 'Nikola Tesla', chess: 'Mikhail Tal' },
+  'rudolf-einstein': { scientist: 'Albert Einstein', chess: 'Rudolf Spielmann' },
+  'freeman-morphy': { scientist: 'Freeman Dyson', chess: 'Paul Morphy' },
+  'david-feynman': { scientist: 'Richard Feynman', chess: 'David Bronstein' },
+  'edith-franklin': { scientist: 'Rosalind Franklin', chess: 'Edith Baird' },
+  'savielly-dirac': { scientist: 'Paul Dirac', chess: 'Savielly Tartakower' },
+  'james-euwe': { scientist: 'James Clerk Maxwell', chess: 'Max Euwe' },
+  'stephen-reti': { scientist: 'Stephen Hawking', chess: 'Richard Réti' },
+  'tigran-turing': { scientist: 'Alan Turing', chess: 'Tigran Petrosian' },
+  'max-alekhine': { scientist: 'Max Planck', chess: 'Alexander Alekhine' },
+  'vera-graf': { scientist: 'Vera Rubin', chess: 'Sonja Graf' },
+  'efim-faraday': { scientist: 'Michael Faraday', chess: 'Efim Geller' },
+  'cecilia-chigorin': { scientist: 'Cecilia Payne-Gaposchkin', chess: 'Mikhail Chigorin' },
+  'ernest-smyslov': { scientist: 'Ernest Rutherford', chess: 'Vasily Smyslov' },
+};
 
 export const DEFAULT_BOT_ID = 'boris-bohr';
 
