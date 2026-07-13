@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { args, CFG, rng } from './miner/config.mjs';
-import { minerBot, mirrorGame, BY_RATING, MID_STRONG, MID_WEAK, playGame } from './miner/gameplay.mjs';
+import { minerBot, mirrorGame, twinBots, BY_RATING, MID_STRONG, MID_WEAK, playGame } from './miner/gameplay.mjs';
 import { mineGame, verifyParPly } from './miner/swing.mjs';
 
 // -------------------------------------------------------------------- main
@@ -50,7 +50,19 @@ for (let g = 0; g < CFG.games; g++) {
   // STRONGEST bot takes White to capitalize, a mid-weak bot takes Black to
   // err. Random picks per game keep positional variety.
   let roles;
-  if (args.includes('--selfPlay')) {
+  if (args.includes('--twins')) {
+    // Twin mains (identical, until-timeout; the strong twin gets +4 per
+    // beam width AND the longer --strongMs clock vs --playMs). Roster bots
+    // still play the varied opening.
+    const { weak, strong } = twinBots(CFG.playMs, CFG.strongMs);
+    const openW = MID_STRONG[Math.floor(rng() * MID_STRONG.length)];
+    roles = {
+      openW: minerBot(openW),
+      openB: minerBot(BY_RATING[0]),
+      mainW: strong,
+      mainB: weak,
+    };
+  } else if (args.includes('--selfPlay')) {
     // Diagnostic: the same strongest bot everywhere.
     const top = BY_RATING[0];
     roles = { openW: minerBot(top), openB: minerBot(top), mainW: minerBot(top), mainB: minerBot(top) };

@@ -20,6 +20,7 @@ import { moveOutcome } from '../../frontend/src/chessboard/advanceCore.js';
 // Fast packed engine — verified bit-identical to alphaBetaEngine's search
 // (frontend/tests/fastEngineDiff.test.js), ~13-17x faster mining.
 import { searchBestMoveFast as searchBestMove } from '../../frontend/src/ai/fast/fastSearch.js';
+import { BOT_TIME_MODES } from '../../frontend/src/ai/alphaBetaEngine.js';
 import { BOTS } from '../../frontend/src/ai/bots.js';
 import { CFG } from './config.mjs';
 
@@ -87,12 +88,32 @@ function applyReply(state, reply) {
 // strong-vs-stronger: balanced positions where the mistakes that do happen
 // are subtle and worth punishing — a weak bot's queen-hang produces mop-up
 // puzzles, which is exactly what the seed-3/4/5 era taught us to avoid.
-function minerBot(rosterBot, timeMs = CFG.playMs) {
+function minerBot(rosterBot, timeMs = CFG.playMs, timeMode = BOT_TIME_MODES.CAPPED) {
   return {
     id: rosterBot.id,
     tier: rosterBot.tier,
     weights: rosterBot.weights || {},
-    search: { ...(rosterBot.search || {}), noise: 0, timeMs },
+    search: { ...(rosterBot.search || {}), noise: 0, timeMs, timeMode },
+  };
+}
+
+// Twin main bots (--twins, Jasper 2026-07-13): IDENTICAL personalities —
+// default weights, noise 0 — and both in until-timeout mode so each burns
+// its ENTIRE think time instead of stopping at a depth cap. Two asymmetries
+// only: the strong twin sees 4 more moves at every beam level AND thinks on
+// a longer clock (--strongMs vs the weak twin's --playMs, e.g. 2000 vs
+// 1000). Mistakes then come purely from search breadth and time, not style.
+const TWIN_BASE_WIDTHS = [22, 14, 10]; // hard-tier defaults
+function twinBots(weakMs, strongMs) {
+  const make = (id, widths, timeMs) => ({
+    id,
+    tier: 'hard',
+    weights: {},
+    search: { noise: 0, timeMs, timeMode: BOT_TIME_MODES.UNTIL_TIMEOUT, widths },
+  });
+  return {
+    weak: make('twin-weak', TWIN_BASE_WIDTHS, weakMs),
+    strong: make('twin-strong', TWIN_BASE_WIDTHS.map((w) => w + 4), strongMs),
   };
 }
 
@@ -226,4 +247,4 @@ export function mirrorGame(game) {
   };
 }
 
-export { applyReply, minerBot, BY_RATING, MID_STRONG, MID_WEAK, playGame };
+export { applyReply, minerBot, twinBots, BY_RATING, MID_STRONG, MID_WEAK, playGame };
