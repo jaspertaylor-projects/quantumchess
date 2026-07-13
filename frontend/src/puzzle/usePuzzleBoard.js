@@ -21,6 +21,10 @@ import { enumerateWhiteMoves } from './whiteMoves.js';
 export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }) {
   const [display, setDisplay] = useState(null); // pieces currently shown
   const [marks, setMarks] = useState([]);
+  // Contact-effect squares for the shown position: red spin-out (zap),
+  // green bloom (heal), gold ring (shield) — same visual language as the
+  // live board and the tutorial.
+  const [effects, setEffects] = useState({ zaps: [], heals: [], shields: [] });
   const [selectedSq, setSelectedSq] = useState(null);
   const timersRef = useRef([]);
   const later = (fn, ms) => { timersRef.current.push(setTimeout(fn, ms)); };
@@ -92,11 +96,15 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     sealed: false,
     mark: marks.includes(p.square),
     ring: threats.some((t) => t.to === p.square),
-  })), [live, display, marks, threats]);
+    zap: effects.zaps.includes(p.square),
+    heal: effects.heals.includes(p.square),
+    shield: effects.shields.includes(p.square),
+  })), [live, display, marks, threats, effects]);
 
   return {
     display, setDisplay,
     marks, setMarks,
+    effects, setEffects,
     selectedSq, setSelectedSq,
     live, atRest, threats, selected, targets, moves,
     boardPieces,

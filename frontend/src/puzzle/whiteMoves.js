@@ -53,6 +53,9 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
       didCapture: true,
       nextCC: captureCounter + 1,
       measuredSquares: sim.measuredSquares || [],
+      zappedSquares: sim.zappedSquares || [],
+      healedSquares: sim.healedSquares || [],
+      fizzledSquares: sim.fizzledSquares || [],
       nextLastMove: buildLastMove(sim.pieces, mover, mover.square, ep.to, true, sim.measuredSquares),
     });
   }
@@ -74,6 +77,9 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
         didCapture: Boolean(sim.didCapture),
         nextCC: captureCounter + (sim.didCapture ? 1 : 0),
         measuredSquares: sim.measuredSquares || [],
+        zappedSquares: sim.zappedSquares || [],
+        healedSquares: sim.healedSquares || [],
+        fizzledSquares: sim.fizzledSquares || [],
         nextLastMove: buildLastMove(sim.pieces, p, p.square, to, false, sim.measuredSquares),
       });
     }

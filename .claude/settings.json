@@ -12,7 +12,8 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(python3)",
-      "mcp__playwright__browser_find"
+      "mcp__playwright__browser_find",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
