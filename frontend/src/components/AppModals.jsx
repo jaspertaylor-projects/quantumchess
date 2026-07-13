@@ -20,6 +20,7 @@ import TutorialModal from '../tutorial/TutorialModal.jsx';
 import AccountModal from '../account/AccountModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
 import ReviewModal from '../review/ReviewModal.jsx';
+import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
 
 export default function AppModals({
   // game end
@@ -37,11 +38,15 @@ export default function AppModals({
   auth, accountOpen, onCloseAccount, billingReturn, handleReviewGame, onAccountCreated,
   pricingOpen, onClosePricing,
   reviewGame, onCloseReview,
+  // mined-puzzle dev preview (?mined=N)
+  minedPreview, onCloseMinedPreview,
   // confirm
   confirmState, setConfirmState,
   svgStyles,
   // sayings
   localSayings, onSaveLocalSayings,
+  // player-bar identity (avatars/ratings) for the mined modal
+  bars,
 }) {
   const { whiteColors, blackColors, boardColors, playerBarColors } = colors;
   return (
@@ -143,6 +148,18 @@ export default function AppModals({
         pieceSvgStyles={svgStyles}
         initialLessonId={tutorialLessonId}
         onOpenRules={onOpenRulesPage}
+      />
+
+      <MinedPuzzleModal
+        open={Boolean(minedPreview)}
+        onClose={onCloseMinedPreview}
+        puzzle={minedPreview}
+        svgStyleBySide={svgStyles}
+        boardColors={boardColors}
+        playerBarColors={playerBarColors}
+        selfAvatar={bars ? bars.selfAvatar : null}
+        selfRating={bars ? bars.selfRating : null}
+        strangerAvatar={bars ? bars.strangerAvatar : null}
       />
 
     </>

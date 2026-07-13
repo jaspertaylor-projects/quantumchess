@@ -196,6 +196,30 @@ export default function App() {
     handleRequirePremium, reviewGame, setReviewGame, handleReviewGame,
   } = useMonetization({ auth, showWinPopup, onRequirePremiumExtra: closeMobileNewGame });
 
+  // DEV-ONLY mined-puzzle previews: ?mined=N plays a mined chain in the
+  // one-chance gauge modal, ?minedGame=N opens a miner game in review. The
+  // daily puzzle stays PARKED — only the mined dev surface is hooked up.
+  const [minedPreviewPuzzle, setMinedPreviewPuzzle] = useState(null);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get('mined');
+    if (m !== null) {
+      import('./puzzle/minedPreview.js').then(async (mod) => {
+        const p = await mod.loadMinedPreview(Number(m) || 0);
+        if (p) setMinedPreviewPuzzle(p);
+      });
+      return;
+    }
+    const gm = params.get('minedGame');
+    if (gm !== null) {
+      import('./puzzle/minedGameLoader.js').then(async (mod) => {
+        const g = await mod.loadMinedGame(Number(gm) || 0);
+        if (g) setReviewGame(g);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const layout = useBoardLayout({ gameStarted, svgStyles });
   const { isNarrow, boardSize, currentPieceSize } = layout;
 
@@ -762,6 +786,8 @@ export default function App() {
         onClosePricing={() => setPricingOpen(false)}
         reviewGame={reviewGame}
         onCloseReview={() => setReviewGame(null)}
+        minedPreview={minedPreviewPuzzle}
+        onCloseMinedPreview={() => setMinedPreviewPuzzle(null)}
         confirmState={confirmState}
         setConfirmState={setConfirmState}
         svgStyles={svgStyles}
