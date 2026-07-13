@@ -96,13 +96,13 @@ export default function Board({
   }, [pieces]);
 
   // Active checks, using the game's own threat rule: only nearly-defined
-  // (<= 2 type) attackers project real threats, mirroring end-of-turn king
-  // pruning. Each threat is drawn as a ray from the checker to the checked
-  // king-holder, which gets a pulsing ring.
+  // (<= 2 type) attackers project real threats. Each threat is drawn as a
+  // ray from the checker to the checked king-holder. (The pulsing red
+  // target ring is retired, 2026-07-13 — arrows only.)
   const checkThreats = useMemo(() => {
-    if (!indicators.checkGlow && !indicators.checkRing) return [];
+    if (!indicators.checkGlow) return [];
     return listCheckThreats(pieces);
-  }, [pieces, indicators.checkGlow, indicators.checkRing]);
+  }, [pieces, indicators.checkGlow]);
 
   const styles = {
     root: {
@@ -581,24 +581,6 @@ export default function Board({
                   <line x1={x1} y1={y1} x2={baseX} y2={baseY} stroke={`rgba(${rgb}, 0.9)`} strokeWidth={w} strokeLinecap="round" />
                   <polygon points={headPoints} fill={`rgba(${rgb}, 0.95)`} stroke={halo} strokeWidth="1.4" strokeLinejoin="round" />
                 </g>
-              );
-            }) : null}
-            {indicators.checkRing ? [...new Set(checkThreats.map((t) => t.to))].map((sq) => {
-              const to = squareCenterPx(sq);
-              if (!to) return null;
-              const cell = dimensions.cell || 0;
-              return (
-                <circle
-                  key={`check-ring-${sq}`}
-                  cx={to.x}
-                  cy={to.y}
-                  r={cell * 0.42}
-                  fill="none"
-                  stroke="rgba(255, 64, 64, 0.9)"
-                  strokeWidth={Math.max(2.5, cell * 0.055)}
-                >
-                  <animate attributeName="opacity" values="0.95;0.35;0.95" dur="1.4s" repeatCount="indefinite" />
-                </circle>
               );
             }) : null}
           </svg>

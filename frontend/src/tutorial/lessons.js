@@ -479,7 +479,7 @@ export const LESSONS = [
           files: 5,
           ranks: 5,
           pieces: [
-            { sq: 'd5', side: 'black', types: 'k', ring: true },
+            { sq: 'd5', side: 'black', types: 'k' },
             { sq: 'b5', side: 'white', types: 'r' },
           ],
           arrows: [{ from: 'b5', to: 'd5', side: 'white' }],

@@ -92,7 +92,6 @@ export default function SettingsModal({
   const PRESET_HINTS = {
     total: 'Every visual hint on.',
     amateur: 'Hides check arrows. The default.',
-    master: 'Also hides the red check rings.',
     grandmaster: 'Also hides the promotion insignia.',
     goat: 'Also hides the piece icons inside 3+ possibility bands. Bands only.',
   };

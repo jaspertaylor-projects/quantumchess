@@ -176,7 +176,6 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     zap: marks.zaps.includes(p.square),
     heal: marks.heals.includes(p.square),
     shield: marks.shields.includes(p.square),
-    ring: threats.some((t) => t.to === p.square),
   }));
   const arrows = threats.map((t) => ({ from: t.from, to: t.to, side: t.side }));
 

@@ -1,8 +1,8 @@
 // frontend/src/tutorial/MiniBoard.jsx
 // Purpose: Small static board diagrams for the tutorial, rendered with the
 // REAL QuantumPiece art (trapezoid-band composites and indicators) so the
-// tutorial teaches exactly what the board shows. Adds arrows, check rings,
-// pulse marks, and square highlights on top. Optionally interactive: click
+// tutorial teaches exactly what the board shows. Adds arrows, contact
+// effects, pulse marks, and square highlights on top. Optionally interactive: click
 // squares, and (when canDrag/onDrop are provided) drag pieces to move them.
 // Imports From: ../chessboard/QuantumPiece.jsx, ../settings/usePieceColors.js,
 //   ../theme.js
@@ -43,7 +43,7 @@ export default function MiniBoard({
   files = 6,
   ranks = 6,
   cell = 48,
-  pieces = [], // { sq, side, types, chevrons, ring, mark, zap, heal, shield }
+  pieces = [], // { sq, side, types, chevrons, mark, zap, heal, shield }
   arrows = [], // { from, to, side } or review-style { from, to, kind: 'hint', opacity }
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
@@ -349,14 +349,6 @@ export default function MiniBoard({
                 strokeLinejoin="round"
               />
             </g>
-          );
-        })}
-        {pieces.filter((p) => p.ring).map((p) => {
-          const c = center(p.sq);
-          return (
-            <circle key={`ring-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.42} fill="none" stroke="rgba(255,64,64,0.9)" strokeWidth={Math.max(2.5, cell * 0.055)}>
-              <animate attributeName="opacity" values="0.95;0.35;0.95" dur="1.4s" repeatCount="indefinite" />
-            </circle>
           );
         })}
         {pieces.filter((p) => p.mark).map((p) => {

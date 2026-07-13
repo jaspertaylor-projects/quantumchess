@@ -35,8 +35,10 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
 
   const live = useMemo(() => (display || []).filter((p) => !p.captured && p.square), [display]);
 
-  // Threat arrows/rings are shown only on move RESULTS — drawing them on the
-  // rest position would literally point at the solution.
+  // Threats are computed only on move RESULTS — surfacing them on the rest
+  // position would literally point at the solution. (No visual consumes them
+  // in the mined modal since check rings were retired; the parked daily
+  // modal still receives the list.)
   const atRest = Boolean(ply && display === ply.pieces && playing);
   const threats = useMemo(
     () => (display && !atRest ? listCheckThreats(display) : []),
@@ -95,10 +97,6 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     // contact rules have no recoherence clock, so no solid-line pips.
     sealed: false,
     mark: marks.includes(p.square),
-    // Contact rules: check exists ONLY for a revealed king. Rings on
-    // superposed king-holders were classic-era pruning semantics.
-    ring: p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k'
-      && threats.some((t) => t.to === p.square),
     zap: effects.zaps.includes(p.square),
     heal: effects.heals.includes(p.square),
     shield: effects.shields.includes(p.square),
