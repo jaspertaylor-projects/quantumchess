@@ -33,7 +33,7 @@ import { mineGame, verifyParPly } from './miner/swing.mjs';
 console.log(`puzzle-miner  games=${CFG.games} seed=${CFG.seed} playMs=${CFG.playMs} strongMs=${CFG.strongMs} mineDepth=${CFG.mineDepth} verifyDepth=${CFG.verifyDepth}`);
 console.log(`swing bar: balanced |eval|<=${CFG.balanceBand} for ${CFG.balanceStreak} probes (one developing probe allowed), then best>=${CFG.swingMin} & jump>=${CFG.swingDelta}, medianFrac<${CFG.perishFrac}, ${CFG.minChoices}<=choices<${CFG.maxChoices}, ply>=${CFG.minPly}; par line: ${CFG.parPlies} white moves, every ply trickiness>=${CFG.minPlyTrick}; filters: plain recaptures, classical/inert lines\n`);
 
-const stats = { scanned: 0, swings: 0, balancedEligible: 0, weakSwingRejects: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
+const stats = { scanned: 0, swings: 0, balancedEligible: 0, weakSwingRejects: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, parCollapseRejects: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
 const verifiable = []; // { gameIdx, startPly, entry } for the gate
@@ -145,6 +145,7 @@ const report = {
       depthConfirm: stats.confirmRejects,
       dullPly: stats.dullRejects,
       shortLine: stats.shortLineRejects,
+      parCollapse: stats.parCollapseRejects,
       plainRecapture: stats.filteredRecapture,
       classicalOrInert: stats.filteredClassical,
     },
@@ -174,7 +175,7 @@ fs.writeFileSync(outFile, JSON.stringify(report, null, 1));
 console.log(`\n=== SUMMARY ===`);
 console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgMineMsPerPosition}ms each; probe survivors: ${stats.funnelSurvivors}; timeouts: ${stats.prefilterTimeouts} probe / ${stats.timeouts} deep)`);
 console.log(`balance-window positions: ${stats.balancedEligible}; swings confirmed: ${stats.swings}  -> chains kept: ${allChains.length} (all ${CFG.parPlies}-movers)`);
-console.log(`rejects: ${stats.weakSwingRejects} weak swing, ${stats.perishRejects} not perishable, ${stats.sizeRejects} size, ${stats.confirmRejects} depth-confirm, ${stats.dullRejects} dull ply, ${stats.shortLineRejects} short line, ${stats.filteredRecapture} plain recaptures, ${stats.filteredClassical} classical/inert`);
+console.log(`rejects: ${stats.weakSwingRejects} weak swing, ${stats.perishRejects} not perishable, ${stats.sizeRejects} size, ${stats.confirmRejects} depth-confirm, ${stats.dullRejects} dull ply, ${stats.shortLineRejects} short line, ${stats.parCollapseRejects} par collapse, ${stats.filteredRecapture} plain recaptures, ${stats.filteredClassical} classical/inert`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
 console.log(`GATE — par holds at depth ${CFG.verifyDepth}: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);
 console.log(`report: ${outFile}`);

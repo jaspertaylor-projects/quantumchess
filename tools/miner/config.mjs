@@ -55,6 +55,10 @@ const CFG = {
   perishFrac: Number(argVal('perishFrac', 0.34)),
   // --- par line (all puzzles are 3-movers) ---
   parPlies: Number(argVal('parPlies', 3)), // white moves in the certified par line
+  // Every par eval along the rollout must stay above this floor — later
+  // evals see deeper, so a collapsing line means the swing was an illusion
+  // (Jasper, 2026-07-13: +3.44 headline, -2.13 rollout).
+  parHoldFloor: Number(argVal('parHoldFloor', 0.25)),
   minPlyTrick: Number(argVal('minPlyTrick', 4.0)), // every par ply must stay this interesting (sustained trickiness)
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mined')),
 };

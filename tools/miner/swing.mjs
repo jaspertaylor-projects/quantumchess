@@ -194,7 +194,7 @@ function isPlainRecapture(step, rec) {
 // deep analysis (swing + perishability + size) → depth-stability confirm →
 // a parPlies-long engine rollout in which EVERY ply must stay tricky and
 // the line must stay quantum. Returns { probe, chain }.
-function detectSwingChain(rec, preEval, stats) {
+function detectSwingChain(rec, preEval, stats, priorRec = null) {
   const probe = probeEval(rec, stats);
   // Relaxed probe bar (depth-2 evals are noisy; a real swing must never die
   // in the funnel, mop-ups and quiet positions do).
@@ -312,6 +312,17 @@ function detectSwingChain(rec, preEval, stats) {
     if (!positionSane(curRec.pieces) || !censusFixed(curRec.pieces)) { stats.censusBug++; return { probe, chain: null }; }
   }
 
+  // Par must HOLD through the line (Jasper, 2026-07-13: a chain reported a
+  // +3.44 swing whose own rollout ended at -2.13 — every later par eval sees
+  // ~2 plies deeper, so a collapsing line means the swing was shallow-search
+  // noise, not a mistake). Each white-to-move par eval along the line must
+  // keep a real advantage; the deepest view is the most trusted one.
+  const parFloor = CFG.parHoldFloor;
+  if (steps.some((s) => s.parEval < parFloor)) {
+    stats.parCollapseRejects++;
+    return { probe, chain: null };
+  }
+
   // Quantum-ness: cull lines where nothing collapses, decoheres, or
   // recoheres at any ply — classical puzzles in the wrong costume.
   const quantumActive = replyActivity || replyRecohere
@@ -346,6 +357,15 @@ function detectSwingChain(rec, preEval, stats) {
       captureCounter: rec.captureCounter,
       sideToMove: 'white',
     },
+    // Position before the mistake. The puzzle intro holds this snapshot,
+    // then replays the already-certified Black move into `start` so its
+    // contact particles are visible before White is allowed to answer.
+    intro: priorRec ? {
+      pieces: clonePieces(priorRec.pieces),
+      lastMove: priorRec.lastMove ? structuredClone(priorRec.lastMove) : null,
+      captureCounter: priorRec.captureCounter,
+      sideToMove: 'black',
+    } : null,
     // One instant-gauge table per par position (start + each follow-up the
     // recorded line reaches) — see buildEvalTable.
     evalTables: steps.map((s) => buildEvalTable(s.position)).filter(Boolean),
@@ -363,7 +383,8 @@ function mineGame(game, stats) {
   let balancedEligible = 0;
   let found = false;
 
-  for (const rec of game.record) {
+  for (let recIdx = 0; recIdx < game.record.length; recIdx++) {
+    const rec = game.record[recIdx];
     if (rec.sideToMove !== 'white') continue;
     if (!positionSane(rec.pieces)) { stats.insane++; continue; }
     if (!censusFixed(rec.pieces)) {
@@ -389,7 +410,7 @@ function mineGame(game, stats) {
       stats.balancedEligible++;
       const inBand = recent.filter((e) => e !== null && Math.abs(e) <= CFG.balanceBand);
       const preEval = inBand.length ? inBand[inBand.length - 1] : core[core.length - 1];
-      const { probe, chain } = detectSwingChain(rec, preEval, stats);
+      const { probe, chain } = detectSwingChain(rec, preEval, stats, game.record[recIdx - 1] || null);
       probes.push(probe);
       if (probe !== null) evals.push({ ply: rec.ply, eval: probe, side: 'white' });
       if (chain) {
