@@ -95,7 +95,10 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     // contact rules have no recoherence clock, so no solid-line pips.
     sealed: false,
     mark: marks.includes(p.square),
-    ring: threats.some((t) => t.to === p.square),
+    // Contact rules: check exists ONLY for a revealed king. Rings on
+    // superposed king-holders were classic-era pruning semantics.
+    ring: p.possibleTypes.length === 1 && p.possibleTypes[0] === 'k'
+      && threats.some((t) => t.to === p.square),
     zap: effects.zaps.includes(p.square),
     heal: effects.heals.includes(p.square),
     shield: effects.shields.includes(p.square),

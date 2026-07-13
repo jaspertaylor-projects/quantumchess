@@ -31,6 +31,22 @@ function minedTitle(chain) {
 // fidelity math compares like with like.
 const clampPar = (v) => Math.min(v, 30);
 
+const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
+
+// Par on the GAUGE'S ruler. The modal grades the player's landing (a
+// depth-3 gauge score) against par — so par must be the certified move's
+// score in the SAME depth-3 eval tables the gauge reads, not the miner's
+// depth-4 certification number. Mixing rulers produced 150-200% "fidelity"
+// on ordinary good runs. Falls back to the miner's parEvals when a table
+// is missing (old fixtures).
+function gaugeParEvals(chain) {
+  return chain.steps.map((step, k) => {
+    const table = (chain.evalTables || [])[k];
+    const v = table && table.evals ? table.evals[keyOf(step.bestMove)] : undefined;
+    return v === undefined ? chain.parEvals[k] : v;
+  });
+}
+
 // Convert one mined chain into the modal's par-mode puzzle. The par line is
 // re-checked ply by ply on the real engine (legality only — the player is
 // free to diverge, so we never pin positions beyond the start): if the
@@ -80,7 +96,7 @@ export function buildMinedPuzzle(chain, idx) {
     // Instant-gauge tables mined alongside the chain (may be absent on old
     // fixtures): [{ sig, evals }] keyed by position signature.
     evalTables: chain.evalTables || [],
-    parEvals: chain.parEvals.map(clampPar),
+    parEvals: gaugeParEvals(chain).map(clampPar),
     parMoves: chain.steps.map((step) => ({ ...step.bestMove })),
     parFirstMove: { ...chain.steps[0].bestMove }, // revealed after a rough run
     themes: chain.themes,
