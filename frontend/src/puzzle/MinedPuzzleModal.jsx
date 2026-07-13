@@ -155,6 +155,10 @@ export default function MinedPuzzleModal({
   const [needleValue, setNeedleValue] = useState(null);
   const [moveRank, setMoveRank] = useState(null);
   const [replyArrow, setReplyArrow] = useState(null); // Black's live answer
+  // Effect replay: bumps per beat so repeat squares re-animate; origin is
+  // the mover's landing square (particle motes fly from it).
+  const [fx, setFx] = useState({ key: 0, origin: null });
+  const bumpFx = (origin) => setFx((f) => ({ key: f.key + 1, origin }));
   const [suggestedMove, setSuggestedMove] = useState(null); // legal best move for the position just played
   const [revealArrow, setRevealArrow] = useState(null); // par move 1, shown on a rough run
   const [copied, setCopied] = useState(false);
@@ -581,6 +585,7 @@ export default function MinedPuzzleModal({
     // zap/heal/shield effects, exactly like live play. No rewinding.
     setDisplay(move.after);
     setEffects(effectsOfMove(move));
+    bumpFx(move.to);
     setNeedleValue(landed !== null ? Number(landed.toFixed(2)) : null);
     setMoveRank(standing);
     setGrades((g) => {
@@ -641,6 +646,7 @@ export default function MinedPuzzleModal({
           if (aliveRef.current !== token) return;
           setDisplay(afterPieces);
           setEffects(replyEffects);
+          bumpFx(reply.to);
           setReplyArrow({ from: reply.from, to: reply.to });
           later(() => {
             if (aliveRef.current !== token) return;
@@ -823,6 +829,8 @@ export default function MinedPuzzleModal({
             onDragStart={handleDragStart}
             onDrop={handleDrop}
             svgStyleBySide={svgStyleBySide}
+            effectKey={fx.key}
+            pulseOrigin={fx.origin}
           />
         </div>
 

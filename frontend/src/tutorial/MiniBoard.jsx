@@ -9,11 +9,21 @@
 // Exported To: ./TutorialModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
 //   ../puzzle/MinedPuzzleModal.jsx
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import { arrowGeometry } from '../chessboard/arrowGeometry.js';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import theme from '../theme.js';
+
+// Deterministic 0..1 jitter for particle spreads (mirrors Board.jsx).
+function jitter01(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 8) & 0xffff) / 0x10000;
+}
 
 const LIGHT = theme.boardLight;
 const DARK = theme.boardDark;
@@ -43,6 +53,8 @@ export default function MiniBoard({
   onDrop = null, // (from, to) => void, when a dragged piece lands on another square
   svgStyleBySide = null, // live piece colors from the app; defaults otherwise
   squareColors = null, // { light, dark } from user settings; classic defaults otherwise
+  effectKey = 0, // bumps per move so zap/heal animations replay on repeat squares
+  pulseOrigin = null, // mover's landing square: particle motes fly from here
 }) {
   const lightSq = (squareColors && squareColors.light) || LIGHT;
   const darkSq = (squareColors && squareColors.dark) || DARK;
@@ -102,6 +114,46 @@ export default function MiniBoard({
     const { col, row } = sqToRC(sq, ranks);
     return { x: (col + 0.5) * cell, y: (row + 0.5) * cell };
   };
+
+  // Contact-pulse particles (mirrors Board.jsx): soft motes fly from the
+  // mover's landing square to every contacted square, arriving as the
+  // circle/shield lands.
+  const pulseParticles = useMemo(() => {
+    if (!pulseOrigin) return [];
+    const hasOrigin = pieces.some((p) => p.sq === pulseOrigin);
+    if (!hasOrigin && !pulseOrigin) return [];
+    const origin = center(pulseOrigin);
+    const groups = [
+      { flag: 'zap', cls: 'qc-particle--zap' },
+      { flag: 'heal', cls: 'qc-particle--heal' },
+      { flag: 'shield', cls: 'qc-particle--fizzle' },
+    ];
+    const out = [];
+    for (const g of groups) {
+      for (const p of pieces) {
+        if (!p[g.flag] || p.sq === pulseOrigin) continue;
+        const target = center(p.sq);
+        for (let i = 0; i < 4; i++) {
+          const ja = jitter01(`${p.sq}:${i}:a`);
+          const jb = jitter01(`${p.sq}:${i}:b`);
+          const jc = jitter01(`${p.sq}:${i}:c`);
+          const x0 = origin.x + (ja - 0.5) * cell * 0.4;
+          const y0 = origin.y + (jb - 0.5) * cell * 0.4;
+          out.push({
+            key: `${g.cls}-${p.sq}-${i}-${effectKey}`,
+            cls: g.cls,
+            x0,
+            y0,
+            tx: target.x + (jb - 0.5) * cell * 0.3 - x0,
+            ty: target.y + (ja - 0.5) * cell * 0.3 - y0,
+            delay: Math.round(jc * 150),
+            dur: Math.round(430 + ja * 240),
+          });
+        }
+      }
+    }
+    return out;
+  }, [pieces, pulseOrigin, cell, effectKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const bodyHex = (side) => (side === 'white' ? DEFAULT_WHITE.bandFill : DEFAULT_BLACK.bandFill);
 
   const coordStyle = {
@@ -181,6 +233,83 @@ export default function MiniBoard({
         );
       })}
 
+      {/* Contact effects — the LIVE board's visual language (App.css
+          animations): red zap spin-out, green heal bloom, shield pop, and
+          the particle motes. Keyed on effectKey so repeats replay. */}
+      {pieces.filter((p) => p.zap).map((p) => {
+        const { col, row } = sqToRC(p.sq, ranks);
+        return (
+          <div key={`zap-${p.sq}-${effectKey}`} style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, pointerEvents: 'none', zIndex: 30 }} aria-hidden="true">
+            <div
+              className="qc-zap-circle"
+              style={{
+                position: 'absolute', inset: '10%', borderRadius: '50%', boxSizing: 'border-box',
+                border: '3px dashed rgba(255, 64, 64, 0.95)',
+                boxShadow: '0 0 12px rgba(255, 64, 64, 0.6), inset 0 0 10px rgba(255, 64, 64, 0.35)',
+              }}
+            />
+          </div>
+        );
+      })}
+      {pieces.filter((p) => p.heal).map((p) => {
+        const { col, row } = sqToRC(p.sq, ranks);
+        return (
+          <div key={`heal-${p.sq}-${effectKey}`} style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, pointerEvents: 'none', zIndex: 30 }} aria-hidden="true">
+            <div
+              className="qc-heal-circle"
+              style={{
+                position: 'absolute', inset: '10%', borderRadius: '50%', boxSizing: 'border-box',
+                border: '3px solid rgba(46, 204, 113, 0.9)',
+                boxShadow: '0 0 12px rgba(46, 204, 113, 0.55), inset 0 0 10px rgba(46, 204, 113, 0.3)',
+              }}
+            />
+          </div>
+        );
+      })}
+      {pieces.filter((p) => p.shield).map((p) => {
+        const { col, row } = sqToRC(p.sq, ranks);
+        return (
+          <div key={`shield-${p.sq}-${effectKey}`} style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, pointerEvents: 'none', zIndex: 31 }} aria-hidden="true">
+            <div
+              className="qc-fizzle-shield"
+              style={{
+                position: 'absolute', inset: '18%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                filter: 'drop-shadow(0 0 8px rgba(170, 190, 220, 0.75))',
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="100%" height="100%">
+                <path
+                  d="M12 2 L20 5 V11 C20 16.5 16.7 20.6 12 22 C7.3 20.6 4 16.5 4 11 V5 Z"
+                  fill="rgba(170, 190, 220, 0.28)"
+                  stroke="rgba(200, 215, 235, 0.95)"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+                <path d="M8.2 11.2 L15.8 11.2" stroke="rgba(200, 215, 235, 0.95)" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+        );
+      })}
+      {pulseParticles.length ? (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 29 }} aria-hidden="true">
+          {pulseParticles.map((pt) => (
+            <div
+              key={pt.key}
+              className={`qc-pulse-particle ${pt.cls}`}
+              style={{
+                left: pt.x0,
+                top: pt.y0,
+                '--qc-tx': `${pt.tx}px`,
+                '--qc-ty': `${pt.ty}px`,
+                animationDelay: `${pt.delay}ms`,
+                animationDuration: `${pt.dur}ms`,
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
       <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
         {arrows.map((a, i) => {
           const from = center(a.from);
@@ -243,27 +372,6 @@ export default function MiniBoard({
               strokeWidth={2.5}
               strokeDasharray="5 4"
             />
-          );
-        })}
-        {pieces.filter((p) => p.zap).map((p) => {
-          const c = center(p.sq);
-          return (
-            <circle key={`zap-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.42} fill="none"
-              stroke="rgba(255,64,64,0.95)" strokeWidth={3} strokeDasharray="6 4" />
-          );
-        })}
-        {pieces.filter((p) => p.heal).map((p) => {
-          const c = center(p.sq);
-          return (
-            <circle key={`heal-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.42} fill="none"
-              stroke="rgba(46,204,113,0.9)" strokeWidth={3} />
-          );
-        })}
-        {pieces.filter((p) => p.shield).map((p) => {
-          const c = center(p.sq);
-          return (
-            <circle key={`shield-${p.sq}`} cx={c.x} cy={c.y} r={cell * 0.46} fill="none"
-              stroke="rgba(246,196,69,0.95)" strokeWidth={3.5} />
           );
         })}
         {targets.map((sq) => {
