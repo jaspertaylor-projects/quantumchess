@@ -81,8 +81,8 @@ function probeEval(position, stats, side = 'white') {
     bot: { search: { maxDepth: 2, widths: PROBE_WIDTHS, timeMs: CFG.probeMs, noise: 0 } },
   });
   stats.mineMsTotal += performance.now() - t0;
-  if (!res || !res.move || res.depth < 2) { stats.prefilterTimeouts++; return null; }
-  return Number((side === 'white' ? res.score : -res.score).toFixed(2));
+  if (!res || !res.move || res.depth < 2) { stats.prefilterTimeouts++; return { score: null, move: null }; }
+  return { score: Number((side === 'white' ? res.score : -res.score).toFixed(2)), move: res.move };
 }
 
 // Spread stats over a full root analysis: how perishable is the advantage?
@@ -178,15 +178,19 @@ function parStep(rec, stats, analysis = null) {
   return step;
 }
 
-// "Plain recapture": statically the top move, taking a fully-collapsed piece
-// on the square Black just moved to. Sound but boring — take-back-the-queen.
-// Filtered as a puzzle START; forced recaptures deeper in the line are fine.
-function isPlainRecapture(step, rec) {
-  if (step.shallowRank !== 0) return false;
+// "First grab" (Jasper, 2026-07-13): the puzzle's first move takes the very
+// piece Black just moved — "they hung it, take it". Sound but stale as a
+// steady diet, so it's filtered as a puzzle START (forced recaptures deeper
+// in the line are fine). Any capture landing on lastMove.to is that piece;
+// en passant on the crossed square grabs the double-stepper. Re-enable for
+// easy-Monday harvests with --allowFirstGrab. Subsumes the old
+// isPlainRecapture (which only caught the collapsed-piece subcase).
+function isFirstGrab(move, rec) {
   const lm = rec.lastMove;
-  if (!lm || lm.to !== step.bestMove.to) return false;
-  const target = rec.pieces.find((p) => !p.captured && p.square === step.bestMove.to && p.side === 'black');
-  return Boolean(target && (target.possibleTypes || []).length === 1);
+  if (!lm || !move) return false;
+  if (move.to === lm.to) return true;
+  if (move.enPassant && lm.isDoubleStep && move.to === lm.crossedSquare) return true;
+  return false;
 }
 
 // The mistake moment, certified end to end. Called on a white-to-move
@@ -195,7 +199,7 @@ function isPlainRecapture(step, rec) {
 // a parPlies-long engine rollout in which EVERY ply must stay tricky and
 // the line must stay quantum. Returns { probe, chain }.
 function detectSwingChain(rec, preEval, stats, priorRec = null) {
-  const probe = probeEval(rec, stats);
+  const { score: probe, move: probeMove } = probeEval(rec, stats);
   // Relaxed probe bar (depth-2 evals are noisy; a real swing must never die
   // in the funnel, mop-ups and quiet positions do).
   if (probe === null || probe < CFG.swingMin - 1) return { probe, chain: null };
@@ -208,6 +212,17 @@ function detectSwingChain(rec, preEval, stats, priorRec = null) {
   if (moveCount < CFG.minChoices || moveCount >= CFG.maxChoices) {
     stats.sizeRejects++;
     console.log(`  size-reject @ply ${rec.ply}: probe ${probe} but ${moveCount} legal moves (bar: ${CFG.minChoices}..${CFG.maxChoices - 1})`);
+    return { probe, chain: null };
+  }
+
+  // Grab pre-filter BEFORE the deep analysis (Jasper, 2026-07-13): the
+  // depth-2 probe's own best move is a cheap tell. If even the shallow
+  // search wants to take the piece Black just moved, skip the minutes of
+  // deep search — the authoritative post-analysis check below still guards
+  // the cases where only the deep best is the grab.
+  if (!CFG.allowFirstGrab && probeMove
+    && isFirstGrab({ to: probeMove.to, enPassant: probeMove.type === 'enpassant' }, rec)) {
+    stats.firstGrabPrefilter++;
     return { probe, chain: null };
   }
 
@@ -260,7 +275,7 @@ function detectSwingChain(rec, preEval, stats, priorRec = null) {
     const step = parStep(curRec, stats, curAnalysis);
     curAnalysis = null;
     if (!step) return { probe, chain: null };
-    if (k === 0 && isPlainRecapture(step, rec)) { stats.filteredRecapture++; return { probe, chain: null }; }
+    if (k === 0 && !CFG.allowFirstGrab && isFirstGrab(step.bestMove, rec)) { stats.filteredRecapture++; return { probe, chain: null }; }
     if (k > 0 && step.numChoices < CFG.minChoices) { stats.sizeRejects++; return { probe, chain: null }; }
     if (step.trickiness < CFG.minPlyTrick) { stats.dullRejects++; return { probe, chain: null }; }
     steps.push(step);
@@ -427,7 +442,7 @@ function mineGame(game, stats) {
         found = true;
       }
     } else {
-      const probe = probeEval(rec, stats);
+      const { score: probe } = probeEval(rec, stats);
       probes.push(probe);
       if (probe !== null) evals.push({ ply: rec.ply, eval: probe, side: 'white' });
     }
@@ -446,21 +461,35 @@ function mineGame(game, stats) {
 // search, i.e. the deep best falling clearly below the mined par.
 function verifyParPly(entry, stats) {
   const t0 = performance.now();
-  let analysis = null;
+  let best = null;
   let usedDepth = null;
-  for (let d = CFG.verifyDepth; d > CFG.mineDepth && !analysis; d--) {
-    analysis = analyzePosition(entry.position, d, VERIFY_WIDTHS, CFG.verifyMs);
-    if (analysis) usedDepth = d;
+  // Best-score search, not analyzeRootMoves: the verdict needs only the
+  // best move's score, and root-wide alpha pruning is ~6x cheaper — which
+  // is what makes depth 8 affordable (~20 min/ply vs ~2 h; Jasper asked
+  // for the deeper gate 2026-07-13). Even depths stay parity-sober.
+  for (let d = CFG.verifyDepth; d > CFG.mineDepth && !best; d--) {
+    const res = searchBestMove({
+      pieces: entry.position.pieces,
+      sideToMove: 'white',
+      lastMove: entry.position.lastMove,
+      bot: { search: { maxDepth: d, widths: VERIFY_WIDTHS, timeMs: CFG.verifyMs, noise: 0 } },
+      openingVariety: false,
+      adaptiveDepth: false,
+    });
+    if (res && res.move && res.depth >= d) {
+      best = res;
+      usedDepth = d;
+    }
   }
   stats.verifyMsTotal += performance.now() - t0;
-  if (!analysis || !analysis.moves.length) return { verdict: 'timeout' };
-  const best = analysis.moves[0];
+  if (!best) return { verdict: 'timeout' };
   const parHolds = best.score >= entry.parEval - 1.0;
   const swingHolds = entry.plyIdx > 0 || best.score >= CFG.swingMin - 0.5;
+  const mv = best.move;
   return {
     verdict: parHolds && swingHolds ? 'agree' : 'disagree',
     depth: usedDepth,
-    deepBest: `${best.move.type}:${best.move.from || ''}->${best.move.to || ''}`,
+    deepBest: `${mv.type}:${mv.type === 'castle' ? mv.plan.piece1_from : mv.from || ''}->${mv.type === 'castle' ? mv.plan.piece1_to : mv.to || ''}`,
     deepBestScore: Number(best.score.toFixed(2)),
     parHolds, swingHolds,
   };

@@ -26,18 +26,18 @@ const CFG = {
   maxPlies: Number(argVal('maxPlies', QUICK ? 70 : 90)), // 45 full moves, then adjudicate (Jasper 2026-07-09): past that it's classical endgame territory — no puzzles there, and probing it isn't free
   playMs: Number(argVal('playMs', QUICK ? 250 : 900)), // per-move time; strong bots need thinking room
   strongMs: Number(argVal('strongMs', QUICK ? 400 : 2000)), // the post-handoff WHITE capitalizer's per-move time; the opening seats all play --playMs (Jasper, 2026-07-10: 2000ms, main seat only)
-  minPly: Number(argVal('minPly', 14)), // plies (half-moves): mid-game starts at the ply-14 handoff (seed-11: was 20 — fast post-handoff wins were erring below the floor)
+  minPly: Number(argVal('minPly', 8)), // plies (half-moves): chains may start as early as move 5 (Jasper 2026-07-13; was 14 — the first-grab filter now keeps early finds honest)
   handoffPly: Number(argVal('handoffPly', 20)), // bot handoff: opening controllers play plies 0..handoffPly-1, main controllers after
   mineDepth: Number(argVal('mineDepth', 4)),
   probeMs: Number(argVal('probeMs', 8000)), // per-ply balance probe budget (timeouts poison the streak)
   mineMs: Number(argVal('mineMs', QUICK ? 10000 : 45000)), // deep budget, only for probe survivors
   confirmMs: Number(argVal('confirmMs', QUICK ? 30000 : 120000)), // depth-stability confirm
-  verifyDepth: Number(argVal('verifyDepth', 6)), // gate must sit above confirm (mineDepth+1); falls back one level on timeout
-  // 120000 -> 480000 (2026-07-12): on the fast engine 120s still timed out
-  // 11/18 verify plies in the seed-2 run (per-depth budget: the depth-6 ->
-  // depth-5 fallback each gets verifyMs). 8 min per attempt keeps the gate
-  // honest instead of quietly grading only the easy plies.
-  verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 480000)),
+  verifyDepth: Number(argVal('verifyDepth', 8)), // gate must sit above confirm (mineDepth+1); falls back one level on timeout. 6 -> 8 (Jasper 2026-07-13): the gate now uses the best-score instrument (~6x cheaper than score-every-move), which makes depth 8 affordable
+  // 480000 -> 1800000 (2026-07-13): depth-8 best-score searches project to
+  // ~20 min on hard quantum midgames (measured d6 analyze 466s, /6 for the
+  // best-score instrument, x4/ply). Per-depth budget: each rung of the
+  // 8 -> 7 -> ... fallback ladder gets verifyMs.
+  verifyMs: Number(argVal('verifyMs', QUICK ? 45000 : 1800000)),
   verifyCap: Number(argVal('verifyCap', 120)), // max par plies to re-verify
   minChoices: Number(argVal('minChoices', 10)), // fewer legal moves = not a real search
   maxChoices: Number(argVal('maxChoices', 10000)), // no hard cap (2026-07-09: seed-8 swings sat at 78-158 moves — width is inherent to winning quantum positions); numChoices is curation metadata
@@ -59,6 +59,9 @@ const CFG = {
   // evals see deeper, so a collapsing line means the swing was an illusion
   // (Jasper, 2026-07-13: +3.44 headline, -2.13 rollout).
   parHoldFloor: Number(argVal('parHoldFloor', 0.25)),
+  // First-grab filter off-switch: harvest 'they hung it, take it' puzzles
+  // deliberately (easy Mondays) instead of never.
+  allowFirstGrab: args.includes('--allowFirstGrab'),
   minPlyTrick: Number(argVal('minPlyTrick', 4.0)), // every par ply must stay this interesting (sustained trickiness)
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mined')),
 };
