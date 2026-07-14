@@ -13,6 +13,7 @@ import {
   computePositionSignature,
   generateLegalReplies,
   attacksForType,
+  getPromoTypes,
   isLostInCheck,
   otherSide,
 } from '../chessboard/quantumEngine.js';
@@ -49,6 +50,13 @@ export const DEFAULT_WEIGHTS = {
   pawnRace: 0.03, // quadratic kicker so far-advanced pawns become urgent
   promoImminent: 3.2, // definite pawn on the 7th — near-queen when unstoppable
   promoNear: 1.2, // definite pawn on the 6th, same idea one step earlier
+  // The banked conversion: a piece with promo-origin identities IS the
+  // realized promotion. Without this, promoImminent (+ the pawn progress
+  // terms, ~4.6 total on an unstoppable 7th) evaporates the move the pawn
+  // converts and the eval nets NEGATIVE for promoting — engines hoarded
+  // pawns on the 7th forever (Jasper caught it reviewing minedGame=0's
+  // clueless endgame, 2026-07-13). Must clearly exceed that package.
+  promoBank: 5.0, // per living piece holding any promo-origin identity
   development: 0.06, // per piece that has moved at least once
   kingHunt: 0.15, // per attacked square around a unique enemy king holder
   // Mop-up: clinical conversion instincts, active only when clearly winning
@@ -70,6 +78,35 @@ export const DIFFICULTY_CONFIG = {
   medium: { maxDepth: 2, widths: [40, 14], timeMs: 5000, noise: 0 },
   hard: { maxDepth: 3, widths: [22, 14, 10], timeMs: 12000, noise: 0 },
 };
+
+// Search-time behavior is opt-in per bot. Existing bots are depth-capped;
+// an until-timeout bot keeps adding iterative-deepening layers until its
+// deadline interrupts one, with negamax reusing the final configured width
+// for every layer beyond the widths array.
+export const BOT_TIME_MODES = {
+  CAPPED: 'capped',
+  UNTIL_TIMEOUT: 'until-timeout',
+};
+
+export function isPawnCaptureTarget(pieces, targetSquare, attackerSide) {
+  if (!targetSquare) return false;
+  const targetFile = targetSquare.charCodeAt(0) - 97;
+  const targetRank = Number(targetSquare[1]);
+  const step = attackerSide === 'white' ? 1 : -1;
+  return pieces.some((p) => {
+    if (p.captured || !p.square || p.side !== attackerSide || !(p.possibleTypes || []).includes('p')) return false;
+    const file = p.square.charCodeAt(0) - 97;
+    const rank = Number(p.square[1]);
+    return rank + step === targetRank && Math.abs(file - targetFile) === 1;
+  });
+}
+
+export function isHardRandomOpeningMoveSafe(root, sideToMove, move) {
+  if (!move || move.type !== 'move') return true;
+  const landed = (move.resultPieces || []).find((p) => !p.captured && p.side === sideToMove && p.square === move.to);
+  if (!landed || (landed.possibleTypes || []).includes('p')) return true;
+  return !isPawnCaptureTarget(move.resultPieces || root, move.to, otherSide(sideToMove));
+}
 
 // Per-side attack info: which squares each side attacks, and the cheapest
 // piece-value it can bring to bear on each square. Rays respect blockers.
@@ -186,6 +223,8 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
       }
     }
     if ((p.moveCount || 0) > 0) score += sign * W.development;
+    // Banked promotion (see W.promoBank).
+    if (getPromoTypes(p).length > 0) score += sign * W.promoBank;
   }
 
   // Mobility via attacked-square counts.
@@ -376,10 +415,12 @@ export function searchBestMove({
   if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
     const replies = generateLegalReplies(root, sideToMove, 0, lastMove);
     const occupied = new Set(root.filter((p) => !p.captured && p.square).map((p) => p.square));
+    const hardOpening = ((bot && bot.tier) || difficulty) === 'hard';
     const quiet = replies.filter((mv) => {
       if (mv.type !== 'move' || occupied.has(mv.to)) return false;
       const rank = parseInt(mv.to.slice(1), 10);
-      return sideToMove === 'white' ? rank <= 4 : rank >= 5;
+      if (!(sideToMove === 'white' ? rank <= 4 : rank >= 5)) return false;
+      return !hardOpening || isHardRandomOpeningMoveSafe(root, sideToMove, mv);
     });
     if (quiet.length > 0) {
       const pick = quiet[Math.floor(Math.random() * quiet.length)];
@@ -436,7 +477,8 @@ export function searchBestMove({
 
   const rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
 
-  for (let depth = 2; depth <= maxDepth; depth++) {
+  const fillTime = cfg.timeMode === BOT_TIME_MODES.UNTIL_TIMEOUT && Number.isFinite(cfg.timeMs);
+  for (let depth = 2; fillTime || depth <= maxDepth; depth++) {
     try {
       let alpha = -Infinity;
       let depthBest = null;

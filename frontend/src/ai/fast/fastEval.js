@@ -12,7 +12,7 @@
 import {
   BLACK, CAPTURED, HAS_MOVED,
   TP, TK,
-  sqOf, sideBit, possibleOf, popcount6,
+  sqOf, sideBit, possibleOf, promoOf, popcount6,
 } from './fastBoard.js';
 import { emitAttacksForType } from './fastGeometry.js';
 
@@ -146,6 +146,8 @@ export function evaluateFast(bd, W) {
       }
     }
     if (w & HAS_MOVED) score += sign * W.development;
+    // Banked promotion (see W.promoBank) — REF: same accumulation spot.
+    if (promoOf(w) !== 0) score += sign * W.promoBank;
   }
 
   score += W.mobility * (mobW - mobB);
