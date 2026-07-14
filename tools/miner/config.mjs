@@ -62,6 +62,8 @@ const CFG = {
   // First-grab filter off-switch: harvest 'they hung it, take it' puzzles
   // deliberately (easy Mondays) instead of never.
   allowFirstGrab: args.includes('--allowFirstGrab'),
+  // --twins: the strong twin's extra beam width at every level.
+  twinDelta: Number(argVal('twinDelta', 4)),
   minPlyTrick: Number(argVal('minPlyTrick', 4.0)), // every par ply must stay this interesting (sustained trickiness)
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mined')),
 };

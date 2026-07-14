@@ -113,7 +113,7 @@ function twinBots(weakMs, strongMs) {
   });
   return {
     weak: make('twin-weak', TWIN_BASE_WIDTHS, weakMs),
-    strong: make('twin-strong', TWIN_BASE_WIDTHS.map((w) => w + 4), strongMs),
+    strong: make('twin-strong', TWIN_BASE_WIDTHS.map((w) => w + CFG.twinDelta), strongMs),
   };
 }
 
