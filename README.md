@@ -31,6 +31,12 @@ dormant. One engine, one ruleset.
     it can lose CLEANLY (King first), walking down k→q→r→b→n→p. A shed whose
     census cascade would rewrite any other piece is skipped; if nothing sheds
     cleanly the target is **shielded** (gold ring, fizzle).
+  - **Zaps strike as one volley** (2026-07-13): every shed is judged against
+    the board as the mover landed, then all land together — if the combined
+    cascade would ripple beyond the struck pieces, the WHOLE volley fizzles.
+    A zap never chooses between victims (no square-order tie-breaks); they
+    shed together or shield together. Heals bloom as a volley the same way:
+    every regain takes root at once or the volley dissipates.
   - Friendly contacts are **healed**: each regains its cheapest missing
     feasible identity (never King; never Pawn on promoted pieces/promotion
     rank; census-claimed types are skipped — the pawn-bishop overflow).

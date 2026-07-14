@@ -45,6 +45,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Moving is touching. When your piece completes a move, it touches every square it could capture on from its landing square — and every enemy piece it touches is ZAPPED.',
           'You touch as your CHEAPEST self: the reach comes from the least valuable type the mover still holds (P < N < B < R < Q < K). A fresh six-type blur pokes like a pawn; a confirmed queen sweeps like one. Collapsing your own pieces is what arms them.',
           'A zap removes the MOST valuable possibility the target can cleanly lose, trying King, then Queen, Rook, Bishop, Knight, Pawn. "Cleanly" means the loss changes nothing else on the board: a shed whose census cascade would rewrite any other piece is skipped, and the zap walks down to the next type.',
+          'Zaps strike TOGETHER. Every struck piece is judged against the board exactly as your piece landed — no zap sees another zap\'s result — and all the sheds land as one volley. If the combined volley\'s census cascade would ripple beyond the struck pieces themselves, the WHOLE volley fizzles: a zap never chooses between victims. They shed together or shield together.',
           'One exception outranks the guard: a zap that erases a side\'s LAST King possibility always lands, cascade and all — that is the win by wave function collapse (see Winning).',
           'A fully known piece (one possibility) has nothing left to lose; zaps pass through it. A piece where nothing sheds cleanly shows a SHIELD instead (see Shields).',
           'Feedback: a red circle spins out over every piece your move zapped.',
@@ -54,6 +55,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
         title: 'The Heal',
         content: [
           'The same touch that zaps enemies HEALS friends: every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen.',
+          'Heals bloom TOGETHER, like zaps: each touched friend finds its regain against the board as your piece landed, and all regains take root as one volley. If the census cannot let every regain take root at once, the whole volley dissipates — no piece is favored over another.',
           'King never comes back. Pawn never returns to a promoted piece, or to a piece standing on its own promotion rank.',
           'The census must accept the regain. If an identity is fully claimed elsewhere the heal overflows upward: with both your knights known, a bare pawn you protect becomes a Pawn–BISHOP.',
           'Defense is regeneration: a protected army does not just hold its ground — it re-blurs. Leave a wounded piece unattended and it stays exactly as collapsed as your opponent made it.',
@@ -66,6 +68,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Sometimes a zap finds nothing it can remove cleanly: every possibility the target holds is load-bearing, and removing any of them would force other pieces to change. The zap fizzles — the piece is SHIELDED.',
           'Shields come from closed groups: N pieces sharing exactly N identities (say, three survivors that are exactly {Queen-King, Rook-King, Rook-Queen}). No member can lose anything locally.',
           'Break the group and the shield drops: capture a member, or force a collapse elsewhere that reopens the ledger.',
+          'A volley shields together: when several struck pieces could each shed alone but not all at once, no one is chosen — every one of them shields. Symmetric situations resolve symmetrically; nothing in this game is decided by which square comes first in the alphabet.',
           'The one zap a shield never stops: erasing the last King possibility a side has. The terminal zap ignores the guard.',
           'Feedback: a gold ring pops over a shielded piece so a fizzled zap never reads as a bug.',
         ],

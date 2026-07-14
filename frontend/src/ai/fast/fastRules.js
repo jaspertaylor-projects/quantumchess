@@ -88,24 +88,29 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     }
   }
 
-  // Zaps first.
+  // Zaps strike TOGETHER (REF: the volley, rules change 2026-07-13). Every
+  // target's candidate shed is judged in ISOLATION against the pre-zap
+  // state (trial then rollback), then all candidates land as one volley:
+  // joint-clean (or kingless win) commits, anything else fizzles the whole
+  // volley. Order-independent by construction.
+  const volleyCandidates = []; // [pieceIdx, shedBit, preTypes] triplets, flat
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
-    let w = bd.words[i];
+    const w = bd.words[i];
     if (sideBit(w) === moverSide) continue;
     if (w & CAPTURED) continue;
     const types = possibleOf(w);
     if (popcount6(types) <= 1) continue;
     const targetSide = sideBit(w);
-    for (let z = 0; z < 6; z++) {
+    let found = false;
+    for (let z = 0; z < 6 && !found; z++) {
       const shed = ZAP_ORDER[z];
       if (!(types & shed)) continue;
       const mark = watermark(bd);
       setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
       applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
 
-      // REF: winsByCollapse — a king shed that leaves the side kingless
-      // always lands, cascade and all.
+      // REF: winsByCollapse — a king shed that leaves the side kingless.
       let wins = false;
       if (shed === TK) {
         wins = true;
@@ -115,11 +120,8 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
         }
       }
 
-      // REF: shedIsLocal via the journal — every touched word must belong to
-      // the target, and the target's possible mask must be exactly
-      // types & ~shed. Possible-mask comparison only: base/promo
-      // redistribution with an unchanged union is clean (reference compares
-      // possibleTypes joins).
+      // Isolated cleanliness via the journal (possible-mask comparison, as
+      // the reference's shedIsLocal).
       let clean = true;
       if (!wins) {
         const j = bd.journal;
@@ -129,13 +131,59 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
         if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
       }
 
-      if (wins || clean) break; // commit: journal entries stay
-      rollback(bd, mark);
-      w = bd.words[i]; // unchanged by rollback, but keep explicit
+      rollback(bd, mark); // isolation: the trial never persists
+      if (wins || clean) {
+        volleyCandidates.push(i, shed, types);
+        found = true;
+      }
     }
   }
 
-  // Heals.
+  if (volleyCandidates.length > 0) {
+    const mark = watermark(bd);
+    let targetSide = -1;
+    for (let k = 0; k < volleyCandidates.length; k += 3) {
+      const i = volleyCandidates[k];
+      const shed = volleyCandidates[k + 1];
+      const w = bd.words[i];
+      targetSide = sideBit(w);
+      setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
+    }
+    applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
+
+    let wins = true;
+    for (let j = 0; j < bd.n; j++) {
+      const wj = bd.words[j];
+      if (!(wj & CAPTURED) && sideBit(wj) === targetSide && (possibleOf(wj) & TK)) { wins = false; break; }
+    }
+
+    let jointClean = true;
+    if (!wins) {
+      const j = bd.journal;
+      for (let k = mark; k < j.length && jointClean; k += 2) {
+        const idx = j[k];
+        let isCandidate = false;
+        for (let q = 0; q < volleyCandidates.length; q += 3) {
+          if (volleyCandidates[q] === idx) { isCandidate = true; break; }
+        }
+        if (!isCandidate) jointClean = false;
+      }
+      for (let q = 0; q < volleyCandidates.length && jointClean; q += 3) {
+        const i = volleyCandidates[q];
+        const shed = volleyCandidates[q + 1];
+        const pre = volleyCandidates[q + 2];
+        if (possibleOf(bd.words[i]) !== (pre & ~shed)) jointClean = false;
+      }
+    }
+
+    if (!wins && !jointClean) rollback(bd, mark); // whole volley fizzles
+  }
+
+  // Heals bloom TOGETHER (REF: the heal volley, 2026-07-13). Isolated
+  // candidate regains against the pre-heal state, then one joint commit:
+  // every healed piece must still hold its regain and have grown, or the
+  // whole volley dissipates.
+  const healCandidates = []; // [pieceIdx, gainBit, preCount] triplets, flat
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
     const w = bd.words[i];
@@ -155,9 +203,32 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
       setWord(bd, i, withMasks(w, baseOf(w) | t, promoOf(w)));
       applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
       const after = possibleOf(bd.words[i]);
-      if ((after & t) && popcount6(after) > preCount) break; // commit
-      rollback(bd, mark);
+      const took = (after & t) && popcount6(after) > preCount;
+      rollback(bd, mark); // isolation: the trial never persists
+      if (took) {
+        healCandidates.push(i, t, preCount);
+        break;
+      }
     }
+  }
+  if (healCandidates.length > 0) {
+    const mark = watermark(bd);
+    for (let k = 0; k < healCandidates.length; k += 3) {
+      const i = healCandidates[k];
+      const t = healCandidates[k + 1];
+      const w = bd.words[i];
+      setWord(bd, i, withMasks(w, baseOf(w) | t, promoOf(w)));
+    }
+    applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
+    let allHold = true;
+    for (let k = 0; k < healCandidates.length && allHold; k += 3) {
+      const i = healCandidates[k];
+      const t = healCandidates[k + 1];
+      const preCount = healCandidates[k + 2];
+      const after = possibleOf(bd.words[i]);
+      if (!(after & t) || popcount6(after) <= preCount) allHold = false;
+    }
+    if (!allHold) rollback(bd, mark);
   }
 }
 

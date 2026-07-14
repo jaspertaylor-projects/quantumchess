@@ -303,24 +303,31 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     .map((sq) => occ.get(sq))
     .filter((p) => p && !p.captured && !moverSet.has(p.id));
 
-  // Zaps first: each target sheds the most valuable possibility it can lose
-  // cleanly (see the guard above). Every committed shed is already
-  // conservation-settled, so there is no batch cascade afterward. A target
-  // where NO possibility sheds cleanly is census-locked: the zap fizzles,
-  // and the square is reported so the UI can show a shield instead of
-  // silently doing nothing.
+  // Zaps strike TOGETHER (rules change 2026-07-13, Jasper's ruling — "the
+  // volley"). Sequential zaps chose between indistinguishable victims by
+  // square order: with two identical {p,k} holders both in reach, the
+  // alphabetically-first shed cleanly and its shed census-locked the twin
+  // into a shield. No dice anywhere means no alphabet either. Now every
+  // target's shed is judged against the board AS THE MOVER LANDED (no zap
+  // sees another's result), and all sheds land as ONE volley: if the
+  // combined cascade would ripple beyond the struck pieces, the whole
+  // volley fizzles — they shed together or shield together. A volley that
+  // erases the target side's last maybe-king is the win by wave-function
+  // collapse and always lands, cascade and all.
   const zappedSquares = [];
   const fizzledSquares = [];
+  const preZap = current;
+  const candidates = []; // { id, square, shed }
   for (const target of contacts) {
     if (target.side === moverSide) continue;
-    const live = current.find((p) => p.id === target.id && !p.captured && p.square);
+    const live = preZap.find((p) => p.id === target.id && !p.captured && p.square);
     if (!live) continue;
     const types = live.possibleTypes || [];
     if (types.length <= 1) continue;
-    let committed = false;
+    let found = null;
     for (const shed of CONTACT_ZAP_ORDER) {
       if (!types.includes(shed)) continue;
-      const trial = clonePieces(current);
+      const trial = clonePieces(preZap);
       const trialTarget = trial.find((x) => x.id === live.id);
       restrictTypes(trialTarget, types.filter((t) => t !== shed));
       const constrained = applyQuantumConstraints(trial);
@@ -329,21 +336,65 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
         !constrained.some(
           (p) => !p.captured && p.square && p.side === live.side && (p.possibleTypes || []).includes('k')
         );
-      if (!winsByCollapse && !shedIsLocal(current, constrained, live.id, shed)) continue;
-      current = constrained;
-      zappedSquares.push(live.square);
-      committed = true;
-      break;
+      if (winsByCollapse || shedIsLocal(preZap, constrained, live.id, shed)) {
+        found = { id: live.id, square: live.square, shed };
+        break;
+      }
     }
-    if (!committed) fizzledSquares.push(live.square);
+    if (found) candidates.push(found);
+    else fizzledSquares.push(live.square);
   }
 
-  // Heals: every friendly contact regains its least valuable feasible
-  // possibility, whatever its current possibility count.
+  if (candidates.length > 0) {
+    const volley = clonePieces(preZap);
+    for (const c of candidates) {
+      const t = volley.find((x) => x.id === c.id);
+      restrictTypes(t, (t.possibleTypes || []).filter((y) => y !== c.shed));
+    }
+    const constrained = applyQuantumConstraints(volley);
+    const targetSide = otherSide(moverSide);
+    const winsByCollapse = !constrained.some(
+      (p) => !p.captured && p.square && p.side === targetSide && (p.possibleTypes || []).includes('k')
+    );
+    const shedById = new Map(candidates.map((c) => [c.id, c.shed]));
+    const afterById = new Map(constrained.map((p) => [p.id, p]));
+    let jointClean = true;
+    for (const b of preZap) {
+      const a = afterById.get(b.id);
+      if (!a) { jointClean = false; break; }
+      const bTypes = (b.possibleTypes || []).join('');
+      const aTypes = (a.possibleTypes || []).join('');
+      const shed = shedById.get(b.id);
+      if (shed) {
+        const expected = (b.possibleTypes || []).filter((t) => t !== shed).join('');
+        if (aTypes !== expected) { jointClean = false; break; }
+      } else if (aTypes !== bTypes) {
+        jointClean = false;
+        break;
+      }
+    }
+    if (winsByCollapse || jointClean) {
+      current = constrained;
+      for (const c of candidates) zappedSquares.push(c.square);
+    } else {
+      for (const c of candidates) fizzledSquares.push(c.square);
+    }
+  }
+
+  // Heals bloom TOGETHER (same 2026-07-13 ruling as the zap volley — no
+  // hidden square-order tie-breaks). Each friendly contact finds its
+  // cheapest feasible regain against the POST-VOLLEY, PRE-HEAL state in
+  // isolation; then all regains land at once. If the combined census lets
+  // every regain take root (each healed piece still holds its regained
+  // type and grew), the volley commits — cascades to other pieces remain
+  // allowed, as heals always did. If ANY regain fails to take root
+  // jointly, the whole heal volley dissipates.
   const healedSquares = [];
+  const preHeal = current;
+  const healCandidates = []; // { id, square, gain, preLen }
   for (const c of contacts) {
     if (c.side !== moverSide) continue;
-    const live = current.find((p) => p.id === c.id && !p.captured && p.square);
+    const live = preHeal.find((p) => p.id === c.id && !p.captured && p.square);
     if (!live) continue;
     const promoted = getPromoTypes(live).length > 0;
     const pos = fromAlgebraic(live.square);
@@ -352,16 +403,35 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     for (const t of HEAL_GAIN_ORDER) {
       if (t === 'p' && (promoted || onPromotionRank)) continue;
       if (live.possibleTypes.includes(t)) continue;
-      const trial = clonePieces(current);
+      const trial = clonePieces(preHeal);
       const trialPiece = trial.find((x) => x.id === live.id);
       withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
       const constrained = applyQuantumConstraints(trial);
       const after = constrained.find((x) => x.id === live.id);
       if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
-        current = constrained;
-        healedSquares.push(live.square);
+        healCandidates.push({ id: live.id, square: live.square, gain: t, preLen: live.possibleTypes.length });
         break;
       }
+    }
+  }
+  if (healCandidates.length > 0) {
+    const volley = clonePieces(preHeal);
+    for (const c of healCandidates) {
+      const t = volley.find((x) => x.id === c.id);
+      withTypes(t, [...getBaseTypes(t), c.gain], getPromoTypes(t));
+    }
+    const constrained = applyQuantumConstraints(volley);
+    let allHold = true;
+    for (const c of healCandidates) {
+      const after = constrained.find((x) => x.id === c.id);
+      if (!after || !after.possibleTypes.includes(c.gain) || after.possibleTypes.length <= c.preLen) {
+        allHold = false;
+        break;
+      }
+    }
+    if (allHold) {
+      current = constrained;
+      for (const c of healCandidates) healedSquares.push(c.square);
     }
   }
 
