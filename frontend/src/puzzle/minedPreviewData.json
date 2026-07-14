@@ -1,115 +1,1119 @@
 {
- "source": "seed-2 (2026-07-12, FAST engine): playMs 500 / strongMs 1000, 24 games, contact zap/heal rules, handoff 20, minPly 14 \u2014 6 chains; gate 7/7 = 100% at depth 6 (11 verify timeouts); chains carry instant-gauge evalTables (sig-keyed, modal ruler depth 3 [176,12,8])",
+ "source": "seed-3 TWINS (2026-07-13, fast engine): identical default-weight bots, until-timeout, twin-strong +4 widths & 2000ms vs twin-weak 1000ms (decisives 6-6 \u2014 the width cost cancels the clock), 24 games \u2014 5 chains mined, gate 15/15 = 100% at depth 6 with ZERO timeouts (verifyMs 480s); 1 chain post-filtered by the par-hold rule (+3.44 headline, -2.13 rollout \u2014 Jasper's catch). evalTables included.",
  "chains": [
   {
-   "startPly": 60,
+   "startPly": 37,
    "parPlies": 3,
    "endsInMate": false,
    "mistake": {
-    "from": "b8",
-    "to": "c7",
-    "evalBefore": -1.25,
-    "evalAfter": 2.08,
-    "swing": 3.33
+    "from": "f6",
+    "to": "d5",
+    "evalBefore": 0.6,
+    "evalAfter": 4.32,
+    "swing": 3.72
    },
    "spread": {
-    "best": 2.078,
-    "median": -0.86,
+    "best": 4.322999999999997,
+    "median": -4.61,
     "medianFrac": 0,
-    "numChoices": 128
+    "numChoices": 108
    },
    "parEvals": [
-    2.08,
-    0.39,
-    1.2
+    4.32,
+    4.77,
+    4.67
    ],
-   "trickiness": 13.7,
-   "trickMin": 6.2,
-   "trickAvg": 12.33,
+   "trickiness": 8.55,
+   "trickMin": 5.77,
+   "trickAvg": 7.95,
    "themes": [
     "quiet",
     "recohere"
    ],
    "steps": [
     {
-     "ply": 60,
+     "ply": 37,
      "bestMove": {
       "type": "move",
-      "from": "a2",
-      "to": "a4",
+      "from": "c6",
+      "to": "c2",
       "enPassant": false
      },
-     "parEval": 2.08,
+     "parEval": 4.32,
      "spread": {
-      "best": 2.078,
-      "median": -0.86,
+      "best": 4.322999999999997,
+      "median": -4.61,
       "medianFrac": 0,
-      "numChoices": 128
+      "numChoices": 108
      },
-     "numChoices": 128,
-     "shallowRank": 6,
-     "possDelta": 4,
+     "numChoices": 108,
+     "shallowRank": 2,
+     "possDelta": 0,
      "themes": [
       "quiet"
      ],
-     "trickiness": 13.7
+     "trickiness": 8.55
     },
     {
-     "ply": 62,
+     "ply": 39,
      "bestMove": {
       "type": "move",
-      "from": "e2",
-      "to": "g2",
+      "from": "g3",
+      "to": "h4",
       "enPassant": false
      },
-     "parEval": 0.39,
+     "parEval": 4.77,
      "spread": {
-      "best": 0.38900000000000146,
-      "median": -1.6,
+      "best": 4.771000000000001,
+      "median": -0.53,
       "medianFrac": 0,
-      "numChoices": 128
+      "numChoices": 87
      },
-     "numChoices": 128,
-     "shallowRank": 41,
-     "possDelta": 3,
+     "numChoices": 87,
+     "shallowRank": 1,
+     "possDelta": 0,
+     "themes": [],
+     "trickiness": 5.77
+    },
+    {
+     "ply": 41,
+     "bestMove": {
+      "type": "move",
+      "from": "c2",
+      "to": "d2",
+      "enPassant": false
+     },
+     "parEval": 4.67,
+     "spread": {
+      "best": 4.670999999999997,
+      "median": -5.79,
+      "medianFrac": 0,
+      "numChoices": 62
+     },
+     "numChoices": 62,
+     "shallowRank": 2,
+     "possDelta": -1,
      "themes": [
       "quiet",
       "recohere"
      ],
-     "trickiness": 17.1
-    },
-    {
-     "ply": 64,
-     "bestMove": {
-      "type": "move",
-      "from": "c3",
-      "to": "d4",
-      "enPassant": false
-     },
-     "parEval": 1.2,
-     "spread": {
-      "best": 1.1959999999999975,
-      "median": -1.74,
-      "medianFrac": 0,
-      "numChoices": 111
-     },
-     "numChoices": 111,
-     "shallowRank": 1,
-     "possDelta": 3,
-     "themes": [],
-     "trickiness": 6.2
+     "trickiness": 9.52
     }
    ],
    "blackReplies": [
     {
      "type": "move",
-     "from": "b5",
-     "to": "a4"
+     "from": "h5",
+     "to": "h4"
     },
     {
      "type": "move",
      "from": "d5",
-     "to": "d4"
+     "to": "e3"
+    }
+   ],
+   "start": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "W_c1_2",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "W_d1_3",
+      "side": "black",
+      "square": "b7",
+      "possibleTypes": [
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 4,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "black",
+      "square": "e8",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "black",
+      "square": "g6",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_b2_9",
+      "side": "black",
+      "square": "b6",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c2_10",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "W_d2_11",
+      "side": "black",
+      "square": "d5",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "black",
+      "square": "e6",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f2_13",
+      "side": "black",
+      "square": "f7",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g2_14",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "W_h2_15",
+      "side": "black",
+      "square": "h5",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a8_0",
+      "side": "white",
+      "square": "a1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "white",
+      "square": "b1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "white",
+      "square": "c1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "white",
+      "square": "e1",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e8_4",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 4,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "B_f8_5",
+      "side": "white",
+      "square": "f4",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_g8_6",
+      "side": "white",
+      "square": "e3",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_h8_7",
+      "side": "white",
+      "square": "h1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "white",
+      "square": "a2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b7_9",
+      "side": "white",
+      "square": "b3",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c7_10",
+      "side": "white",
+      "square": "c6",
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "B_e7_12",
+      "side": "white",
+      "square": "d1",
+      "possibleTypes": [
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f7_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_g7_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_h7_15",
+      "side": "white",
+      "square": "g3",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "black",
+     "pieceId": "W_d2_11",
+     "from": "f6",
+     "to": "d5",
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "e3"
+     ],
+     "healedSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 9,
+    "sideToMove": "white"
+   },
+   "evalTables": [
+    {
+     "sig": "white#-#B_a7_8:a2:pnqk::f:|B_a8_0:a1:pnqk::f:|B_b7_9:b3:pnqk::m:|B_b8_1:b1:pnqk::f:|B_c7_10:c6:r::m:|B_c8_2:c1:pnqk::f:|B_d7_11:x:n::m:|B_d8_3:e1:pqk::m:|B_e7_12:d1:qk::m:|B_e8_4:x:b::m:|B_f7_13:x:b::m:|B_f8_5:f4:p::m:|B_g7_14:x:r::m:|B_g8_6:e3:pn::m:|B_h7_15:g3:pn::m:|B_h8_7:h1:pnqk::f:|W_a1_0:a8:pqk::f:|W_a2_8:x:b::m:|W_b1_1:x:n::m:|W_b2_9:b6:pq::m:|W_c1_2:x:r::m:|W_c2_10:x:b::m:|W_d1_3:b7:qk::m:|W_d2_11:d5:n::m:|W_e1_4:e8:pqk::f:|W_e2_12:e6:pq::m:|W_f1_5:f8:pqk::f:|W_f2_13:f7:pqk::f:|W_g1_6:g6:pq::m:|W_g2_14:x:r::m:|W_h1_7:h8:pqk::f:|W_h2_15:h5:p::m:",
+     "evals": {
+      "c6>d6": 7.294,
+      "b3>b4": 6.414,
+      "e3>e4": 6.347,
+      "d1>d2": 6.012,
+      "c1>c2": 5.892,
+      "a2>a3": 5.883,
+      "e3>d5": 5.865,
+      "h1>h2": 5.845,
+      "e1>e2": 5.82,
+      "b1>b2": 5.79,
+      "a2>a4": 5.783,
+      "d1>e2": 5.64,
+      "g3>e4": 5.577,
+      "c6>c2": 5.349,
+      "f4>f5": 5.328,
+      "c6>c8": 5.278,
+      "c6>c4": 5.273,
+      "g3>g4": 5.203,
+      "g3>e2": 5.123,
+      "d1>c2": 5.113,
+      "e3>g2": 5.1,
+      "c6>c7": 4.945,
+      "b1>a3": 4.897,
+      "a2>b4": 4.895,
+      "h1>h3": 4.895,
+      "g3>f1": 4.631,
+      "e3>f1": 4.62,
+      "b1>d2": 4.213,
+      "h1>f2": 4.184,
+      "c6>c5": 4.139,
+      "b3>d4": 4.132,
+      "g3>h5": 4.121,
+      "b3>d2": 4.062,
+      "c6>e6": 3.699,
+      "c1>d3": 3.253,
+      "c1>e2": 3.241,
+      "c6>c3": 3.166,
+      "e3>c4": 3.097,
+      "a1>c2": 3.091,
+      "c6>b6": 2.977,
+      "e3>c2": 2.971,
+      "c1>c3": 2.844,
+      "g3>f5": 2.735,
+      "e3>f5": 2.724,
+      "b3>a5": 2.575,
+      "e3>g4": 2.538,
+      "d1>d3": 2.149,
+      "a2>c3": 2.02,
+      "d1>f3": 2.011,
+      "b1>c3": 2.008,
+      "d1>d4": 1.31,
+      "c1>d2": 0.037,
+      "h1>e4": 0.029,
+      "h1>g1": -0.022,
+      "e1>f2": -0.047,
+      "b3>c5": -0.173,
+      "c1>b2": -0.316,
+      "a1>b2": -0.406,
+      "a2>b2": -0.43,
+      "e1>d2": -0.49,
+      "b1>e4": -0.587,
+      "b3>b2": -0.593,
+      "b1>d3": -0.661,
+      "h1>f3": -0.712,
+      "e1>g1": -0.878,
+      "a1>d4": -0.934,
+      "d1>d5": -0.973,
+      "a2>f2": -1.076,
+      "b3>a4": -1.121,
+      "a2>e2": -1.19,
+      "a2>d2": -1.214,
+      "b3>a3": -1.29,
+      "b1>c2": -1.292,
+      "a1>e5": -1.409,
+      "e1>f1": -1.73,
+      "b3>d3": -1.881,
+      "c1>a3": -1.918,
+      "h1>h4": -2.011,
+      "a2>h2": -2.185,
+      "a2>c2": -2.25,
+      "h1>g2": -2.256,
+      "b3>c2": -2.329,
+      "b3>c4": -2.962,
+      "c1>c4": -3.215,
+      "a2>g2": -3.364,
+      "d1>h5": -3.398,
+      "d1>g4": -3.982,
+      "b3>d5": -4,
+      "h1>d5": -4.473,
+      "b3>b6": -4.833,
+      "h1>h5": -5.214,
+      "h1>f1": -5.921,
+      "b3>b5": -5.924,
+      "c1>c5": -7.738,
+      "e1>b4": -7.77,
+      "b1>f5": -7.818,
+      "a2>a5": -8.118,
+      "e1>a5": -8.178,
+      "a1>g7": -9.003,
+      "a1>f6": -9.11,
+      "a1>c3": -9.339,
+      "e1>c3": -9.411,
+      "a1>h8": -9.514,
+      "b3>c3": -9.55,
+      "a2>a8": -9.563,
+      "a2>a6": -10.909,
+      "a2>a7": -10.909,
+      "b1>g6": -10.989
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:a2:pnqk::f:|B_a8_0:a1:pnqk::f:|B_b7_9:b3:pnqk::m:|B_b8_1:b1:pnqk::f:|B_c7_10:c2:r::m:|B_c8_2:c1:pnqk::f:|B_d7_11:x:n::m:|B_d8_3:e1:pqk::m:|B_e7_12:d1:qk::m:|B_e8_4:x:b::m:|B_f7_13:x:b::m:|B_f8_5:f4:p::m:|B_g7_14:x:r::m:|B_g8_6:e3:pn::m:|B_h7_15:g3:p::m:|B_h8_7:h1:pnqk::f:|W_a1_0:a8:pqk::f:|W_a2_8:x:b::m:|W_b1_1:x:n::m:|W_b2_9:b6:pq::m:|W_c1_2:x:r::m:|W_c2_10:x:b::m:|W_d1_3:b7:qk::m:|W_d2_11:d5:n::m:|W_e1_4:e8:pqk::f:|W_e2_12:e6:pq::m:|W_f1_5:f8:pqk::f:|W_f2_13:f7:pqk::f:|W_g1_6:g6:pq::m:|W_g2_14:x:r::m:|W_h1_7:h8:pqk::f:|W_h2_15:h4:p::m:",
+     "evals": {
+      "e3>e4": 6.763,
+      "e3>d5": 6.345,
+      "b1>c3": 5.56,
+      "a2>c3": 5.56,
+      "f4>f5": 5.535,
+      "g3>h4": 5.533,
+      "c2>d2": 5.416,
+      "d1>e2": 5.373,
+      "e1>e2": 5.373,
+      "d1>d2": 5.361,
+      "a2>a4": 5.339,
+      "c2>e2": 5.338,
+      "c2>b2": 5.326,
+      "a2>a3": 5.199,
+      "c2>h2": 5.195,
+      "h1>h2": 5.107,
+      "b1>b2": 5.094,
+      "b3>b4": 4.986,
+      "c2>c4": 4.971,
+      "c2>g2": 4.936,
+      "e3>c4": 4.894,
+      "e3>f1": 4.652,
+      "c2>c7": 4.643,
+      "h1>h3": 4.526,
+      "c2>c6": 4.511,
+      "d1>d3": 4.486,
+      "d1>f3": 4.478,
+      "c1>d3": 4.421,
+      "d1>g4": 4.395,
+      "c1>e2": 4.359,
+      "d1>d4": 4.245,
+      "g3>g4": 4.214,
+      "c2>c8": 4.205,
+      "b3>d4": 4.066,
+      "e3>g4": 4.035,
+      "b1>a3": 4.021,
+      "c2>f2": 3.961,
+      "e1>f2": 3.948,
+      "e3>g2": 3.93,
+      "h1>f2": 3.887,
+      "c2>c5": 3.881,
+      "a2>b4": 3.819,
+      "b3>c5": 3.38,
+      "h1>g1": 3.357,
+      "b3>a5": 3.348,
+      "b1>d2": 3.345,
+      "h1>h4": 3.274,
+      "e3>f5": 3.182,
+      "b3>d2": 3.146,
+      "c2>c3": 2.954,
+      "h1>f3": 2.81,
+      "e1>d2": 2.767,
+      "e1>g1": 2.489,
+      "a1>d4": 2.453,
+      "a1>e5": 2.351,
+      "c1>d2": 1.965,
+      "a1>b2": 1.553,
+      "c1>b2": 1.553,
+      "a2>b2": 1.541,
+      "b3>b2": 1.378,
+      "b3>d3": 1.22,
+      "c1>a3": 1.014,
+      "b3>a3": 0.985,
+      "h1>g2": -0.153,
+      "e1>f1": -0.26,
+      "b3>c4": -1.041,
+      "b3>a4": -1.054,
+      "d1>d5": -1.292,
+      "h1>f1": -2.356,
+      "d1>h5": -3.278,
+      "h1>d5": -3.475,
+      "b3>d5": -4.283,
+      "a1>h8": -4.498,
+      "h1>e4": -5.193,
+      "a2>a8": -5.546,
+      "a1>g7": -5.769,
+      "a2>a5": -5.842,
+      "e1>a5": -5.902,
+      "b3>b6": -5.944,
+      "a1>f6": -7.443,
+      "a2>a6": -8.219,
+      "a2>a7": -8.231,
+      "a1>c3": -8.671,
+      "e1>c3": -8.743,
+      "b3>c3": -8.906,
+      "e1>b4": -9.023,
+      "b3>b5": -9.197
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:a2:pnqk::f:|B_a8_0:a1:pnqk::f:|B_b7_9:b3:pnqk::m:|B_b8_1:b1:pnqk::f:|B_c7_10:c2:r::m:|B_c8_2:c1:pnqk::f:|B_d7_11:x:n::m:|B_d8_3:e1:pqk::m:|B_e7_12:d1:qk::m:|B_e8_4:x:b::m:|B_f7_13:x:b::m:|B_f8_5:f4:p::m:|B_g7_14:x:r::m:|B_g8_6:x:p::m:|B_h7_15:h4:p::m:|B_h8_7:h1:pnqk::f:|W_a1_0:a8:pqk::f:|W_a2_8:x:b::m:|W_b1_1:x:n::m:|W_b2_9:b6:pq::m:|W_c1_2:x:r::m:|W_c2_10:x:b::m:|W_d1_3:b7:qk::m:|W_d2_11:e3:n::m:|W_e1_4:e8:pqk::f:|W_e2_12:e6:pq::m:|W_f1_5:f8:pqk::f:|W_f2_13:f7:pqk::f:|W_g1_6:g6:pq::m:|W_g2_14:x:r::m:|W_h1_7:h8:pqk::f:|W_h2_15:x:p::m:",
+     "evals": {
+      "c2>d2": 7.202,
+      "b1>c3": 6.586,
+      "a2>c3": 6.574,
+      "c1>e3": 5.71,
+      "e1>e3": 5.65,
+      "d1>e2": 5.579,
+      "d1>d2": 5.567,
+      "b3>e3": 4.499,
+      "d1>f3": 3.53,
+      "h1>f2": 2.835,
+      "b3>c5": 2.013,
+      "d1>d3": 1.773,
+      "b3>a5": 1.485,
+      "d1>d8": 1.443,
+      "c2>c7": 1.426,
+      "d1>d4": 1.105,
+      "d1>d6": 0.511,
+      "c2>h2": -1.075,
+      "f4>f5": -1.075,
+      "h1>h2": -1.843,
+      "c2>c4": -1.88,
+      "h1>h3": -1.889,
+      "h4>h5": -2.051,
+      "c2>f2": -2.311,
+      "h1>g3": -2.551,
+      "a2>a4": -2.575,
+      "c1>d3": -2.59,
+      "e1>e2": -2.718,
+      "b1>b2": -2.76,
+      "c2>g2": -2.866,
+      "d1>g4": -2.873,
+      "c2>c6": -2.929,
+      "c1>e2": -2.979,
+      "c2>e2": -3.197,
+      "a2>a3": -3.225,
+      "b3>b4": -3.237,
+      "c2>b2": -3.287,
+      "c2>c8": -3.559,
+      "c2>c5": -3.846,
+      "b3>d4": -3.986,
+      "c2>c3": -4.019,
+      "b1>a3": -4.031,
+      "a2>b4": -4.251,
+      "b1>d2": -4.263,
+      "b3>d2": -4.474,
+      "d1>d7": -4.692,
+      "d1>h5": -4.749,
+      "d1>d5": -5.047,
+      "c1>d2": -5.399,
+      "e1>d2": -5.743,
+      "c1>b2": -8.492,
+      "e1>f1": -8.584,
+      "h1>g1": -9.046,
+      "b3>c4": -9.679,
+      "b3>c3": -9.903,
+      "e1>f2": -10.401,
+      "b3>a4": -17.289,
+      "a1>b2": -998,
+      "a2>b2": -998,
+      "b3>b2": -998,
+      "b3>a3": -998,
+      "h1>g2": -998
+     }
+    }
+   ],
+   "game": 4,
+   "white": "twin-weak",
+   "black": "twin-strong",
+   "mirrored": true
+  },
+  {
+   "startPly": 16,
+   "parPlies": 3,
+   "endsInMate": false,
+   "mistake": {
+    "from": "a7",
+    "to": "a5",
+    "evalBefore": 1.01,
+    "evalAfter": 5.11,
+    "swing": 4.1
+   },
+   "spread": {
+    "best": 5.111999999999998,
+    "median": -1.03,
+    "medianFrac": 0,
+    "numChoices": 127
+   },
+   "parEvals": [
+    5.11,
+    5.02,
+    5.24
+   ],
+   "trickiness": 8.62,
+   "trickMin": 4.83,
+   "trickAvg": 7.79,
+   "themes": [
+    "quiet",
+    "recohere"
+   ],
+   "steps": [
+    {
+     "ply": 16,
+     "bestMove": {
+      "type": "move",
+      "from": "a2",
+      "to": "a3",
+      "enPassant": false
+     },
+     "parEval": 5.11,
+     "spread": {
+      "best": 5.111999999999998,
+      "median": -1.03,
+      "medianFrac": 0,
+      "numChoices": 127
+     },
+     "numChoices": 127,
+     "shallowRank": 1,
+     "possDelta": 1,
+     "themes": [
+      "quiet",
+      "recohere"
+     ],
+     "trickiness": 8.62
+    },
+    {
+     "ply": 18,
+     "bestMove": {
+      "type": "move",
+      "from": "a3",
+      "to": "b4",
+      "enPassant": false
+     },
+     "parEval": 5.02,
+     "spread": {
+      "best": 5.015000000000002,
+      "median": 1.84,
+      "medianFrac": 0.367,
+      "numChoices": 107
+     },
+     "numChoices": 107,
+     "shallowRank": 0,
+     "possDelta": 1,
+     "themes": [],
+     "trickiness": 4.83
+    },
+    {
+     "ply": 20,
+     "bestMove": {
+      "type": "move",
+      "from": "b4",
+      "to": "b5",
+      "enPassant": false
+     },
+     "parEval": 5.24,
+     "spread": {
+      "best": 5.243999999999999,
+      "median": 3.56,
+      "medianFrac": 0.679,
+      "numChoices": 112
+     },
+     "numChoices": 112,
+     "shallowRank": 3,
+     "possDelta": 0,
+     "themes": [
+      "quiet"
+     ],
+     "trickiness": 9.92
+    }
+   ],
+   "blackReplies": [
+    {
+     "type": "move",
+     "from": "a5",
+     "to": "b4"
+    },
+    {
+     "type": "move",
+     "from": "h7",
+     "to": "h6"
     }
    ],
    "start": {
@@ -169,69 +1173,31 @@
      {
       "id": "W_c1_2",
       "side": "white",
-      "square": "h6",
+      "square": "c1",
       "possibleTypes": [
        "p",
+       "n",
        "b",
-       "q"
+       "r",
+       "q",
+       "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "b",
-       "q"
+       "r",
+       "q",
+       "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "W_d1_3",
-      "side": "white",
-      "square": "d2",
-      "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e1_4",
-      "side": "white",
-      "square": "h2",
-      "possibleTypes": [
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 7,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_f1_5",
       "side": "white",
       "square": null,
       "possibleTypes": [
@@ -242,15 +1208,33 @@
       ],
       "promoTypes": [],
       "captured": true,
-      "moveCount": 5,
+      "moveCount": 2,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 7
+      "captureIndex": 1
      },
      {
-      "id": "W_g1_6",
+      "id": "W_e1_4",
       "side": "white",
-      "square": "g3",
+      "square": "b4",
+      "possibleTypes": [
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "white",
+      "square": "f1",
       "possibleTypes": [
        "p",
        "n",
@@ -269,7 +1253,33 @@
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "white",
+      "square": "g1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "b",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "b",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
@@ -306,18 +1316,12 @@
       "possibleTypes": [
        "p",
        "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "b"
       ],
       "baseTypes": [
        "p",
        "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "b"
       ],
       "promoTypes": [],
       "captured": false,
@@ -354,20 +1358,24 @@
      {
       "id": "W_c2_10",
       "side": "white",
-      "square": "c3",
+      "square": "c2",
       "possibleTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q"
       ],
       "baseTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 1,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
@@ -383,3338 +1391,43 @@
       ],
       "promoTypes": [],
       "captured": true,
-      "moveCount": 2,
+      "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 1
+      "captureIndex": 5
      },
      {
       "id": "W_e2_12",
       "side": "white",
-      "square": "e2",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
+      "captured": true,
+      "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 3
      },
      {
       "id": "W_f2_13",
       "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 4
-     },
-     {
-      "id": "W_g2_14",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "W_h2_15",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 8
-     },
-     {
-      "id": "B_a8_0",
-      "side": "black",
-      "square": "d6",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b8_1",
-      "side": "black",
-      "square": "c7",
-      "possibleTypes": [
-       "b",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "b",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c8_2",
-      "side": "black",
-      "square": "c5",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d8_3",
-      "side": "black",
       "square": "d5",
       "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e8_4",
-      "side": "black",
-      "square": "e6",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_f8_5",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 9
-     },
-     {
-      "id": "B_g8_6",
-      "side": "black",
-      "square": "g8",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_h8_7",
-      "side": "black",
-      "square": "f6",
-      "possibleTypes": [
-       "b",
-       "q"
-      ],
-      "baseTypes": [
-       "b",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a7_8",
-      "side": "black",
-      "square": "a6",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b7_9",
-      "side": "black",
-      "square": "b5",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c7_10",
-      "side": "black",
-      "square": "c4",
-      "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d7_11",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
-     },
-     {
-      "id": "B_e7_12",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
        "p"
       ],
       "baseTypes": [
        "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 5
-     },
-     {
-      "id": "B_f7_13",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 6
-     },
-     {
-      "id": "B_g7_14",
-      "side": "black",
-      "square": "f7",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_h7_15",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 3
-     }
-    ],
-    "lastMove": {
-     "side": "black",
-     "pieceId": "B_b8_1",
-     "from": "b8",
-     "to": "c7",
-     "isDoubleStep": false,
-     "crossedSquare": null,
-     "zappedSquares": [],
-     "healedSquares": [
-      "d6"
-     ],
-     "fizzledSquares": []
-    },
-    "captureCounter": 10,
-    "sideToMove": "white"
-   },
-   "evalTables": [
-    {
-     "sig": "white#-#B_a7_8:a6:pbrqk::m:|B_a8_0:d6:pbrqk::m:|B_b7_9:b5:pbrqk::m:|B_b8_1:c7:bqk::m:|B_c7_10:c4:pr::m:|B_c8_2:c5:pbrq::m:|B_d7_11:x:n::m:|B_d8_3:d5:pr::m:|B_e7_12:x:p::m:|B_e8_4:e6:pbrq::m:|B_f7_13:x:b::m:|B_f8_5:x:n::m:|B_g7_14:f7:prq::m:|B_g8_6:g8:pbrqk::f:|B_h7_15:x:p::m:|B_h8_7:f6:bq::m:|W_a1_0:a1:pnbrqk::f:|W_a2_8:a2:pnbrqk::f:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:h6:pbq::m:|W_c2_10:c3:prq::m:|W_d1_3:d2:pnbrqk::m:|W_d2_11:x:b::m:|W_e1_4:h2:qk::m:|W_e2_12:e2:pnbrqk::f:|W_f1_5:x:n::m:|W_f2_13:x:p::m:|W_g1_6:g3:pnbrqk::m:|W_g2_14:x:p::m:|W_h1_7:h1:pnbrqk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "c3>f3": 4.935,
-      "a2>a3": 4.204,
-      "e2>e3": 4.195,
-      "b2>c2": 4.068,
-      "a2>a6": 4.037,
-      "e2>g2": 4.022,
-      "d2>d1": 3.973,
-      "b1>f1": 3.932,
-      "h1>f1": 3.932,
-      "h1>c1": 3.93,
-      "h1>d1": 3.93,
-      "b1>e1": 3.92,
-      "h1>g2": 3.751,
-      "h1>f3": 3.719,
-      "c3>c2": 3.691,
-      "b1>c2": 3.66,
-      "e2>f3": 3.658,
-      "c3>c1": 3.656,
-      "b2>a3": 3.627,
-      "d2>e1": 3.608,
-      "b2>c1": 3.578,
-      "e2>f1": 3.576,
-      "h1>e1": 3.561,
-      "h2>g2": 3.549,
-      "d2>c1": 3.518,
-      "g3>f4": 3.506,
-      "d2>f4": 3.498,
-      "g3>g2": 3.488,
-      "d2>c2": 3.463,
-      "e2>d1": 3.462,
-      "a2>a4": 3.431,
-      "b1>c1": 3.428,
-      "e2>e1": 3.356,
-      "b2>d1": 3.301,
-      "b1>d1": 2.948,
-      "a2>c1": 3.246,
-      "e2>c1": 3.199,
-      "e2>g1": 3.199,
-      "e2>f2": 3.162,
-      "h1>g1": 3.084,
-      "g3>g8": 3.08,
-      "b1>a3": 3.078,
-      "c3>e3": 3.003,
-      "h2>g1": 2.966,
-      "e2>e6": 2.964,
-      "a1>c2": 2.957,
-      "b2>b3": 2.954,
-      "h1>f2": 2.9,
-      "d2>f3": 2.894,
-      "d2>d3": 2.839,
-      "d2>f1": 2.824,
-      "d2>e3": 2.822,
-      "c3>a3": 2.805,
-      "d2>d4": 2.752,
-      "g3>f1": 2.706,
-      "d2>e4": 2.697,
-      "c3>c4": 2.67,
-      "g3>h3": 2.656,
-      "e2>f4": 2.635,
-      "h6>f4": 2.601,
-      "b1>g1": 2.518,
-      "e2>e4": 2.513,
-      "b2>b4": 2.41,
-      "g3>g4": 2.346,
-      "a2>a5": 2.27,
-      "g3>f3": 2.268,
-      "h2>h3": 2.257,
-      "h2>h5": 2.134,
-      "e2>h5": 2.114,
-      "g3>f2": 2.069,
-      "h6>e3": 2.039,
-      "g3>e1": 1.978,
-      "b2>a4": 1.903,
-      "g3>e4": 1.86,
-      "b2>c4": 1.814,
-      "d2>c4": 1.754,
-      "a2>c4": 1.749,
-      "e2>c4": 1.702,
-      "h6>h7": 1.67,
-      "g3>d6": 1.496,
-      "e2>g4": 1.41,
-      "h2>f2": 1.332,
-      "g3>h5": 1.296,
-      "h1>d5": 1.294,
-      "c3>d3": 0.935,
-      "c3>b3": 0.762,
-      "e2>d4": 0.618,
-      "a1>b3": 0.594,
-      "d2>b3": 0.487,
-      "g3>g1": 0.439,
-      "b2>d3": 0.437,
-      "b1>f5": 0.409,
-      "a2>b3": 0.392,
-      "b2>b5": 0.367,
-      "g3>f5": 0.25,
-      "d2>d5": 0.185,
-      "a2>b4": 0.173,
-      "g3>e3": 0.091,
-      "g3>h4": 0.045,
-      "g3>e5": 0.02,
-      "b1>e4": -0.037,
-      "h1>e4": -0.037,
-      "b1>d3": -0.055,
-      "g3>g7": -0.121,
-      "e2>d3": -0.347,
-      "d2>g5": -0.396,
-      "b1>g6": -0.445,
-      "g3>g5": -0.547,
-      "b1>h7": -0.682,
-      "e2>e5": -0.885,
-      "h6>g5": -1.136,
-      "h6>h5": -1.46,
-      "h6>f8": -1.525,
-      "h6>g7": -1.957,
-      "h6>h3": -2.124,
-      "g3>g6": -2.258,
-      "g3>d3": -2.753,
-      "h6>f6": -3.017,
-      "h2>h4": -3.282,
-      "c3>f6": -3.3,
-      "c3>a5": -8.004,
-      "c3>b4": -9.536,
-      "c3>e5": -9.79,
-      "c3>d4": -9.82,
-      "h6>h4": -10.175,
-      "h6>g6": -11.541,
-      "h6>h8": -12.541
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a6:pbrqk::m:|B_a8_0:d6:pbrqk::m:|B_b7_9:a4:pbq::m:|B_b8_1:c7:bqk::m:|B_c7_10:c4:pr::m:|B_c8_2:c5:pbrq::m:|B_d7_11:x:n::m:|B_d8_3:d5:pr::m:|B_e7_12:x:p::m:|B_e8_4:e6:pbrq::m:|B_f7_13:x:b::m:|B_f8_5:x:n::m:|B_g7_14:f7:prq::m:|B_g8_6:g8:pbrqk::f:|B_h7_15:x:p::m:|B_h8_7:f6:bq::m:|W_a1_0:a1:pnbrqk::f:|W_a2_8:x:p::m:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:h6:pbq::m:|W_c2_10:c3:prq::m:|W_d1_3:d2:pnbrqk::m:|W_d2_11:x:b::m:|W_e1_4:h2:qk::m:|W_e2_12:e2:pnbrqk::f:|W_f1_5:x:n::m:|W_f2_13:x:p::m:|W_g1_6:g3:pnbrqk::m:|W_g2_14:x:p::m:|W_h1_7:h1:pnbrqk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "a1>a4": 3.917,
-      "c3>f3": 3.78,
-      "b2>a4": 3.54,
-      "a1>a3": 3.165,
-      "b2>a2": 3.13,
-      "e2>e3": 3.082,
-      "h1>g2": 3.009,
-      "b2>a3": 3.001,
-      "e2>f3": 2.997,
-      "b1>f1": 2.996,
-      "h1>f1": 2.996,
-      "h1>f3": 2.966,
-      "a1>a2": 2.962,
-      "b1>c1": 2.926,
-      "b2>c2": 2.904,
-      "e2>f1": 2.903,
-      "h1>c1": 2.872,
-      "d2>c1": 2.867,
-      "b1>c2": 2.859,
-      "d2>e1": 2.855,
-      "e2>g2": 2.848,
-      "d2>c2": 2.832,
-      "e2>d1": 2.813,
-      "d2>d1": 2.809,
-      "h1>e1": 2.782,
-      "c3>c1": 2.754,
-      "b1>e1": 2.734,
-      "b1>d1": 1.801,
-      "h1>d1": 2.712,
-      "c3>a3": 2.505,
-      "h2>g2": 2.486,
-      "d2>f4": 2.443,
-      "g3>f4": 2.441,
-      "b2>c1": 2.435,
-      "g3>g2": 2.435,
-      "b1>a2": 2.39,
-      "c3>c2": 2.366,
-      "b2>d1": 2.28,
-      "g3>g8": 2.278,
-      "e2>f2": 2.238,
-      "b2>b7": 2.22,
-      "e2>e1": 2.108,
-      "c3>e3": 2.059,
-      "g3>h3": 1.933,
-      "h1>g1": 1.922,
-      "d2>f3": 1.841,
-      "e2>e4": 1.836,
-      "a1>c2": 1.83,
-      "h2>g1": 1.811,
-      "h1>f2": 1.795,
-      "b1>g1": 1.784,
-      "e2>e6": 1.773,
-      "d2>f1": 1.771,
-      "c3>c4": 1.759,
-      "d2>e3": 1.757,
-      "d2>d4": 1.753,
-      "b1>a3": 1.748,
-      "e2>c1": 1.736,
-      "e2>g1": 1.736,
-      "d2>d3": 1.696,
-      "d2>e4": 1.644,
-      "g3>f1": 1.641,
-      "h6>e3": 1.616,
-      "e2>f4": 1.558,
-      "h6>f4": 1.546,
-      "b2>b4": 1.527,
-      "h6>h7": 1.431,
-      "b2>c4": 1.296,
-      "g3>d6": 1.274,
-      "d2>c4": 1.236,
-      "g3>g4": 1.179,
-      "e2>h5": 1.127,
-      "g3>f3": 1.113,
-      "h2>h3": 1.102,
-      "h2>h5": 0.967,
-      "g3>f2": 0.914,
-      "b2>b3": 0.877,
-      "g3>e1": 0.863,
-      "e2>c4": 0.859,
-      "h1>d5": 0.845,
-      "g3>e4": 0.413,
-      "e2>g4": 0.345,
-      "g3>h5": 0.297,
-      "h2>f2": 0.227,
-      "c3>d3": -0.208,
-      "d2>d5": -0.378,
-      "b1>h7": -0.404,
-      "g3>e5": -0.492,
-      "b1>g6": -0.559,
-      "b1>f5": -0.595,
-      "b2>d3": -0.64,
-      "g3>g1": -0.704,
-      "d2>g5": -0.731,
-      "b1>e4": -0.769,
-      "h1>e4": -0.769,
-      "e2>d4": -0.817,
-      "g3>f5": -0.827,
-      "e2>d3": -0.874,
-      "b1>d3": -0.905,
-      "c3>b3": -0.917,
-      "g3>h4": -0.942,
-      "g3>e3": -0.986,
-      "h6>f8": -1.236,
-      "g3>g7": -1.276,
-      "a1>b3": -1.285,
-      "b2>b6": -1.326,
-      "h6>g5": -1.334,
-      "d2>b3": -1.38,
-      "h6>g7": -1.668,
-      "g3>g5": -1.702,
-      "e2>e5": -1.983,
-      "h6>h5": -2.585,
-      "b2>b8": -2.664,
-      "b2>b5": -2.905,
-      "h6>h3": -2.984,
-      "g3>g6": -3.403,
-      "h2>h4": -3.872,
-      "g3>d3": -3.896,
-      "c3>f6": -3.948,
-      "h6>f6": -4.518,
-      "c3>a5": -9.136,
-      "c3>e5": -10.098,
-      "c3>b4": -10.27,
-      "c3>d4": -10.504,
-      "h6>g6": -11.055,
-      "h6>h4": -11.139,
-      "h6>h8": -13.505
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a6:pbrqk::m:|B_a8_0:d6:pbrqk::m:|B_b7_9:a4:pbq::m:|B_b8_1:c7:bqk::m:|B_c7_10:c4:pr::m:|B_c8_2:c5:pbrq::m:|B_d7_11:x:n::m:|B_d8_3:d4:pr::m:|B_e7_12:x:p::m:|B_e8_4:e6:pbrq::m:|B_f7_13:x:b::m:|B_f8_5:x:n::m:|B_g7_14:f7:prq::m:|B_g8_6:g8:pbrqk::f:|B_h7_15:x:p::m:|B_h8_7:f6:bq::m:|W_a1_0:a1:pnbrqk::f:|W_a2_8:x:p::m:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:h6:pbq::m:|W_c2_10:c3:pr::m:|W_d1_3:d2:pnbrqk::m:|W_d2_11:x:b::m:|W_e1_4:h2:pqk::m:|W_e2_12:g2:rq::m:|W_f1_5:x:n::m:|W_f2_13:x:p::m:|W_g1_6:g3:pnbrqk::m:|W_g2_14:x:p::m:|W_h1_7:h1:pnbrqk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "g3>f3": 3.249,
-      "c3>d4": 3.239,
-      "b1>f1": 3.162,
-      "h1>f1": 3.162,
-      "g2>f2": 3.097,
-      "a1>a4": 2.757,
-      "d2>f2": 2.725,
-      "d2>e4": 2.438,
-      "c3>f3": 2.419,
-      "g3>e4": 2.346,
-      "d2>c4": 2.3,
-      "g3>g8": 2.216,
-      "c3>a3": 2.059,
-      "b2>c4": 1.98,
-      "c3>c1": 1.966,
-      "g3>h5": 1.689,
-      "b2>a3": 1.616,
-      "d2>f4": 1.513,
-      "b2>b7": 1.507,
-      "c3>c2": 1.453,
-      "g2>e2": 1.409,
-      "b2>a4": 1.32,
-      "h2>h3": 1.297,
-      "d2>d3": 1.286,
-      "b2>b4": 1.269,
-      "d2>e2": 1.229,
-      "g3>g4": 1.177,
-      "b1>c2": 1.12,
-      "b2>a2": 1.104,
-      "a1>a2": 1.097,
-      "d2>c1": 1.092,
-      "b1>a2": 1.061,
-      "h2>h4": 1.055,
-      "d2>e1": 1.002,
-      "b2>b3": 1.002,
-      "d2>g5": 0.992,
-      "b2>c1": 0.99,
-      "b1>c1": 0.959,
-      "h6>h7": 0.919,
-      "g3>d6": 0.909,
-      "d2>c2": 0.902,
-      "g3>f2": 0.867,
-      "g3>g7": 0.843,
-      "a1>a3": 0.831,
-      "c3>c4": 0.829,
-      "b1>e4": 0.82,
-      "h1>e1": 0.727,
-      "b2>c2": 0.727,
-      "b1>e1": 0.691,
-      "d2>d1": 0.645,
-      "h1>c1": 0.625,
-      "d2>f3": 0.586,
-      "b2>d1": 0.585,
-      "d2>f1": 0.54,
-      "h6>f4": 0.467,
-      "g3>e1": 0.438,
-      "g2>f3": 0.43,
-      "b1>a3": 0.241,
-      "h1>f2": 0.234,
-      "g2>g1": 0.232,
-      "a1>c2": 0.198,
-      "h1>g1": 0.147,
-      "g3>f1": 0.066,
-      "g3>e2": 0.051,
-      "g3>h3": 0.05,
-      "h6>g5": 0.05,
-      "h1>d1": -0.162,
-      "g3>g5": -0.188,
-      "b1>g1": -0.259,
-      "g2>f1": -0.266,
-      "b1>d1": -0.361,
-      "d2>d4": -0.654,
-      "g3>f4": -0.704,
-      "g3>f5": -0.788,
-      "h6>g7": -0.789,
-      "h2>g1": -0.82,
-      "b1>h7": -0.826,
-      "g3>e5": -0.899,
-      "b2>d3": -0.948,
-      "b1>g6": -0.981,
-      "b2>b6": -0.992,
-      "b1>f5": -0.993,
-      "c3>e3": -1.035,
-      "b1>d3": -1.159,
-      "a1>b3": -1.208,
-      "g3>h4": -1.275,
-      "d2>b3": -1.291,
-      "g2>b7": -1.328,
-      "g2>h3": -1.506,
-      "h2>h5": -1.561,
-      "d2>e3": -1.605,
-      "h6>f8": -1.658,
-      "g2>a8": -1.794,
-      "g3>g6": -2.182,
-      "b2>b8": -2.22,
-      "c3>d3": -2.391,
-      "h6>e3": -2.421,
-      "g2>e4": -2.481,
-      "h6>h5": -2.571,
-      "g3>d3": -2.638,
-      "h6>h3": -2.708,
-      "b2>b5": -2.819,
-      "g3>e3": -2.886,
-      "c3>b3": -3.248,
-      "h6>f6": -4.136,
-      "g2>c6": -5.082,
-      "h6>h4": -5.538,
-      "g2>d5": -6.467,
-      "h6>h8": -7.765,
-      "h6>g6": -7.797
-     }
-    }
-   ],
-   "game": 0,
-   "white": "ernest-smyslov",
-   "black": "tigran-turing",
-   "mirrored": false
-  },
-  {
-   "startPly": 45,
-   "parPlies": 3,
-   "endsInMate": false,
-   "mistake": {
-    "from": "b7",
-    "to": "b8",
-    "evalBefore": -0.24,
-    "evalAfter": 3.86,
-    "swing": 4.1
-   },
-   "spread": {
-    "best": 3.8589999999999955,
-    "median": -0.59,
-    "medianFrac": 0,
-    "numChoices": 112
-   },
-   "parEvals": [
-    3.86,
-    3.61,
-    3.34
-   ],
-   "trickiness": 16.78,
-   "trickMin": 8.37,
-   "trickAvg": 12.84,
-   "themes": [
-    "quiet",
-    "recohere"
-   ],
-   "steps": [
-    {
-     "ply": 45,
-     "bestMove": {
-      "type": "move",
-      "from": "h1",
-      "to": "c6",
-      "enPassant": false
-     },
-     "parEval": 3.86,
-     "spread": {
-      "best": 3.8589999999999955,
-      "median": -0.59,
-      "medianFrac": 0,
-      "numChoices": 112
-     },
-     "numChoices": 112,
-     "shallowRank": 45,
-     "possDelta": 2,
-     "themes": [
-      "quiet",
-      "recohere"
-     ],
-     "trickiness": 16.78
-    },
-    {
-     "ply": 47,
-     "bestMove": {
-      "type": "move",
-      "from": "d2",
-      "to": "c2",
-      "enPassant": false
-     },
-     "parEval": 3.61,
-     "spread": {
-      "best": 3.612999999999997,
-      "median": -4.39,
-      "medianFrac": 0,
-      "numChoices": 118
-     },
-     "numChoices": 118,
-     "shallowRank": 1,
-     "possDelta": -1,
-     "themes": [
-      "quiet",
-      "recohere"
-     ],
-     "trickiness": 8.37
-    },
-    {
-     "ply": 49,
-     "bestMove": {
-      "type": "move",
-      "from": "b1",
-      "to": "a2",
-      "enPassant": false
-     },
-     "parEval": 3.34,
-     "spread": {
-      "best": 3.3449999999999958,
-      "median": -0.29,
-      "medianFrac": 0,
-      "numChoices": 91
-     },
-     "numChoices": 91,
-     "shallowRank": 6,
-     "possDelta": 2,
-     "themes": [
-      "quiet"
-     ],
-     "trickiness": 13.37
-    }
-   ],
-   "blackReplies": [
-    {
-     "type": "move",
-     "from": "f5",
-     "to": "f4"
-    },
-    {
-     "type": "move",
-     "from": "f4",
-     "to": "c7"
-    }
-   ],
-   "start": {
-    "pieces": [
-     {
-      "id": "W_a1_0",
-      "side": "black",
-      "square": "a8",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_b1_1",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 12
-     },
-     {
-      "id": "W_c1_2",
-      "side": "black",
-      "square": "f5",
-      "possibleTypes": [
-       "p",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 8,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_d1_3",
-      "side": "black",
-      "square": "d8",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e1_4",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "r"
-      ],
-      "baseTypes": [
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "W_f1_5",
-      "side": "black",
-      "square": "f8",
-      "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_g1_6",
-      "side": "black",
-      "square": "g8",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_h1_7",
-      "side": "black",
-      "square": "h8",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_a2_8",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 4
-     },
-     {
-      "id": "W_b2_9",
-      "side": "black",
-      "square": "b8",
-      "possibleTypes": [
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c2_10",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 6
-     },
-     {
-      "id": "W_d2_11",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 9
-     },
-     {
-      "id": "W_e2_12",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
-     },
-     {
-      "id": "W_f2_13",
-      "side": "black",
-      "square": "f7",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_g2_14",
-      "side": "black",
-      "square": "g7",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
       ],
       "promoTypes": [],
       "captured": false,
       "moveCount": 3,
       "wasPromoted": false,
       "castled": false
-     },
-     {
-      "id": "W_h2_15",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 7
-     },
-     {
-      "id": "B_a8_0",
-      "side": "white",
-      "square": "a3",
-      "possibleTypes": [
-       "p",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b8_1",
-      "side": "white",
-      "square": "b1",
-      "possibleTypes": [
-       "p",
-       "b",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c8_2",
-      "side": "white",
-      "square": "c1",
-      "possibleTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d8_3",
-      "side": "white",
-      "square": "d1",
-      "possibleTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e8_4",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "r"
-      ],
-      "baseTypes": [
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 3
-     },
-     {
-      "id": "B_f8_5",
-      "side": "white",
-      "square": "f4",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_g8_6",
-      "side": "white",
-      "square": "g1",
-      "possibleTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_h8_7",
-      "side": "white",
-      "square": "h1",
-      "possibleTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a7_8",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 5
-     },
-     {
-      "id": "B_b7_9",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 1
-     },
-     {
-      "id": "B_c7_10",
-      "side": "white",
-      "square": "d2",
-      "possibleTypes": [
-       "r"
-      ],
-      "baseTypes": [
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d7_11",
-      "side": "white",
-      "square": "d7",
-      "possibleTypes": [
-       "p",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e7_12",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 10
-     },
-     {
-      "id": "B_f7_13",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 11
-     },
-     {
-      "id": "B_g7_14",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 8
-     },
-     {
-      "id": "B_h7_15",
-      "side": "white",
-      "square": "h3",
-      "possibleTypes": [
-       "p",
-       "b"
-      ],
-      "baseTypes": [
-       "p",
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     }
-    ],
-    "lastMove": {
-     "side": "black",
-     "pieceId": "W_b2_9",
-     "from": "b7",
-     "to": "b8",
-     "isDoubleStep": false,
-     "crossedSquare": null,
-     "zappedSquares": [
-      "b1"
-     ],
-     "healedSquares": [
-      "d8"
-     ],
-     "fizzledSquares": []
-    },
-    "captureCounter": 13,
-    "sideToMove": "white"
-   },
-   "evalTables": [
-    {
-     "sig": "white#-#B_a7_8:x:n::m:|B_a8_0:a3:pq::m:|B_b7_9:x:b::m:|B_b8_1:b1:pbq::f:|B_c7_10:d2:r::m:|B_c8_2:c1:pbqk::f:|B_d7_11:d7:pq::m:|B_d8_3:d1:pbqk::f:|B_e7_12:x:p::m:|B_e8_4:x:r::m:|B_f7_13:x:p::m:|B_f8_5:f4:n::m:|B_g7_14:x:p::m:|B_g8_6:g1:pbqk::f:|B_h7_15:h3:pb::m:|B_h8_7:h1:pbqk::f:|W_a1_0:a8:prqk::f:|W_a2_8:x:p::m:|W_b1_1:x:b::m:|W_b2_9:b8:rqk::m:|W_c1_2:f5:pq::m:|W_c2_10:x:n::m:|W_d1_3:d8:prq::f:|W_d2_11:x:p::m:|W_e1_4:x:r::m:|W_e2_12:x:b::m:|W_f1_5:f8:pr::f:|W_f2_13:f7:prqk::f:|W_g1_6:g8:prqk::f:|W_g2_14:g7:n::m:|W_h1_7:h8:prqk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "b1>b8": 9.894,
-      "h1>g2": 7.263,
-      "h1>c6": 7.091,
-      "a3>a4": 6.773,
-      "h1>d5": 6.726,
-      "h3>g2": 6.535,
-      "d2>d3": 6.47,
-      "h1>f3": 6.451,
-      "d1>f3": 6.451,
-      "g1>a7": 6.213,
-      "b1>b2": 6.2,
-      "d2>a2": 6.172,
-      "h1>h2": 6.119,
-      "f4>g2": 6.012,
-      "c1>c3": 6.008,
-      "f4>e2": 5.966,
-      "g1>c5": 5.965,
-      "g1>h2": 5.955,
-      "d2>g2": 5.862,
-      "g1>g3": 5.838,
-      "d2>d5": 5.79,
-      "d2>d6": 5.704,
-      "b1>a2": 5.607,
-      "d2>b2": 5.544,
-      "g1>b6": 5.534,
-      "d2>d4": 5.508,
-      "c1>b2": 5.457,
-      "g1>g2": 5.433,
-      "d2>h2": 5.427,
-      "d1>c2": 5.421,
-      "b1>c2": 5.409,
-      "b1>b3": 5.387,
-      "g1>f2": 5.343,
-      "h3>h4": 5.34,
-      "g1>f1": 5.33,
-      "d2>e2": 5.324,
-      "d2>f2": 5.324,
-      "d2>c2": 5.324,
-      "d1>e2": 5.295,
-      "f4>d5": 5.258,
-      "f4>d3": 5.151,
-      "g1>d4": 5.109,
-      "d1>a4": 5.01,
-      "g1>e3": 4.99,
-      "c1>c2": 4.928,
-      "b1>d3": 4.7,
-      "a3>d3": 4.626,
-      "d1>b3": 4.612,
-      "h3>f1": 4.565,
-      "d1>e1": 4.513,
-      "a3>g3": 4.395,
-      "a3>c3": 4.395,
-      "a3>d6": 4.325,
-      "f4>g6": 4.176,
-      "h1>e4": 3.709,
-      "a3>a7": 3.653,
-      "f4>h5": 3.583,
-      "a3>f3": 3.205,
-      "b1>f5": 3.177,
-      "a3>c5": 3.021,
-      "h3>f5": 3.013,
-      "c1>c6": 2.976,
-      "b1>a1": 2.941,
-      "f4>e6": 2.909,
-      "a3>e3": 2.835,
-      "g1>g5": 2.713,
-      "h1>a8": 2.682,
-      "b1>e4": 2.505,
-      "g1>e1": 2.469,
-      "d1>f1": 2.433,
-      "h3>g4": 2.384,
-      "d7>d6": 1.9,
-      "d1>g4": 1.866,
-      "d1>h5": 1.655,
-      "h1>b7": 1.419,
-      "d7>c6": 1.357,
-      "a3>a2": 0.703,
-      "d7>a7": 0.356,
-      "c1>c4": 0.322,
-      "a3>b2": 0.266,
-      "c1>c5": 0.24,
-      "b1>b4": 0.157,
-      "a3>a5": 0.094,
-      "a3>b3": 0.093,
-      "b1>b6": 0.091,
-      "b1>b5": 0.001,
-      "a3>b4": -0.271,
-      "d7>d5": -0.315,
-      "g1>g7": -0.766,
-      "d7>a4": -0.984,
-      "d7>d3": -1.012,
-      "d7>d4": -1.16,
-      "a3>a6": -1.167,
-      "a3>a1": -1.221,
-      "a3>a8": -1.889,
-      "d7>b5": -2.226,
-      "a3>f8": -2.829,
-      "d7>d8": -2.862,
-      "c1>c8": -3.41,
-      "b1>b7": -3.801,
-      "d7>c8": -3.801,
-      "g1>g6": -3.82,
-      "a3>e7": -4.167,
-      "g1>g4": -4.347,
-      "d7>f7": -4.602,
-      "d7>f5": -4.97,
-      "c1>c7": -5.426,
-      "d7>b7": -5.544,
-      "d7>c7": -5.926,
-      "d7>e7": -6.116,
-      "d7>e8": -6.172,
-      "d7>e6": -6.531
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:x:n::m:|B_a8_0:a3:pq::m:|B_b7_9:x:b::m:|B_b8_1:b1:pbq::f:|B_c7_10:d2:r::m:|B_c8_2:c1:pbqk::f:|B_d7_11:d7:pbq::m:|B_d8_3:d1:pbqk::f:|B_e7_12:x:p::m:|B_e8_4:x:r::m:|B_f7_13:x:p::m:|B_f8_5:x:n::m:|B_g7_14:x:p::m:|B_g8_6:g1:pbqk::f:|B_h7_15:h3:pb::m:|B_h8_7:c6:bq::m:|W_a1_0:a8:pr::f:|W_a2_8:x:p::m:|W_b1_1:x:b::m:|W_b2_9:b8:prk::m:|W_c1_2:f4:q::m:|W_c2_10:x:n::m:|W_d1_3:d8:pr::f:|W_d2_11:x:p::m:|W_e1_4:x:r::m:|W_e2_12:x:b::m:|W_f1_5:f8:pr::f:|W_f2_13:f7:prk::f:|W_g1_6:g8:prk::f:|W_g2_14:g7:n::m:|W_h1_7:h8:prk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "d2>d6": 7.605,
-      "d2>c2": 6.779,
-      "d2>d3": 5.954,
-      "a3>a4": 5.831,
-      "g1>g3": 5.814,
-      "b1>b3": 5.812,
-      "b1>b2": 5.81,
-      "c6>d5": 5.804,
-      "d2>a2": 5.77,
-      "d2>f2": 5.739,
-      "d2>g2": 5.727,
-      "d2>e2": 5.703,
-      "c6>g2": 5.49,
-      "d2>b2": 5.43,
-      "c6>e4": 5.422,
-      "h3>h4": 5.417,
-      "c1>c3": 5.333,
-      "c6>h1": 5.305,
-      "c6>b5": 5.274,
-      "c6>a4": 5.203,
-      "g1>h2": 5.031,
-      "c1>c2": 4.846,
-      "c6>c2": 4.782,
-      "g1>g2": 4.277,
-      "c1>b2": 4.265,
-      "g1>h1": 4.235,
-      "c6>c3": 4.191,
-      "d2>d4": 4.183,
-      "d1>e2": 4.163,
-      "d2>d5": 4.159,
-      "d1>c2": 4.151,
-      "d2>h2": 4.099,
-      "d1>e1": 4.05,
-      "c6>a6": 3.867,
-      "c6>b6": 3.415,
-      "c6>c8": 3.165,
-      "c6>f3": 3.107,
-      "c6>a8": 2.987,
-      "b1>c2": 2.911,
-      "g1>e3": 2.774,
-      "c6>b7": 2.604,
-      "a3>c3": 2.581,
-      "g1>c5": 2.525,
-      "c6>d6": 2.517,
-      "a3>a8": 2.395,
-      "b1>d3": 2.364,
-      "d1>g4": 2.304,
-      "c6>c5": 2.212,
-      "b1>e4": 2.192,
-      "b1>a2": 2.147,
-      "h3>f1": 2.104,
-      "h3>g2": 1.991,
-      "h3>f5": 1.934,
-      "a3>a5": 1.805,
-      "d1>b3": 1.755,
-      "a3>b2": 1.725,
-      "g1>d4": 1.672,
-      "a3>a1": 1.639,
-      "g1>f2": 1.604,
-      "a3>a2": 1.562,
-      "a3>d3": 1.553,
-      "g1>b6": 1.535,
-      "b1>a1": 1.406,
-      "d1>a4": 1.302,
-      "b1>g6": 1.299,
-      "h3>g4": 1.262,
-      "a3>b3": 1.153,
-      "b1>b5": 1.096,
-      "a3>a6": 1.095,
-      "a3>f8": 0.962,
-      "a3>d6": 0.949,
-      "d7>g4": 0.846,
-      "a3>c5": 0.843,
-      "c6>c4": 0.525,
-      "h3>e6": 0.52,
-      "g1>g4": 0.453,
-      "g1>e1": 0.448,
-      "b1>b4": 0.391,
-      "d7>d8": 0.098,
-      "d1>f3": 0.018,
-      "b1>h7": -0.041,
-      "d1>h5": -0.096,
-      "c1>c5": -0.225,
-      "d7>c8": -0.236,
-      "d7>d3": -0.271,
-      "g1>a7": -0.508,
-      "b1>b6": -0.826,
-      "d7>d5": -1.08,
-      "b1>f5": -1.302,
-      "a3>g3": -1.475,
-      "d7>d6": -1.85,
-      "g1>g5": -1.961,
-      "d7>e8": -2.263,
-      "a3>f3": -2.359,
-      "d7>e6": -2.381,
-      "a3>e3": -2.384,
-      "c1>c4": -2.389,
-      "d7>d4": -2.591,
-      "c6>g6": -2.984,
-      "d1>f1": -3.384,
-      "d7>f5": -3.403,
-      "c6>h6": -3.575,
-      "c6>f6": -3.639,
-      "c6>e6": -3.991,
-      "g1>g7": -4.038,
-      "g1>f1": -4.975,
-      "a3>a7": -5.117,
-      "c6>c7": -5.195,
-      "a3>e7": -5.32,
-      "d7>f7": -5.686,
-      "b1>b8": -5.754,
-      "a3>b4": -6.173,
-      "d7>a7": -6.846,
-      "b1>b7": -7.35,
-      "g1>g6": -7.699,
-      "d7>e7": -8.209,
-      "d7>c7": -9.137,
-      "d7>b7": -9.183
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:x:n::m:|B_a8_0:a3:pq::m:|B_b7_9:x:b::m:|B_b8_1:b1:pbq::f:|B_c7_10:c2:r::m:|B_c8_2:c1:pbqk::f:|B_d7_11:d7:pb::m:|B_d8_3:d1:pbqk::f:|B_e7_12:x:p::m:|B_e8_4:x:r::m:|B_f7_13:x:p::m:|B_f8_5:x:n::m:|B_g7_14:x:p::m:|B_g8_6:g1:pbqk::f:|B_h7_15:h3:pb::m:|B_h8_7:c6:pb::m:|W_a1_0:a8:pr::f:|W_a2_8:x:p::m:|W_b1_1:x:b::m:|W_b2_9:b8:prk::m:|W_c1_2:c7:q::m:|W_c2_10:x:n::m:|W_d1_3:d8:pr::f:|W_d2_11:x:p::m:|W_e1_4:x:r::m:|W_e2_12:x:b::m:|W_f1_5:f8:pr::f:|W_f2_13:f7:prk::f:|W_g1_6:g8:prk::f:|W_g2_14:g7:n::m:|W_h1_7:h8:prk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "c2>c3": 7.057,
-      "b1>b2": 6.815,
-      "c1>b2": 6.791,
-      "b1>a2": 6.756,
-      "c2>c4": 6.534,
-      "c2>a2": 6.479,
-      "c2>e2": 6.424,
-      "a3>a4": 6.323,
-      "a3>a2": 6.322,
-      "b1>b3": 6.304,
-      "g1>c5": 6.286,
-      "c2>d2": 6.261,
-      "g1>f2": 6.254,
-      "b1>a1": 6.222,
-      "h3>h4": 6.221,
-      "c2>g2": 6.207,
-      "d1>d2": 6.164,
-      "a3>d3": 6.104,
-      "d1>f3": 5.991,
-      "g1>e3": 5.979,
-      "d1>d3": 5.933,
-      "g1>h2": 5.93,
-      "c2>b2": 5.898,
-      "c1>e3": 5.865,
-      "c2>c5": 5.849,
-      "c1>d2": 5.825,
-      "d1>e2": 5.806,
-      "a3>a1": 5.707,
-      "a3>a6": 5.695,
-      "d1>g4": 5.635,
-      "c2>h2": 5.623,
-      "a3>c3": 5.562,
-      "g1>g3": 5.544,
-      "g1>d4": 5.52,
-      "d1>e1": 5.301,
-      "c2>f2": 5.11,
-      "g1>h1": 4.885,
-      "g1>g2": 4.619,
-      "c1>h6": 4.608,
-      "h3>g2": 4.097,
-      "d1>d5": 3.969,
-      "c1>g5": 3.452,
-      "a3>a8": 3.415,
-      "a3>c5": 3.361,
-      "b1>b4": 3.322,
-      "b1>b5": 3.256,
-      "a3>e3": 3.152,
-      "g1>e1": 3.128,
-      "a3>b2": 3.116,
-      "h3>g4": 3.025,
-      "g1>g5": 3.002,
-      "h3>f1": 2.978,
-      "d1>d4": 2.594,
-      "c6>a8": 2.548,
-      "g1>g4": 2.388,
-      "c6>d5": 2.288,
-      "c6>a4": 2.21,
-      "a3>f3": 2.17,
-      "c6>b5": 1.956,
-      "c1>f4": 1.929,
-      "c6>e4": 1.72,
-      "c6>f3": 1.639,
-      "c6>g2": 1.548,
-      "c6>h1": 1.548,
-      "d1>d6": 1.407,
-      "d7>g4": 1.335,
-      "a3>g3": 1.231,
-      "a3>d6": 0.992,
-      "g1>b6": 0.94,
-      "h3>e6": 0.771,
-      "b1>b8": 0.751,
-      "a3>b3": 0.542,
-      "h3>f5": 0.427,
-      "d1>h5": 0.42,
-      "g1>a7": 0.337,
-      "a3>b4": 0.262,
-      "g1>f1": 0.244,
-      "c6>b7": 0.049,
-      "b1>b6": -0.253,
-      "a3>f8": -0.279,
-      "d7>e8": -0.351,
-      "d1>f1": -0.68,
-      "d7>e6": -1.363,
-      "d7>c8": -1.464,
-      "d7>f5": -1.709,
-      "g1>g7": -2.102,
-      "b1>b7": -2.308,
-      "a3>a7": -2.309,
-      "a3>e7": -2.524,
-      "a3>a5": -3.783,
-      "g1>g6": -4.888
-     }
-    }
-   ],
-   "game": 4,
-   "white": "max-alekhine",
-   "black": "ernest-smyslov",
-   "mirrored": true
-  },
-  {
-   "startPly": 58,
-   "parPlies": 3,
-   "endsInMate": false,
-   "mistake": {
-    "from": "c6",
-    "to": "f6",
-    "evalBefore": 0.92,
-    "evalAfter": 6.52,
-    "swing": 5.6
-   },
-   "spread": {
-    "best": 6.515000000000003,
-    "median": -0.1,
-    "medianFrac": 0,
-    "numChoices": 117
-   },
-   "parEvals": [
-    6.52,
-    9.03,
-    8.92
-   ],
-   "trickiness": 4.83,
-   "trickMin": 4.64,
-   "trickAvg": 8.39,
-   "themes": [
-    "promo",
-    "quiet",
-    "recohere"
-   ],
-   "steps": [
-    {
-     "ply": 58,
-     "bestMove": {
-      "type": "move",
-      "from": "e4",
-      "to": "f6",
-      "enPassant": false
-     },
-     "parEval": 6.52,
-     "spread": {
-      "best": 6.515000000000003,
-      "median": -0.1,
-      "medianFrac": 0,
-      "numChoices": 117
-     },
-     "numChoices": 117,
-     "shallowRank": 0,
-     "possDelta": 12,
-     "themes": [],
-     "trickiness": 4.83
-    },
-    {
-     "ply": 60,
-     "bestMove": {
-      "type": "move",
-      "from": "g6",
-      "to": "f7",
-      "enPassant": false
-     },
-     "parEval": 9.03,
-     "spread": {
-      "best": 9.028,
-      "median": 3.61,
-      "medianFrac": 0.399,
-      "numChoices": 89
-     },
-     "numChoices": 89,
-     "shallowRank": 0,
-     "possDelta": 8,
-     "themes": [
-      "promo"
-     ],
-     "trickiness": 4.64
-    },
-    {
-     "ply": 62,
-     "bestMove": {
-      "type": "move",
-      "from": "b2",
-      "to": "b4",
-      "enPassant": false
-     },
-     "parEval": 8.92,
-     "spread": {
-      "best": 8.922999999999998,
-      "median": 6.15,
-      "medianFrac": 0.689,
-      "numChoices": 90
-     },
-     "numChoices": 90,
-     "shallowRank": 8,
-     "possDelta": 0,
-     "themes": [
-      "quiet"
-     ],
-     "trickiness": 15.7
-    }
-   ],
-   "blackReplies": [
-    {
-     "type": "move",
-     "from": "e8",
-     "to": "f7"
-    },
-    {
-     "type": "move",
-     "from": "g8",
-     "to": "f7"
-    }
-   ],
-   "start": {
-    "pieces": [
-     {
-      "id": "W_a1_0",
-      "side": "white",
-      "square": "a1",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_b1_1",
-      "side": "white",
-      "square": "b1",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c1_2",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 4
-     },
-     {
-      "id": "W_d1_3",
-      "side": "white",
-      "square": "b2",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e1_4",
-      "side": "white",
-      "square": "e4",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_f1_5",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "W_g1_6",
-      "side": "white",
-      "square": "g2",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_h1_7",
-      "side": "white",
-      "square": "h1",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_a2_8",
-      "side": "white",
-      "square": "a3",
-      "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_b2_9",
-      "side": "white",
-      "square": "f2",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 6,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c2_10",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 1
-     },
-     {
-      "id": "W_d2_11",
-      "side": "white",
-      "square": "d4",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e2_12",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 8
-     },
-     {
-      "id": "W_f2_13",
-      "side": "white",
-      "square": "f5",
-      "possibleTypes": [
-       "p",
-       "n"
-      ],
-      "baseTypes": [
-       "p",
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_g2_14",
-      "side": "white",
-      "square": "f4",
-      "possibleTypes": [
-       "r"
-      ],
-      "baseTypes": [
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_h2_15",
-      "side": "white",
-      "square": "g6",
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a8_0",
-      "side": "black",
-      "square": "a8",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b8_1",
-      "side": "black",
-      "square": "b8",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c8_2",
-      "side": "black",
-      "square": "f6",
-      "possibleTypes": [
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d8_3",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 4,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 5
-     },
-     {
-      "id": "B_e8_4",
-      "side": "black",
-      "square": "d7",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_f8_5",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 7
-     },
-     {
-      "id": "B_g8_6",
-      "side": "black",
-      "square": "g8",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_h8_7",
-      "side": "black",
-      "square": "h8",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a7_8",
-      "side": "black",
-      "square": "a4",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b7_9",
-      "side": "black",
-      "square": "b7",
-      "possibleTypes": [
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c7_10",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
-     },
-     {
-      "id": "B_d7_11",
-      "side": "black",
-      "square": "b5",
-      "possibleTypes": [
-       "p",
-       "b",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e7_12",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 3
-     },
-     {
-      "id": "B_f7_13",
-      "side": "black",
-      "square": "e8",
-      "possibleTypes": [
-       "b",
-       "q"
-      ],
-      "baseTypes": [
-       "b",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 7,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_g7_14",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 6
-     },
-     {
-      "id": "B_h7_15",
-      "side": "black",
-      "square": "h6",
-      "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     }
-    ],
-    "lastMove": {
-     "side": "black",
-     "pieceId": "B_c8_2",
-     "from": "c6",
-     "to": "f6",
-     "isDoubleStep": false,
-     "crossedSquare": null,
-     "zappedSquares": [
-      "f5"
-     ],
-     "healedSquares": [],
-     "fizzledSquares": []
-    },
-    "captureCounter": 9,
-    "sideToMove": "white"
-   },
-   "evalTables": [
-    {
-     "sig": "white#-#B_a7_8:a4:prq::m:|B_a8_0:a8:pbrqk::f:|B_b7_9:b7:rq::m:|B_b8_1:b8:pbrq::f:|B_c7_10:x:n::m:|B_c8_2:f6:rq::m:|B_d7_11:b5:pbr::m:|B_d8_3:x:n::m:|B_e7_12:x:b::m:|B_e8_4:d7:pbrq::m:|B_f7_13:e8:bq::m:|B_f8_5:x:p::m:|B_g7_14:x:p::m:|B_g8_6:g8:pbrq::f:|B_h7_15:h6:pr::m:|B_h8_7:h8:pbrqk::f:|W_a1_0:a1:pnrqk::f:|W_a2_8:a3:pr::m:|W_b1_1:b1:pnrqk::f:|W_b2_9:f2:prq::m:|W_c1_2:x:b::m:|W_c2_10:x:b::m:|W_d1_3:b2:pnr::m:|W_d2_11:d4:pnrq::m:|W_e1_4:e4:pnrq::m:|W_e2_12:x:n::m:|W_f1_5:x:p::m:|W_f2_13:f5:pn::m:|W_g1_6:g2:prq::m:|W_g2_14:f4:r::m:|W_h1_7:h1:pnrqk::f:|W_h2_15:g6:p::m:",
-     "evals": {
-      "e4>f6": 8.53,
-      "d4>f6": 7.835,
-      "e4>e8": 6.223,
-      "h1>h6": 5.042,
-      "f2>e3": 4.614,
-      "d4>e3": 4.3,
-      "b1>e1": 4.223,
-      "e4>e5": 3.979,
-      "f2>e1": 3.922,
-      "f2>e2": 3.853,
-      "g2>g3": 3.815,
-      "h1>e1": 3.798,
-      "b2>b3": 3.63,
-      "f4>f3": 3.616,
-      "f2>f1": 3.61,
-      "e4>e7": 3.587,
-      "e4>c5": 3.44,
-      "h1>h4": 3.383,
-      "f4>g4": 3.354,
-      "b2>b4": 3.345,
-      "g2>g4": 3.34,
-      "b1>c2": 3.334,
-      "f4>h4": 3.313,
-      "d4>d5": 3.308,
-      "h1>h2": 3.308,
-      "f2>f3": 3.306,
-      "g2>h2": 3.298,
-      "f2>g3": 3.297,
-      "b2>d3": 3.269,
-      "g2>g1": 3.232,
-      "f2>c2": 3.227,
-      "g2>f3": 3.218,
-      "f2>h4": 3.208,
-      "f2>d2": 3.203,
-      "b2>a4": 3.181,
-      "a1>a2": 3.173,
-      "h1>g1": 3.129,
-      "b1>c1": 3.128,
-      "e4>d6": 3.073,
-      "f5>d6": 3.046,
-      "d4>d3": 2.988,
-      "d4>b4": 2.967,
-      "d4>d2": 2.955,
-      "b2>e2": 2.941,
-      "d4>e5": 2.94,
-      "h1>h5": 2.919,
-      "h1>h3": 2.895,
-      "e4>e3": 2.81,
-      "g2>h3": 2.792,
-      "h1>c1": 2.713,
-      "b1>g1": 2.701,
-      "e4>e1": 2.65,
-      "e4>f3": 2.582,
-      "f2>g1": 2.57,
-      "b2>b5": 2.562,
-      "d4>d1": 2.562,
-      "b1>d1": 1.768,
-      "h1>d1": 2.535,
-      "e4>d3": 2.434,
-      "d4>c5": 2.424,
-      "e4>c2": 2.313,
-      "e4>e2": 2.299,
-      "a3>a4": 2.275,
-      "b1>d3": 2.269,
-      "d4>e2": 2.195,
-      "d4>c3": 2.182,
-      "a3>e3": 2.181,
-      "a3>f3": 2.175,
-      "g2>f1": 2.168,
-      "a3>h3": 2.152,
-      "b1>a2": 2.124,
-      "b1>c3": 2.122,
-      "a3>c3": 2.12,
-      "b1>f1": 2.038,
-      "e4>c3": 2.035,
-      "h1>f1": 2.014,
-      "b2>d1": 1.997,
-      "d4>b5": 1.958,
-      "h1>g3": 1.932,
-      "e4>g3": 1.845,
-      "a1>c2": 1.793,
-      "d4>c2": 1.718,
-      "b2>c2": 1.686,
-      "b1>d2": 1.679,
-      "d4>f3": 1.639,
-      "b2>d2": 1.635,
-      "e4>d2": 1.592,
-      "f5>h6": 1.572,
-      "b2>c4": 1.505,
-      "e4>d5": 1.482,
-      "a3>g3": 1.416,
-      "d4>e6": 1.393,
-      "a3>a2": 1.377,
-      "b2>a2": 1.296,
-      "e4>g5": 1.231,
-      "a3>d3": 1.183,
-      "g6>g7": 1.132,
-      "a1>b3": 0.546,
-      "f5>e7": 0.374,
-      "f5>e3": 0.274,
-      "f5>h4": 0.261,
-      "a3>b3": 0.131,
-      "f5>g3": 0.024,
-      "g2>g5": -0.135,
-      "d4>a4": -0.163,
-      "d4>b3": -0.355,
-      "d4>d6": -0.371,
-      "d4>d7": -0.379,
-      "d4>c6": -0.75,
-      "e4>b7": -1.288,
-      "f5>g7": -1.518,
-      "d4>c4": -2.007,
-      "e4>e6": -2.255,
-      "d4>a7": -5.438,
-      "e4>c6": -6.685,
-      "d4>b6": -6.818
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a4:prq::m:|B_a8_0:a8:pbrqk::f:|B_b7_9:b7:rq::m:|B_b8_1:b8:pbrq::f:|B_c7_10:x:n::m:|B_c8_2:x:r::m:|B_d7_11:b5:pbr::m:|B_d8_3:x:n::m:|B_e7_12:x:b::m:|B_e8_4:d7:pbr::m:|B_f7_13:f7:bq::m:|B_f8_5:x:p::m:|B_g7_14:x:p::m:|B_g8_6:g8:pbrq::f:|B_h7_15:h6:pr::m:|B_h8_7:h8:pbrqk::f:|W_a1_0:a1:prqk::f:|W_a2_8:a3:pr::m:|W_b1_1:b1:prqk::f:|W_b2_9:f2:prq::m:|W_c1_2:x:b::m:|W_c2_10:x:b::m:|W_d1_3:b2:pr::m:|W_d2_11:d4:prq::m:|W_e1_4:f6:n::m:|W_e2_12:x:n::m:|W_f1_5:x:p::m:|W_f2_13:f5:p::m:|W_g1_6:g2:prq::m:|W_g2_14:f4:r::m:|W_h1_7:h1:prqk::f:|W_h2_15:g6:p::m:",
-     "evals": {
-      "g6>f7": 10.286,
-      "h1>h6": 9.3,
-      "g2>g3": 8.842,
-      "g2>g4": 8.72,
-      "h1>h4": 8.684,
-      "b2>b4": 8.642,
-      "b1>c2": 8.631,
-      "d4>a4": 8.63,
-      "f4>f3": 8.62,
-      "d4>b4": 8.61,
-      "f4>g4": 8.553,
-      "f4>h4": 8.508,
-      "f4>e4": 8.499,
-      "g2>e4": 8.475,
-      "d4>e4": 8.444,
-      "b1>c1": 8.38,
-      "f2>h4": 8.359,
-      "f6>e4": 8.352,
-      "b1>e4": 8.34,
-      "f2>c2": 8.34,
-      "f2>g3": 8.22,
-      "d4>d3": 8.209,
-      "f6>d5": 8.116,
-      "f6>h5": 8.076,
-      "g2>f3": 7.967,
-      "b2>b3": 7.912,
-      "f6>g4": 7.649,
-      "f2>f3": 7.629,
-      "f2>f1": 7.597,
-      "d4>e3": 7.581,
-      "h1>h2": 7.574,
-      "g2>h2": 7.517,
-      "f2>d2": 7.514,
-      "f2>e2": 7.501,
-      "g2>g1": 7.498,
-      "h1>g1": 7.448,
-      "h1>c1": 7.369,
-      "d4>d2": 7.368,
-      "h1>h5": 7.344,
-      "h1>h3": 7.296,
-      "d4>d1": 7.278,
-      "d4>d6": 7.21,
-      "a3>a4": 7.207,
-      "a1>a2": 7.192,
-      "b1>e1": 7.138,
-      "h1>e1": 7.125,
-      "d4>d5": 7.122,
-      "b1>g1": 7.102,
-      "g2>h3": 7.048,
-      "f2>e3": 6.949,
-      "f2>e1": 6.938,
-      "d4>e5": 6.907,
-      "d4>c5": 6.893,
-      "d4>c3": 6.872,
-      "f6>h7": 6.85,
-      "a3>h3": 6.816,
-      "f2>g1": 6.777,
-      "b1>d3": 6.753,
-      "b1>d1": 5.343,
-      "h1>d1": 6.658,
-      "b2>b5": 6.528,
-      "b1>f1": 6.152,
-      "h1>f1": 6.128,
-      "g2>b7": 6.125,
-      "f6>g8": 5.938,
-      "f6>d7": 5.827,
-      "b2>c2": 5.809,
-      "a3>c3": 5.787,
-      "b2>d2": 5.785,
-      "a3>e3": 5.775,
-      "g2>f1": 5.741,
-      "a3>f3": 5.739,
-      "g6>g7": 5.403,
-      "a3>a2": 5.234,
-      "a3>g3": 5.171,
-      "b2>e2": 5.025,
-      "b2>a2": 4.914,
-      "a3>d3": 4.837,
-      "d4>d7": 4.631,
-      "f6>e8": 4.416,
-      "g2>g5": 3.349,
-      "d4>c4": 3.153,
-      "a3>b3": 2.089,
-      "g2>d5": 1.574,
-      "b1>a2": 0.214,
-      "d4>b6": -0.503,
-      "g2>c6": -1.004,
-      "d4>a7": -1.228
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a4:prq::m:|B_a8_0:a8:prqk::f:|B_b7_9:b7:rq::m:|B_b8_1:b8:prq::f:|B_c7_10:x:n::m:|B_c8_2:x:r::m:|B_d7_11:b5:pr::m:|B_d8_3:x:n::m:|B_e7_12:x:b::m:|B_e8_4:d7:pr::m:|B_f7_13:x:b::m:|B_f8_5:x:p::m:|B_g7_14:x:p::m:|B_g8_6:f7:p::m:|B_h7_15:h6:pr::m:|B_h8_7:h8:prqk::f:|W_a1_0:a1:prqk::f:|W_a2_8:a3:pr::m:|W_b1_1:b1:prqk::f:|W_b2_9:f2:prq::m:|W_c1_2:x:b::m:|W_c2_10:x:b::m:|W_d1_3:b2:pr::m:|W_d2_11:d4:prq::m:|W_e1_4:f6:n::m:|W_e2_12:x:n::m:|W_f1_5:x:p::m:|W_f2_13:f5:p::m:|W_g1_6:g2:prq::m:|W_g2_14:f4:r::m:|W_h1_7:h1:prqk::f:|W_h2_15:x:p::m:",
-     "evals": {
-      "f6>d7": 11.339,
-      "h1>h6": 10.867,
-      "b2>b3": 10.706,
-      "g2>g3": 10.698,
-      "f6>d5": 10.542,
-      "d4>b4": 10.512,
-      "f2>f1": 10.505,
-      "b1>a2": 10.42,
-      "f6>h5": 10.413,
-      "h1>h4": 10.396,
-      "f4>h4": 10.229,
-      "f6>e8": 10.178,
-      "g2>h2": 10.174,
-      "d4>d5": 10.1,
-      "f4>f3": 10.066,
-      "f6>g4": 10.045,
-      "f2>h4": 10.013,
-      "f2>e2": 9.986,
-      "d4>a4": 9.971,
-      "f4>e4": 9.939,
-      "g2>g4": 9.938,
-      "d4>e5": 9.936,
-      "d4>d3": 9.923,
-      "d4>d6": 9.888,
-      "d4>d7": 9.876,
-      "f2>f3": 9.845,
-      "f6>e4": 9.844,
-      "a1>a2": 9.79,
-      "h1>h2": 9.79,
-      "g2>b7": 9.725,
-      "b2>b4": 9.718,
-      "b1>c1": 9.7,
-      "f4>g4": 9.683,
-      "h1>g1": 9.676,
-      "f2>e3": 9.663,
-      "b1>e1": 9.621,
-      "f2>g3": 9.616,
-      "h1>e1": 9.609,
-      "h1>h5": 9.543,
-      "h1>h3": 9.512,
-      "b1>c2": 9.434,
-      "a3>h3": 9.424,
-      "f2>c2": 9.321,
-      "f2>d2": 9.297,
-      "f6>g8": 9.243,
-      "b2>e2": 9.242,
-      "d4>d2": 9.189,
-      "a3>e3": 9.161,
-      "d4>e4": 9.149,
-      "g2>g1": 9.127,
-      "d4>d1": 9.099,
-      "h1>c1": 8.885,
-      "b1>d1": 8.031,
-      "b1>f1": 8.885,
-      "b1>g1": 8.885,
-      "h1>f1": 8.849,
-      "h1>d1": 8.849,
-      "g2>h3": 8.826,
-      "f2>e1": 8.747,
-      "g2>f1": 8.641,
-      "a3>a2": 8.609,
-      "b1>d3": 8.586,
-      "f2>g1": 8.563,
-      "b2>a2": 8.54,
-      "b1>e4": 8.527,
-      "b2>c2": 8.509,
-      "g2>g8": 8.493,
-      "d4>c5": 8.488,
-      "b2>d2": 8.485,
-      "d4>e3": 8.474,
-      "a3>f3": 8.464,
-      "a3>d3": 8.463,
-      "a3>g3": 8.429,
-      "g2>e4": 8.408,
-      "d4>c3": 8.352,
-      "a3>c3": 8.17,
-      "g2>f3": 7.912,
-      "d4>c4": 7.295,
-      "f6>h7": 6.541,
-      "a3>a4": 6.149,
-      "g2>d5": 6.039,
-      "b2>b5": 5.47,
-      "g2>g6": 5.265,
-      "a3>b3": 4.807,
-      "g2>g7": 4.166,
-      "g2>g5": 4.05,
-      "d4>b6": 1.151,
-      "g2>c6": -0.512,
-      "d4>a7": -0.78
-     }
-    }
-   ],
-   "game": 5,
-   "white": "ernest-smyslov",
-   "black": "vera-botvinnik",
-   "mirrored": false
-  },
-  {
-   "startPly": 14,
-   "parPlies": 3,
-   "endsInMate": false,
-   "mistake": {
-    "from": "f7",
-    "to": "f6",
-    "evalBefore": 0.07,
-    "evalAfter": 2.31,
-    "swing": 2.24
-   },
-   "spread": {
-    "best": 2.3099999999999996,
-    "median": -3.66,
-    "medianFrac": 0,
-    "numChoices": 97
-   },
-   "parEvals": [
-    2.31,
-    2.6,
-    2.3
-   ],
-   "trickiness": 15.86,
-   "trickMin": 4.76,
-   "trickAvg": 9.29,
-   "themes": [
-    "quiet",
-    "recohere"
-   ],
-   "steps": [
-    {
-     "ply": 14,
-     "bestMove": {
-      "type": "move",
-      "from": "d2",
-      "to": "c3",
-      "enPassant": false
-     },
-     "parEval": 2.31,
-     "spread": {
-      "best": 2.3099999999999996,
-      "median": -3.66,
-      "medianFrac": 0,
-      "numChoices": 97
-     },
-     "numChoices": 97,
-     "shallowRank": 19,
-     "possDelta": 3,
-     "themes": [
-      "quiet"
-     ],
-     "trickiness": 15.86
-    },
-    {
-     "ply": 16,
-     "bestMove": {
-      "type": "move",
-      "from": "c5",
-      "to": "d6",
-      "enPassant": false
-     },
-     "parEval": 2.6,
-     "spread": {
-      "best": 2.598,
-      "median": -3.66,
-      "medianFrac": 0,
-      "numChoices": 88
-     },
-     "numChoices": 88,
-     "shallowRank": 0,
-     "possDelta": 6,
-     "themes": [],
-     "trickiness": 4.76
-    },
-    {
-     "ply": 18,
-     "bestMove": {
-      "type": "move",
-      "from": "d1",
-      "to": "d2",
-      "enPassant": false
-     },
-     "parEval": 2.3,
-     "spread": {
-      "best": 2.296000000000002,
-      "median": -3.59,
-      "medianFrac": 0,
-      "numChoices": 84
-     },
-     "numChoices": 84,
-     "shallowRank": 0,
-     "possDelta": -1,
-     "themes": [
-      "quiet",
-      "recohere"
-     ],
-     "trickiness": 7.24
-    }
-   ],
-   "blackReplies": [
-    {
-     "type": "move",
-     "from": "d7",
-     "to": "d6"
-    },
-    {
-     "type": "move",
-     "from": "c7",
-     "to": "d6"
-    }
-   ],
-   "start": {
-    "pieces": [
-     {
-      "id": "W_a1_0",
-      "side": "white",
-      "square": "b3",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_b1_1",
-      "side": "white",
-      "square": "b1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c1_2",
-      "side": "white",
-      "square": "c5",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_d1_3",
-      "side": "white",
-      "square": "d1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e1_4",
-      "side": "white",
-      "square": "e1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_f1_5",
-      "side": "white",
-      "square": "f1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_g1_6",
-      "side": "white",
-      "square": "g1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_h1_7",
-      "side": "white",
-      "square": "h1",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_a2_8",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 5
-     },
-     {
-      "id": "W_b2_9",
-      "side": "white",
-      "square": "b2",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c2_10",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "r"
-      ],
-      "baseTypes": [
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 3
-     },
-     {
-      "id": "W_d2_11",
-      "side": "white",
-      "square": "d2",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e2_12",
-      "side": "white",
-      "square": "e2",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_f2_13",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 1
      },
      {
       "id": "W_g2_14",
@@ -3722,12 +1435,16 @@
       "square": "g2",
       "possibleTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q",
        "k"
@@ -3744,12 +1461,16 @@
       "square": "h2",
       "possibleTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
+       "b",
        "r",
        "q",
        "k"
@@ -3766,12 +1487,14 @@
       "square": "a8",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -3785,19 +1508,26 @@
      {
       "id": "B_b8_1",
       "side": "black",
-      "square": null,
+      "square": "b8",
       "possibleTypes": [
-       "r"
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
       ],
       "baseTypes": [
-       "r"
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
       ],
       "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
+      "captured": false,
+      "moveCount": 0,
       "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 6
+      "castled": false
      },
      {
       "id": "B_c8_2",
@@ -3805,12 +1535,14 @@
       "square": "c8",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -3827,12 +1559,14 @@
       "square": "d8",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -3846,22 +1580,24 @@
      {
       "id": "B_e8_4",
       "side": "black",
-      "square": "e7",
+      "square": "e8",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 1,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
@@ -3880,29 +1616,24 @@
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 4
+      "captureIndex": 6
      },
      {
       "id": "B_g8_6",
       "side": "black",
-      "square": "g8",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
+      "captured": true,
+      "moveCount": 2,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 4
      },
      {
       "id": "B_h8_7",
@@ -3910,12 +1641,14 @@
       "square": "h8",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -3929,12 +1662,16 @@
      {
       "id": "B_a7_8",
       "side": "black",
-      "square": "c6",
+      "square": "a5",
       "possibleTypes": [
-       "n"
+       "p",
+       "r",
+       "q"
       ],
       "baseTypes": [
-       "n"
+       "p",
+       "r",
+       "q"
       ],
       "promoTypes": [],
       "captured": false,
@@ -3945,19 +1682,26 @@
      {
       "id": "B_b7_9",
       "side": "black",
-      "square": null,
+      "square": "b7",
       "possibleTypes": [
-       "n"
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
       ],
       "baseTypes": [
-       "n"
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
       ],
       "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
+      "captured": false,
+      "moveCount": 0,
       "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
+      "castled": false
      },
      {
       "id": "B_c7_10",
@@ -3965,15 +1709,15 @@
       "square": "c7",
       "possibleTypes": [
        "p",
+       "n",
        "r",
-       "q",
-       "k"
+       "q"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
-       "q",
-       "k"
+       "q"
       ],
       "promoTypes": [],
       "captured": false,
@@ -3984,27 +1728,39 @@
      {
       "id": "B_d7_11",
       "side": "black",
-      "square": "d7",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
+       "p"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
+      "captured": true,
+      "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 7
      },
      {
       "id": "B_e7_12",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_f7_13",
       "side": "black",
       "square": null,
       "possibleTypes": [
@@ -4018,27 +1774,7 @@
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "B_f7_13",
-      "side": "black",
-      "square": "f6",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
+      "captureIndex": 0
      },
      {
       "id": "B_g7_14",
@@ -4046,12 +1782,14 @@
       "square": "g7",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -4068,12 +1806,14 @@
       "square": "h7",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q",
        "k"
@@ -4087,419 +1827,494 @@
     ],
     "lastMove": {
      "side": "black",
-     "pieceId": "B_f7_13",
-     "from": "f7",
-     "to": "f6",
-     "isDoubleStep": false,
-     "crossedSquare": null,
+     "pieceId": "B_a7_8",
+     "from": "a7",
+     "to": "a5",
+     "isDoubleStep": true,
+     "crossedSquare": "a6",
      "zappedSquares": [],
      "healedSquares": [],
-     "fizzledSquares": []
+     "fizzledSquares": [
+      "b4"
+     ]
     },
-    "captureCounter": 7,
+    "captureCounter": 8,
     "sideToMove": "white"
    },
    "evalTables": [
     {
-     "sig": "white#-#B_a7_8:c6:n::m:|B_a8_0:a8:prqk::f:|B_b7_9:x:n::m:|B_b8_1:x:r::m:|B_c7_10:c7:prqk::f:|B_c8_2:c8:prqk::f:|B_d7_11:d7:prqk::f:|B_d8_3:d8:prqk::f:|B_e7_12:x:b::m:|B_e8_4:e7:prqk::m:|B_f7_13:f6:prq::m:|B_f8_5:x:b::m:|B_g7_14:g7:prqk::f:|B_g8_6:g8:prqk::f:|B_h7_15:h7:prqk::f:|B_h8_7:h8:prqk::f:|W_a1_0:b3:n::m:|W_a2_8:x:b::m:|W_b1_1:b1:prqk::f:|W_b2_9:b2:prq::f:|W_c1_2:c5:prq::m:|W_c2_10:x:r::m:|W_d1_3:d1:prqk::f:|W_d2_11:d2:prqk::f:|W_e1_4:e1:prqk::f:|W_e2_12:e2:n::m:|W_f1_5:f1:prqk::f:|W_f2_13:x:b::m:|W_g1_6:g1:prq::f:|W_g2_14:g2:prqk::f:|W_h1_7:h1:prqk::f:|W_h2_15:h2:prqk::f:",
+     "sig": "white#a6#B_a7_8:a5:prq::m:|B_a8_0:a8:pnrqk::f:|B_b7_9:b7:pnrqk::f:|B_b8_1:b8:pnrqk::f:|B_c7_10:c7:pnrq::f:|B_c8_2:c8:pnrqk::f:|B_d7_11:x:p::m:|B_d8_3:d8:pnrqk::f:|B_e7_12:x:n::m:|B_e8_4:e8:pnrqk::f:|B_f7_13:x:b::m:|B_f8_5:x:b::m:|B_g7_14:g7:pnrqk::f:|B_g8_6:x:p::m:|B_h7_15:h7:pnrqk::f:|B_h8_7:h8:pnrqk::f:|W_a1_0:a1:pnbrqk::f:|W_a2_8:a2:pnb::f:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:c1:pnbrqk::f:|W_c2_10:c2:pnbrq::f:|W_d1_3:x:n::m:|W_d2_11:x:b::m:|W_e1_4:b4:bq::m:|W_e2_12:x:p::m:|W_f1_5:f1:pnbrqk::f:|W_f2_13:d5:p::m:|W_g1_6:g1:pnbrqk::f:|W_g2_14:g2:pnbrqk::f:|W_h1_7:h1:pnbrqk::f:|W_h2_15:h2:pnbrqk::f:",
      "evals": {
-      "d2>d4": 4.347,
-      "c5>b5": 3.822,
-      "h2>h4": 3.441,
-      "g2>g4": 3.401,
-      "h2>h3": 3.401,
-      "g2>g3": 3.391,
-      "d2>c3": 3.386,
-      "d2>d3": 3.386,
-      "f1>f3": 3.343,
-      "f1>f2": 3.306,
-      "d1>c1": 3.249,
-      "d2>c2": 3.247,
-      "b1>c1": 3.247,
-      "e2>c3": 3.227,
-      "f1>f4": 3.22,
-      "e2>g3": 3.211,
-      "e2>d4": 3.2,
-      "b3>d4": 3.2,
-      "b3>a1": 3.176,
-      "b3>c1": 3.176,
-      "e2>c1": 3.164,
-      "e2>f4": 3.139,
-      "b2>a2": 3.138,
-      "d2>c1": 3.11,
-      "b2>c2": 3.105,
-      "g2>f2": 3.089,
-      "b1>a1": 2.988,
-      "c5>c4": 2.792,
-      "d1>c2": 2.65,
-      "b1>c2": 2.65,
-      "b3>a5": 2.61,
-      "c5>c3": 2.531,
-      "c5>c2": 2.508,
-      "c5>c1": 2.461,
-      "b2>c3": 2.2,
-      "b2>c1": 1.986,
-      "b1>d1": 0.737,
-      "f1>f5": 0.143,
-      "c5>c6": -0.104,
-      "c5>f5": -0.317,
-      "c5>a5": -0.38,
-      "g1>e3": -0.725,
-      "h2>f4": -0.828,
-      "d2>f4": -0.863,
-      "e1>g3": -0.923,
-      "g1>f2": -0.96,
-      "d2>d6": -0.987,
-      "h2>g3": -0.996,
-      "h2>h5": -0.999,
-      "e1>f2": -1.05,
-      "c5>e3": -1.335,
-      "c5>h5": -1.345,
-      "g2>g7": -1.376,
-      "d2>d7": -1.426,
-      "h2>h7": -1.455,
-      "f1>f6": -1.504,
-      "c5>f2": -1.582,
-      "g2>f3": -1.608,
-      "b2>a1": -1.741,
-      "c5>a3": -2.26,
-      "d2>d5": -2.283,
-      "c5>d5": -2.606,
-      "b2>a3": -2.657,
-      "d2>e3": -2.701,
-      "g2>g5": -2.737,
-      "g2>g6": -2.773,
-      "h2>h6": -2.803,
-      "b1>a2": -2.861,
-      "c5>e5": -3.138,
-      "c5>g5": -3.186,
-      "g2>c6": -3.511,
-      "g1>d4": -3.659,
-      "b2>d4": -3.706,
-      "b1>f5": -3.815,
-      "c5>d4": -4.305,
-      "g2>e4": -4.313,
-      "e1>h4": -4.393,
-      "d2>b4": -4.437,
-      "d2>a5": -4.763,
-      "b1>e4": -4.821,
-      "h2>d6": -4.946,
-      "g2>h3": -5.021,
-      "h2>c7": -5.311,
-      "b2>f6": -5.329,
-      "b1>h7": -5.393,
-      "c5>e7": -5.735,
-      "b1>d3": -6.069,
-      "g2>d5": -6.241,
-      "b2>e5": -6.557,
-      "h2>e5": -6.612,
-      "b1>g6": -6.696,
-      "d2>g5": -6.809,
-      "d2>h6": -6.812,
-      "c5>d6": -7.112,
-      "c5>a7": -7.155,
-      "c5>b4": -7.288,
-      "c5>b6": -7.337
+      "b4>d2": 6.251,
+      "b4>c3": 6.23,
+      "b4>e1": 6.132,
+      "b4>a3": 6.03,
+      "a2>a3": 5.912,
+      "c2>c3": 5.673,
+      "f1>f4": 5.647,
+      "b2>c3": 5.579,
+      "b4>c5": 5.549,
+      "c1>d2": 5.536,
+      "b2>a3": 5.489,
+      "b4>a5": 5.111,
+      "b4>d4": 4.897,
+      "c1>d3": 4.738,
+      "b2>d3": 4.691,
+      "h2>h7": 4.538,
+      "b4>f4": 4.116,
+      "d5>d6": 3.661,
+      "c2>c4": 2.972,
+      "b2>b3": 2.938,
+      "a2>a4": 2.883,
+      "g2>g4": 2.805,
+      "h2>h4": 2.781,
+      "b4>e7": 2.732,
+      "b4>d6": 2.688,
+      "b4>f8": 2.653,
+      "h2>h3": 2.653,
+      "g2>g3": 2.641,
+      "f1>f3": 2.597,
+      "f1>f2": 2.572,
+      "c2>e2": 2.549,
+      "c1>d1": 2.327,
+      "f1>e1": 2.537,
+      "c2>d2": 2.525,
+      "g2>f3": 2.482,
+      "c1>e1": 2.471,
+      "g2>e2": 2.471,
+      "g2>f2": 2.447,
+      "g2>d2": 2.447,
+      "c2>f2": 2.435,
+      "f1>d1": 2.435,
+      "g2>g5": 2.406,
+      "g1>f2": 2.404,
+      "c2>c7": 2.309,
+      "g2>g7": 2.006,
+      "a2>c3": 1.833,
+      "b2>g7": 1.809,
+      "c2>c5": 1.783,
+      "g1>d4": 1.64,
+      "b2>d4": 1.64,
+      "c2>d4": 1.617,
+      "c2>d3": 1.612,
+      "f1>f5": 1.606,
+      "c2>e3": 1.582,
+      "f1>d3": 1.533,
+      "f1>e3": 1.527,
+      "c2>b3": 1.524,
+      "h1>g3": 1.516,
+      "c2>a3": 1.512,
+      "g2>e3": 1.504,
+      "h2>g4": 1.504,
+      "c1>e2": 1.504,
+      "c2>e1": 1.5,
+      "c2>h7": 1.499,
+      "g1>e2": 1.492,
+      "f1>g3": 1.492,
+      "h1>f2": 1.48,
+      "g2>f4": 1.48,
+      "f1>d2": 1.48,
+      "g1>h3": 1.445,
+      "c2>d1": 1.428,
+      "b2>c4": 1.427,
+      "a1>b3": 1.427,
+      "c1>b3": 1.427,
+      "g2>e1": 1.422,
+      "g2>h4": 1.41,
+      "b1>d2": 1.325,
+      "h2>h5": 1.282,
+      "b2>a4": 1.243,
+      "c2>c6": 1.235,
+      "b2>d1": 1.231,
+      "h2>g3": 1.212,
+      "f1>f8": 1.176,
+      "b4>e4": 1.09,
+      "f1>e2": 1.074,
+      "g2>h3": 1.066,
+      "c1>f4": 1.046,
+      "h2>f4": 1.034,
+      "b1>c3": 0.947,
+      "b4>b3": 0.873,
+      "b1>a3": 0.821,
+      "h2>c7": 0.809,
+      "g1>f3": 0.653,
+      "h2>f3": 0.653,
+      "b4>h4": 0.645,
+      "f1>f7": 0.622,
+      "b4>g4": 0.614,
+      "c2>e4": 0.594,
+      "f1>c4": 0.563,
+      "h2>h6": 0.546,
+      "g2>e4": 0.516,
+      "h2>e5": 0.515,
+      "b2>e5": 0.48,
+      "b2>f6": 0.468,
+      "g2>g6": 0.441,
+      "g1>b6": 0.425,
+      "g1>a7": 0.413,
+      "c2>f5": 0.397,
+      "c2>g6": 0.397,
+      "c2>a4": 0.362,
+      "f1>f6": 0.35,
+      "g1>c5": 0.323,
+      "g1>e3": 0.323,
+      "c1>e3": 0.323,
+      "f1>a6": 0.228,
+      "f1>b5": 0.228,
+      "c1>h6": 0.205,
+      "c1>g5": 0.205,
+      "b4>b5": -0.092,
+      "b4>c4": -0.15,
+      "b4>a4": -0.28,
+      "b4>b7": -0.537,
+      "h2>d6": -0.598,
+      "b4>b6": -3.08,
+      "a2>c4": -4.127,
+      "a2>b3": -4.329
      }
     },
     {
-     "sig": "white#-#B_a7_8:c6:n::m:|B_a8_0:a8:prqk::f:|B_b7_9:x:n::m:|B_b8_1:x:r::m:|B_c7_10:c7:prqk::f:|B_c8_2:c8:prqk::f:|B_d7_11:d6:prqk::m:|B_d8_3:d8:prqk::f:|B_e7_12:x:b::m:|B_e8_4:e7:prqk::m:|B_f7_13:f6:pr::m:|B_f8_5:x:b::m:|B_g7_14:g7:prqk::f:|B_g8_6:g8:prqk::f:|B_h7_15:h7:prqk::f:|B_h8_7:h8:prqk::f:|W_a1_0:b3:n::m:|W_a2_8:x:b::m:|W_b1_1:b1:prqk::f:|W_b2_9:b2:prq::f:|W_c1_2:c5:pr::m:|W_c2_10:x:r::m:|W_d1_3:d1:prqk::f:|W_d2_11:c3:qk::m:|W_e1_4:e1:prqk::f:|W_e2_12:e2:n::m:|W_f1_5:f1:prqk::f:|W_f2_13:x:b::m:|W_g1_6:g1:prq::f:|W_g2_14:g2:prqk::f:|W_h1_7:h1:prqk::f:|W_h2_15:h2:prqk::f:",
+     "sig": "white#-#B_a7_8:b4:pq::m:|B_a8_0:a8:pnrqk::f:|B_b7_9:b7:pnrqk::f:|B_b8_1:b8:pnrqk::f:|B_c7_10:c7:pnrq::f:|B_c8_2:c8:pnrqk::f:|B_d7_11:x:p::m:|B_d8_3:d8:pnrqk::f:|B_e7_12:x:n::m:|B_e8_4:e8:pnrqk::f:|B_f7_13:x:b::m:|B_f8_5:x:b::m:|B_g7_14:g7:pnrqk::f:|B_g8_6:x:p::m:|B_h7_15:h7:pnrqk::f:|B_h8_7:h8:pnrqk::f:|W_a1_0:a1:pnbrqk::f:|W_a2_8:a3:p::m:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:c1:pnbrqk::f:|W_c2_10:c2:pnbrq::f:|W_d1_3:x:n::m:|W_d2_11:x:b::m:|W_e1_4:x:p::m:|W_e2_12:x:p::m:|W_f1_5:f1:pnbrqk::f:|W_f2_13:d5:p::m:|W_g1_6:g1:pnbrqk::f:|W_g2_14:g2:pnbrqk::f:|W_h1_7:h1:pnbrqk::f:|W_h2_15:h2:pnbrqk::f:",
      "evals": {
-      "d1>d2": 2.993,
-      "c5>d6": 2.957,
-      "b3>d4": 2.951,
-      "e2>d4": 2.936,
-      "g2>g4": 2.93,
-      "h2>h4": 2.894,
-      "d1>d3": 2.884,
-      "g2>g3": 2.868,
-      "b2>c2": 2.868,
-      "f1>f3": 2.86,
-      "h2>h3": 2.856,
-      "b1>c1": 2.856,
-      "d1>c1": 2.844,
-      "f1>f2": 2.823,
-      "b2>a2": 2.801,
-      "b1>a1": 2.8,
-      "f1>f4": 2.792,
-      "g2>f2": 2.779,
-      "e2>f4": 2.775,
-      "b2>d2": 2.698,
-      "e2>g3": 2.692,
-      "e2>c1": 2.681,
-      "f1>f5": 2.647,
-      "c3>c2": 1.904,
-      "b3>d2": 1.819,
-      "c5>c4": 1.746,
-      "c3>c1": 1.737,
-      "c3>f3": 1.7,
-      "c5>f5": 1.584,
-      "b3>a1": 1.426,
-      "b3>c1": 1.426,
-      "b3>a5": 0.895,
-      "e1>f2": 0.894,
-      "g2>f3": 0.89,
-      "c3>c4": 0.867,
-      "c5>c6": 0.798,
-      "g2>g7": 0.747,
-      "h2>h7": 0.723,
-      "c5>b5": 0.587,
-      "d1>d6": 0.508,
-      "b1>c2": 0.124,
-      "d1>c2": 0.124,
-      "d1>d4": 0.039,
-      "d1>d5": -0.448,
-      "h2>h6": -0.905,
-      "h2>h5": -0.917,
-      "g2>g6": -1.012,
-      "c3>g3": -1.019,
-      "g2>g5": -1.06,
-      "c5>h5": -1.425,
-      "f1>f6": -1.486,
-      "c3>h3": -1.612,
-      "c5>a5": -1.906,
-      "c3>d2": -1.935,
-      "c5>d5": -2.499,
-      "g2>d5": -2.634,
-      "b2>c1": -2.991,
-      "b1>e4": -3.138,
-      "g2>e4": -3.185,
-      "c3>e3": -3.286,
-      "c5>g5": -3.293,
-      "c3>d4": -3.328,
-      "c5>e5": -3.423,
-      "e1>g3": -3.779,
-      "e1>d2": -4.671,
-      "c3>a5": -4.785,
-      "b2>a1": -4.877,
-      "c3>b4": -4.998,
-      "b1>f5": -5.117,
-      "g2>c6": -5.32,
-      "c3>f6": -5.413,
-      "g1>e3": -5.766,
-      "c3>d3": -5.943,
-      "c3>e5": -6.862,
-      "h2>d6": -7.136,
-      "b1>h7": -7.137,
-      "g1>d4": -7.29,
-      "h2>g3": -7.422,
-      "b1>a2": -7.55,
-      "e1>h4": -8.246,
-      "b1>g6": -8.594,
-      "b2>a3": -10.031,
-      "g2>h3": -10.988,
-      "h2>f4": -998,
-      "b1>d1": -998,
-      "g1>f2": -998,
-      "b1>d3": -998,
-      "h2>e5": -998
+      "a3>b4": 6.559,
+      "b2>b4": 5.732,
+      "h2>h7": 5.469,
+      "a3>a4": 5.345,
+      "c2>b4": 5.25,
+      "c2>h7": 4.895,
+      "c2>c4": 4.669,
+      "g2>g4": 4.49,
+      "h2>h4": 4.466,
+      "b2>b3": 4.461,
+      "b2>a2": 4.454,
+      "d5>d6": 4.434,
+      "h2>g3": 4.43,
+      "h2>h3": 4.428,
+      "a1>a2": 4.423,
+      "g2>g3": 4.416,
+      "g2>f3": 4.406,
+      "c2>d3": 4.406,
+      "f1>f3": 4.384,
+      "g2>h3": 4.36,
+      "c2>b3": 4.359,
+      "f1>f2": 4.359,
+      "g1>d4": 4.351,
+      "f1>d3": 4.351,
+      "c2>e2": 4.336,
+      "f1>e1": 4.324,
+      "c1>d1": 4.024,
+      "c1>f4": 4.316,
+      "c2>d2": 4.312,
+      "b1>a2": 4.312,
+      "c1>e3": 4.309,
+      "g1>e3": 4.309,
+      "h2>f4": 4.304,
+      "f1>c4": 4.292,
+      "f1>e2": 4.281,
+      "b2>d4": 4.271,
+      "c1>d2": 4.269,
+      "g1>f2": 4.269,
+      "c1>e1": 4.246,
+      "g2>e2": 4.246,
+      "c2>c3": 4.235,
+      "c2>f2": 4.222,
+      "g2>d2": 4.222,
+      "g2>f2": 4.222,
+      "f1>d1": 4.222,
+      "f1>f4": 4.214,
+      "g1>c5": 4.198,
+      "c2>d1": 4.187,
+      "c2>f5": 4.186,
+      "c1>g5": 4.038,
+      "c2>e4": 3.772,
+      "g2>e4": 3.694,
+      "c2>e3": 3.573,
+      "h2>e5": 3.535,
+      "f1>e3": 3.53,
+      "c2>d4": 3.494,
+      "g2>e3": 3.483,
+      "g2>f4": 3.459,
+      "b2>e5": 3.41,
+      "c1>d3": 3.404,
+      "c1>e2": 3.381,
+      "g1>e2": 3.381,
+      "c2>e1": 3.377,
+      "a1>b3": 3.369,
+      "c1>b3": 3.369,
+      "h1>g3": 3.369,
+      "h2>g4": 3.369,
+      "b1>d2": 3.357,
+      "f1>d2": 3.357,
+      "h1>f2": 3.357,
+      "f1>g3": 3.357,
+      "b2>c4": 3.338,
+      "b2>d3": 3.324,
+      "g1>h3": 3.31,
+      "g2>e1": 3.287,
+      "g2>h4": 3.275,
+      "b2>d1": 3.254,
+      "c2>a4": 3.105,
+      "h2>c7": 3.098,
+      "c2>c5": 3.096,
+      "b2>g7": 3.087,
+      "f1>f5": 3.006,
+      "g2>g5": 2.96,
+      "b2>a4": 2.753,
+      "g1>f3": 2.53,
+      "h2>f3": 2.518,
+      "c1>a2": 2.501,
+      "f1>b5": 2.315,
+      "c2>c7": 2.153,
+      "g2>g7": 2.13,
+      "c2>g6": 1.78,
+      "g1>b6": 1.738,
+      "c1>h6": 1.729,
+      "g1>a7": 1.714,
+      "b2>f6": 1.666,
+      "f1>a6": 1.657,
+      "h2>d6": 1.647,
+      "b1>c3": 1.596,
+      "b2>c3": 1.527,
+      "h2>h5": 0.902,
+      "c2>c6": 0.831,
+      "f1>f8": 0.69,
+      "f1>f7": 0.636,
+      "h2>h6": 0.615,
+      "g2>g6": 0.522,
+      "f1>f6": 0.419
      }
     },
     {
-     "sig": "white#-#B_a7_8:c6:n::m:|B_a8_0:a8:prqk::f:|B_b7_9:x:n::m:|B_b8_1:x:r::m:|B_c7_10:d6:pq::m:|B_c8_2:c8:prqk::f:|B_d7_11:x:p::m:|B_d8_3:d8:prqk::f:|B_e7_12:x:b::m:|B_e8_4:e7:prq::m:|B_f7_13:f6:pr::m:|B_f8_5:x:b::m:|B_g7_14:g7:prqk::f:|B_g8_6:g8:prqk::f:|B_h7_15:h7:prqk::f:|B_h8_7:h8:prqk::f:|W_a1_0:b3:n::m:|W_a2_8:x:b::m:|W_b1_1:b1:prqk::f:|W_b2_9:b2:prq::f:|W_c1_2:x:p::m:|W_c2_10:x:r::m:|W_d1_3:d1:prqk::f:|W_d2_11:c3:qk::m:|W_e1_4:e1:prqk::f:|W_e2_12:e2:n::m:|W_f1_5:f1:prqk::f:|W_f2_13:x:b::m:|W_g1_6:g1:prq::f:|W_g2_14:g2:prqk::f:|W_h1_7:h1:prqk::f:|W_h2_15:h2:prqk::f:",
+     "sig": "white#-#B_a7_8:x:p::m:|B_a8_0:a8:pnrqk::f:|B_b7_9:b7:pnrqk::f:|B_b8_1:b8:pnrqk::f:|B_c7_10:c7:pnrq::f:|B_c8_2:c8:pnrqk::f:|B_d7_11:x:p::m:|B_d8_3:d8:pnrqk::f:|B_e7_12:x:n::m:|B_e8_4:e8:pnrqk::f:|B_f7_13:x:b::m:|B_f8_5:x:b::m:|B_g7_14:g7:pnrqk::f:|B_g8_6:x:p::m:|B_h7_15:h6:prqk::m:|B_h8_7:h8:pnrqk::f:|W_a1_0:a1:pnbrqk::f:|W_a2_8:b4:p::m:|W_b1_1:b1:pnbrqk::f:|W_b2_9:b2:pnbrqk::f:|W_c1_2:c1:pnbrqk::f:|W_c2_10:c2:pnbrq::f:|W_d1_3:x:n::m:|W_d2_11:x:b::m:|W_e1_4:x:p::m:|W_e2_12:x:p::m:|W_f1_5:f1:pnbrqk::f:|W_f2_13:d5:p::m:|W_g1_6:g1:pnbrqk::f:|W_g2_14:g2:pnbrqk::f:|W_h1_7:h1:pnbrqk::f:|W_h2_15:h2:pnbrqk::f:",
      "evals": {
-      "d1>d5": 3.154,
-      "d1>d2": 3.112,
-      "e2>d4": 3.062,
-      "b3>d4": 3.05,
-      "b1>c1": 2.975,
-      "d1>c1": 2.975,
-      "e2>g3": 2.93,
-      "f1>f4": 2.916,
-      "g2>g4": 2.901,
-      "f1>f5": 2.9,
-      "h2>h4": 2.865,
-      "b3>d2": 2.857,
-      "b2>d2": 2.842,
-      "h2>h3": 2.827,
-      "e2>f4": 2.816,
-      "d1>d3": 2.808,
-      "g2>g3": 2.803,
-      "f1>f3": 2.795,
-      "f1>f2": 2.776,
-      "b2>c2": 2.756,
-      "g2>f2": 2.727,
-      "b2>a2": 2.716,
-      "c3>d2": 2.683,
-      "b1>a1": 2.663,
-      "b3>a1": 2.659,
-      "b3>c1": 2.659,
-      "e2>c1": 2.62,
-      "c3>c2": 2.375,
-      "c3>f3": 2.128,
-      "c3>d3": 1.648,
-      "c3>c1": 1.562,
-      "b3>a5": 1.33,
-      "c3>c4": 1.326,
-      "e1>f2": 0.674,
-      "e1>d2": 0.663,
-      "b3>c5": 0.135,
-      "d1>d4": 0.131,
-      "g2>f3": 0.086,
-      "b1>c2": -0.214,
-      "d1>c2": -0.238,
-      "h2>h5": -1.042,
-      "b1>d1": -1.079,
-      "c3>g3": -1.3,
-      "h2>h7": -1.375,
-      "c3>h3": -1.429,
-      "g2>g7": -1.434,
-      "d1>d6": -1.698,
-      "f1>f6": -1.716,
-      "g1>b6": -1.959,
-      "g1>f2": -1.983,
-      "c3>e3": -2.143,
-      "h2>f4": -2.31,
-      "g2>g5": -2.933,
-      "g2>g6": -2.949,
-      "h2>h6": -2.991,
-      "c3>c6": -3.058,
-      "b1>e4": -3.227,
-      "g2>e4": -3.274,
-      "b2>c1": -3.341,
-      "g1>c5": -3.407,
-      "e1>g3": -3.898,
-      "c3>d4": -3.958,
-      "b2>a1": -4.34,
-      "g1>e3": -4.449,
-      "b1>f5": -4.508,
-      "c3>b4": -4.509,
-      "b1>h7": -5.068,
-      "c3>f6": -5.687,
-      "c3>a5": -6.661,
-      "c3>e5": -6.993,
-      "b1>a2": -7.151,
-      "c3>c5": -7.21,
-      "h2>g3": -7.522,
-      "g2>d5": -7.541,
-      "g1>d4": -7.815,
-      "b1>g6": -7.906,
-      "g2>c6": -8.593,
-      "e1>h4": -8.756,
-      "b2>a3": -8.985,
-      "h2>d6": -9.336,
-      "g2>h3": -10.607,
-      "g1>a7": -13.186,
-      "b1>d3": -998,
-      "h2>e5": -998
+      "c2>c4": 6.378,
+      "c2>e4": 6.332,
+      "g2>g4": 6.33,
+      "f1>e2": 6.31,
+      "b1>a2": 6.287,
+      "g2>e4": 6.267,
+      "c2>c3": 6.243,
+      "f1>f3": 6.224,
+      "b4>b5": 6.223,
+      "c1>e3": 6.178,
+      "g1>e3": 6.178,
+      "c1>d2": 6.158,
+      "g1>d4": 6.152,
+      "g2>h3": 6.141,
+      "b2>d4": 6.129,
+      "c1>f4": 6.118,
+      "a1>a3": 6.118,
+      "b2>b3": 6.112,
+      "h2>f4": 6.106,
+      "g2>g3": 6.089,
+      "h2>h4": 6.083,
+      "g2>f3": 6.044,
+      "b2>a3": 6.033,
+      "h2>h3": 6.033,
+      "h2>g3": 6.032,
+      "f1>f2": 6.032,
+      "a1>a2": 6.021,
+      "c1>d1": 5.484,
+      "c2>d2": 6.009,
+      "g1>f2": 5.954,
+      "g2>d2": 5.931,
+      "f1>d1": 5.919,
+      "c2>f2": 5.919,
+      "g2>f2": 5.919,
+      "c2>b3": 5.912,
+      "f1>f4": 5.9,
+      "f1>c4": 5.88,
+      "g1>c5": 5.876,
+      "c2>d3": 5.845,
+      "f1>d3": 5.815,
+      "c2>d1": 5.775,
+      "c2>f5": 5.772,
+      "a1>a4": 5.665,
+      "c2>e2": 5.586,
+      "c2>g6": 5.568,
+      "g2>e2": 5.484,
+      "b2>a2": 5.449,
+      "c1>e1": 5.43,
+      "f1>e1": 5.394,
+      "c2>e3": 5.37,
+      "b2>d3": 5.37,
+      "b2>c3": 5.368,
+      "b1>c3": 5.363,
+      "c2>a4": 5.3,
+      "f1>e3": 5.291,
+      "g2>e3": 5.268,
+      "c2>d4": 5.196,
+      "c1>d3": 5.184,
+      "c1>a2": 5.126,
+      "g1>f3": 5.082,
+      "c2>e1": 5.079,
+      "c2>a3": 5.079,
+      "b1>d2": 5.071,
+      "g1>e2": 5.059,
+      "c1>e2": 5.059,
+      "f1>d2": 5.054,
+      "h1>f2": 5.042,
+      "g2>f4": 5.041,
+      "b1>a3": 5.036,
+      "c2>c5": 5.033,
+      "g1>h3": 5.024,
+      "b2>d1": 5.007,
+      "h1>g3": 4.986,
+      "g2>e1": 4.984,
+      "f1>g3": 4.974,
+      "h2>f3": 4.907,
+      "c1>b3": 4.884,
+      "a1>b3": 4.872,
+      "b2>a4": 4.813,
+      "h2>g4": 4.765,
+      "b2>c4": 4.699,
+      "h2>e5": 4.671,
+      "d5>d6": 4.669,
+      "g2>h4": 4.618,
+      "g2>g6": 4.612,
+      "f1>f5": 4.592,
+      "b2>e5": 4.522,
+      "c1>h6": 4.235,
+      "b2>g7": 4.048,
+      "a1>a5": 4.046,
+      "f1>b5": 3.861,
+      "h2>h6": 3.82,
+      "g2>g7": 3.818,
+      "h2>c7": 3.375,
+      "b2>f6": 3.092,
+      "c1>g5": 3.032,
+      "c2>c7": 2.85,
+      "h2>h5": 2.706,
+      "c2>c6": 2.699,
+      "a1>a8": 2.693,
+      "g1>a7": 2.387,
+      "f1>a6": 2.33,
+      "c2>h7": 2.286,
+      "g1>b6": 2.277,
+      "f1>f8": 2.037,
+      "h2>d6": 2.002,
+      "g2>g5": 1.99,
+      "f1>f6": 1.822,
+      "a1>a7": 1.399,
+      "a1>a6": 1.366,
+      "f1>f7": 1.297
      }
     }
    ],
-   "game": 6,
-   "white": "ernest-smyslov",
-   "black": "vera-botvinnik",
+   "game": 20,
+   "white": "twin-strong",
+   "black": "twin-weak",
    "mirrored": false
   },
   {
-   "startPly": 39,
+   "startPly": 21,
    "parPlies": 3,
    "endsInMate": false,
    "mistake": {
-    "from": "f6",
-    "to": "g4",
-    "evalBefore": 0.72,
-    "evalAfter": 2.96,
-    "swing": 2.24
+    "from": "c7",
+    "to": "c5",
+    "evalBefore": 0.07,
+    "evalAfter": 2.51,
+    "swing": 2.44
    },
    "spread": {
-    "best": 2.9550000000000005,
-    "median": -1.92,
+    "best": 2.5059999999999993,
+    "median": -1.17,
     "medianFrac": 0,
-    "numChoices": 102
+    "numChoices": 108
    },
    "parEvals": [
-    2.96,
-    1.59,
-    2.27
+    2.51,
+    2.66,
+    2.94
    ],
-   "trickiness": 6.96,
-   "trickMin": 6.96,
-   "trickAvg": 9.55,
+   "trickiness": 8.44,
+   "trickMin": 6.02,
+   "trickAvg": 10.09,
    "themes": [
-    "check",
-    "recohere",
-    "quiet"
+    "quiet",
+    "recohere"
    ],
    "steps": [
     {
-     "ply": 39,
+     "ply": 21,
      "bestMove": {
       "type": "move",
-      "from": "g3",
-      "to": "g4",
+      "from": "c1",
+      "to": "c3",
       "enPassant": false
      },
-     "parEval": 2.96,
+     "parEval": 2.51,
      "spread": {
-      "best": 2.9550000000000005,
-      "median": -1.92,
+      "best": 2.5059999999999993,
+      "median": -1.17,
       "medianFrac": 0,
-      "numChoices": 102
+      "numChoices": 108
      },
-     "numChoices": 102,
+     "numChoices": 108,
      "shallowRank": 1,
-     "possDelta": 2,
+     "possDelta": 0,
      "themes": [
-      "check",
+      "quiet",
       "recohere"
      ],
-     "trickiness": 6.96
+     "trickiness": 8.44
     },
     {
-     "ply": 41,
+     "ply": 23,
      "bestMove": {
       "type": "move",
-      "from": "h4",
-      "to": "g4",
+      "from": "c3",
+      "to": "d4",
       "enPassant": false
      },
-     "parEval": 1.59,
+     "parEval": 2.66,
      "spread": {
-      "best": 1.5880000000000019,
-      "median": -2.44,
+      "best": 2.657999999999998,
+      "median": -0.32,
       "medianFrac": 0,
+      "numChoices": 103
+     },
+     "numChoices": 103,
+     "shallowRank": 1,
+     "possDelta": 2,
+     "themes": [],
+     "trickiness": 6.02
+    },
+    {
+     "ply": 25,
+     "bestMove": {
+      "type": "move",
+      "from": "a2",
+      "to": "a3",
+      "enPassant": false
+     },
+     "parEval": 2.94,
+     "spread": {
+      "best": 2.9400000000000013,
+      "median": 1.26,
+      "medianFrac": 0.43,
       "numChoices": 96
      },
      "numChoices": 96,
-     "shallowRank": 2,
-     "possDelta": 11,
-     "themes": [],
-     "trickiness": 7.14
-    },
-    {
-     "ply": 43,
-     "bestMove": {
-      "type": "move",
-      "from": "g4",
-      "to": "g1",
-      "enPassant": false
-     },
-     "parEval": 2.27,
-     "spread": {
-      "best": 2.271000000000001,
-      "median": -2.74,
-      "medianFrac": 0,
-      "numChoices": 86
-     },
-     "numChoices": 86,
-     "shallowRank": 7,
-     "possDelta": 0,
+     "shallowRank": 12,
+     "possDelta": 1,
      "themes": [
       "quiet"
      ],
-     "trickiness": 14.54
+     "trickiness": 15.81
     }
    ],
    "blackReplies": [
     {
      "type": "move",
-     "from": "e5",
-     "to": "g4"
+     "from": "c5",
+     "to": "d4"
     },
     {
      "type": "move",
-     "from": "g8",
-     "to": "f7"
+     "from": "a7",
+     "to": "a5"
     }
    ],
    "start": {
@@ -4510,15 +2325,13 @@
       "square": "a8",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
@@ -4531,18 +2344,22 @@
      {
       "id": "W_b1_1",
       "side": "black",
-      "square": "b5",
+      "square": "b8",
       "possibleTypes": [
        "p",
-       "q"
+       "r",
+       "q",
+       "k"
       ],
       "baseTypes": [
        "p",
-       "q"
+       "r",
+       "q",
+       "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
@@ -4552,15 +2369,13 @@
       "square": "c8",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
@@ -4573,20 +2388,19 @@
      {
       "id": "W_d1_3",
       "side": "black",
-      "square": "d5",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "q"
+       "b"
       ],
       "baseTypes": [
-       "p",
-       "q"
+       "b"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
+      "captured": true,
+      "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 1
      },
      {
       "id": "W_e1_4",
@@ -4594,17 +2408,15 @@
       "square": "e6",
       "possibleTypes": [
        "p",
-       "q",
-       "k"
+       "r"
       ],
       "baseTypes": [
        "p",
-       "q",
-       "k"
+       "r"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 1,
       "wasPromoted": false,
       "castled": false
      },
@@ -4614,15 +2426,13 @@
       "square": "f8",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
@@ -4638,15 +2448,13 @@
       "square": "g8",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
@@ -4661,6 +2469,80 @@
       "side": "black",
       "square": null,
       "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "W_a2_8",
+      "side": "black",
+      "square": "a7",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "W_c2_10",
+      "side": "black",
+      "square": "c5",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
        "r"
       ],
       "baseTypes": [
@@ -4671,21 +2553,17 @@
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 5
+      "captureIndex": 8
      },
      {
-      "id": "W_a2_8",
+      "id": "W_e2_12",
       "side": "black",
-      "square": "a5",
+      "square": "g6",
       "possibleTypes": [
-       "p",
-       "n",
-       "b"
+       "n"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b"
+       "n"
       ],
       "promoTypes": [],
       "captured": false,
@@ -4694,36 +2572,18 @@
       "castled": false
      },
      {
-      "id": "W_b2_9",
+      "id": "W_f2_13",
       "side": "black",
-      "square": "b4",
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c2_10",
-      "side": "black",
-      "square": "c7",
+      "square": "f7",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
+       "r",
        "q",
        "k"
       ],
@@ -4734,19 +2594,15 @@
       "castled": false
      },
      {
-      "id": "W_d2_11",
+      "id": "W_g2_14",
       "side": "black",
-      "square": "e5",
+      "square": "h6",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
        "q"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
        "q"
       ],
       "promoTypes": [],
@@ -4754,72 +2610,23 @@
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false
-     },
-     {
-      "id": "W_e2_12",
-      "side": "black",
-      "square": "c3",
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_f2_13",
-      "side": "black",
-      "square": "g4",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_g2_14",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 1
      },
      {
       "id": "W_h2_15",
       "side": "black",
       "square": null,
       "possibleTypes": [
-       "r"
+       "p"
       ],
       "baseTypes": [
-       "r"
+       "p"
       ],
       "promoTypes": [],
       "captured": true,
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 3
+      "captureIndex": 2
      },
      {
       "id": "B_a8_0",
@@ -4828,7 +2635,6 @@
       "possibleTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4836,7 +2642,6 @@
       "baseTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4854,7 +2659,6 @@
       "possibleTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4862,7 +2666,6 @@
       "baseTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4876,62 +2679,62 @@
      {
       "id": "B_c8_2",
       "side": "white",
-      "square": "e1",
+      "square": "c1",
       "possibleTypes": [
-       "b",
+       "p",
+       "n",
+       "r",
        "q"
       ],
       "baseTypes": [
-       "b",
+       "p",
+       "n",
+       "r",
        "q"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 4,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_d8_3",
       "side": "white",
-      "square": "e2",
+      "square": "d1",
       "possibleTypes": [
-       "b",
+       "p",
+       "n",
+       "r",
        "q",
        "k"
       ],
       "baseTypes": [
-       "b",
+       "p",
+       "n",
+       "r",
        "q",
        "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 3,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_e8_4",
       "side": "white",
-      "square": "e3",
+      "square": "d3",
       "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q"
+       "p"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q"
+       "p"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 1,
       "wasPromoted": false,
       "castled": false
      },
@@ -4942,7 +2745,6 @@
       "possibleTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4950,7 +2752,6 @@
       "baseTypes": [
        "p",
        "n",
-       "b",
        "r",
        "q",
        "k"
@@ -4964,793 +2765,22 @@
      {
       "id": "B_g8_6",
       "side": "white",
-      "square": "g3",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
+       "r"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q"
+       "r"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
+      "captured": true,
+      "moveCount": 2,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 7
      },
      {
       "id": "B_h8_7",
-      "side": "white",
-      "square": "h4",
-      "possibleTypes": [
-       "p",
-       "r"
-      ],
-      "baseTypes": [
-       "p",
-       "r"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a7_8",
-      "side": "white",
-      "square": "a2",
-      "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_b7_9",
-      "side": "white",
-      "square": "b3",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_c7_10",
-      "side": "white",
-      "square": "c2",
-      "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d7_11",
-      "side": "white",
-      "square": "d3",
-      "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e7_12",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 3,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 4
-     },
-     {
-      "id": "B_f7_13",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "B_g7_14",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 6
-     },
-     {
-      "id": "B_h7_15",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "p"
-      ],
-      "baseTypes": [
-       "p"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
-     }
-    ],
-    "lastMove": {
-     "side": "black",
-     "pieceId": "W_f2_13",
-     "from": "f6",
-     "to": "g4",
-     "isDoubleStep": false,
-     "crossedSquare": null,
-     "zappedSquares": [
-      "e3"
-     ],
-     "healedSquares": [
-      "e5"
-     ],
-     "fizzledSquares": []
-    },
-    "captureCounter": 7,
-    "sideToMove": "white"
-   },
-   "evalTables": [
-    {
-     "sig": "white#-#B_a7_8:a2:pnbrqk::f:|B_a8_0:a1:pnbrqk::f:|B_b7_9:b3:prq::m:|B_b8_1:b1:pnbrqk::f:|B_c7_10:c2:pnbrqk::f:|B_c8_2:e1:bq::m:|B_d7_11:d3:pnbrq::m:|B_d8_3:e2:bqk::m:|B_e7_12:x:n::m:|B_e8_4:e3:pnbrq::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnbrqk::f:|B_g7_14:x:p::m:|B_g8_6:g3:pnrq::m:|B_h7_15:x:p::m:|B_h8_7:h4:pr::m:|W_a1_0:a8:pnbqk::f:|W_a2_8:a5:pnb::m:|W_b1_1:b5:pq::m:|W_b2_9:b4:p::m:|W_c1_2:c8:pnbqk::f:|W_c2_10:c7:pnbqk::f:|W_d1_3:d5:pq::m:|W_d2_11:e5:pnbq::m:|W_e1_4:e6:pqk::m:|W_e2_12:c3:p::m:|W_f1_5:f8:pnbqk::f:|W_f2_13:g4:n::m:|W_g1_6:g8:pnbqk::f:|W_g2_14:x:p::m:|W_h1_7:x:r::m:|W_h2_15:x:r::m:",
-     "evals": {
-      "e3>g4": 5.092,
-      "e2>g4": 4.885,
-      "f1>f8": 4.533,
-      "h4>g4": 4.098,
-      "g3>g4": 3.723,
-      "e3>g2": 3.413,
-      "e3>f3": 3.3,
-      "f1>f2": 3.104,
-      "g3>f3": 2.986,
-      "f1>g1": 2.896,
-      "h4>h5": 2.733,
-      "c2>c1": 2.658,
-      "d3>d4": 2.642,
-      "e3>e4": 2.641,
-      "f1>f3": 2.587,
-      "a2>a4": 2.509,
-      "a2>a3": 2.375,
-      "b1>c1": 2.323,
-      "h4>h3": 2.313,
-      "g3>h3": 2.292,
-      "f1>h1": 2.223,
-      "h4>h1": 2.223,
-      "a2>c3": 2.206,
-      "b1>c3": 2.206,
-      "g3>g1": 2.202,
-      "b1>b2": 2.161,
-      "e3>d1": 2.141,
-      "e1>c3": 2.129,
-      "e2>d1": 2.049,
-      "d3>e5": 2.012,
-      "g3>g2": 1.968,
-      "e3>d5": 1.923,
-      "d3>d1": 1.922,
-      "a2>b4": 1.807,
-      "a2>a5": 1.721,
-      "d3>b4": 1.699,
-      "b1>d1": 1.684,
-      "g3>h1": 1.548,
-      "g3>h5": 1.536,
-      "e2>f3": 1.467,
-      "e1>f2": 1.466,
-      "d3>f4": 1.327,
-      "c2>b4": 1.284,
-      "c2>d4": 1.23,
-      "d3>c5": 1.02,
-      "f1>h2": 0.944,
-      "d3>c1": 0.926,
-      "e1>d1": 0.884,
-      "e3>e5": 0.877,
-      "b3>c3": 0.869,
-      "e1>c1": 0.794,
-      "a2>c1": 0.79,
-      "d3>f2": 0.745,
-      "d3>c3": 0.744,
-      "c2>c3": 0.562,
-      "e2>g2": 0.519,
-      "f1>g2": 0.475,
-      "h4>h2": 0.451,
-      "b3>b4": 0.394,
-      "d3>d5": 0.38,
-      "b1>a3": 0.33,
-      "h4>h8": 0.286,
-      "c2>d1": 0.28,
-      "c2>a3": 0.17,
-      "e3>c4": 0.12,
-      "b1>d2": 0.099,
-      "e1>d2": 0.084,
-      "f1>d2": 0.063,
-      "g3>e4": 0.007,
-      "d3>b2": -0.255,
-      "f1>f7": -0.639,
-      "f1>f4": -0.665,
-      "h4>h7": -0.93,
-      "b3>a3": -1.054,
-      "a1>c3": -1.197,
-      "d3>d2": -1.289,
-      "c2>d2": -1.342,
-      "g3>f5": -1.351,
-      "e3>f5": -1.422,
-      "b3>b2": -1.476,
-      "c2>b2": -1.73,
-      "a2>b2": -1.749,
-      "f1>f6": -1.903,
-      "a2>c2": -1.959,
-      "h4>h6": -2.009,
-      "f1>f5": -2.539,
-      "a1>b2": -3.995,
-      "e2>f2": -4.553,
-      "b3>a4": -4.875,
-      "e2>h2": -5.312,
-      "e3>f4": -5.764,
-      "e2>d2": -6.086,
-      "b3>d5": -8.639,
-      "e3>d4": -9.106,
-      "g3>h2": -9.615,
-      "g3>f2": -9.68,
-      "f1>h3": -998,
-      "d3>c4": -998,
-      "g3>e5": -998,
-      "d3>b5": -998,
-      "b3>c4": -998,
-      "g3>f4": -998
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a2:pnbrqk::f:|B_a8_0:a1:pnbrqk::f:|B_b7_9:b3:prq::m:|B_b8_1:b1:pnbrqk::f:|B_c7_10:c2:pnbrqk::f:|B_c8_2:e1:bq::m:|B_d7_11:d3:pnbrq::m:|B_d8_3:e2:bqk::m:|B_e7_12:x:n::m:|B_e8_4:e3:pnbr::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnbrqk::f:|B_g7_14:x:p::m:|B_g8_6:x:r::m:|B_h7_15:x:p::m:|B_h8_7:h4:pnr::m:|W_a1_0:a8:pbqk::f:|W_a2_8:a5:pb::m:|W_b1_1:b5:pq::m:|W_b2_9:b4:p::m:|W_c1_2:c8:pbqk::f:|W_c2_10:c7:pbqk::f:|W_d1_3:d5:pq::m:|W_d2_11:g4:n::m:|W_e1_4:e6:pqk::m:|W_e2_12:c3:p::m:|W_f1_5:f8:pbqk::f:|W_f2_13:x:n::m:|W_g1_6:g8:pbq::f:|W_g2_14:x:p::m:|W_h1_7:x:r::m:|W_h2_15:x:r::m:",
-     "evals": {
-      "e2>g4": 3.939,
-      "e3>g4": 3.821,
-      "h4>g4": 3.539,
-      "e2>f3": 3.086,
-      "e1>g3": 2.781,
-      "d3>d1": 2.744,
-      "e3>e4": 2.548,
-      "f1>g1": 2.438,
-      "d3>d4": 2.207,
-      "d3>f4": 2.196,
-      "b1>c3": 2.083,
-      "a2>c3": 2.083,
-      "b1>c1": 2.077,
-      "f1>f2": 2.07,
-      "h4>h5": 2.028,
-      "f1>f8": 2.015,
-      "a2>a4": 1.93,
-      "f1>f3": 1.926,
-      "c2>c1": 1.91,
-      "e3>f3": 1.805,
-      "e2>d1": 1.781,
-      "e3>g2": 1.742,
-      "e1>c3": 1.704,
-      "h4>g2": 1.623,
-      "c2>d4": 1.622,
-      "b1>d1": 1.62,
-      "a2>b4": 1.62,
-      "a2>a3": 1.604,
-      "e3>d1": 1.588,
-      "h4>g6": 1.563,
-      "d3>b4": 1.488,
-      "e1>c1": 1.413,
-      "b1>b2": 1.28,
-      "e1>d1": 1.162,
-      "f1>h1": 1.134,
-      "h4>h3": 1.125,
-      "d3>c1": 1.08,
-      "e3>h3": 1.033,
-      "a2>c1": 0.99,
-      "e3>d5": 0.965,
-      "c2>b4": 0.939,
-      "f1>g3": 0.863,
-      "h4>f3": 0.828,
-      "e1>f2": 0.749,
-      "d3>f2": 0.585,
-      "f1>h2": 0.212,
-      "h4>h1": 0.118,
-      "f1>g2": 0.086,
-      "d3>c5": -0.002,
-      "h4>h8": -0.015,
-      "c2>d1": -0.105,
-      "e1>d2": -0.155,
-      "b1>d2": -0.253,
-      "f1>d2": -0.277,
-      "d3>e5": -0.37,
-      "f1>f4": -0.372,
-      "b1>a3": -0.412,
-      "e2>g2": -0.437,
-      "e3>f5": -0.485,
-      "h4>f5": -0.489,
-      "e3>g3": -0.514,
-      "b3>c3": -0.527,
-      "d3>c3": -0.562,
-      "a2>a5": -0.643,
-      "e3>c4": -0.922,
-      "c2>a3": -0.947,
-      "e3>e6": -1.021,
-      "c2>c3": -1.055,
-      "b3>b4": -1.12,
-      "d3>b2": -1.214,
-      "d3>d5": -1.376,
-      "e3>e5": -1.408,
-      "f1>f7": -1.94,
-      "h4>h2": -2.002,
-      "a1>c3": -2.071,
-      "d3>d2": -2.157,
-      "d3>b5": -2.209,
-      "h4>h7": -2.219,
-      "f1>f5": -2.313,
-      "b3>a3": -2.479,
-      "f1>h3": -2.546,
-      "b3>b2": -3.101,
-      "c2>d2": -3.108,
-      "f1>f6": -3.371,
-      "a2>b2": -3.386,
-      "c2>b2": -3.445,
-      "h4>h6": -3.495,
-      "a1>b2": -4.555,
-      "d3>c4": -4.649,
-      "e2>f2": -5.253,
-      "e2>h2": -6.763,
-      "e2>d2": -7.03,
-      "a2>c2": -8.12,
-      "b3>d5": -10.009,
-      "b3>c4": -11.55,
-      "b3>a4": -11.696
-     }
-    },
-    {
-     "sig": "white#-#B_a7_8:a2:pnbqk::f:|B_a8_0:a1:pnbqk::f:|B_b7_9:b3:pq::m:|B_b8_1:b1:pnbqk::f:|B_c7_10:c2:pnbqk::f:|B_c8_2:e1:bq::m:|B_d7_11:d3:pnbq::m:|B_d8_3:e2:bqk::m:|B_e7_12:x:n::m:|B_e8_4:e3:pnb::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnbqk::f:|B_g7_14:x:p::m:|B_g8_6:x:r::m:|B_h7_15:x:p::m:|B_h8_7:g4:r::m:|W_a1_0:a8:pbqk::f:|W_a2_8:a5:pb::m:|W_b1_1:b5:pq::m:|W_b2_9:b4:p::m:|W_c1_2:c8:pbqk::f:|W_c2_10:c7:pbqk::f:|W_d1_3:d5:pq::m:|W_d2_11:x:n::m:|W_e1_4:e6:pbqk::m:|W_e2_12:c3:p::m:|W_f1_5:f8:pbqk::f:|W_f2_13:x:n::m:|W_g1_6:f7:b::m:|W_g2_14:x:p::m:|W_h1_7:x:r::m:|W_h2_15:x:r::m:",
-     "evals": {
-      "g4>g5": 3.84,
-      "g4>g1": 3.703,
-      "g4>h4": 3.34,
-      "e2>f3": 3.283,
-      "g4>d4": 3.27,
-      "g4>g2": 3.151,
-      "g4>f4": 2.641,
-      "e1>g3": 2.475,
-      "g4>g3": 2.43,
-      "a2>c3": 2.347,
-      "b1>c3": 2.347,
-      "f1>f3": 2.327,
-      "a2>b4": 2.148,
-      "e1>h4": 2.105,
-      "d3>b4": 2.028,
-      "e1>c3": 2.006,
-      "a2>a3": 1.973,
-      "a2>a4": 1.613,
-      "c2>b4": 1.613,
-      "f1>h2": 1.603,
-      "e1>f2": 1.584,
-      "f1>f2": 1.554,
-      "e2>f2": 1.508,
-      "d3>f2": 1.483,
-      "b1>b2": 1.428,
-      "e2>d1": 1.424,
-      "g4>g6": 1.333,
-      "e3>d5": 1.287,
-      "d3>d4": 1.201,
-      "g4>b4": 1.154,
-      "e1>d1": 1.14,
-      "e1>c1": 1.14,
-      "e3>e4": 1.133,
-      "g4>e4": 0.938,
-      "e2>g2": 0.869,
-      "d3>f4": 0.627,
-      "f1>g3": 0.312,
-      "e3>d1": 0.178,
-      "e1>d2": 0.141,
-      "e3>f5": 0.061,
-      "g4>c4": 0.03,
-      "g4>g7": -0.027,
-      "c2>d4": -0.043,
-      "d3>c5": -0.139,
-      "g4>g8": -0.357,
-      "b1>a3": -0.495,
-      "d3>e5": -0.569,
-      "b1>d2": -0.667,
-      "e3>g2": -0.668,
-      "f1>d2": -0.679,
-      "d3>b2": -0.889,
-      "e3>c4": -0.947,
-      "f1>g2": -1.015,
-      "c2>a3": -1.03,
-      "f1>h3": -1.135,
-      "b1>c1": -1.272,
-      "d3>c1": -1.292,
-      "f1>g1": -1.339,
-      "a2>c1": -1.44,
-      "c2>d1": -1.512,
-      "c2>c1": -1.566,
-      "a1>c3": -2.753,
-      "d3>c4": -3.435,
-      "a1>b2": -3.613,
-      "f1>f7": -4.254,
-      "d3>d5": -4.315,
-      "e2>h2": -4.406,
-      "f1>h1": -4.769,
-      "f1>f6": -4.927,
-      "d3>b5": -5.708,
-      "e2>d2": -6.023,
-      "f1>f4": -7.621,
-      "c2>c3": -7.934,
-      "b3>c3": -8.96,
-      "b3>d5": -9.029,
-      "a2>b2": -10.017,
-      "c2>b2": -10.064,
-      "c2>d2": -10.148,
-      "b3>c4": -10.327,
-      "f1>f5": -10.876,
-      "b1>d1": -998,
-      "b3>b4": -998,
-      "b3>a3": -998,
-      "b3>b2": -998,
-      "a2>a5": -998,
-      "b3>a4": -998
-     }
-    }
-   ],
-   "game": 11,
-   "white": "stephen-tal",
-   "black": "ernest-smyslov",
-   "mirrored": true
-  },
-  {
-   "startPly": 28,
-   "parPlies": 3,
-   "endsInMate": false,
-   "mistake": {
-    "from": "b7",
-    "to": "d5",
-    "evalBefore": 0.67,
-    "evalAfter": 2.52,
-    "swing": 1.85
-   },
-   "spread": {
-    "best": 2.523,
-    "median": -2.9,
-    "medianFrac": 0,
-    "numChoices": 113
-   },
-   "parEvals": [
-    2.52,
-    2.82,
-    2.42
-   ],
-   "trickiness": 6.05,
-   "trickMin": 5.83,
-   "trickAvg": 5.91,
-   "themes": [
-    "check",
-    "zap3",
-    "recohere"
-   ],
-   "steps": [
-    {
-     "ply": 28,
-     "bestMove": {
-      "type": "move",
-      "from": "c4",
-      "to": "d5",
-      "enPassant": false
-     },
-     "parEval": 2.52,
-     "spread": {
-      "best": 2.523,
-      "median": -2.9,
-      "medianFrac": 0,
-      "numChoices": 113
-     },
-     "numChoices": 113,
-     "shallowRank": 1,
-     "possDelta": 2,
-     "themes": [
-      "check"
-     ],
-     "trickiness": 6.05
-    },
-    {
-     "ply": 30,
-     "bestMove": {
-      "type": "move",
-      "from": "f4",
-      "to": "f6",
-      "enPassant": false
-     },
-     "parEval": 2.82,
-     "spread": {
-      "best": 2.8160000000000025,
-      "median": -1.7,
-      "medianFrac": 0,
-      "numChoices": 130
-     },
-     "numChoices": 130,
-     "shallowRank": 0,
-     "possDelta": 16,
-     "themes": [
-      "zap3",
-      "check"
-     ],
-     "trickiness": 5.84
-    },
-    {
-     "ply": 32,
-     "bestMove": {
-      "type": "move",
-      "from": "d3",
-      "to": "e4",
-      "enPassant": false
-     },
-     "parEval": 2.42,
-     "spread": {
-      "best": 2.4210000000000007,
-      "median": -0.78,
-      "medianFrac": 0,
-      "numChoices": 115
-     },
-     "numChoices": 115,
-     "shallowRank": 0,
-     "possDelta": 0,
-     "themes": [
-      "check",
-      "recohere"
-     ],
-     "trickiness": 5.83
-    }
-   ],
-   "blackReplies": [
-    {
-     "type": "move",
-     "from": "f5",
-     "to": "e4"
-    },
-    {
-     "type": "move",
-     "from": "h8",
-     "to": "f6"
-    }
-   ],
-   "start": {
-    "pieces": [
-     {
-      "id": "W_a1_0",
-      "side": "white",
-      "square": "a1",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_b1_1",
-      "side": "white",
-      "square": "b1",
-      "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_c1_2",
-      "side": "white",
-      "square": "c2",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_d1_3",
-      "side": "white",
-      "square": "d3",
-      "possibleTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "baseTypes": [
-       "p",
-       "r",
-       "q",
-       "k"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_e1_4",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 1
-     },
-     {
-      "id": "W_f1_5",
-      "side": "white",
-      "square": null,
-      "possibleTypes": [
-       "b"
-      ],
-      "baseTypes": [
-       "b"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 2
-     },
-     {
-      "id": "W_g1_6",
-      "side": "white",
-      "square": "h3",
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "W_h1_7",
       "side": "white",
       "square": "h1",
       "possibleTypes": [
@@ -5774,7 +2804,7 @@
       "castled": false
      },
      {
-      "id": "W_a2_8",
+      "id": "B_a7_8",
       "side": "white",
       "square": "a2",
       "possibleTypes": [
@@ -5798,22 +2828,20 @@
       "castled": false
      },
      {
-      "id": "W_b2_9",
+      "id": "B_b7_9",
       "side": "white",
       "square": "b2",
       "possibleTypes": [
        "p",
        "n",
        "r",
-       "q",
-       "k"
+       "q"
       ],
       "baseTypes": [
        "p",
        "n",
        "r",
-       "q",
-       "k"
+       "q"
       ],
       "promoTypes": [],
       "captured": false,
@@ -5822,27 +2850,79 @@
       "castled": false
      },
      {
-      "id": "W_c2_10",
+      "id": "B_c7_10",
       "side": "white",
-      "square": "c4",
+      "square": "d4",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_e7_12",
+      "side": "white",
+      "square": "e2",
       "possibleTypes": [
        "p",
+       "n",
        "r",
        "q"
       ],
       "baseTypes": [
        "p",
+       "n",
        "r",
        "q"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
-      "id": "W_d2_11",
+      "id": "B_f7_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "B_g7_14",
       "side": "white",
       "square": null,
       "possibleTypes": [
@@ -5853,27 +2933,492 @@
       ],
       "promoTypes": [],
       "captured": true,
-      "moveCount": 3,
+      "moveCount": 2,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 4
+      "captureIndex": 3
      },
      {
-      "id": "W_e2_12",
+      "id": "B_h7_15",
       "side": "white",
-      "square": "e2",
+      "square": "h3",
       "possibleTypes": [
        "p",
-       "n",
        "r",
        "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
        "r",
        "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "black",
+     "pieceId": "W_c2_10",
+     "from": "c7",
+     "to": "c5",
+     "isDoubleStep": true,
+     "crossedSquare": "c6",
+     "zappedSquares": [],
+     "healedSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 9,
+    "sideToMove": "white"
+   },
+   "evalTables": [
+    {
+     "sig": "white#c6#B_a7_8:a2:pnrqk::f:|B_a8_0:a1:pnrqk::f:|B_b7_9:b2:pnrq::f:|B_b8_1:b1:pnrqk::f:|B_c7_10:d4:n::m:|B_c8_2:c1:pnrq::f:|B_d7_11:x:b::m:|B_d8_3:d1:pnrqk::f:|B_e7_12:e2:pnrq::f:|B_e8_4:d3:p::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnrqk::f:|B_g7_14:x:p::m:|B_g8_6:x:r::m:|B_h7_15:h3:prqk::m:|B_h8_7:h1:pnrqk::f:|W_a1_0:a8:prqk::f:|W_a2_8:a7:prq::f:|W_b1_1:b8:prqk::f:|W_b2_9:x:n::m:|W_c1_2:c8:prqk::f:|W_c2_10:c5:prq::m:|W_d1_3:x:b::m:|W_d2_11:x:r::m:|W_e1_4:e6:pr::m:|W_e2_12:g6:n::m:|W_f1_5:f8:prqk::f:|W_f2_13:f7:prqk::f:|W_g1_6:g8:prqk::f:|W_g2_14:h6:pq::m:|W_h1_7:x:b::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "d4>c2": 5.328,
+      "d4>b3": 5.218,
+      "d4>f3": 4.726,
+      "h3>g4": 4.421,
+      "c1>c3": 4.398,
+      "e2>e3": 4.363,
+      "c1>c4": 4.251,
+      "d4>b5": 4.232,
+      "d4>e6": 4.224,
+      "c1>e3": 3.861,
+      "h1>e4": 3.657,
+      "e2>g4": 3.295,
+      "d4>c6": 2.891,
+      "h3>h4": 2.805,
+      "e2>e4": 2.664,
+      "d4>f5": 2.649,
+      "b2>b4": 2.494,
+      "b2>b5": 2.494,
+      "b2>c2": 2.482,
+      "a2>a4": 2.48,
+      "e2>c2": 2.47,
+      "h3>h6": 2.46,
+      "a2>a3": 2.43,
+      "c1>c2": 2.427,
+      "f1>f3": 2.41,
+      "h1>g2": 2.385,
+      "f1>f2": 2.373,
+      "f1>g2": 2.361,
+      "d1>d2": 2.349,
+      "b2>b3": 2.344,
+      "h1>h2": 2.314,
+      "h3>h2": 2.3,
+      "h3>g3": 2.299,
+      "h1>g1": 2.236,
+      "d1>e1": -0.79,
+      "h3>g2": 2.221,
+      "f1>g1": -1.55,
+      "f1>e1": 2.2,
+      "e2>f4": 1.743,
+      "c1>c5": 1.682,
+      "h3>h5": 1.645,
+      "d1>f2": 1.539,
+      "h1>f2": 1.539,
+      "h3>e3": 1.517,
+      "e2>g3": 1.492,
+      "h3>f3": 1.488,
+      "e2>f2": 1.484,
+      "e2>g1": 1.457,
+      "h1>g3": 1.449,
+      "a1>c2": 1.425,
+      "f1>g3": 1.425,
+      "f1>d2": 1.413,
+      "c1>b3": 1.381,
+      "b2>d2": 1.34,
+      "a1>b3": 1.339,
+      "c1>h6": 1.187,
+      "f1>f4": 1.093,
+      "c1>d2": 0.969,
+      "e2>d2": 0.934,
+      "a2>b4": 0.773,
+      "e2>e6": 0.75,
+      "b2>a4": 0.726,
+      "b2>b8": 0.689,
+      "d1>e3": 0.66,
+      "e2>e1": 0.655,
+      "f1>e3": 0.648,
+      "b2>c4": 0.636,
+      "e2>h2": 0.634,
+      "e2>g2": 0.579,
+      "b1>d2": 0.577,
+      "e2>c3": 0.577,
+      "f1>h2": 0.554,
+      "b1>a3": 0.546,
+      "b1>c3": 0.546,
+      "d1>c3": 0.546,
+      "a2>c3": 0.534,
+      "f1>f7": 0.22,
+      "a2>c4": 0.101,
+      "a2>a7": 0.096,
+      "b2>c3": -0.034,
+      "e2>f3": -0.13,
+      "a2>a5": -0.341,
+      "b1>c2": -0.392,
+      "d1>c2": -0.392,
+      "d1>a4": -0.466,
+      "d1>b3": -0.475,
+      "a2>b3": -0.499,
+      "f1>f6": -0.549,
+      "f1>f5": -0.728,
+      "e2>e5": -0.824,
+      "b2>b7": -1.202,
+      "h1>f3": -1.315,
+      "a2>a6": -1.353,
+      "e2>h5": -1.833,
+      "b2>b6": -1.927,
+      "a2>e6": -2.905,
+      "h1>c6": -2.986,
+      "h3>e6": -3.045,
+      "c1>f4": -3.207,
+      "b2>a3": -3.938,
+      "h1>a8": -4.306,
+      "a2>d5": -4.451,
+      "h3>f5": -4.784,
+      "h1>b7": -4.845,
+      "h1>d5": -5.301,
+      "c1>g5": -5.361
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:a2:pnrqk::f:|B_a8_0:a1:pnrqk::f:|B_b7_9:b2:pnrq::f:|B_b8_1:b1:pnrqk::f:|B_c7_10:x:p::m:|B_c8_2:c3:pr::m:|B_d7_11:x:b::m:|B_d8_3:d1:pnrqk::f:|B_e7_12:e2:pnrq::f:|B_e8_4:d3:p::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnrqk::f:|B_g7_14:x:p::m:|B_g8_6:x:r::m:|B_h7_15:h3:prqk::m:|B_h8_7:h1:pnrqk::f:|W_a1_0:a8:prqk::f:|W_a2_8:a7:prq::f:|W_b1_1:b8:prqk::f:|W_b2_9:x:n::m:|W_c1_2:c8:prqk::f:|W_c2_10:d4:pq::m:|W_d1_3:x:b::m:|W_d2_11:x:r::m:|W_e1_4:e6:pr::m:|W_e2_12:g6:n::m:|W_f1_5:f8:prqk::f:|W_f2_13:f7:prqk::f:|W_g1_6:g8:prqk::f:|W_g2_14:h6:pq::m:|W_h1_7:x:b::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "c3>d4": 5.226,
+      "e2>d4": 4.884,
+      "c3>c4": 4.177,
+      "h3>h6": 3.556,
+      "h3>g4": 3.388,
+      "e2>e4": 3.035,
+      "b2>b3": 2.977,
+      "b2>c2": 2.977,
+      "h3>h4": 2.915,
+      "b2>b4": 2.897,
+      "e2>c2": 2.887,
+      "e2>e3": 2.884,
+      "a2>a4": 2.863,
+      "a2>b4": 2.862,
+      "b1>c1": 2.844,
+      "d1>c1": 2.844,
+      "a2>a3": 2.837,
+      "f1>f3": 2.793,
+      "h1>g2": 2.768,
+      "f1>f2": 2.768,
+      "f1>g2": 2.744,
+      "d1>d2": 2.744,
+      "h3>g3": 2.742,
+      "e2>d2": 2.721,
+      "h3>h2": 2.719,
+      "h1>h2": 2.697,
+      "e2>h2": 2.686,
+      "e2>e1": 2.674,
+      "d1>f2": 2.666,
+      "d1>c2": 2.654,
+      "b2>a4": 2.647,
+      "h1>f2": 2.642,
+      "h3>h5": 2.641,
+      "b2>d2": 2.629,
+      "h1>g1": 2.619,
+      "f1>g1": -998,
+      "e2>g2": 2.619,
+      "b1>c2": 2.618,
+      "h3>g2": 2.616,
+      "d1>e1": 0.555,
+      "f1>e1": 2.583,
+      "e2>c1": 2.572,
+      "c3>a3": 2.571,
+      "e2>g1": 2.56,
+      "a2>c1": 2.517,
+      "e2>g3": 2.505,
+      "a1>c2": 2.462,
+      "a1>b3": 2.462,
+      "h1>g3": 2.45,
+      "f1>d2": 2.45,
+      "f1>g3": 2.45,
+      "b2>b5": 2.439,
+      "b1>d2": 2.438,
+      "e2>f4": 2.385,
+      "b1>a3": 2.379,
+      "c3>b3": 2.256,
+      "b2>c4": 2.231,
+      "h3>f3": 2.181,
+      "c3>c2": 2.152,
+      "e2>f2": 2.08,
+      "e2>g4": 2.055,
+      "c3>c1": 2.004,
+      "b2>c1": 1.85,
+      "e2>h5": 1.776,
+      "f1>h2": 1.541,
+      "h1>e4": 1.37,
+      "d1>e3": 1.055,
+      "f1>e3": 1.031,
+      "b1>d1": 0.543,
+      "b2>b8": 0.18,
+      "c3>c8": 0.164,
+      "a2>a5": 0.025,
+      "f1>f7": -0.203,
+      "a2>a7": -0.257,
+      "f1>f4": -0.383,
+      "e2>e6": -0.591,
+      "e2>e5": -0.786,
+      "c3>c6": -0.898,
+      "d1>a4": -1.128,
+      "b2>a3": -1.212,
+      "a2>a6": -1.303,
+      "a2>c4": -1.405,
+      "c3>c5": -1.435,
+      "b2>b7": -1.441,
+      "c3>c7": -1.481,
+      "d1>b3": -1.574,
+      "a2>b3": -1.598,
+      "f1>f5": -1.773,
+      "f1>f6": -1.788,
+      "b2>b6": -1.799,
+      "h3>e3": -1.986,
+      "h1>f3": -2.14,
+      "a2>e6": -4.105,
+      "h3>e6": -4.257,
+      "h1>a8": -5.014,
+      "h1>c6": -5.348,
+      "h1>b7": -5.651,
+      "h3>f5": -5.793,
+      "a2>d5": -5.844,
+      "e2>f3": -6.043,
+      "h1>d5": -6.694
+     }
+    },
+    {
+     "sig": "white#a6#B_a7_8:a2:pnrqk::f:|B_a8_0:a1:pnrqk::f:|B_b7_9:b2:pnrq::f:|B_b8_1:b1:pnrqk::f:|B_c7_10:x:p::m:|B_c8_2:d4:p::m:|B_d7_11:x:b::m:|B_d8_3:d1:pnrqk::f:|B_e7_12:e2:pnrq::f:|B_e8_4:d3:p::m:|B_f7_13:x:b::m:|B_f8_5:f1:pnrqk::f:|B_g7_14:x:p::m:|B_g8_6:x:r::m:|B_h7_15:h3:prqk::m:|B_h8_7:h1:pnrqk::f:|W_a1_0:a8:prqk::f:|W_a2_8:a5:prq::m:|W_b1_1:b8:prqk::f:|W_b2_9:x:n::m:|W_c1_2:c8:prqk::f:|W_c2_10:x:p::m:|W_d1_3:x:b::m:|W_d2_11:x:r::m:|W_e1_4:e6:pr::m:|W_e2_12:g6:n::m:|W_f1_5:f8:prqk::f:|W_f2_13:f7:prqk::f:|W_g1_6:g8:prqk::f:|W_g2_14:h6:pq::m:|W_h1_7:x:b::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "h3>h4": 5.594,
+      "e2>e4": 5.588,
+      "e2>e3": 5.455,
+      "f1>f3": 5.334,
+      "b2>b3": 5.287,
+      "a2>a4": 5.28,
+      "f1>f2": 5.273,
+      "d1>d2": 5.261,
+      "a2>a3": 5.256,
+      "h3>g3": 5.235,
+      "h1>h2": 5.226,
+      "h3>h2": 5.224,
+      "d1>f2": 5.159,
+      "h1>f2": 5.147,
+      "h1>g1": 5.136,
+      "d1>e1": 1.808,
+      "f1>g1": 0.951,
+      "e2>c1": 5.113,
+      "f1>e1": 5.112,
+      "e2>g1": 5.089,
+      "e2>g3": 5.058,
+      "d1>e3": 5.05,
+      "d1>c3": 5.038,
+      "f1>e3": 5.026,
+      "b2>c4": 5.015,
+      "h1>g3": 4.991,
+      "f1>g3": 4.979,
+      "f1>d2": 4.967,
+      "h3>h6": 4.964,
+      "b1>c3": 4.946,
+      "b1>d2": 4.899,
+      "a1>c2": 4.723,
+      "a1>b3": 4.721,
+      "a2>c3": 4.692,
+      "a2>c1": 4.664,
+      "d4>d5": 4.468,
+      "h3>g4": 4.376,
+      "h1>g2": 4.344,
+      "f1>g2": 4.332,
+      "e2>c3": 4.278,
+      "h3>g2": 4.241,
+      "b2>b4": 4.183,
+      "h3>e3": 4.108,
+      "f1>h2": 4.07,
+      "e2>d2": 4.05,
+      "b2>d2": 4.038,
+      "e2>h2": 4.027,
+      "b2>a4": 4.016,
+      "e2>e1": 4.016,
+      "a2>a5": 3.972,
+      "e2>g2": 3.898,
+      "h1>e4": 3.885,
+      "e2>c2": 3.819,
+      "e2>f4": 3.805,
+      "b1>a3": 3.794,
+      "h3>f3": 3.787,
+      "b2>c2": 3.765,
+      "e2>f2": 3.626,
+      "e2>g4": 3.49,
+      "b1>c1": 3.258,
+      "d1>c1": 3.258,
+      "h3>h5": 3.167,
+      "a2>b4": 2.261,
+      "b1>d1": 1.523,
+      "e2>e5": 1.389,
+      "f1>f4": 1.139,
+      "b2>b5": 0.675,
+      "b2>b6": 0.663,
+      "b2>b8": 0.202,
+      "b2>c3": -0.055,
+      "a2>c4": -0.11,
+      "f1>f7": -0.198,
+      "d1>b3": -0.278,
+      "a2>b3": -0.29,
+      "b2>a3": -0.29,
+      "d1>a4": -0.332,
+      "b2>c1": -0.353,
+      "b1>c2": -0.398,
+      "d1>c2": -0.398,
+      "h1>f3": -0.534,
+      "e2>e6": -0.567,
+      "b2>b7": -1.395,
+      "f1>f5": -1.564,
+      "f1>f6": -1.693,
+      "e2>h5": -1.742,
+      "a2>e6": -4.116,
+      "h1>a8": -4.25,
+      "h3>e6": -4.268,
+      "e2>f3": -4.449,
+      "h1>c6": -4.57,
+      "h1>b7": -4.887,
+      "a2>d5": -5.592,
+      "h3>f5": -5.679,
+      "h1>d5": -5.733
+     }
+    }
+   ],
+   "game": 21,
+   "white": "twin-weak",
+   "black": "twin-strong",
+   "mirrored": true
+  },
+  {
+   "startPly": 23,
+   "parPlies": 3,
+   "endsInMate": false,
+   "mistake": {
+    "from": "d7",
+    "to": "b6",
+    "evalBefore": 1.09,
+    "evalAfter": 3.25,
+    "swing": 2.16
+   },
+   "spread": {
+    "best": 3.253000000000006,
+    "median": -3.66,
+    "medianFrac": 0,
+    "numChoices": 37
+   },
+   "parEvals": [
+    3.25,
+    3.26,
+    3.52
+   ],
+   "trickiness": 5.5,
+   "trickMin": 5.5,
+   "trickAvg": 10.81,
+   "themes": [
+    "quiet"
+   ],
+   "steps": [
+    {
+     "ply": 23,
+     "bestMove": {
+      "type": "move",
+      "from": "d5",
+      "to": "d8",
+      "enPassant": false
+     },
+     "parEval": 3.25,
+     "spread": {
+      "best": 3.253000000000006,
+      "median": -3.66,
+      "medianFrac": 0,
+      "numChoices": 37
+     },
+     "numChoices": 37,
+     "shallowRank": 1,
+     "possDelta": 2,
+     "themes": [],
+     "trickiness": 5.5
+    },
+    {
+     "ply": 25,
+     "bestMove": {
+      "type": "move",
+      "from": "b2",
+      "to": "b3",
+      "enPassant": false
+     },
+     "parEval": 3.26,
+     "spread": {
+      "best": 3.2550000000000043,
+      "median": 1.86,
+      "medianFrac": 0.571,
+      "numChoices": 36
+     },
+     "numChoices": 36,
+     "shallowRank": 5,
+     "possDelta": 0,
+     "themes": [
+      "quiet"
+     ],
+     "trickiness": 11.66
+    },
+    {
+     "ply": 27,
+     "bestMove": {
+      "type": "move",
+      "from": "a2",
+      "to": "a3",
+      "enPassant": false
+     },
+     "parEval": 3.52,
+     "spread": {
+      "best": 3.5160000000000022,
+      "median": 1.07,
+      "medianFrac": 0.305,
+      "numChoices": 41
+     },
+     "numChoices": 41,
+     "shallowRank": 9,
+     "possDelta": 0,
+     "themes": [
+      "quiet"
+     ],
+     "trickiness": 15.26
+    }
+   ],
+   "blackReplies": [
+    {
+     "type": "move",
+     "from": "h8",
+     "to": "h7"
+    },
+    {
+     "type": "move",
+     "from": "f8",
+     "to": "f6"
+    }
+   ],
+   "start": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
        "k"
       ],
       "promoTypes": [],
@@ -5883,20 +3428,217 @@
       "castled": false
      },
      {
-      "id": "W_f2_13",
-      "side": "white",
-      "square": "f4",
+      "id": "W_b1_1",
+      "side": "black",
+      "square": "b8",
       "possibleTypes": [
        "p",
-       "n",
-       "r",
-       "q"
+       "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "r",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
        "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 10
+     },
+     {
+      "id": "W_d1_3",
+      "side": "black",
+      "square": "d8",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 9
+     },
+     {
+      "id": "W_f1_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "W_h1_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "black",
+      "square": "a5",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_c2_10",
+      "side": "black",
+      "square": "c7",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "black",
+      "square": "b6",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "W_f2_13",
+      "side": "black",
+      "square": "f5",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
       ],
       "promoTypes": [],
       "captured": false,
@@ -5906,202 +3648,154 @@
      },
      {
       "id": "W_g2_14",
-      "side": "white",
-      "square": "e4",
+      "side": "black",
+      "square": "h6",
       "possibleTypes": [
-       "p"
+       "p",
+       "k"
       ],
       "baseTypes": [
-       "p"
+       "p",
+       "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 1,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "W_h2_15",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "B_a8_0",
       "side": "white",
-      "square": "h2",
+      "square": "a1",
       "possibleTypes": [
        "p",
-       "n",
-       "r",
-       "q"
+       "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "r",
-       "q"
+       "k"
       ],
       "promoTypes": [],
       "captured": false,
       "moveCount": 0,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_a8_0",
-      "side": "black",
-      "square": "d5",
-      "possibleTypes": [
-       "b",
-       "q"
-      ],
-      "baseTypes": [
-       "b",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_b8_1",
-      "side": "black",
-      "square": "b6",
+      "side": "white",
+      "square": "b1",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q"
+       "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q"
+       "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 1,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_c8_2",
-      "side": "black",
-      "square": "c7",
+      "side": "white",
+      "square": "c1",
       "possibleTypes": [
        "p",
-       "r",
-       "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "r",
-       "q",
        "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 1,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_d8_3",
-      "side": "black",
-      "square": "d8",
+      "side": "white",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "q"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "q"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
+      "captured": true,
+      "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 11
      },
      {
       "id": "B_e8_4",
-      "side": "black",
-      "square": "e8",
+      "side": "white",
+      "square": "d5",
       "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "r"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "r"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 0,
+      "moveCount": 4,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_f8_5",
-      "side": "black",
-      "square": "f7",
+      "side": "white",
+      "square": "f1",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 1,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
       "id": "B_g8_6",
-      "side": "black",
-      "square": "g8",
+      "side": "white",
+      "square": "g1",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "promoTypes": [],
@@ -6112,48 +3806,31 @@
      },
      {
       "id": "B_h8_7",
-      "side": "black",
-      "square": "h8",
+      "side": "white",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "b"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
-       "k"
+       "b"
       ],
       "promoTypes": [],
-      "captured": false,
-      "moveCount": 0,
+      "captured": true,
+      "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 4
      },
      {
       "id": "B_a7_8",
-      "side": "black",
-      "square": "a7",
+      "side": "white",
+      "square": "a2",
       "possibleTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "promoTypes": [],
@@ -6164,77 +3841,14 @@
      },
      {
       "id": "B_b7_9",
-      "side": "black",
-      "square": null,
-      "possibleTypes": [
-       "n"
-      ],
-      "baseTypes": [
-       "n"
-      ],
-      "promoTypes": [],
-      "captured": true,
-      "moveCount": 1,
-      "wasPromoted": false,
-      "castled": false,
-      "captureIndex": 0
-     },
-     {
-      "id": "B_c7_10",
-      "side": "black",
-      "square": "a5",
+      "side": "white",
+      "square": "b2",
       "possibleTypes": [
        "p",
-       "b",
-       "q"
-      ],
-      "baseTypes": [
-       "p",
-       "b",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_d7_11",
-      "side": "black",
-      "square": "f6",
-      "possibleTypes": [
-       "r",
-       "q"
-      ],
-      "baseTypes": [
-       "r",
-       "q"
-      ],
-      "promoTypes": [],
-      "captured": false,
-      "moveCount": 2,
-      "wasPromoted": false,
-      "castled": false
-     },
-     {
-      "id": "B_e7_12",
-      "side": "black",
-      "square": "e7",
-      "possibleTypes": [
-       "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "baseTypes": [
        "p",
-       "n",
-       "b",
-       "r",
-       "q",
        "k"
       ],
       "promoTypes": [],
@@ -6244,52 +3858,41 @@
       "castled": false
      },
      {
-      "id": "B_f7_13",
-      "side": "black",
-      "square": "f5",
+      "id": "B_c7_10",
+      "side": "white",
+      "square": "c2",
       "possibleTypes": [
-       "p",
-       "n",
-       "r"
+       "p"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "r"
+       "p"
       ],
       "promoTypes": [],
       "captured": false,
-      "moveCount": 2,
+      "moveCount": 0,
       "wasPromoted": false,
       "castled": false
      },
      {
-      "id": "B_g7_14",
-      "side": "black",
-      "square": "g6",
+      "id": "B_d7_11",
+      "side": "white",
+      "square": null,
       "possibleTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
+       "n"
       ],
       "baseTypes": [
-       "p",
-       "n",
-       "r",
-       "q",
-       "k"
+       "n"
       ],
       "promoTypes": [],
-      "captured": false,
+      "captured": true,
       "moveCount": 1,
       "wasPromoted": false,
-      "castled": false
+      "castled": false,
+      "captureIndex": 8
      },
      {
-      "id": "B_h7_15",
-      "side": "black",
+      "id": "B_e7_12",
+      "side": "white",
       "square": null,
       "possibleTypes": [
        "r"
@@ -6302,403 +3905,210 @@
       "moveCount": 1,
       "wasPromoted": false,
       "castled": false,
-      "captureIndex": 3
+      "captureIndex": 6
+     },
+     {
+      "id": "B_f7_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_g7_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_h7_15",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
      }
     ],
     "lastMove": {
      "side": "black",
-     "pieceId": "B_a8_0",
-     "from": "b7",
-     "to": "d5",
+     "pieceId": "W_d2_11",
+     "from": "d7",
+     "to": "b6",
      "isDoubleStep": false,
      "crossedSquare": null,
-     "zappedSquares": [
-      "c4"
-     ],
-     "healedSquares": [
-      "f7"
-     ],
+     "zappedSquares": [],
+     "healedSquares": [],
      "fizzledSquares": []
     },
-    "captureCounter": 5,
+    "captureCounter": 12,
     "sideToMove": "white"
    },
    "evalTables": [
     {
-     "sig": "white#-#B_a7_8:a7:pnbrqk::f:|B_a8_0:d5:bq::m:|B_b7_9:x:n::m:|B_b8_1:b6:pnbrq::m:|B_c7_10:a5:pbq::m:|B_c8_2:c7:prqk::m:|B_d7_11:f6:rq::m:|B_d8_3:d8:pnbrqk::f:|B_e7_12:e7:pnbrqk::f:|B_e8_4:e8:pnbrqk::f:|B_f7_13:f5:pnr::m:|B_f8_5:f7:pnbrqk::m:|B_g7_14:g6:pnrqk::m:|B_g8_6:g8:pnbrqk::f:|B_h7_15:x:r::m:|B_h8_7:h8:pnbrqk::f:|W_a1_0:a1:pnrqk::f:|W_a2_8:a2:pnrqk::f:|W_b1_1:b1:pnrqk::f:|W_b2_9:b2:pnrqk::f:|W_c1_2:c2:prqk::m:|W_c2_10:c4:prq::m:|W_d1_3:d3:prqk::m:|W_d2_11:x:p::m:|W_e1_4:x:b::m:|W_e2_12:e2:pnrqk::f:|W_f1_5:x:b::m:|W_f2_13:f4:pnrq::m:|W_g1_6:h3:n::m:|W_g2_14:e4:p::m:|W_h1_7:h1:pnrqk::f:|W_h2_15:h2:pnrq::f:",
+     "sig": "white#-#B_a7_8:a2:pk::f:|B_a8_0:a1:pk::f:|B_b7_9:b2:pk::f:|B_b8_1:b1:pk::f:|B_c7_10:c2:p::f:|B_c8_2:c1:pk::f:|B_d7_11:x:n::m:|B_d8_3:x:q::m:|B_e7_12:x:r::m:|B_e8_4:d5:r::m:|B_f7_13:x:n::m:|B_f8_5:f1:pk::f:|B_g7_14:x:b::m:|B_g8_6:g1:pk::f:|B_h7_15:h2:pk::f:|B_h8_7:x:b::m:|W_a1_0:a8:pk::f:|W_a2_8:a5:p::m:|W_b1_1:b8:pk::f:|W_b2_9:x:b::m:|W_c1_2:x:q::m:|W_c2_10:c7:p::f:|W_d1_3:d8:p::f:|W_d2_11:b6:n::m:|W_e1_4:x:r::m:|W_e2_12:x:r::m:|W_f1_5:f8:pk::f:|W_f2_13:f5:p::m:|W_g1_6:x:n::m:|W_g2_14:h6:pk::m:|W_h1_7:h8:pk::f:|W_h2_15:x:b::m:",
      "evals": {
-      "c4>d5": 4.98,
-      "e4>d5": 3.843,
-      "e4>e5": 3.175,
-      "e4>f5": 3.004,
-      "f4>d5": 2.894,
-      "d3>d5": 1.814,
-      "h3>f2": 1.458,
-      "h3>g5": 1.443,
-      "b2>b4": 1.296,
-      "c4>c5": 1.256,
-      "a2>a4": 1.182,
-      "c2>c3": 1.173,
-      "b2>b3": 1.162,
-      "e2>e3": 1.143,
-      "a2>a3": 1.12,
-      "e2>f1": 1.049,
-      "h3>g1": 1.046,
-      "b1>c1": 1.004,
-      "c2>c1": 0.999,
-      "h2>g2": 0.958,
-      "b1>d1": -0.246,
-      "h1>d1": 0.914,
-      "h1>c1": 0.914,
-      "e2>g2": 0.912,
-      "f4>f3": 0.862,
-      "b2>c1": 0.855,
-      "e2>f3": 0.836,
-      "b1>f1": 0.824,
-      "h1>f1": 0.824,
-      "f4>f1": 0.54,
-      "e2>e1": 0.306,
-      "b1>c3": 0.288,
-      "d3>e3": 0.284,
-      "a2>c3": 0.276,
-      "e2>d2": 0.272,
-      "a1>b3": 0.241,
-      "h1>g3": 0.238,
-      "e2>c3": 0.229,
-      "e2>g3": 0.203,
-      "e2>d4": 0.174,
-      "h2>f2": 0.166,
-      "b1>d2": 0.151,
-      "e2>f2": 0.143,
-      "h1>f2": 0.139,
-      "b1>a3": 0.104,
-      "c2>d2": 0.096,
-      "a2>c1": 0.092,
-      "e2>c1": 0.057,
-      "e2>g1": 0.057,
-      "b2>d1": 0.045,
-      "h2>f3": 0.029,
-      "f4>f2": -0.115,
-      "b1>e1": -0.126,
-      "h1>e1": -0.126,
-      "d3>d4": -0.128,
-      "f4>g2": -0.133,
-      "f4>h4": -0.193,
-      "h1>f3": -0.28,
-      "b1>g1": -0.406,
-      "h1>g2": -0.414,
-      "h2>f1": -0.44,
-      "f4>g6": -0.445,
-      "f4>c1": -0.53,
-      "a2>b3": -0.57,
-      "d3>b3": -0.579,
-      "c2>d1": -0.621,
-      "a2>a5": -0.644,
-      "c2>b3": -0.653,
-      "c4>c3": -0.687,
-      "b2>a4": -0.701,
-      "h2>g4": -0.719,
-      "e2>d1": -0.72,
-      "b2>b5": -0.739,
-      "d3>d1": -0.76,
-      "c4>d4": -0.803,
-      "d3>f3": -0.814,
-      "b2>b6": -0.938,
-      "d3>c3": -1.086,
-      "f4>f5": -1.09,
-      "h1>g1": -1.127,
-      "a2>b4": -1.182,
-      "d3>d2": -1.273,
-      "f4>h5": -1.317,
-      "c4>a4": -1.322,
-      "c4>c7": -1.364,
-      "b2>f6": -1.372,
-      "d3>a3": -1.54,
-      "d3>g3": -1.567,
-      "f4>g4": -1.972,
-      "c4>b4": -2.108,
-      "f4>h6": -2.257,
-      "f4>e6": -3,
-      "c4>c6": -3.537,
-      "f4>d2": -3.649,
-      "b2>e5": -3.973,
-      "h2>g3": -4.117,
-      "b2>a3": -4.162,
-      "h2>g1": -4.301,
-      "f4>g5": -4.31,
-      "f4>g3": -4.437,
-      "b2>c3": -4.654,
-      "b2>d4": -4.68,
-      "f4>e3": -4.973,
-      "c4>a6": -5.192,
-      "f4>c7": -5.978,
-      "e2>h5": -6.14,
-      "c2>a4": -6.323,
-      "e2>g4": -6.458,
-      "c4>b5": -6.484,
-      "f4>e5": -6.706,
-      "c4>b3": -6.954,
-      "f4>d6": -8.89
+      "d5>d8": 5.394,
+      "d5>f5": 5.261,
+      "d5>a5": 5.246,
+      "d5>e5": 4.108,
+      "d5>c5": 4.108,
+      "d5>b5": 4.108,
+      "d5>d4": 2.594,
+      "d5>d3": 2.546,
+      "d5>d2": 2.163,
+      "d5>d1": 1.48,
+      "c2>c4": 0.121,
+      "b2>b4": -0.575,
+      "a2>a4": -0.587,
+      "h2>h4": -0.599,
+      "b2>b3": -0.601,
+      "a2>a3": -0.613,
+      "h2>h3": -0.625,
+      "f1>f3": -0.657,
+      "f1>f2": -0.658,
+      "g1>g2": -0.67,
+      "g1>g3": -0.692,
+      "c2>c3": -0.777,
+      "h2>g2": -2.57,
+      "f1>g2": -2.594,
+      "c1>d1": -2.641,
+      "f1>e1": -2.653,
+      "g1>h1": -2.665,
+      "h2>h1": -2.665,
+      "f1>e2": -2.732,
+      "g1>f2": -2.744,
+      "b2>a3": -2.85,
+      "h2>g3": -2.882,
+      "c1>d2": -2.882,
+      "a2>b3": -2.906,
+      "d5>d6": -3.163,
+      "b2>c3": -3.209,
+      "d5>d7": -3.257
      }
     },
     {
-     "sig": "white#-#B_a7_8:a7:pnbrqk::f:|B_a8_0:x:b::m:|B_b7_9:x:n::m:|B_b8_1:b6:pnbrq::m:|B_c7_10:a5:pbq::m:|B_c8_2:c7:prqk::m:|B_d7_11:f6:rq::m:|B_d8_3:d8:pnbrqk::f:|B_e7_12:e7:pnbrqk::f:|B_e8_4:e8:pnbrqk::f:|B_f7_13:e4:p::m:|B_f8_5:f7:pnbrqk::m:|B_g7_14:g6:pnrqk::m:|B_g8_6:g8:pnbrqk::f:|B_h7_15:x:r::m:|B_h8_7:h8:pnbrqk::f:|W_a1_0:a1:pnrqk::f:|W_a2_8:a2:pnrqk::f:|W_b1_1:b1:pnrqk::f:|W_b2_9:b2:pnrqk::f:|W_c1_2:c2:prqk::m:|W_c2_10:d5:pq::m:|W_d1_3:d3:prq::m:|W_d2_11:x:p::m:|W_e1_4:x:b::m:|W_e2_12:e2:pnrqk::f:|W_f1_5:x:b::m:|W_f2_13:f4:pnrq::m:|W_g1_6:h3:n::m:|W_g2_14:x:p::m:|W_h1_7:h1:pnrqk::f:|W_h2_15:h2:pnrq::f:",
+     "sig": "white#-#B_a7_8:a2:pk::f:|B_a8_0:a1:pk::f:|B_b7_9:b2:pk::f:|B_b8_1:b1:pk::f:|B_c7_10:c2:p::f:|B_c8_2:c1:pk::f:|B_d7_11:x:n::m:|B_d8_3:x:q::m:|B_e7_12:x:r::m:|B_e8_4:d8:r::m:|B_f7_13:x:n::m:|B_f8_5:f1:pk::f:|B_g7_14:x:b::m:|B_g8_6:g1:pk::f:|B_h7_15:h2:pk::f:|B_h8_7:x:b::m:|W_a1_0:a8:pk::f:|W_a2_8:a5:p::m:|W_b1_1:b8:p::f:|W_b2_9:x:b::m:|W_c1_2:x:q::m:|W_c2_10:c7:p::f:|W_d1_3:x:p::f:|W_d2_11:b6:n::m:|W_e1_4:x:r::m:|W_e2_12:x:r::m:|W_f1_5:f8:p::f:|W_f2_13:f5:p::m:|W_g1_6:x:n::m:|W_g2_14:h6:pk::m:|W_h1_7:h7:pk::m:|W_h2_15:x:b::m:",
      "evals": {
-      "f4>f6": 3.963,
-      "d3>e4": 3.952,
-      "d5>d6": 3.886,
-      "e2>e4": 3.308,
-      "c2>c4": 3.162,
-      "c2>c3": 3.117,
-      "h2>g2": 3.073,
-      "f4>e4": 3.047,
-      "d3>d4": 3.016,
-      "h3>g5": 2.978,
-      "h3>f2": 2.954,
-      "e2>g2": 2.936,
-      "e2>f1": 2.898,
-      "a2>a3": 2.867,
-      "c2>c1": 2.86,
-      "f4>f5": 2.831,
-      "h3>g1": 2.829,
-      "e2>e3": 2.798,
-      "b1>c1": 2.787,
-      "e2>d1": 2.74,
-      "b2>b4": 2.685,
-      "c2>d1": 2.668,
-      "a2>a4": 2.649,
-      "b2>b3": 2.575,
-      "d3>d1": 2.476,
-      "h1>c1": 2.417,
-      "b1>f1": 2.405,
-      "h1>f1": 2.405,
-      "b1>d1": 1.435,
-      "h1>d1": 2.373,
-      "b2>c1": 2.358,
-      "d3>b3": 2.332,
-      "h2>g4": 2.305,
-      "d3>g3": 2.248,
-      "d3>a3": 2.159,
-      "e2>g3": 2.055,
-      "e2>c1": 1.996,
-      "e2>g1": 1.996,
-      "d5>e4": 1.96,
-      "b2>c4": 1.936,
-      "f4>f1": 1.895,
-      "e2>d2": 1.857,
-      "a1>b3": 1.81,
-      "e2>e1": 1.79,
-      "c2>d2": 1.785,
-      "h1>e4": 1.766,
-      "h1>g3": 1.744,
-      "b1>d2": 1.732,
-      "b1>a3": 1.697,
-      "a2>c1": 1.673,
-      "h2>f1": 1.667,
-      "d3>d2": 1.663,
-      "b2>d1": 1.65,
-      "h1>g2": 1.556,
-      "h2>f2": 1.47,
-      "b1>g1": 1.367,
-      "b1>e1": 1.365,
-      "h1>e1": 1.365,
-      "b2>a4": 1.319,
-      "h2>f3": 1.313,
-      "a2>a5": 1.306,
-      "f4>g4": 1.177,
-      "d3>e3": 1.116,
-      "c2>c7": 1.112,
-      "a2>b3": 1.058,
-      "c2>b3": 0.927,
-      "h1>f2": 0.858,
-      "e2>c3": 0.855,
-      "a2>b4": 0.834,
-      "c2>c6": 0.785,
-      "f4>g6": 0.778,
-      "e2>d4": 0.776,
-      "e2>f2": 0.717,
-      "b2>b5": 0.65,
-      "d3>c3": 0.593,
-      "b1>c3": 0.58,
-      "a2>c3": 0.568,
-      "f4>f2": 0.546,
-      "h1>g1": 0.537,
-      "h2>g3": 0.394,
-      "f4>g2": 0.391,
-      "b2>b6": 0.297,
-      "f4>h4": 0.293,
-      "d3>f3": -0.073,
-      "e2>g4": -0.169,
-      "c2>c5": -0.226,
-      "b2>f6": -0.537,
-      "f4>g3": -0.762,
-      "f4>c1": -0.771,
-      "f4>h5": -0.921,
-      "f4>e6": -1.06,
-      "f4>f3": -2.412,
-      "f4>d2": -2.564,
-      "b2>e5": -2.868,
-      "d5>g5": -2.873,
-      "a2>c4": -3.052,
-      "b2>a3": -3.101,
-      "h2>g1": -3.117,
-      "d3>a6": -3.153,
-      "d3>c4": -3.62,
-      "d5>e5": -3.689,
-      "f4>e3": -3.823,
-      "e2>h5": -4.019,
-      "d3>b5": -4.352,
-      "b2>c3": -4.547,
-      "f4>c7": -4.588,
-      "b2>d4": -4.625,
-      "d5>b3": -4.691,
-      "d5>c4": -4.77,
-      "f4>h6": -4.926,
-      "d5>d4": -4.929,
-      "f4>g5": -4.976,
-      "f4>e5": -5.07,
-      "c2>a4": -5.304,
-      "d5>f7": -5.338,
-      "d5>a5": -5.756,
-      "d5>d8": -5.763,
-      "d5>b5": -5.799,
-      "d5>b7": -5.854,
-      "d5>a8": -6.186,
-      "d5>d7": -6.25,
-      "e2>f3": -6.68,
-      "h1>f3": -6.723,
-      "d5>e6": -6.99,
-      "d5>h5": -7.004,
-      "d5>c5": -7.028,
-      "d5>f5": -7.062,
-      "d5>c6": -7.122,
-      "f4>d6": -7.218
+      "d8>f8": 5.602,
+      "d8>b8": 5.31,
+      "c2>c3": 4.647,
+      "h2>h4": 4.638,
+      "b2>b3": 4.636,
+      "a2>a3": 4.624,
+      "h2>h3": 4.612,
+      "c2>c4": 4.593,
+      "f1>f3": 4.58,
+      "f1>f2": 4.579,
+      "g1>g2": 4.567,
+      "g1>g3": 4.545,
+      "d8>e8": 4.46,
+      "b2>b4": 4.112,
+      "d8>d4": 3.984,
+      "d8>d3": 3.902,
+      "d8>d2": 3.867,
+      "a2>a4": 3.812,
+      "d8>d1": 3.208,
+      "h2>g2": 2.667,
+      "c1>d2": 2.643,
+      "f1>g2": 2.643,
+      "g1>f2": 2.643,
+      "f1>e2": 2.643,
+      "c1>d1": 2.596,
+      "f1>e1": 2.584,
+      "h2>h1": 2.572,
+      "g1>h1": 2.572,
+      "h2>g3": 2.505,
+      "b2>c3": 2.319,
+      "b2>a3": 2.237,
+      "a2>b3": 2.193,
+      "d8>d5": 0.927,
+      "d8>d7": -1.147,
+      "d8>c8": -1.47,
+      "d8>d6": -1.483
      }
     },
     {
-     "sig": "white#-#B_a7_8:a7:pnbqk::f:|B_a8_0:x:b::m:|B_b7_9:x:n::m:|B_b8_1:b6:pnb::m:|B_c7_10:a5:pbq::m:|B_c8_2:c7:pqk::m:|B_d7_11:x:r::m:|B_d8_3:d8:pnbqk::f:|B_e7_12:e7:pnbqk::f:|B_e8_4:e8:pnbqk::f:|B_f7_13:e4:p::m:|B_f8_5:f7:pnbq::m:|B_g7_14:g6:pnq::m:|B_g8_6:g8:pnbqk::f:|B_h7_15:x:r::m:|B_h8_7:f6:bq::m:|W_a1_0:a1:pnrqk::f:|W_a2_8:a2:pnrqk::f:|W_b1_1:b1:pnrqk::f:|W_b2_9:b2:pnrq::f:|W_c1_2:c2:prqk::m:|W_c2_10:d5:pq::m:|W_d1_3:d3:prq::m:|W_d2_11:x:p::m:|W_e1_4:x:b::m:|W_e2_12:e2:pnrqk::f:|W_f1_5:x:b::m:|W_f2_13:x:r::m:|W_g1_6:h3:n::m:|W_g2_14:x:p::m:|W_h1_7:h1:pnrqk::f:|W_h2_15:h2:pnrq::f:",
+     "sig": "white#f7#B_a7_8:a2:pk::f:|B_a8_0:a1:pk::f:|B_b7_9:b3:pk::m:|B_b8_1:b1:pk::f:|B_c7_10:c2:p::f:|B_c8_2:c1:pk::f:|B_d7_11:x:n::m:|B_d8_3:x:q::m:|B_e7_12:x:r::m:|B_e8_4:d8:r::m:|B_f7_13:x:n::m:|B_f8_5:f1:pk::f:|B_g7_14:x:b::m:|B_g8_6:g1:pk::f:|B_h7_15:h2:pk::f:|B_h8_7:x:b::m:|W_a1_0:a8:pk::f:|W_a2_8:a5:p::m:|W_b1_1:b8:p::f:|W_b2_9:x:b::m:|W_c1_2:x:q::m:|W_c2_10:c7:p::f:|W_d1_3:x:p::f:|W_d2_11:b6:n::m:|W_e1_4:x:r::m:|W_e2_12:x:r::m:|W_f1_5:f6:p::m:|W_f2_13:f5:p::m:|W_g1_6:x:n::m:|W_g2_14:h6:pk::m:|W_h1_7:h7:pk::m:|W_h2_15:x:b::m:",
      "evals": {
-      "d3>e4": 4.466,
-      "e2>e4": 4.067,
-      "d3>d4": 3.459,
-      "d5>e4": 3.134,
-      "d3>e3": 2.897,
-      "h1>e4": 2.848,
-      "d3>d1": 2.826,
-      "e2>d2": 2.722,
-      "c2>c3": 2.65,
-      "d5>d6": 2.642,
-      "e2>e3": 2.632,
-      "e2>f2": 2.604,
-      "h2>f2": 2.549,
-      "c2>c4": 2.541,
-      "h3>f4": 2.482,
-      "c2>b3": 2.44,
-      "b2>b4": 2.378,
-      "c2>d2": 2.367,
-      "c2>c1": 2.355,
-      "d3>d2": 2.288,
-      "h2>g4": 2.277,
-      "d3>b3": 2.257,
-      "b2>b3": 2.25,
-      "b1>f1": 2.179,
-      "h1>f1": 2.179,
-      "h1>g2": 2.171,
-      "a2>b3": 2.165,
-      "e2>d1": 2.163,
-      "c2>d1": 2.163,
-      "h3>f2": 2.145,
-      "a2>a3": 2.112,
-      "h3>g1": 2.098,
-      "h2>g2": 2.079,
-      "e2>g2": 2.044,
-      "b1>c1": 2.002,
-      "b1>d1": -1.594,
-      "h1>d1": 1.927,
-      "a2>a4": 1.906,
-      "e2>f1": 1.697,
-      "d3>a3": 1.693,
-      "e2>e1": 1.681,
-      "h1>c1": 1.632,
-      "b2>c4": 1.563,
-      "e2>f4": 1.563,
-      "e2>c3": 1.437,
-      "b2>a4": 1.403,
-      "d3>g3": 1.383,
-      "h2>f1": 1.348,
-      "e2>d4": 1.346,
-      "b2>d1": 1.301,
-      "e2>g3": 1.288,
-      "e2>c1": 1.262,
-      "e2>g1": 1.241,
-      "h3>g5": 1.235,
-      "b1>c3": 1.162,
-      "a2>c3": 1.15,
-      "h1>g1": 1.106,
-      "a1>b3": 1.091,
-      "h1>g3": 1.037,
-      "b1>d2": 1.013,
-      "b1>a3": 0.99,
-      "h1>e1": 0.988,
-      "b1>e1": 0.976,
-      "a2>c1": 0.966,
-      "h1>f2": 0.963,
-      "h2>g3": 0.858,
-      "d3>c3": 0.785,
-      "b1>g1": 0.736,
-      "c2>c6": 0.485,
-      "e2>g4": 0.434,
-      "h2>g1": 0.354,
-      "a2>b4": 0.176,
-      "b2>c1": 0.139,
-      "h2>f3": 0.072,
-      "c2>c7": 0.049,
-      "a2>a5": -0.114,
-      "b2>b5": -0.573,
-      "b2>b6": -0.643,
-      "d3>a6": -0.831,
-      "d5>b3": -1.073,
-      "c2>c5": -1.499,
-      "b2>a3": -1.652,
-      "b2>f6": -1.798,
-      "d3>f3": -2.07,
-      "d5>d8": -3.342,
-      "d3>b5": -3.396,
-      "a2>c4": -3.561,
-      "h2>c7": -3.606,
-      "h2>f4": -3.619,
-      "b2>c3": -3.672,
-      "d5>c4": -4.172,
-      "d5>f7": -4.467,
-      "c2>a4": -4.571,
-      "b2>d4": -4.694,
-      "d5>c6": -4.889,
-      "d5>b7": -4.92,
-      "d5>d4": -4.991,
-      "d5>a5": -5.02,
-      "h2>d6": -5.109,
-      "d5>b5": -5.302,
-      "d5>d7": -5.328,
-      "d3>c4": -5.352,
-      "d5>a8": -5.362,
-      "h2>e5": -5.743,
-      "b2>e5": -5.88,
-      "d5>c5": -6,
-      "e2>h5": -6.187,
-      "e2>f3": -6.228,
-      "d5>e6": -6.266,
-      "d5>g5": -6.316,
-      "d5>h5": -6.346,
-      "d5>f5": -6.392,
-      "d5>e5": -6.472,
-      "h1>f3": -6.53
+      "d8>f8": 5.244,
+      "d8>b8": 5.172,
+      "c2>c4": 4.649,
+      "c2>c3": 4.371,
+      "a2>a3": 4.336,
+      "d8>d4": 4.242,
+      "a2>a4": 4.198,
+      "d8>h8": 4.16,
+      "h2>h3": 4.148,
+      "f1>f3": 4.116,
+      "f1>f2": 4.115,
+      "g1>g2": 4.103,
+      "b1>b2": 4.091,
+      "g1>g3": 4.081,
+      "d8>e8": 4.078,
+      "h2>h4": 3.836,
+      "d8>d3": 3.776,
+      "d8>d2": 3.729,
+      "d8>d1": 3.381,
+      "b3>b4": 3.076,
+      "h2>g2": 2.167,
+      "a2>b2": 2.167,
+      "a1>b2": 2.167,
+      "c1>b2": 2.155,
+      "c1>d2": 2.155,
+      "f1>g2": 2.143,
+      "g1>f2": 2.143,
+      "f1>e2": 2.143,
+      "c1>d1": 2.096,
+      "f1>e1": 2.084,
+      "h2>h1": 2.072,
+      "g1>h1": 2.072,
+      "h2>g3": 2.005,
+      "b3>b2": 1.968,
+      "b3>c3": 1.679,
+      "b3>a3": 1.597,
+      "d8>d5": 0.881,
+      "d8>g8": -0.745,
+      "d8>d7": -1.169,
+      "d8>c8": -1.516,
+      "d8>d6": -1.774
      }
     }
    ],
-   "game": 15,
-   "white": "ernest-smyslov",
-   "black": "tigran-turing",
-   "mirrored": false
+   "game": 22,
+   "white": "twin-weak",
+   "black": "twin-strong",
+   "mirrored": true
   }
  ]
 }
