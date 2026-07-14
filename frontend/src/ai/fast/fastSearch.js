@@ -12,7 +12,7 @@
 // Exported To: ../aiWorker.js, ../../../tests/fastEngineDiff.test.js
 
 import {
-  BLACK, ALGEBRAIC, parseSquare,
+  BLACK, ALGEBRAIC, TP, parseSquare, sqOf, sideBit, possibleOf, isCaptured,
   packBoard, unpackBoard, rollback, watermark, positionSignature,
   snapshotWords, wordsEqual,
 } from './fastBoard.js';
@@ -20,7 +20,7 @@ import {
   forEachLegalReply, makeStandardMove, makeEnPassant, makeCastle, lostInCheck,
 } from './fastRules.js';
 import { evaluateFast, MATE } from './fastEval.js';
-import { DEFAULT_WEIGHTS, DIFFICULTY_CONFIG } from '../alphaBetaEngine.js';
+import { BOT_TIME_MODES, DEFAULT_WEIGHTS, DIFFICULTY_CONFIG } from '../alphaBetaEngine.js';
 
 class SearchTimeout extends Error {}
 
@@ -28,6 +28,37 @@ const sideBitOf = (s) => (s === 'black' ? BLACK : 0);
 const sideName = (b) => (b === BLACK ? 'black' : 'white');
 const otherB = (b) => b ^ BLACK;
 const signOf = (b) => (b === BLACK ? -1 : 1);
+
+function rootDescMatches(desc, preferredMove) {
+  if (!desc || !preferredMove) return false;
+  if (desc.kind === 2) {
+    return Boolean(preferredMove.castle)
+      && ALGEBRAIC[desc.plan.from1] === preferredMove.from
+      && ALGEBRAIC[desc.plan.to1] === preferredMove.to;
+  }
+  return !preferredMove.castle
+    && ALGEBRAIC[desc.from] === preferredMove.from
+    && ALGEBRAIC[desc.to] === preferredMove.to
+    && (desc.kind === 1) === Boolean(preferredMove.enPassant);
+}
+
+// The opening callback sees the child board. A hard bot may still choose a
+// random quiet move, but if that move removes Pawn from the mover, do not
+// land on a square attacked by any opposing piece that still includes Pawn.
+function hardRandomOpeningSafe(bd, desc, moverSide) {
+  if (desc.kind !== 'move' || (possibleOf(bd.words[desc.pieceIdx]) & TP)) return true;
+  const targetFile = desc.to & 7;
+  const targetRank = desc.to >> 3;
+  const attackerSide = otherB(moverSide);
+  const step = attackerSide === BLACK ? -1 : 1;
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if (isCaptured(w) || sideBit(w) !== attackerSide || !(possibleOf(w) & TP)) continue;
+    const from = sqOf(w);
+    if ((from >> 3) + step === targetRank && Math.abs((from & 7) - targetFile) === 1) return false;
+  }
+  return true;
+}
 
 // Convert a reference lastMove record into the packed en passant window.
 export function epFromLastMove(bd, lastMove) {
@@ -185,6 +216,7 @@ export function searchBestMoveFast({
   repetitionSigs = null,
   openingVariety = true,
   adaptiveDepth = true,
+  preferredMove = null,
 }) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
@@ -200,11 +232,14 @@ export function searchBestMoveFast({
   const anyCaptures = pieces.some((p) => p.captured);
   if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
     const quiet = [];
+    const hardOpening = ((bot && bot.tier) || difficulty) === 'hard';
     forEachLegalReply(bd, side, ep, (desc) => {
       if (desc.kind !== 'move' || desc.victimIdx >= 0) return;
       // REF: unoccupied destination, own half of the board.
       const toRank = desc.to >> 3;
-      if (side === BLACK ? toRank >= 4 : toRank <= 3) quiet.push(desc);
+      if (!(side === BLACK ? toRank >= 4 : toRank <= 3)) return;
+      if (hardOpening && !hardRandomOpeningSafe(bd, desc, side)) return;
+      quiet.push(desc);
     });
     // A quiet non-capture destination was empty pre-move by construction
     // (victimIdx < 0 and friendly squares are never destinations).
@@ -233,6 +268,20 @@ export function searchBestMoveFast({
   const rootChildren = orderedChildrenFast(bd, side, ctx, ep, Boolean(repetitionSigs));
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
+  // REF: retain the review's played continuation just beyond the normal
+  // prefix when necessary, expanding rather than replacing the root beam.
+  let rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
+  const preferredIdx = preferredMove
+    ? rootChildren.findIndex((child) => rootDescMatches(child.desc, preferredMove))
+    : -1;
+  if (preferredIdx >= rootWidth) {
+    if (preferredIdx > rootWidth) {
+      const [preferred] = rootChildren.splice(preferredIdx, 1);
+      rootChildren.splice(rootWidth, 0, preferred);
+    }
+    rootWidth = Math.min(rootChildren.length, rootWidth + 1);
+  }
+
   // REF: repetition penalty for the winning side.
   const repCount = (sig) => {
     if (!repetitionSigs) return 0;
@@ -259,10 +308,10 @@ export function searchBestMoveFast({
   };
   report(best);
 
-  const rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
   const rootMark = watermark(bd);
 
-  for (let depth = 2; depth <= maxDepth; depth++) {
+  const fillTime = cfg.timeMode === BOT_TIME_MODES.UNTIL_TIMEOUT && Number.isFinite(cfg.timeMs);
+  for (let depth = 2; fillTime || depth <= maxDepth; depth++) {
     try {
       let alpha = -Infinity;
       let depthBest = null;
@@ -280,6 +329,7 @@ export function searchBestMoveFast({
             rollback(bd, mark);
           }
         }
+        child.deepScore = s; // deepest completed-iteration score (noise jitter)
         const adjusted = s - repPen[i];
         if (!depthBest || adjusted > depthBest.adjusted) depthBest = { desc: child.desc, score: s, adjusted };
         if (s > alpha) alpha = s;
@@ -298,12 +348,13 @@ export function searchBestMoveFast({
     if (performance.now() > deadline) break;
   }
 
-  // REF: easy-mode noise jitters the top of the root ordering.
+  // REF: noise jitters the top of the root ordering — deepest completed
+  // scores where available (see alphaBetaEngine.js, 2026-07-14).
   let chosenDesc = best.desc;
   if (cfg.noise > 0 && rootChildren.length > 1) {
     const jittered = rootChildren
       .slice(0, Math.min(6, rootChildren.length))
-      .map((c, i) => ({ desc: c.desc, s: c.score - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((c, i) => ({ desc: c.desc, s: (c.deepScore ?? c.score) - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
       .sort((a, b) => b.s - a.s);
     chosenDesc = jittered[0].desc;
   }

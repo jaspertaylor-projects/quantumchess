@@ -88,6 +88,19 @@ export const BOT_TIME_MODES = {
   UNTIL_TIMEOUT: 'until-timeout',
 };
 
+function rootMoveMatches(mv, preferredMove) {
+  if (!mv || !preferredMove) return false;
+  if (mv.type === 'castle') {
+    return Boolean(preferredMove.castle)
+      && mv.plan?.piece1_from === preferredMove.from
+      && mv.plan?.piece1_to === preferredMove.to;
+  }
+  return !preferredMove.castle
+    && mv.from === preferredMove.from
+    && mv.to === preferredMove.to
+    && (mv.type === 'enpassant' || Boolean(mv.enPassant)) === Boolean(preferredMove.enPassant);
+}
+
 export function isPawnCaptureTarget(pieces, targetSquare, attackerSide) {
   if (!targetSquare) return false;
   const targetFile = targetSquare.charCodeAt(0) - 97;
@@ -398,6 +411,7 @@ export function searchBestMove({
   repetitionSigs = null,
   openingVariety = true,
   adaptiveDepth = true,
+  preferredMove = null,
 }) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
@@ -449,6 +463,20 @@ export function searchBestMove({
   const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove);
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
+  // Review analysis may ask us to retain the move that was actually played.
+  // Grow the root beam by one rather than displacing an engine candidate.
+  let rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
+  const preferredIdx = preferredMove
+    ? rootChildren.findIndex((child) => rootMoveMatches(child.mv, preferredMove))
+    : -1;
+  if (preferredIdx >= rootWidth) {
+    if (preferredIdx > rootWidth) {
+      const [preferred] = rootChildren.splice(preferredIdx, 1);
+      rootChildren.splice(rootWidth, 0, preferred);
+    }
+    rootWidth = Math.min(rootChildren.length, rootWidth + 1);
+  }
+
   // Repetition avoidance: a WINNING side that re-enters an already-seen
   // position is shuffling toward a threefold draw the search can't see
   // (the mate sits past the horizon, so shuffle and progress eval equal —
@@ -475,8 +503,6 @@ export function searchBestMove({
   let best = { move: rootChildren[initIdx].mv, score: rootChildren[initIdx].score, depth: 1, nodes: ctx.nodes };
   if (typeof onDepthComplete === 'function') onDepthComplete(best);
 
-  const rootWidth = Math.min(rootChildren.length, ctx.widths[0] || rootChildren.length);
-
   const fillTime = cfg.timeMode === BOT_TIME_MODES.UNTIL_TIMEOUT && Number.isFinite(cfg.timeMs);
   for (let depth = 2; fillTime || depth <= maxDepth; depth++) {
     try {
@@ -490,6 +516,7 @@ export function searchBestMove({
         } else {
           s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, -alpha, ctx);
         }
+        child.deepScore = s; // deepest completed-iteration score (noise jitter)
         const adjusted = s - repPen[i];
         if (!depthBest || adjusted > depthBest.adjusted) depthBest = { move: child.mv, score: s, adjusted };
         if (s > alpha) alpha = s;
@@ -505,11 +532,16 @@ export function searchBestMove({
     if (performance.now() > deadline) break;
   }
 
-  // Easy mode: blur the top of the root ordering so play is beatable.
+  // Noise: blur the top of the root ordering. Jitter the DEEPEST completed
+  // scores where available (2026-07-14: depth-1 jitter could override the
+  // deep search with a shallowly-plausible blunder — seed-7's noisy twin
+  // bled eval constantly and starved the miner's balance windows); children
+  // the deep loop never searched fall back to their depth-1 eval. Easy
+  // bots (maxDepth 1) never run the deep loop, so their feel is unchanged.
   if (cfg.noise > 0 && rootChildren.length > 1) {
     const jittered = rootChildren
       .slice(0, Math.min(6, rootChildren.length))
-      .map((c, i) => ({ mv: c.mv, s: c.score - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((c, i) => ({ mv: c.mv, s: (c.deepScore ?? c.score) - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
       .sort((a, b) => b.s - a.s);
     return { ...best, move: jittered[0].mv };
   }
