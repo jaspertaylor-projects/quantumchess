@@ -109,15 +109,18 @@ function regainedIdentity(before, after) {
 // Analyze one par ply: full root analysis (reused if the caller already has
 // it), theme tags, spread, and per-ply trickiness.
 // --- Instant-gauge eval tables ---
-// The modal's gauge scores every root move at depth 3 / widths [176,12,8]
-// (MinedPuzzleModal.jsx — the two rulers MUST stay in sync). Precompute that
+// The modal's gauge scores every root move at depth 4 / widths
+// [176,176,12,8] (MinedPuzzleModal.jsx — the two rulers MUST stay in sync):
+// EXHAUSTIVE at the reply level so no beam can hide a refutation, and
+// even-depth so the ruler reads sober (Jasper, 2026-07-13; ~100s/position
+// at the miner, which the harvest absorbs). Precompute that
 // exact table for every white-to-move position on the certified line, keyed
 // by position signature: the modal looks the current position up and, on a
 // hit, loads certified evals instantly instead of running a 176-wide
 // analyze in the browser. A miss (player diverged, or the live black reply
 // differed from the recorded one) falls back to the worker as before.
-const GAUGE_DEPTH = 3;
-const GAUGE_WIDTHS = [176, 12, 8];
+const GAUGE_DEPTH = 4;
+const GAUGE_WIDTHS = [176, 176, 12, 8];
 
 export function buildEvalTable(position) {
   const analysis = analyzeRootMoves({
@@ -126,7 +129,7 @@ export function buildEvalTable(position) {
     lastMove: position.lastMove || null,
     depth: GAUGE_DEPTH,
     widths: GAUGE_WIDTHS,
-    timeMs: 120000,
+    timeMs: 600000,
   });
   if (!analysis || !analysis.moves.length) return null;
   const evals = {};

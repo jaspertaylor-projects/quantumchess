@@ -4,8 +4,8 @@
 // game's first mistake — the board shows that move — and the player gets
 // puzzle.recipe.moves FREE moves to capitalize, the engine answering as
 // Black live. Every move lands the needle on its eval and earns a graded
-// square vs the certified par eval for that ply; the final landing vs par
-// is the FIDELITY score, with a Wordle-style share text.
+// square; the final result scores how much of the maximum possible advantage
+// the player retained, with a Wordle-style share text.
 // Imports From: ../theme.js, ../components/ModalShell.jsx, ../tutorial/MiniBoard.jsx,
 //   ../components/PlayerBar.jsx, ./EvalGauge.jsx, ./usePuzzleBoard.js,
 //   ../chessboard/quantumEngine.js, ../chessboard/boardUtils.js, ../ai/alphaBetaEngine.js
@@ -30,6 +30,7 @@ import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { capturedPieces } from '../chessboard/boardUtils.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { devDebug } from '../devlog.js';
+import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleScoring.js';
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
 // static eval alone rates "hangs the queen" as fine. One ply of lookahead
@@ -51,14 +52,12 @@ const ordinal = (n) => {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
 };
 
-// The verdict is the move's exact standing, not a red/green vibe: "3rd best
-// of 45". Green is reserved for the top move; everything else grades by rank.
+// The verdict preserves the move's exact standing ("3rd best of 45") while
+// its color matches the same relative/absolute gates as the move square.
 function RankLine({ rank }) {
   if (!rank) return null;
-  const color = rank.rank === 1 ? '#f6c445'
-    : rank.rank <= Math.max(2, Math.ceil(rank.total * 0.1)) ? '#7ee787'
-      : rank.rank <= Math.ceil(rank.total * 0.25) ? '#ffd166'
-        : '#ff8f8f';
+  const grade = gradeOfStanding(rank);
+  const color = grade === 's' ? '#aab2bd' : GRADE_COLORS[grade];
   return (
     <div style={{ textAlign: 'center', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
       <span style={{ fontSize: 15, fontWeight: 800, color }}>
@@ -71,23 +70,8 @@ function RankLine({ rank }) {
   );
 }
 
-// Grade each decision locally, independent of advantage lost on earlier
-// rounds (loss = eval distance from the position's best move). The bar
-// (Jasper, 2026-07-12): the absolute best move is a STAR; within 1 pawn of
-// best OR a top-10% move is green; within 2 OR top-25% yellow; within 3 OR
-// top-50% red; anything worse is a skull.
-function gradeOfStanding(standing) {
-  if (!standing) return 'r';
-  const { rank, total, loss } = standing;
-  const frac = rank / Math.max(1, total);
-  if (rank === 1) return '*';
-  if (loss <= 1 || frac <= 0.10) return 'g';
-  if (loss <= 2 || frac <= 0.25) return 'y';
-  if (loss <= 3 || frac <= 0.50) return 'r';
-  return 's';
-}
-const GRADE_COLORS = { '*': '#f6c445', g: '#2ea043', y: '#d4a72c', r: '#da3633', s: '#14171c', x: '#30363d' };
-const GRADE_EMOJI = { '*': '⭐', g: '🟩', y: '🟨', r: '🟥', s: '💀', x: '⬛' };
+const GRADE_COLORS = { '*': '#f6c445', g: '#2ea043', y: '#d4a72c', o: '#db6d28', r: '#da3633', s: '#14171c', x: '#30363d' };
+const GRADE_EMOJI = { '*': '⭐', g: '🟩', y: '🟨', o: '🟧', r: '🟥', s: '💀', x: '⬛' };
 const GRADE_GLYPH = { '*': '★', s: '💀' };
 
 function MoveSquares({ grades, total }) {
@@ -109,6 +93,20 @@ function MoveSquares({ grades, total }) {
           {GRADE_GLYPH[grades[i]] || ''}
         </div>
       ))}
+    </div>
+  );
+}
+
+function QuantumThinkingIndicator() {
+  return (
+    <div className="qc-quantum-thinking-bounds" role="status" aria-label="The Stranger is thinking">
+      <div className="qc-quantum-thinking-bounce-x">
+        <div className="qc-quantum-thinking-bounce-y">
+          <div className="qc-quantum-thinking">
+            <div className="qc-quantum-thinking__sprite" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -137,6 +135,7 @@ function blackLastMove(afterPieces, moverId, from, to, wasFirstMove, measuredSqu
 export default function MinedPuzzleModal({
   open = false,
   onClose = () => {},
+  onComplete = () => {},
   puzzle = null,
   svgStyleBySide = null,
   boardColors = null,
@@ -148,7 +147,7 @@ export default function MinedPuzzleModal({
   const totalMoves = puzzle ? puzzle.recipe.moves : 3;
   const [cur, setCur] = useState(null); // { pieces, lastMove, cc } — the live position
   const [round, setRound] = useState(0); // which of the player's moves is next (0-based)
-  const [phase, setPhase] = useState('playing'); // playing | landing | thinking | replying | done
+  const [phase, setPhase] = useState('playing'); // intro-before | intro-move | playing | landing | thinking | replying | final-effects | done
   const [grades, setGrades] = useState([]);
   const [finalLanding, setFinalLanding] = useState(null);
   const [deepEvals, setDeepEvals] = useState(null); // moveKey -> depth-3 score, from the worker
@@ -159,10 +158,14 @@ export default function MinedPuzzleModal({
   // the mover's landing square (particle motes fly from it).
   const [fx, setFx] = useState({ key: 0, origin: null });
   const bumpFx = (origin) => setFx((f) => ({ key: f.key + 1, origin }));
-  const [suggestedMove, setSuggestedMove] = useState(null); // legal best move for the position just played
+  const [suggestedMove, setSuggestedMove] = useState(null); // best-move confirmation/correction for the position just played
   const [revealArrow, setRevealArrow] = useState(null); // par move 1, shown on a rough run
+  const [showThinkingBrain, setShowThinkingBrain] = useState(false);
+  const [totalCollapse, setTotalCollapse] = useState(false);
   const [copied, setCopied] = useState(false);
   const aliveRef = useRef(0); // bumps on reset; async work checks it
+  const collapseRef = useRef(false);
+  const completionReportedRef = useRef(false);
   const roundRef = useRef(0);
   roundRef.current = round;
   // Black's in-flight reply search. computeBlackReply runs in a Promise, not
@@ -197,12 +200,13 @@ export default function MinedPuzzleModal({
   useEffect(() => {
     if (!open || !puzzle) return undefined;
     aliveRef.current += 1;
+    const hasIntro = Boolean(puzzle.intro && Array.isArray(puzzle.intro.pieces));
     setCur({ pieces: puzzle.start.pieces, lastMove: puzzle.start.lastMove, cc: puzzle.start.captureCounter || 0 });
     setRound(0);
-    setPhase('playing');
+    setPhase(hasIntro ? 'intro-before' : 'playing');
     setGrades([]);
     setFinalLanding(null);
-    setDisplay(puzzle.start.pieces);
+    setDisplay(hasIntro ? puzzle.intro.pieces : puzzle.start.pieces);
     setMarks([]);
     setEffects({ zaps: [], heals: [], shields: [] });
     setSelectedSq(null);
@@ -211,11 +215,74 @@ export default function MinedPuzzleModal({
     setReplyArrow(null);
     setSuggestedMove(null);
     setRevealArrow(null);
+    setShowThinkingBrain(false);
+    setTotalCollapse(false);
     setCopied(false);
+    collapseRef.current = false;
+    completionReportedRef.current = false;
     moveMadeRef.current = null;
     killReplyPrefetch();
     return () => { clearTimers(); killReplyWorker(); killReplyPrefetch(); };
   }, [open, puzzle]);
+
+  // Start the context clock only after React has committed the pre-mistake
+  // board and the browser has had two animation frames to paint it. Loading
+  // and mounting time therefore never eats into the visible 1.5-second hold.
+  useEffect(() => {
+    if (!open || !puzzle || phase !== 'intro-before') return undefined;
+    const token = aliveRef.current;
+    let timer = 0;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        timer = setTimeout(() => {
+          if (aliveRef.current !== token) return;
+          const last = puzzle.start.lastMove || {};
+          setDisplay(puzzle.start.pieces);
+          setEffects({
+            zaps: last.zappedSquares || [],
+            heals: last.healedSquares || [],
+            shields: last.fizzledSquares || [],
+          });
+          bumpFx(puzzle.mistake?.to || last.to || null);
+          setPhase('intro-move');
+        }, 1500);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      clearTimeout(timer);
+    };
+  }, [open, puzzle, phase]);
+
+  // The move/effects beat also starts from its own committed render. White
+  // stays locked until the longest contact animation has had time to read.
+  useEffect(() => {
+    if (!open || !puzzle || phase !== 'intro-move') return undefined;
+    const token = aliveRef.current;
+    const timer = setTimeout(() => {
+      if (aliveRef.current !== token) return;
+      clearEffects();
+      setPhase('playing');
+    }, 1400);
+    return () => clearTimeout(timer);
+  }, [open, puzzle, phase]);
+
+  // The hint gets a quiet reading beat before the old bouncing-brain search
+  // animation arrives. If Black answers sooner, the brain never flashes.
+  useEffect(() => {
+    setShowThinkingBrain(false);
+    if (phase !== 'thinking' || !suggestedMove) return undefined;
+    const timer = setTimeout(() => setShowThinkingBrain(true), 3500);
+    return () => clearTimeout(timer);
+  }, [phase, suggestedMove]);
+
+  useEffect(() => {
+    if (phase !== 'done' || !puzzle?.isDaily || completionReportedRef.current) return;
+    completionReportedRef.current = true;
+    onComplete({ date: puzzle.date, totalCollapse });
+  }, [phase, puzzle, totalCollapse, onComplete]);
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
 
@@ -259,7 +326,10 @@ export default function MinedPuzzleModal({
     worker.postMessage({
       type: 'analyze',
       id: round,
-      payload: { pieces: cur.pieces, sideToMove: 'white', lastMove: cur.lastMove || null, depth: 3, widths: [176, 12, 8], timeMs: 25000 },
+      // Same ruler as the shipped tables: exhaustive replies, even parity.
+      // On wide positions the 25s budget times out and the exhaustive-d2
+      // stand-in (also even parity) stands — both outcomes stay sober.
+      payload: { pieces: cur.pieces, sideToMove: 'white', lastMove: cur.lastMove || null, depth: 4, widths: [176, 176, 12, 8], timeMs: 25000 },
     });
     return () => { worker.terminate(); };
   }, [open, cur, round]);
@@ -313,8 +383,11 @@ export default function MinedPuzzleModal({
         pieces: reply.resultPieces,
         sideToMove: 'white',
         lastMove,
-        depth: 3,
-        widths: [176, 12, 8],
+        // Same ruler as the shipped tables: exhaustive replies, even parity.
+        // On wide positions the 25s budget times out and the exhaustive-d2
+        // stand-in (also even parity) stands — both outcomes stay sober.
+        depth: 4,
+        widths: [176, 176, 12, 8],
         timeMs: 25000,
       },
     });
@@ -376,6 +449,7 @@ export default function MinedPuzzleModal({
       total: moves.length,
       best,
       loss: Math.max(0, best - landed),
+      landed,
     };
   };
 
@@ -389,16 +463,37 @@ export default function MinedPuzzleModal({
     const landed = deepEvals[keyOf(made.move)];
     if (landed === undefined) return;
     const standing = rankOfMove(landed);
+    const revisedGrade = gradeOfStanding(standing);
+    const deepScored = moves.filter((m) => deepEvals[keyOf(m)] !== undefined);
+    const deepBest = deepScored.length ? deepScored.reduce((best, m) =>
+      (deepEvals[keyOf(m)] > deepEvals[keyOf(best)] ? m : best)) : null;
+    const confirmedMove = standing?.rank === 1 ? made.move : deepBest;
     setNeedleValue(Number(landed.toFixed(2)));
     setMoveRank(standing);
+    setSuggestedMove((previous) => {
+      if (!confirmedMove) return null;
+      const next = {
+        from: confirmedMove.from,
+        to: confirmedMove.to,
+        enPassant: Boolean(confirmedMove.enPassant),
+      };
+      return previous?.from === next.from && previous?.to === next.to
+        && Boolean(previous.enPassant) === next.enPassant ? previous : next;
+    });
     setGrades((g) => {
       const next = [...g];
       if (next[made.roundIdx] && next[made.roundIdx] !== 'x') {
-        next[made.roundIdx] = gradeOfStanding(standing);
+        next[made.roundIdx] = revisedGrade;
       }
       return next;
     });
     if (made.roundIdx === totalMoves - 1) setFinalLanding(Number(landed.toFixed(2)));
+    if (revisedGrade === 's' && phase !== 'done') {
+      finishOnSkull(landed, {
+        pieces: made.move.after,
+        effects: effectsOfMove(made.move),
+      });
+    }
   }, [deepEvals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const whiteLossPawns = useMemo(() => capturedPieces(display || [], 'white', true), [display]);
@@ -514,16 +609,23 @@ export default function MinedPuzzleModal({
   });
   const clearEffects = () => setEffects({ zaps: [], heals: [], shields: [] });
 
-  const finishPuzzle = (landed, landing = null) => {
+  const finishPuzzle = (landed, landing = null, collapsed = false) => {
+    if (collapsed) setTotalCollapse(true);
     setFinalLanding(landed !== null ? Number(landed.toFixed(2)) : null);
-    later(() => {
-      if (landing) {
-        setDisplay(landing.pieces);
-        setEffects(landing.effects || { zaps: [], heals: [], shields: [] });
-      }
-      setRevealArrowIfRough();
-      setPhase('done');
-    }, 1400);
+    if (landing) {
+      setDisplay(landing.pieces);
+      setEffects(landing.effects || { zaps: [], heals: [], shields: [] });
+    }
+    setPhase('final-effects');
+  };
+
+  const finishOnSkull = (landed, landing) => {
+    if (collapseRef.current) return;
+    collapseRef.current = true;
+    aliveRef.current += 1; // invalidate any queued reply/search continuation
+    killReplyWorker();
+    killReplyPrefetch();
+    finishPuzzle(landed, landing, true);
   };
 
   const setRevealArrowIfRough = () => {
@@ -537,6 +639,30 @@ export default function MinedPuzzleModal({
       return g;
     });
   };
+
+  // The result card waits for a committed final board plus two browser paint
+  // frames. Its delay therefore belongs entirely to the particle-effects
+  // beat instead of being consumed by React's final render.
+  useEffect(() => {
+    if (phase !== 'final-effects') return undefined;
+    const token = aliveRef.current;
+    let timer = 0;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        timer = setTimeout(() => {
+          if (aliveRef.current !== token) return;
+          setRevealArrowIfRough();
+          setPhase('done');
+        }, 1400);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      clearTimeout(timer);
+    };
+  }, [phase]);
 
   const attemptMove = (fromSq, toSq) => {
     setSelectedSq(null);
@@ -569,16 +695,15 @@ export default function MinedPuzzleModal({
     const positionBest = deepBest || legalCertifiedMove || progressiveBest || null;
     const landed = evalOfMove(move);
     const standing = rankOfMove(landed);
+    const moveGrade = gradeOfStanding(standing);
     setReplyArrow(null); // the player moved — Black's trail comes off
-    // The hint arrow only exists when a strictly better move was available;
-    // it appears AFTER the move's contact effects have had their beat.
-    const playedTheBest = positionBest
-      && positionBest.from === move.from && positionBest.to === move.to
-      && Boolean(positionBest.enPassant) === Boolean(move.enPassant);
-    setSuggestedMove(positionBest && !playedTheBest ? {
-      from: positionBest.from,
-      to: positionBest.to,
-      enPassant: Boolean(positionBest.enPassant),
+    // A best move gets the same positive-confirmation arrow as a correction.
+    // It appears AFTER the move's contact effects have had their beat.
+    const arrowMove = standing?.rank === 1 ? move : positionBest;
+    setSuggestedMove(arrowMove ? {
+      from: arrowMove.from,
+      to: arrowMove.to,
+      enPassant: Boolean(arrowMove.enPassant),
     } : null);
     moveMadeRef.current = { move, roundIdx };
     // The move plays IMMEDIATELY — board shows the resolved result with its
@@ -590,10 +715,15 @@ export default function MinedPuzzleModal({
     setMoveRank(standing);
     setGrades((g) => {
       const next = [...g];
-      next[roundIdx] = gradeOfStanding(standing);
+      next[roundIdx] = moveGrade;
       return next;
     });
     setPhase('landing');
+
+    if (moveGrade === 's') {
+      finishOnSkull(landed, { pieces: move.after, effects: effectsOfMove(move) });
+      return;
+    }
 
     const replies = generateLegalReplies(move.after, 'black', move.nextCC, move.nextLastMove);
     if (roundIdx === totalMoves - 1 || replies.length === 0) {
@@ -667,16 +797,21 @@ export default function MinedPuzzleModal({
 
   if (!open || !puzzle) return null;
 
-  const finalPar = puzzle.parEvals[puzzle.parEvals.length - 1];
-  const fidelity = phase === 'done'
-    ? Math.round(100 * Math.max(0, finalLanding ?? 0) / Math.max(0.01, finalPar))
+  const startingTableEvals = Object.values(puzzle.evalTables?.[0]?.evals || {})
+    .filter(Number.isFinite);
+  const startingMaxEval = startingTableEvals.length
+    ? Math.max(...startingTableEvals)
+    : puzzle.parEvals[0];
+  const finalScore = phase === 'done'
+    ? puzzleFinalScore(finalLanding, startingMaxEval)
     : null;
+  const letterGrade = finalScore === null ? null : puzzleLetterGrade(finalScore);
   const squaresText = Array.from({ length: totalMoves }, (_, i) => GRADE_EMOJI[grades[i] || 'x']).join('');
   const shareText = phase === 'done'
     ? [
       `⚛️ Quantum Chess · mined ${puzzle.date}`,
-      `${squaresText} fidelity ${fidelity}%${fidelity > 100 ? ' ⚡ beyond the line' : ''}`,
-      `held ${(finalLanding ?? 0) >= 0 ? '+' : ''}${(finalLanding ?? 0).toFixed(1)} of +${finalPar.toFixed(1)}`,
+      `${squaresText} ${finalScore}/100 · Grade ${letterGrade}`,
+      ...(totalCollapse ? ['Complete and total collapse 💀'] : []),
     ].join('\n')
     : '';
 
@@ -720,26 +855,21 @@ export default function MinedPuzzleModal({
       backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
     },
     barWrap: { margin: '4px 0', position: 'relative' },
-    banner: (kind) => ({
-      textAlign: 'center', fontWeight: 700, borderRadius: 10, padding: '8px 12px', margin: '8px 0 0',
-      background: kind === 'good' ? 'rgba(126,231,135,0.12)' : kind === 'mid' ? 'rgba(255,209,102,0.12)' : 'rgba(255,107,107,0.12)',
-      border: `1px solid ${kind === 'good' ? 'rgba(126,231,135,0.5)' : kind === 'mid' ? 'rgba(255,209,102,0.5)' : 'rgba(255,107,107,0.5)'}`,
-      color: kind === 'good' ? '#7ee787' : kind === 'mid' ? '#ffd166' : '#ff8f8f',
-    }),
-    share: {
+    share: (kind) => ({
       margin: '10px auto 0', maxWidth: 340, background: 'rgba(255,255,255,0.05)',
-      border: '1px solid rgba(255,255,255,0.18)', borderRadius: 10, padding: '10px 12px',
+      border: `1px solid ${kind === 'good' ? 'rgba(126,231,135,0.7)' : kind === 'mid' ? 'rgba(255,209,102,0.7)' : 'rgba(255,107,107,0.7)'}`,
+      borderRadius: 10, padding: '10px 12px',
       fontSize: 13, whiteSpace: 'pre', textAlign: 'center', fontVariantNumeric: 'tabular-nums',
       position: 'relative', color: '#e8e6e1',
-    },
+    }),
   };
 
   // Computer moves read like live play: a from/to trail of highlighted
   // squares (cyan origin, gold landing), not an arrow. The arrow is reserved
   // for the par-line HINT revealed after a rough run.
   // Sequence: the landing beat belongs to the move's zap/heal effects; the
-  // better-move arrow only appears AFTER it (through Black's think and the
-  // short pre-move beat), clearing when replyArrow lands.
+  // best-move confirmation/correction only appears AFTER it (through Black's
+  // think and the short pre-move beat), clearing when replyArrow lands.
   const landingBestMove = (phase === 'thinking'
     || (phase === 'replying' && !replyArrow))
     ? suggestedMove
@@ -748,7 +878,8 @@ export default function MinedPuzzleModal({
     : landingBestMove ? [{ ...landingBestMove, kind: 'hint', opacity: 0.8 }]
       : [];
   const trail = replyArrow
-    || (phase === 'playing' && round === 0 && puzzle.mistake ? puzzle.mistake : null);
+    || ((phase === 'intro-move' || phase === 'playing')
+      && round === 0 && puzzle.mistake ? puzzle.mistake : null);
   const boardHighlights = [
     ...(selectedSq ? [selectedSq] : []),
     ...(trail && !revealArrow ? [
@@ -757,27 +888,28 @@ export default function MinedPuzzleModal({
     ] : []),
   ];
 
-  const bannerKind = fidelity === null ? null : fidelity >= 85 ? 'good' : fidelity >= 50 ? 'mid' : 'bad';
-  const bannerText = fidelity === null ? ''
-    : fidelity > 100 ? '⚡ Beyond the line. You out-played the certification.'
-      : fidelity >= 85 ? 'Clean capitalization.'
-        : fidelity >= 50 ? 'You kept some of it. The rest slipped back.'
-          : `It collapsed.${revealArrow ? ' The line began with the arrow.' : ''}`;
+  const bannerKind = totalCollapse ? 'bad'
+    : letterGrade === null ? null
+      : letterGrade === 'A' || letterGrade === 'B' ? 'good'
+        : letterGrade === 'C' ? 'mid' : 'bad';
 
   return (
     <ModalShell
       onClose={onClose}
       closeOnBackdrop
       zIndex={1001}
-      ariaLabel="Mined puzzle"
+      ariaLabel={puzzle.isDaily ? 'Daily puzzle' : 'Mined puzzle'}
       backdropClassName="qc-mined-backdrop"
       panelClassName="qc-mined-card"
       panelStyle={styles.card}
     >
         <div style={styles.headRow}>
           <div style={styles.kicker}>
-            <Pickaxe size={13} /> Mined puzzle · {totalMoves} moves
-            {phase === 'thinking' ? ' · the Stranger is thinking…'
+            <Pickaxe size={13} /> {puzzle.isDaily ? 'Daily puzzle' : 'Mined puzzle'} · {totalMoves} moves
+            {phase === 'intro-before' ? ' · one move earlier…'
+                : phase === 'intro-move' ? ' · Black makes the mistake…'
+                  : phase === 'thinking' ? ' · the Stranger is thinking…'
+                    : phase === 'final-effects' ? ' · resolving…'
               : phase !== 'done' ? ` · move ${Math.min(round + 1, totalMoves)} of ${totalMoves}` : ''}
           </div>
           <IconButton icon={XIcon} label="Close mined puzzle" onClick={onClose} />
@@ -799,13 +931,19 @@ export default function MinedPuzzleModal({
         </div>
 
         <div style={styles.boardWrap}>
+          {showThinkingBrain ? (
+            <div style={{
+              position: 'absolute', top: 0, left: 'calc(50% + 8px)',
+              width: cell * 8, height: cell * 8, transform: 'translateX(-50%)',
+              zIndex: 60, pointerEvents: 'none', overflow: 'hidden', borderRadius: 8,
+            }}>
+              <QuantumThinkingIndicator />
+            </div>
+          ) : null}
           {phase === 'done' ? (
             <div style={styles.doneOverlay}>
               <div style={styles.doneCard}>
-                <div style={{ ...styles.banner(bannerKind), margin: 0 }}>
-                  {`Fidelity ${fidelity}% — ${bannerText}`}
-                </div>
-                <div style={{ ...styles.share, margin: '8px auto 0' }}>
+                <div style={{ ...styles.share(bannerKind), margin: 0 }}>
                   {shareText}
                   <div style={{ marginTop: 8 }}>
                     <IconButton icon={CopyIcon} label="Copy share text" onClick={copyShare} />
