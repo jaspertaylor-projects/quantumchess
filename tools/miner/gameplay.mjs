@@ -105,15 +105,17 @@ function minerBot(rosterBot, timeMs = CFG.playMs, timeMode = BOT_TIME_MODES.CAPP
 // 1000). Mistakes then come purely from search breadth and time, not style.
 const TWIN_BASE_WIDTHS = [22, 14, 10]; // hard-tier defaults
 function twinBots(weakMs, strongMs) {
-  const make = (id, widths, timeMs) => ({
+  const make = (id, widths, timeMs, noise) => ({
     id,
     tier: 'hard',
     weights: {},
-    search: { noise: 0, timeMs, timeMode: BOT_TIME_MODES.UNTIL_TIMEOUT, widths },
+    search: { noise, timeMs, timeMode: BOT_TIME_MODES.UNTIL_TIMEOUT, widths },
   });
   return {
-    weak: make('twin-weak', TWIN_BASE_WIDTHS, weakMs),
-    strong: make('twin-strong', TWIN_BASE_WIDTHS.map((w) => w + CFG.twinDelta), strongMs),
+    // The weak twin may carry --twinNoise (game diversity across a long
+    // pipeline); the strong twin stays exact — par lines come from it.
+    weak: make('twin-weak', TWIN_BASE_WIDTHS, weakMs, CFG.twinNoise),
+    strong: make('twin-strong', TWIN_BASE_WIDTHS.map((w) => w + CFG.twinDelta), strongMs, 0),
   };
 }
 

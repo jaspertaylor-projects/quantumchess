@@ -64,6 +64,11 @@ const CFG = {
   allowFirstGrab: args.includes('--allowFirstGrab'),
   // --twins: the strong twin's extra beam width at every level.
   twinDelta: Number(argVal('twinDelta', 4)),
+  // --twins: root-jitter noise for the WEAK twin (Jasper 2026-07-13: a
+  // little indeterminacy so re-runs and long pipelines never farm the same
+  // deterministic games into repeat puzzles; still reproducible per --seed
+  // via the patched rng).
+  twinNoise: Number(argVal('twinNoise', 0)),
   minPlyTrick: Number(argVal('minPlyTrick', 4.0)), // every par ply must stay this interesting (sustained trickiness)
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mined')),
 };
