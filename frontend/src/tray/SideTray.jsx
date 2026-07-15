@@ -8,7 +8,7 @@ import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon, X as XIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon, X as XIcon } from 'lucide-react';
 
 // Big labeled home-menu button. The pre-game tray is a menu, not a form:
 // setup, puzzle, tutorial, rules, account, settings each get a full-width
@@ -84,6 +84,8 @@ export default function SideTray({
   onDismissOnboarding = () => {},
   isPaid = false,
   onRequirePremium = null,
+  onOpenPuzzle = () => {},
+  puzzleUnsolved = false,
   onOpenTutorial = () => {},
   attentionSignal = 0, // bump to flash the tray (board Start CTA clicked)
 }) {
@@ -455,6 +457,12 @@ export default function SideTray({
               icon={PlayIcon} label="Play Game" primary
               className="qc-menu-btn--play"
               onClick={() => { setView('new-game'); onDismissOnboarding(); }}
+            />
+            <MenuButton
+              icon={PuzzleIcon} label="Daily Puzzle" primary dot={puzzleUnsolved}
+              bg="#f6c445" fg="#1a1a1a"
+              className="qc-menu-btn--puzzle"
+              onClick={onOpenPuzzle}
             />
             <MenuButton
               icon={GraduationCapIcon} label="Tutorial" accent="#4fc3f7"

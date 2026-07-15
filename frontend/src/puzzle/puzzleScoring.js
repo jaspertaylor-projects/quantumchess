@@ -27,11 +27,14 @@ export function gradeOfStanding(standing) {
   if (landed < -4) return PUZZLE_GRADES.SKULL;
   if (rank === 1) return PUZZLE_GRADES.STAR;
   let grade;
-  if (loss <= 1 || frac <= 0.10 || landed >= 4) grade = PUZZLE_GRADES.GREEN;
+  if (loss <= 1 || frac <= 0.10 || landed > 5) grade = PUZZLE_GRADES.GREEN;
   else if (loss <= 2 || frac <= 0.25 || landed >= 2) grade = PUZZLE_GRADES.YELLOW;
   else if (loss <= 3 || frac <= 0.50 || landed >= 0) grade = PUZZLE_GRADES.ORANGE;
   else if (loss <= 4 || frac <= 0.75 || landed > -2) grade = PUZZLE_GRADES.RED;
   else grade = PUZZLE_GRADES.SKULL;
+  // Giving away more than 1.5 evaluation points can never earn green,
+  // even when the move's rank or absolute landing would otherwise qualify.
+  if (loss > 1.5 && grade === PUZZLE_GRADES.GREEN) grade = PUZZLE_GRADES.YELLOW;
   return landed < 0 ? (NEGATIVE_EVAL_DOWNGRADE[grade] || grade) : grade;
 }
 

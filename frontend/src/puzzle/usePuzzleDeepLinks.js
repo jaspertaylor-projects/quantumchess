@@ -1,41 +1,53 @@
 // frontend/src/puzzle/usePuzzleDeepLinks.js
-// Purpose: Daily-puzzle open state (with the "unplayed" dot) and the URL
-// deep links: /?puzzle opens today's daily (production — it's the share-card
-// URL); ?puzzleDate / ?mined / ?minedGame are dev-only previews. Extracted
-// from App.jsx.
-// Imports From: ./puzzleProgress.js (+ lazy ./minedPreview.js, ./minedGameLoader.js)
+// Purpose: Mined-daily open state (with the "unplayed" dot), completion
+// tracking, and the /?puzzle, ?mined, and ?minedGame deep links.
+// Imports From: ./minedPuzzleProgress.js (+ lazy ./minedPreview.js, ./minedGameLoader.js)
 // Exported To: ../App.jsx
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getDayResult, todayStr } from './puzzleProgress.js';
+import {
+  getMinedPuzzleResult,
+  minedPuzzleDay,
+  recordMinedPuzzleResult,
+} from './minedPuzzleProgress.js';
 
 export default function usePuzzleDeepLinks({ dismissOnboarding, setReviewGame }) {
-  // Daily puzzle: the buttons wear a dot until today's is played. The bump
-  // counter re-reads localStorage after the modal closes.
-  const [dailyPuzzleOpen, setDailyPuzzleOpen] = useState(false);
+  // The buttons wear a dot until today's mined puzzle has been completed.
+  const [dailyPuzzle, setDailyPuzzle] = useState(null);
   const [puzzleStateBump, setPuzzleStateBump] = useState(0);
   const puzzleUnsolved = useMemo(() => {
     void puzzleStateBump;
-    try { return !getDayResult(todayStr()); } catch (_) { return false; }
+    return !getMinedPuzzleResult(minedPuzzleDay());
   }, [puzzleStateBump]);
-  const handleOpenPuzzle = useCallback(() => { setDailyPuzzleOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
-  const handleClosePuzzle = useCallback(() => { setDailyPuzzleOpen(false); setPuzzleStateBump((n) => n + 1); }, []);
 
-  const [puzzlePreviewDate, setPuzzlePreviewDate] = useState(null);
+  const handleOpenPuzzle = useCallback(async () => {
+    dismissOnboarding();
+    const date = minedPuzzleDay();
+    const mod = await import('./minedPreview.js');
+    const puzzle = await mod.loadDailyMinedPuzzle(date);
+    if (puzzle) setDailyPuzzle(puzzle);
+  }, [dismissOnboarding]);
+
+  const handleClosePuzzle = useCallback(() => {
+    setDailyPuzzle(null);
+    setMinedPreviewPuzzle(null);
+    setPuzzleStateBump((n) => n + 1);
+  }, []);
+
+  const handlePuzzleComplete = useCallback((result = {}) => {
+    if (!result.date) return;
+    recordMinedPuzzleResult(result.date, result);
+    setPuzzleStateBump((n) => n + 1);
+  }, []);
+
   const [minedPreviewPuzzle, setMinedPreviewPuzzle] = useState(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('puzzle') !== null) {
-      setDailyPuzzleOpen(true);
+      handleOpenPuzzle();
       return;
     }
     if (!import.meta.env.DEV) return;
-    const d = params.get('puzzleDate');
-    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
-      setPuzzlePreviewDate(d);
-      setDailyPuzzleOpen(true);
-      return;
-    }
     const m = params.get('mined');
     if (m !== null) {
       import('./minedPreview.js').then(async (mod) => {
@@ -54,12 +66,10 @@ export default function usePuzzleDeepLinks({ dismissOnboarding, setReviewGame })
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    dailyPuzzleOpen,
     puzzleUnsolved,
     handleOpenPuzzle,
     handleClosePuzzle,
-    puzzlePreviewDate,
-    minedPreviewPuzzle,
-    setMinedPreviewPuzzle,
+    handlePuzzleComplete,
+    activePuzzle: minedPreviewPuzzle || dailyPuzzle,
   };
 }

@@ -21,6 +21,7 @@ import {
   ChevronRight as ChevronRightIcon,
   ChevronsLeft as ChevronsLeftIcon,
   ChevronsRight as ChevronsRightIcon,
+  Puzzle as PuzzleIcon,
 } from 'lucide-react';
 
 export default function MobileBar({
@@ -39,6 +40,8 @@ export default function MobileBar({
   onResign = () => {},
   onOfferDraw = () => {},
   onCancelSearch = () => {},
+  onOpenPuzzle = () => {},
+  puzzleUnsolved = false,
 }) {
   const styles = {
     root: {
@@ -214,6 +217,20 @@ export default function MobileBar({
         <button type="button" style={styles.homeButton(true)} onClick={onNewGame}>
           <PlusIcon size={18} />
           New Game
+        </button>
+        <button type="button" style={{ ...styles.homeButton(), position: 'relative' }} onClick={onOpenPuzzle}>
+          <PuzzleIcon size={18} color="#f6c445" />
+          Puzzle
+          {puzzleUnsolved ? (
+            <span
+              aria-hidden="true"
+              style={{
+                position: 'absolute', top: 4, right: '26%', width: 8, height: 8,
+                borderRadius: 999, background: '#f6c445',
+                border: '1.5px solid rgba(10,12,20,0.9)', pointerEvents: 'none',
+              }}
+            />
+          ) : null}
         </button>
         <button type="button" style={styles.homeButton()} onClick={onOpenAccount}>
           <UserIcon size={18} color={accountSignedIn ? theme.success : undefined} />
