@@ -18,17 +18,7 @@ import { hexToRgbString } from '../settings/useMeasurementColors.js';
 import { arrowGeometry } from './arrowGeometry.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 import { listCheckThreats } from './quantumEngine.js';
-
-// Deterministic 0..1 jitter for particle spreads: stable across re-renders
-// (Math.random would re-roll mid-animation), varied across squares/indices.
-function jitter01(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 8) & 0xffff) / 0x10000;
-}
+import { buildContactParticles } from './contactParticles.js';
 
 export default function Board({
   orientation = 'white',
@@ -378,40 +368,16 @@ export default function Board({
   // steel to census-locked shields. Purely decorative; deterministic jitter.
   const pulseParticles = useMemo(() => {
     if (!pulseOrigin || !dimensions.cell) return [];
-    const origin = squareCenterPx(pulseOrigin);
-    if (!origin) return [];
-    const cell = dimensions.cell;
-    const groups = [
+    return buildContactParticles({
+      originSquare: pulseOrigin,
+      centerOf: squareCenterPx,
+      effectKey,
+      groups: [
       { squares: zapMarks, cls: 'qc-particle--zap' },
       { squares: healMarks, cls: 'qc-particle--heal' },
       { squares: fizzleMarks, cls: 'qc-particle--fizzle' },
-    ];
-    const out = [];
-    for (const g of groups) {
-      for (const sq of g.squares) {
-        if (sq === pulseOrigin) continue;
-        const target = squareCenterPx(sq);
-        if (!target) continue;
-        for (let i = 0; i < 4; i++) {
-          const ja = jitter01(`${sq}:${i}:a`);
-          const jb = jitter01(`${sq}:${i}:b`);
-          const jc = jitter01(`${sq}:${i}:c`);
-          const x0 = origin.x + (ja - 0.5) * cell * 0.4;
-          const y0 = origin.y + (jb - 0.5) * cell * 0.4;
-          out.push({
-            key: `${g.cls}-${sq}-${i}-${effectKey}`,
-            cls: g.cls,
-            x0,
-            y0,
-            tx: target.x + (jb - 0.5) * cell * 0.3 - x0,
-            ty: target.y + (ja - 0.5) * cell * 0.3 - y0,
-            delay: Math.round(jc * 150),
-            dur: Math.round(430 + ja * 240),
-          });
-        }
-      }
-    }
-    return out;
+      ],
+    });
   }, [pulseOrigin, zapMarks, healMarks, fizzleMarks, squareCenterPx, dimensions.cell, effectKey]);
 
   return (

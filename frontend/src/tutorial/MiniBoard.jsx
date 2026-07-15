@@ -14,16 +14,7 @@ import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import { arrowGeometry } from '../chessboard/arrowGeometry.js';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import theme from '../theme.js';
-
-// Deterministic 0..1 jitter for particle spreads (mirrors Board.jsx).
-function jitter01(str) {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 8) & 0xffff) / 0x10000;
-}
+import { buildContactParticles } from '../chessboard/contactParticles.js';
 
 const LIGHT = theme.boardLight;
 const DARK = theme.boardDark;
@@ -120,39 +111,16 @@ export default function MiniBoard({
   // circle/shield lands.
   const pulseParticles = useMemo(() => {
     if (!pulseOrigin) return [];
-    const hasOrigin = pieces.some((p) => p.sq === pulseOrigin);
-    if (!hasOrigin && !pulseOrigin) return [];
-    const origin = center(pulseOrigin);
-    const groups = [
-      { flag: 'zap', cls: 'qc-particle--zap' },
-      { flag: 'heal', cls: 'qc-particle--heal' },
-      { flag: 'shield', cls: 'qc-particle--fizzle' },
-    ];
-    const out = [];
-    for (const g of groups) {
-      for (const p of pieces) {
-        if (!p[g.flag] || p.sq === pulseOrigin) continue;
-        const target = center(p.sq);
-        for (let i = 0; i < 4; i++) {
-          const ja = jitter01(`${p.sq}:${i}:a`);
-          const jb = jitter01(`${p.sq}:${i}:b`);
-          const jc = jitter01(`${p.sq}:${i}:c`);
-          const x0 = origin.x + (ja - 0.5) * cell * 0.4;
-          const y0 = origin.y + (jb - 0.5) * cell * 0.4;
-          out.push({
-            key: `${g.cls}-${p.sq}-${i}-${effectKey}`,
-            cls: g.cls,
-            x0,
-            y0,
-            tx: target.x + (jb - 0.5) * cell * 0.3 - x0,
-            ty: target.y + (ja - 0.5) * cell * 0.3 - y0,
-            delay: Math.round(jc * 150),
-            dur: Math.round(430 + ja * 240),
-          });
-        }
-      }
-    }
-    return out;
+    return buildContactParticles({
+      originSquare: pulseOrigin,
+      centerOf: center,
+      effectKey,
+      groups: [
+        { cls: 'qc-particle--zap', squares: pieces.filter((p) => p.zap).map((p) => p.sq) },
+        { cls: 'qc-particle--heal', squares: pieces.filter((p) => p.heal).map((p) => p.sq) },
+        { cls: 'qc-particle--fizzle', squares: pieces.filter((p) => p.shield).map((p) => p.sq) },
+      ],
+    });
   }, [pieces, pulseOrigin, cell, effectKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const bodyHex = (side) => (side === 'white' ? DEFAULT_WHITE.bandFill : DEFAULT_BLACK.bandFill);
 
