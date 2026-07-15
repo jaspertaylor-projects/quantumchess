@@ -1,5 +1,5 @@
 /* frontend/src/App.css */
-/* Purpose: Defines global styles for the application, disables zoom-related gestures, keeps the page non-scrollable, and sizes the root to the viewport. Scrollbars are styled ONCE, globally, in Styles/scrollbar.css (imported by main.jsx).
+/* Purpose: Defines global styles for the application, disables zoom-related gestures, locks scrolling inside the game root (the page itself scrolls past the game to static content), and sizes the root to the viewport. Scrollbars are styled ONCE, globally, in Styles/scrollbar.css (imported by main.jsx).
    Imports From: None
    Exported To: frontend/src/App.jsx */
 
@@ -12,19 +12,26 @@
   background-color: var(--color-globalBackground);
 }
 
-html, body, #root {
+html, body {
   height: 100%;
 }
 
-
-
 html, body {
   margin: 0;
-  overflow: hidden;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   /* Hint to browsers to treat taps as clicks (reduces double-tap zoom triggers) */
   touch-action: manipulation;
+}
+
+/* The game owns exactly the first viewport. The scroll lock lives HERE, not on
+   body: index.html carries static below-the-fold content that must stay
+   reachable (a body-level overflow:hidden would clip it — see
+   AdSenseApprovalPlan.md). Landing view is unchanged: the game fills 100dvh. */
+#root {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* Generic button styles - can be overridden by component-specific styles */

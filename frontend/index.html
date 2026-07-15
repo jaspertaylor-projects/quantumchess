@@ -11,6 +11,36 @@ Exported To: None
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Quantum Chess</title>
+    <meta name="description" content="Chess where the pieces obey quantum mechanics: every piece is a superposition of all six types, every move is a measurement, and checkmate becomes wave function collapse. Free in your browser — no download." />
+    <link rel="canonical" href="https://quantumchess.ninja/" />
+    <style>
+      /* Critical pre-app rules, inlined so they apply at the very first paint
+         (before the bundle or its CSS arrive): the empty #root must already
+         hold the full viewport, otherwise it collapses to 0 height and the
+         below-the-fold section flashes at the top while the app loads.
+         App.css repeats these once it loads. */
+      html, body { margin: 0; height: 100%; background: #0a0e1a; }
+      #root { height: 100vh; height: 100dvh; overflow: hidden; }
+
+      /* Static below-the-fold content (crawlable; the game itself fills the
+         first viewport, so players landing here never see this unless they
+         scroll). Styled here because the app bundle doesn't know about it. */
+      #qc-below {
+        background: #0a0e1a; color: #dfe6f2;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.68;
+      }
+      #qc-below .qc-below-wrap { max-width: 780px; margin: 0 auto; padding: 48px 22px 80px; }
+      #qc-below h2 { font-size: 1.6rem; margin: 0 0 4px; letter-spacing: 0.02em; }
+      #qc-below h3 { font-size: 1.15rem; margin: 30px 0 8px; color: #8fd6ff; }
+      #qc-below .qc-below-tag { color: #9db4ff; font-style: italic; margin: 0 0 18px; }
+      #qc-below a { color: #4fc3f7; }
+      #qc-below ul { padding-left: 20px; }
+      #qc-below li { margin: 5px 0; }
+      #qc-below .qc-below-muted { color: #93a1b5; }
+      #qc-below hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0; }
+      #qc-below footer a { margin-right: 14px; }
+    </style>
     <!-- Google Consent Mode v2 defaults (must run before the AdSense script) -->
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -27,6 +57,44 @@ Exported To: None
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Below-the-fold publisher content. Plain static HTML on purpose: search
+         and ad-review crawlers read this page without executing the app. The
+         game keeps the full first viewport, so the landing experience is
+         unchanged. Never hide this section (display:none = cloaking). -->
+    <section id="qc-below">
+      <div class="qc-below-wrap">
+        <h2>What is Quantum Chess?</h2>
+        <p class="qc-below-tag">Every piece is every piece &mdash; until the game forces it to choose.</p>
+
+        <p>Quantum Chess is a free browser game that rebuilds chess from one strange premise: at the start of the game, <strong>nobody knows what any piece is</strong>. All thirty-two pieces begin as a superposition of all six classical types &mdash; Pawn, Knight, Bishop, Rook, Queen, and King. You don&rsquo;t know which of your pieces is the King. Neither does your opponent. The game is the process of finding out, and winning before they do.</p>
+
+        <p>Moving is measuring: a piece may move like anything it might still be, but afterward it keeps only the identities consistent with that move. A knight&rsquo;s jump collapses a piece into a Knight forever; a quiet one-square push barely narrows it at all. And moving is touching: when your piece lands, it makes contact with everything it could capture from its new square. Enemy pieces it touches are <strong>zapped</strong> &mdash; a weak measurement that strips away their most valuable possibility, King first. Friendly pieces it touches are <strong>healed</strong> &mdash; a weak entanglement that restores their cheapest missing identity, so a protected army literally regenerates its ambiguity. Captures collapse the victim to its cheapest self, shields protect pieces whose every identity is load-bearing, and a strict conservation law keeps each side accountable for exactly one chess set at all times.</p>
+
+        <p>You win by <strong>wave function collapse</strong> &mdash; erasing the King possibility from your opponent&rsquo;s entire army &mdash; or by classical checkmate once their King has been cornered into a single known piece. There is no randomness anywhere: every zap, heal, and collapse resolves deterministically. Classical chess is just one of the many worlds this game can collapse into.</p>
+
+        <h3>Ways to play</h3>
+        <ul>
+          <li><strong>Versus AI</strong> &mdash; a roster of scientist-and-chess-legend mashup bots across easy, medium, and hard difficulty.</li>
+          <li><strong>The daily puzzle</strong> &mdash; one position per day, mined from a real game at the moment one precise move mattered. Graded against the engine, with streaks and a spoiler-free share card.</li>
+          <li><strong>Online 1v1</strong> &mdash; real-time matches with optional rated matchmaking.</li>
+          <li><strong>Local two-player</strong> &mdash; hotseat on one device.</li>
+          <li><strong>Interactive tutorial</strong> &mdash; a full guided game that introduces one rule at a time, built for players who have never seen a superposition before.</li>
+        </ul>
+
+        <h3>Learn the game</h3>
+        <p>The <a href="/rules.html">complete rulebook</a> explains every rule on one page &mdash; superposition and collapse, zaps, heals, shields, quantum castling, en passant, promotion, and the draw rules. The <a href="/strategy.html">strategy guide</a> covers how to actually win: when to zap and when to capture, keeping your maybe-Kings plural, heal networks, and forcing the final collapse. The <a href="/faq.html">FAQ</a> answers everything else &mdash; daily puzzle scoring, streaks, accounts, ratings, and what Premium includes. And the <a href="/about.html">about page</a> tells the story of why this game exists.</p>
+
+        <p class="qc-below-muted">Quantum Chess is an independent project built by one developer and published by Pura Viba LLC. It runs entirely in your browser &mdash; no download, no install, free to play.</p>
+
+        <hr />
+        <footer class="qc-below-muted">
+          <a href="/">Play</a><a href="/rules.html">Rules</a><a href="/strategy.html">Strategy</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
+          <span>&copy; Pura Viba LLC</span>
+        </footer>
+      </div>
+    </section>
+
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Disable zoom across browsers and devices

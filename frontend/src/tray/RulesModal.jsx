@@ -94,10 +94,10 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
       {
         title: 'Castling (Rook–King Pairing)',
         content: [
-          'First-move ethos: castling applies to any two of your unmoved pieces whose current possibilities include both Rook and King. They do not need to be on the classical starting squares — normal chess is just one arrangement.',
-          'How to castle: click one eligible piece, then click a second eligible piece on the same rank to initiate the castle.',
-          'Once per game: each side may castle only once per game.',
-          'Requirement 1 — Clear path: the two selected pieces must share the same rank with only empty squares strictly between them.',
+          'Back-rank ethos: castling applies to any two pieces on your BACK RANK whose current possibilities include both Rook and King. Whether they have moved does not matter — no memory required. They do not need to be on the classical starting squares — normal chess is just one arrangement.',
+          'How to castle: click one eligible back-rank piece, then click a second eligible piece on that rank to initiate the castle.',
+          'Once per game: each side may castle only once per game — spend it wisely.',
+          'Requirement 1 — Clear path: the two selected pieces must both stand on your back rank with only empty squares strictly between them.',
           'Requirement 2 — Meet in the middle: both pieces move simultaneously toward each other and finish on the two most central empty squares between them.',
           'Requirement 3 — Collapse set: after castling, both pieces reduce to Rook–King only; all other types are removed from their superposition.',
           'No strings attached: after the castle the two pieces are ordinary Rook-or-King superpositions — no special link between them. The census keeps the story straight: if either piece is ever confirmed as the King, no other piece can be one.',
@@ -423,6 +423,12 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
                     </div>
                   ))}
               </div>
+              <p className="qc-rules-weblink" style={{ margin: '14px 0 0', fontSize: 12, color: theme.textSecondary }}>
+                Prefer one long page? Read the{' '}
+                <a href="/rules.html" target="_blank" rel="noopener" style={{ color: theme.primary, fontWeight: 700 }}>
+                  web rulebook
+                </a>.
+              </p>
             </>
           ) : (
             <>
