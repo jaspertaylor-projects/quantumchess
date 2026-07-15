@@ -82,10 +82,15 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
     black: blackCapturedPawns.length + blackCapturedOthers.length,
   }), [whiteCapturedPawns, whiteCapturedOthers, blackCapturedPawns, blackCapturedOthers]);
 
-  // `ctx` carries the render-time pieces of the bundle: speech bubbles, the
-  // intro narration (always the black/top bar — intro seats the user as
-  // White), and the display clock.
-  const barPropsFor = (side, { speech, introSpeech, effectiveClock }) => (side === 'white' ? {
+  // `ctx` carries transient speech, the intro narration launcher's state,
+  // and the display clock. Intro narration itself renders over the board;
+  // only its collapsed icon belongs to the black/top player bar.
+  const barPropsFor = (side, {
+    speech,
+    effectiveClock,
+    introSpeechCollapsed,
+    onIntroSpeechExpand,
+  }) => (side === 'white' ? {
     side: 'white',
     playerName: nameFor('white'),
     rating: ratingFor('white'),
@@ -107,8 +112,9 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
     onRatingClick: ratingClickFor('black'),
     avatar: avatarFor('black'),
     tagline: taglineFor('black'),
-    speech: introSpeech || speech.black,
-    speechFlash: Boolean(introSpeech),
+    speech: speech.black,
+    introSpeechCollapsed,
+    onIntroSpeechExpand,
     clockText: effectiveClock.blackText,
     clockActive: effectiveClock.blackActive,
     clockLow: effectiveClock.blackLow,

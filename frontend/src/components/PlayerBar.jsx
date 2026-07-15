@@ -6,6 +6,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 import StyledSvgImg from '../chessboard/StyledSvgImg.jsx';
+import { MessageCircle } from 'lucide-react';
 
 // Bot avatar: uses /bots/<id>.png when the file exists (drop images into
 // frontend/public/bots/), rendered as a plain square. Falls back to a neon
@@ -233,6 +234,10 @@ export default function PlayerBar({
   // Attention mode for narration (the first-visit intro): the bubble may
   // wrap to two lines, wears a gold accent, and flashes softly on arrival.
   speechFlash = false,
+  // The first-visit narration folds into this avatar-anchored launcher. It
+  // remains visible and glowing until the centered message is reopened.
+  introSpeechCollapsed = false,
+  onIntroSpeechExpand = null,
   // 'inline' keeps captures in the bar's right third; 'above'/'below' moves
   // them to a full-width strip outside the bar so the text can use the width.
   capturedPosition = 'inline',
@@ -433,6 +438,34 @@ export default function PlayerBar({
       ref={capturedOutside ? null : barRef}
     >
       {avatar ? <BotAvatar avatar={avatar} /> : null}
+      {introSpeechCollapsed && onIntroSpeechExpand ? (
+        <button
+          type="button"
+          className="qc-intro-speech-launcher"
+          onClick={onIntroSpeechExpand}
+          aria-label="Open opponent message"
+          title="Open opponent message"
+          style={{
+            position: 'absolute',
+            left: 42,
+            top: '50%',
+            transform: 'translateY(5px)',
+            zIndex: 65,
+            width: 30,
+            height: 30,
+            padding: 0,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: '50%',
+            border: '1px solid rgba(255, 200, 80, 0.9)',
+            background: 'rgba(16, 20, 29, 0.98)',
+            color: '#ffd76b',
+            cursor: 'pointer',
+          }}
+        >
+          <MessageCircle size={17} fill="rgba(255, 200, 80, 0.16)" aria-hidden="true" />
+        </button>
+      ) : null}
       <div className={`qc-player-info qc-player-info--${side}`} style={styles.playerInfo}>
         <div className={`qc-player-name-row qc-player-name-row--${side}`} style={styles.playerNameRow}>
           <span className={`qc-player-name-text qc-player-name-text--${side}`}>{playerName}</span>

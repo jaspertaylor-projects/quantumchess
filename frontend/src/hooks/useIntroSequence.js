@@ -9,60 +9,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getBotById, DEFAULT_BOT_ID } from '../ai/bots.js';
 import { addMove, setUserTeam } from '../store/gameSlice.js';
+import { canRunIntroReply, INTRO_DIALOGUE, INTRO_GUIDE, INTRO_SCRIPT } from './introSequenceData.js';
+
+export { INTRO_GUIDE, INTRO_SCRIPT } from './introSequenceData.js';
 
 // Opponent quietly seated when a first-time visitor moves a piece on the
 // intro board (see introFreePlay). Easiest bot: the first minute should feel
 // magical, not punishing.
 const INTRO_BOT_ID = 'isaac-steinitz';
-
-// Black's scripted opening for the intro game — every beat of the zap/heal
-// rules on cue, verified move-by-move against the real engine:
-//   B1 Nf6 zaps e4 (queen bleeds out) · B2 Nc6 claims both knights (census)
-//   · B3 b5 zaps the c4 bishop-queen down to a bishop · B4 xc4 captures it
-//   (least-valuable capture) · B5 d5 heals the capturer PAST the claimed
-//   knights (pawn-bishop overflow) and zaps e4 to a bare pawn.
-// Each step tries its candidates in order against the live position (the
-// visitor's play can block them); if none is legal the script yields to the
-// real engine. `delay` gives the visitor time to read the payoff card their
-// own move just earned.
-const INTRO_SCRIPT = [
-  { moves: [['g8', 'f6'], ['g8', 'h6']], stage: 'reply1', delay: 1100 },
-  { moves: [['b8', 'c6'], ['b8', 'a6']], stage: 'reply2', delay: 4500 },
-  { moves: [['b7', 'b5']], stage: 'reply3', delay: 4500 },
-  { moves: [['b5', 'c4']], stage: 'reply4', delay: 4500 },
-  { moves: [['d7', 'd5']], stage: 'reply5', delay: 4500 },
-];
-
-// White's choreographed moves: entry i is offered once Black has made i
-// scripted replies — the piece glows, the destination lights up, and other
-// moves are gently refused. The line walks the visitor through their own
-// side of the rules: heal by protecting (Nc3), zap with the cheapest self
-// (Bc4), give a possibility back to the census (Nh3), quantum-castle, and
-// finally recapture.
-const INTRO_GUIDE = [
-  { candidates: [['e2', 'e4']], stage: null },
-  { candidates: [['b1', 'c3']], stage: 'guide1' },
-  { candidates: [['f1', 'c4']], stage: 'guide2' },
-  { candidates: [['g1', 'h3']], stage: 'guide3' },
-  { castles: [['e1', 'h1']], stage: 'guide4' },
-  { candidates: [['e4', 'd5']], stage: 'guide6' },
-];
-
-// Spoken in the top player bar's speech bubble (welcome by the Stranger,
-// the rest by the intro bot), so keep each line bubble-sized.
-const INTRO_DIALOGUE = {
-  welcome: 'Every piece is every piece — until it moves. Slide the glowing pawn to the lit square.',
-  reply1: 'A leap only a knight makes. Its touch ZAPS your pawn — the queen it might have been is gone.',
-  guide1: 'Your knight lands touching e4 — friends you touch HEAL. It just grew knight back.',
-  reply2: 'Both my knights are claimed now — no other piece of mine can be one. The census keeps count.',
-  guide2: 'You touch as the cheapest thing you still might be — a bishop here. Its ray zapped f7: never their king now.',
-  reply3: 'My pawn brushes your bishop-queen — and the queen bleeds out of it. Zaps take the best self first.',
-  guide3: 'Your second knight is claimed, so e4 handed its knight back. The census runs both ways.',
-  reply4: 'Captured — a taken piece resolves as the LEAST it could be. Strip a piece down before you take it.',
-  guide4: 'A quantum castle: two pieces, each maybe king, maybe rook. Strip ALL my maybe-kings and I collapse.',
-  reply5: 'My knights are spoken for — so my heal overflowed: that pawn is a pawn-BISHOP now. And your e4? Just a pawn.',
-  guide6: 'Taken back. Zap every maybe-king to win by wave function collapse — or corner a revealed king the old way. The board is yours.',
-};
 
 export default function useIntroSequence({
   auth,
@@ -108,6 +62,13 @@ export default function useIntroSequence({
   });
   // Guided White moves already played (INTRO_GUIDE index).
   const [introGuideStep, setIntroGuideStep] = useState(0);
+  // The final scripted Black move has landed. Keep both the real bot and the
+  // board paused until the visitor chooses to continue from here or replay
+  // the opening.
+  const [introAwaitingChoice, setIntroAwaitingChoice] = useState(false);
+  // Post-White-move explanation cards are explicit reading checkpoints.
+  // Black does not make the next scripted reply until Continue is pressed.
+  const [introNeedsContinue, setIntroNeedsContinue] = useState(false);
   // Off-script attempt during a guided turn: a shaking toast over the board.
   // The counter keys the element so repeat offenses replay the animation.
   const [introNudge, setIntroNudge] = useState(null); // { text, n }
@@ -117,6 +78,40 @@ export default function useIntroSequence({
     return () => clearTimeout(timer);
   }, [introNudge]);
   const introSpeech = introStage ? INTRO_DIALOGUE[introStage] || null : null;
+
+  // Each new narration beat opens over the board, then folds into a glowing
+  // icon beside the opponent avatar after ten untouched seconds. Clicking
+  // anywhere in the card pins it; the close button folds it immediately.
+  const [introSpeechOpen, setIntroSpeechOpen] = useState(() => Boolean(introFreePlay));
+  const introSpeechTimerRef = useRef(null);
+  const clearIntroSpeechTimer = useCallback(() => {
+    if (introSpeechTimerRef.current) clearTimeout(introSpeechTimerRef.current);
+    introSpeechTimerRef.current = null;
+  }, []);
+  useEffect(() => {
+    clearIntroSpeechTimer();
+    if (!introSpeech) {
+      setIntroSpeechOpen(false);
+      return undefined;
+    }
+    setIntroSpeechOpen(true);
+    introSpeechTimerRef.current = setTimeout(() => {
+      setIntroSpeechOpen(false);
+      introSpeechTimerRef.current = null;
+    }, 10000);
+    return clearIntroSpeechTimer;
+  }, [introStage, introSpeech, clearIntroSpeechTimer]);
+  const interactWithIntroSpeech = useCallback(() => {
+    clearIntroSpeechTimer();
+  }, [clearIntroSpeechTimer]);
+  const collapseIntroSpeech = useCallback(() => {
+    clearIntroSpeechTimer();
+    setIntroSpeechOpen(false);
+  }, [clearIntroSpeechTimer]);
+  const expandIntroSpeech = useCallback(() => {
+    clearIntroSpeechTimer();
+    setIntroSpeechOpen(true);
+  }, [clearIntroSpeechTimer]);
 
   // First touch of the intro board seats the opponent. The move itself flips
   // gameStarted via the normal move path; Black's replies then come from
@@ -133,10 +128,45 @@ export default function useIntroSequence({
 
   // An explicit new game retires the intro script and its narration.
   const retireIntro = useCallback(() => {
+    clearIntroSpeechTimer();
     setIntroScriptOn(false);
     setIntroStage(null);
     setIntroChoreo(false);
-  }, []);
+    setIntroAwaitingChoice(false);
+    setIntroNeedsContinue(false);
+  }, [clearIntroSpeechTimer]);
+
+  const continueFromIntro = useCallback(() => {
+    clearIntroSpeechTimer();
+    setIntroAwaitingChoice(false);
+    setIntroStage(null);
+    setIntroScriptOn(false);
+    setIntroChoreo(false);
+    setIntroNeedsContinue(false);
+  }, [clearIntroSpeechTimer]);
+
+  const continueIntroExplanation = useCallback(() => {
+    clearIntroSpeechTimer();
+    setIntroNeedsContinue(false);
+    setIntroStage(null);
+  }, [clearIntroSpeechTimer]);
+
+  // The App resets the engine/Redux timeline; this resets the choreography
+  // itself so the exact same opening can begin again without a page reload.
+  const restartIntro = useCallback(() => {
+    clearIntroSpeechTimer();
+    introScriptDoneRef.current = -1;
+    setIntroFreePlay(true);
+    setIntroStage('welcome');
+    setIntroSpeechOpen(true);
+    setIntroScriptOn(false);
+    setIntroScriptStep(0);
+    setIntroChoreo(true);
+    setIntroGuideStep(0);
+    setIntroAwaitingChoice(false);
+    setIntroNeedsContinue(false);
+    setIntroNudge(null);
+  }, [clearIntroSpeechTimer]);
 
   useEffect(() => {
     if (introFreePlay && gameStarted) {
@@ -191,10 +221,13 @@ export default function useIntroSequence({
   // silent drift between scripted and unscripted play.
   useEffect(() => {
     if (!introChoreo) return;
-    if (introGuideStep >= INTRO_GUIDE.length || gameOver) {
+    if (gameOver) {
       setIntroChoreo(false);
       return;
     }
+    // Once White has played the last guided move, keep the choreography lock
+    // alive while Black delivers the final scripted reply and CTA.
+    if (introGuideStep >= INTRO_GUIDE.length) return;
     if (!gameStarted || sideToMove !== 'white') return;
     if (!introGuide) setIntroChoreo(false);
   }, [introChoreo, introGuide, introGuideStep, gameStarted, gameOver, sideToMove]);
@@ -211,14 +244,22 @@ export default function useIntroSequence({
   // payoff card.
   const onGuidedMovePlayed = useCallback(() => {
     setIntroGuideStep((n) => n + 1);
-    if (introGuide && introGuide.stage) setIntroStage(introGuide.stage);
+    if (introGuide && introGuide.stage) {
+      setIntroStage(introGuide.stage);
+      setIntroNeedsContinue(true);
+    }
   }, [introGuide]);
 
   // Plays Black's scripted intro opening, one reply per Black turn, a beat
   // after the visitor's move so it reads as a decision rather than a reflex.
   useEffect(() => {
-    if (!introScriptOn || !gameStarted || gameOver) return;
-    if (sideToMove !== 'black') return;
+    if (!canRunIntroReply({
+      scriptOn: introScriptOn,
+      needsContinue: introNeedsContinue,
+      gameStarted,
+      gameOver,
+      sideToMove,
+    })) return;
     const step = INTRO_SCRIPT[introScriptStep];
     if (!step) { setIntroScriptOn(false); return; }
     const timer = setTimeout(() => {
@@ -254,7 +295,10 @@ export default function useIntroSequence({
         introScriptDoneRef.current = introScriptStep;
         setIntroStage(step.stage);
         setIntroScriptStep((n) => n + 1);
-        if (introScriptStep + 1 >= INTRO_SCRIPT.length) setIntroScriptOn(false);
+        if (introScriptStep + 1 >= INTRO_SCRIPT.length) {
+          setIntroScriptOn(false);
+          setIntroAwaitingChoice(true);
+        }
       } else {
         // The visitor's play blocked the script — hand Black to the engine,
         // stop choreographing White, and leave whatever card is up alone.
@@ -263,24 +307,26 @@ export default function useIntroSequence({
       }
     }, step.delay || 1100);
     return () => clearTimeout(timer);
-  }, [introScriptOn, introScriptStep, gameStarted, gameOver, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, canCastleBetween, castlePieces, dispatch]);
-
-  // The closing card lingers, then bows out on its own.
-  useEffect(() => {
-    if (introStage !== 'guide6') return;
-    const timer = setTimeout(() => setIntroStage(null), 12000);
-    return () => clearTimeout(timer);
-  }, [introStage]);
+  }, [introScriptOn, introNeedsContinue, introScriptStep, gameStarted, gameOver, sideToMove, getPieceAtSquare, getLegalMoves, movePiece, canCastleBetween, castlePieces, dispatch]);
 
   return {
     introFreePlay,
     introSpeech,
+    introSpeechOpen,
+    introAwaitingChoice,
+    introNeedsContinue,
     introGuide,
     introNudge,
     introScriptOn,
     introChoreo,
     ensureIntroGame,
     retireIntro,
+    continueFromIntro,
+    continueIntroExplanation,
+    restartIntro,
+    interactWithIntroSpeech,
+    collapseIntroSpeech,
+    expandIntroSpeech,
     nudgeOffScript,
     onGuidedMovePlayed,
   };

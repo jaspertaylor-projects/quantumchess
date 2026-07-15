@@ -3,8 +3,8 @@
 // swing/par format). ?mined=N converts chain N of ./minedPreviewData.json
 // into the shape MinedPuzzleModal plays in PAR MODE: the player sees Black's
 // mistake, plays parPlies free moves against live engine replies, and is
-// scored by fidelity vs the certified par evals. This is also the future
-// adapter shape for mined dailies.
+// scored by its final landing against the puzzle's maximum advantage. This is
+// also the future adapter shape for mined dailies.
 // Imports From: ./puzzleGenerator.js, ../chessboard/quantumEngine.js
 // Exported To: ../App.jsx (dynamic import, dev builds only)
 
@@ -28,17 +28,15 @@ function minedTitle(chain) {
 
 // The client's eval ruler caps mates at 30 (see replyAwareEval); the miner's
 // ply-adjusted mate scores run 900+. Clamp par onto the client ruler so
-// fidelity math compares like with like.
+// final-score math compares like with like.
 const clampPar = (v) => Math.min(v, 30);
 
 const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
 
-// Par on the GAUGE'S ruler. The modal grades the player's landing (a
-// depth-3 gauge score) against par — so par must be the certified move's
-// score in the SAME depth-3 eval tables the gauge reads, not the miner's
-// depth-4 certification number. Mixing rulers produced 150-200% "fidelity"
-// on ordinary good runs. Falls back to the miner's parEvals when a table
-// is missing (old fixtures).
+// Par on the GAUGE'S ruler. The first value is also the fallback top of the
+// maximum score, so it must use the SAME depth-3 eval table as the player's
+// landing, not the miner's depth-4 certification number. Falls back to the
+// miner's parEvals when a table is missing (old fixtures).
 function gaugeParEvals(chain) {
   return chain.steps.map((step, k) => {
     const table = (chain.evalTables || [])[k];
@@ -47,12 +45,30 @@ function gaugeParEvals(chain) {
   });
 }
 
+// The hint arrows must agree with the dial: the gauge ticks show the shipped
+// evalTable's scores, but the miner picks step.bestMove on a DIFFERENT ruler
+// (MINE_WIDTHS beams), so its move can rank below other ticks on the table —
+// a green arrow pointing at the 7th-best tick reads as a lie. Anchor every
+// hint to the table's own top move; the certified move stands in when a
+// table is missing (old fixtures).
+function tableTopMove(chain, k) {
+  const table = (chain.evalTables || [])[k];
+  if (!table || !table.evals) return null;
+  let bestKey = null;
+  let best = -Infinity;
+  for (const [key, v] of Object.entries(table.evals)) {
+    if (v > best) { best = v; bestKey = key; }
+  }
+  const m = bestKey && bestKey.match(/^([a-h][1-8])>([a-h][1-8])(ep)?$/);
+  return m ? { from: m[1], to: m[2], enPassant: Boolean(m[3]) } : null;
+}
+
 // Convert one mined chain into the modal's par-mode puzzle. The par line is
 // re-checked ply by ply on the real engine (legality only — the player is
 // free to diverge, so we never pin positions beyond the start): if the
 // fixture and engine have drifted enough that the certified line is not
 // even legal, refuse rather than lie.
-export function buildMinedPuzzle(chain, idx) {
+export function buildMinedPuzzle(chain, idx, options = {}) {
   let pieces = chain.start.pieces;
   let lastMove = chain.start.lastMove || null;
 
@@ -80,7 +96,8 @@ export function buildMinedPuzzle(chain, idx) {
   }
 
   return {
-    date: `#${idx}`,
+    date: options.date || `#${idx}`,
+    isDaily: Boolean(options.isDaily),
     recipe: {
       key: 'mined-par',
       title: minedTitle(chain),
@@ -92,13 +109,18 @@ export function buildMinedPuzzle(chain, idx) {
       lastMove: chain.start.lastMove || null,
       captureCounter: chain.start.captureCounter || 0,
     },
+    intro: chain.intro ? {
+      pieces: chain.intro.pieces,
+      lastMove: chain.intro.lastMove || null,
+      captureCounter: chain.intro.captureCounter || 0,
+    } : null,
     mistake: chain.mistake, // { from, to, evalBefore, evalAfter, swing }
     // Instant-gauge tables mined alongside the chain (may be absent on old
     // fixtures): [{ sig, evals }] keyed by position signature.
     evalTables: chain.evalTables || [],
     parEvals: gaugeParEvals(chain).map(clampPar),
-    parMoves: chain.steps.map((step) => ({ ...step.bestMove })),
-    parFirstMove: { ...chain.steps[0].bestMove }, // revealed after a rough run
+    parMoves: chain.steps.map((step, k) => tableTopMove(chain, k) || { ...step.bestMove }),
+    parFirstMove: tableTopMove(chain, 0) || { ...chain.steps[0].bestMove }, // revealed after a rough run
     themes: chain.themes,
     trickiness: chain.trickiness,
   };
@@ -117,4 +139,18 @@ export async function loadMinedPreview(idx) {
     console.info(`[minedPreview] chain ${idx}: game ${chain.game} ply ${chain.startPly}, mistake ${chain.mistake.from}->${chain.mistake.to} (${chain.mistake.evalBefore} -> ${chain.mistake.evalAfter}), par [${chain.parEvals.join(', ')}], trickiness ${chain.trickiness}, themes [${chain.themes.join(', ')}]`);
   }
   return puzzle;
+}
+
+// The mined corpus is deliberately small while the format is being tuned.
+// The fixture's schedule map pins hand-picked chains to specific dates; any
+// unscheduled date rotates the corpus deterministically so the daily flow
+// never comes up empty while new puzzles are being mined.
+export async function loadDailyMinedPuzzle(date) {
+  const data = (await import('./minedPreviewData.json')).default;
+  if (!data.chains.length) return null;
+  const scheduled = data.schedule ? data.schedule[date] : undefined;
+  const dayNumber = Math.floor(new Date(`${date}T00:00:00`).getTime() / 86400000);
+  const rotated = ((dayNumber % data.chains.length) + data.chains.length) % data.chains.length;
+  const idx = Number.isInteger(scheduled) && data.chains[scheduled] ? scheduled : rotated;
+  return buildMinedPuzzle(data.chains[idx], idx, { date, isDaily: true });
 }

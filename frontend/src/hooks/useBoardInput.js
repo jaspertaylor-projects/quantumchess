@@ -72,15 +72,17 @@ export default function useBoardInput({
     if (!movingPiece) {
       setSelectedId(null);
       setPendingEpChoice(null);
-      return;
+      return false;
     }
     const fromSquare = movingPiece.square || null;
     const result = movePiece(pieceId, toSquare, { enPassant });
-    if (commitEngineResult(result) && fromSquare) {
+    const committed = commitEngineResult(result);
+    if (committed && fromSquare) {
       online.relayMove({ from: fromSquare, to: toSquare, side: movingPiece.side, enPassant });
     }
     setSelectedId(null);
     setPendingEpChoice(null);
+    return committed;
   }, [pieces, movePiece, commitEngineResult, online]);
 
   // Attempt the quantum castle between two pieces: commits + relays on
@@ -111,7 +113,6 @@ export default function useBoardInput({
         setSelectedId(null);
         return true;
       }
-      intro.onGuidedMovePlayed();
     }
     const legal = new Set(getLegalMoves(pieceId));
     const isEp = getEnPassantMoves(pieceId).some((ep) => ep.to === toSquare);
@@ -122,11 +123,13 @@ export default function useBoardInput({
       return true;
     }
     if (isEp) {
-      performMove(pieceId, toSquare, { enPassant: true });
+      const committed = performMove(pieceId, toSquare, { enPassant: true });
+      if (committed && introGuide) intro.onGuidedMovePlayed();
       return true;
     }
     if (isLegal) {
-      performMove(pieceId, toSquare);
+      const committed = performMove(pieceId, toSquare);
+      if (committed && introGuide) intro.onGuidedMovePlayed();
       return true;
     }
     return false;
@@ -139,6 +142,10 @@ export default function useBoardInput({
     if (!gameStarted) {
       if (!intro.introFreePlay) { promptStartGame(); return false; }
       intro.ensureIntroGame();
+    }
+    if (intro.introAwaitingChoice) {
+      intro.expandIntroSpeech();
+      return false;
     }
     if (guardExternalOver()) return false;
     if (!canMakeMove) {
@@ -247,6 +254,10 @@ export default function useBoardInput({
       if (!intro.introFreePlay) { promptStartGame(); return false; }
       intro.ensureIntroGame();
     }
+    if (intro.introAwaitingChoice) {
+      intro.expandIntroSpeech();
+      return false;
+    }
     if (guardExternalOver()) return false;
     if (!canMakeMove) return false;
     if (isOnlineGameRef.current || aiEnabledRef.current) {
@@ -264,6 +275,11 @@ export default function useBoardInput({
     if (!gameStarted) {
       if (!intro.introFreePlay) { promptStartGame(); setSelectedId(null); return; }
       intro.ensureIntroGame();
+    }
+    if (intro.introAwaitingChoice) {
+      intro.expandIntroSpeech();
+      setSelectedId(null);
+      return;
     }
     if (guardExternalOver()) {
       setSelectedId(null);
