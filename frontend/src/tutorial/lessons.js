@@ -516,18 +516,18 @@ export const LESSONS = [
   {
     id: 'castling',
     title: 'Quantum Castling',
-    blurb: 'Any two unmoved pieces that might be Rook and King.',
+    blurb: 'Any two back-rank pieces that might be Rook and King.',
     rulesPage: 'Castling (Rook–King Pairing)',
     steps: [
       {
         title: 'Anyone can castle',
         text: [
-          'Castling works between ANY two of your unmoved pieces whose possibilities still include both Rook and King — on any rank, with a clear path between them. Normal chess is just one arrangement.',
-          'Click one, then the other. They slide toward each other and meet in the middle. Once per game.',
+          'Castling works between ANY two pieces on your BACK RANK whose possibilities still include both Rook and King — moved or not, with a clear path between them. Normal chess is just one arrangement.',
+          'Click one, then the other. They slide toward each other and meet in the middle. Once per game — use it wisely.',
         ],
-        physics: "Castling is a joint measurement of two systems onto the {|R⟩, |K⟩} subspace — performed on any pair whose amplitudes still overlap it.",
+        physics: "Castling is a joint measurement of two systems onto the {|R⟩, |K⟩} subspace — performed on any back-rank pair whose amplitudes still overlap it.",
         interactive: {
-          prompt: 'Castle: click one of your unmoved pieces, then click the other.',
+          prompt: 'Castle: click one of your back-rank pieces, then click the other.',
           pieces: [
             { id: 'WB', side: 'white', square: 'b1', types: 'pnbrqk' },
             { id: 'WG', side: 'white', square: 'g1', types: 'pnbrqk' },

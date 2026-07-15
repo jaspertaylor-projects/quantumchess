@@ -318,16 +318,18 @@ export function computeCastlePlan(bd, side, ia, ib) {
     if (sideBit(w) === side && (w & CASTLED)) return null;
   }
 
-  // REF: both must be superpositions including Rook and King, unmoved.
+  // REF: both must be superpositions including Rook and King, standing on
+  // the mover's back rank (2026-07-14: the unmoved requirement is gone —
+  // tracking moved pieces is too hard for a human).
   const need = TR | TK;
   if ((possibleOf(wa) & need) !== need || (possibleOf(wb) & need) !== need) return null;
-  if ((wa & HAS_MOVED) || (wb & HAS_MOVED)) return null;
 
   const fa = sqOf(wa) & 7;
   const ra = sqOf(wa) >> 3;
   const fb = sqOf(wb) & 7;
   const rb = sqOf(wb) >> 3;
-  if (ra !== rb) return null;
+  const backRank = side === BLACK ? 7 : 0;
+  if (ra !== backRank || rb !== backRank) return null;
 
   const rank = ra;
   const f1 = Math.min(fa, fb);

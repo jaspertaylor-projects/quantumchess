@@ -528,14 +528,16 @@ export function computeCastlePlanInPosition(pieces, sideToMove, idA, idB) {
     return { canCastle: false, reason: 'Both pieces must be a superposition that includes Rook and King.' };
   }
 
-  if ((a.moveCount || 0) > 0 || (b.moveCount || 0) > 0) {
-    return { canCastle: false, reason: 'Both pieces must not have moved to castle.' };
-  }
-
+  // Rules change 2026-07-14 (Jasper): no unmoved requirement — tracking
+  // which pieces have moved is too hard for a human. Instead the pair must
+  // stand on the mover's BACK RANK (where rook-and-king stories live).
   const posA = fromAlgebraic(a.square);
   const posB = fromAlgebraic(b.square);
   if (!posA || !posB) return { canCastle: false, reason: 'Invalid piece position.' };
-  if (posA.rankIndex !== posB.rankIndex) return { canCastle: false, reason: 'Pieces must be on the same rank to castle.' };
+  const backRank = sideToMove === 'white' ? 0 : 7;
+  if (posA.rankIndex !== backRank || posB.rankIndex !== backRank) {
+    return { canCastle: false, reason: 'Both pieces must be on your back rank to castle.' };
+  }
 
   const occupancy = buildOccupancy(pieces);
 
@@ -627,7 +629,8 @@ export function simulateCastle(prevPieces, plan) {
 
   piece1.square = plan.piece1_to;
   piece2.square = plan.piece2_to;
-  // Castling pieces are unmoved, so Rook and King are base-origin identities.
+  // The castle projects both pieces onto base-origin Rook/King (promotion
+  // branches are cleared — mirrors fastRules.makeCastle exactly).
   withTypes(piece1, ['r', 'k'], []);
   withTypes(piece2, ['r', 'k'], []);
   piece1.moveCount = (piece1.moveCount || 0) + 1;
