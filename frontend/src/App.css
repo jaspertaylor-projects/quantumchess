@@ -199,18 +199,75 @@ button:hover {
   animation: qc-intro-speech-in 180ms ease-out;
 }
 
+/* Expanded intro narration never covers a board square. On phones it owns a
+   measured lane between the opponent bar and board; on wide layouts it owns a
+   compact rail to the board's left. Mid-size desktop layouts use the side. */
+.qc-board-row {
+  position: relative;
+}
+
+.qc-intro-speech-slot--mobile {
+  width: 100%;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding-top: 7px;
+}
+
+.qc-intro-speech-slot--mobile:empty {
+  padding-top: 0;
+}
+
+.qc-intro-speech-slot--desktop {
+  z-index: 55;
+  width: clamp(240px, 30vmin, 320px);
+  flex: 0 0 clamp(240px, 30vmin, 320px);
+  pointer-events: none;
+}
+
+.qc-intro-speech-slot--desktop:empty {
+  display: none;
+}
+
+.qc-intro-speech-slot--desktop-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: clamp(260px, 38vmin, 360px);
+}
+
+.qc-intro-speech-slot--desktop-left {
+  align-self: flex-start;
+}
+
+.qc-intro-speech-slot--desktop-left .qc-intro-speech-card--desktop .qc-intro-speech-tail {
+  left: auto;
+  right: -22px;
+}
+
+.qc-intro-speech-card--mobile,
+.qc-intro-speech-card--desktop {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  pointer-events: auto;
+}
+
 .qc-intro-speech-tail {
   position: absolute;
   /* The board and player bar share a left edge. This puts the diamond's
      point directly under the 46px opponent avatar centered at x=36px. */
-  left: 13px;
-  top: -28px;
+  left: 27px;
+  top: -10px;
   width: 18px;
   height: 18px;
   background: rgba(12, 15, 23, 0.96);
   border-left: 1px solid rgba(255, 200, 80, 0.75);
   border-top: 1px solid rgba(255, 200, 80, 0.75);
   transform: rotate(45deg);
+}
+
+.qc-intro-speech-card--desktop .qc-intro-speech-tail {
+  left: 18px;
 }
 
 @keyframes qc-intro-launcher-glow {
@@ -354,4 +411,3 @@ button:hover {
   50%  { transform: rotate(180deg); color: #b400ff; filter: drop-shadow(0 0 10px rgba(180, 0, 255, 0.65)); }
   100% { transform: rotate(360deg); color: #ff3b7f; filter: drop-shadow(0 0 10px rgba(255, 59, 127, 0.65)); }
 }
-

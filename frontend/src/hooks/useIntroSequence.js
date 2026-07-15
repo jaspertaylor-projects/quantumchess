@@ -26,6 +26,7 @@ export default function useIntroSequence({
   sideToMove,
   getPieceAtSquare,
   getLegalMoves,
+  getEnPassantMoves,
   movePiece,
   canCastleBetween,
   castlePieces,
@@ -48,7 +49,7 @@ export default function useIntroSequence({
   // Which intro dialogue card is showing (null = none).
   const [introStage, setIntroStage] = useState(() => (introFreePlay ? 'welcome' : null));
   // While true, Black's replies come from INTRO_SCRIPT and useLocalAi stays
-  // quiet; flips false after the castle (or if the script is invalidated).
+  // quiet; flips false after the final scripted reply (or invalidation).
   const [introScriptOn, setIntroScriptOn] = useState(false);
   const [introScriptStep, setIntroScriptStep] = useState(0);
   // Guards the reply timer against stale duplicate firings: records the last
@@ -77,7 +78,21 @@ export default function useIntroSequence({
     const timer = setTimeout(() => setIntroNudge(null), 2600);
     return () => clearTimeout(timer);
   }, [introNudge]);
-  const introSpeech = introStage ? INTRO_DIALOGUE[introStage] || null : null;
+  const introDialogue = introStage ? INTRO_DIALOGUE[introStage] || null : null;
+  const introSpeechPages = useMemo(() => {
+    if (!introDialogue) return [];
+    return Array.isArray(introDialogue) ? introDialogue : [introDialogue];
+  }, [introDialogue]);
+  const [introSpeechPage, setIntroSpeechPage] = useState(0);
+  const introSpeech = introSpeechPages[introSpeechPage] || introSpeechPages[0] || null;
+  const introDialogueIsPaged = introSpeechPages.length > 1;
+  const introHasMorePages = introSpeechPage + 1 < introSpeechPages.length;
+  // Multi-page cards always require acknowledgement, including narration
+  // after Black's move. The final Continue closes the last page.
+  const introRequiresContinue = introNeedsContinue || introDialogueIsPaged;
+  useEffect(() => {
+    setIntroSpeechPage(0);
+  }, [introStage]);
 
   // Each new narration beat opens over the board, then folds into a glowing
   // icon beside the opponent avatar after ten untouched seconds. Clicking
@@ -95,12 +110,15 @@ export default function useIntroSequence({
       return undefined;
     }
     setIntroSpeechOpen(true);
+    // A required checkpoint must stay visible until Continue is pressed;
+    // collapsing it would make Black appear unresponsive while waiting.
+    if (introRequiresContinue) return clearIntroSpeechTimer;
     introSpeechTimerRef.current = setTimeout(() => {
       setIntroSpeechOpen(false);
       introSpeechTimerRef.current = null;
     }, 10000);
     return clearIntroSpeechTimer;
-  }, [introStage, introSpeech, clearIntroSpeechTimer]);
+  }, [introStage, introSpeech, introRequiresContinue, clearIntroSpeechTimer]);
   const interactWithIntroSpeech = useCallback(() => {
     clearIntroSpeechTimer();
   }, [clearIntroSpeechTimer]);
@@ -147,9 +165,13 @@ export default function useIntroSequence({
 
   const continueIntroExplanation = useCallback(() => {
     clearIntroSpeechTimer();
+    if (introHasMorePages) {
+      setIntroSpeechPage((page) => page + 1);
+      return;
+    }
     setIntroNeedsContinue(false);
     setIntroStage(null);
-  }, [clearIntroSpeechTimer]);
+  }, [clearIntroSpeechTimer, introHasMorePages]);
 
   // The App resets the engine/Redux timeline; this resets the choreography
   // itself so the exact same opening can begin again without a page reload.
@@ -196,10 +218,20 @@ export default function useIntroSequence({
     if (!introChoreo || gameOver || sideToMove !== 'white') return null;
     const g = INTRO_GUIDE[introGuideStep];
     if (!g) return null;
-    for (const [from, to] of g.candidates || []) {
+    for (const candidate of g.candidates || []) {
+      const { from, to, enPassant = false } = candidate;
       const piece = getPieceAtSquare(from);
-      if (piece && piece.side === 'white' && getLegalMoves(piece.id).includes(to)) {
-        return { from, to, stage: g.stage };
+      const standardLegal = piece && getLegalMoves(piece.id).includes(to);
+      const enPassantLegal = piece && enPassant
+        && getEnPassantMoves(piece.id).some((move) => move.to === to);
+      if (piece && piece.side === 'white' && (standardLegal || enPassantLegal)) {
+        return {
+          from,
+          to,
+          enPassant,
+          stage: g.stage,
+          completeAfterWhite: g.completeAfterWhite,
+        };
       }
     }
     // A guided quantum castle: glow one partner, light the other; the input
@@ -213,7 +245,7 @@ export default function useIntroSequence({
       }
     }
     return null;
-  }, [introChoreo, gameOver, sideToMove, introGuideStep, getPieceAtSquare, getLegalMoves, canCastleBetween]);
+  }, [introChoreo, gameOver, sideToMove, introGuideStep, getPieceAtSquare, getLegalMoves, getEnPassantMoves, canCastleBetween]);
 
   // The choreography is all-or-nothing: it retires explicitly — last guided
   // move played, game somehow over, or no candidate playable on a guided
@@ -246,7 +278,13 @@ export default function useIntroSequence({
     setIntroGuideStep((n) => n + 1);
     if (introGuide && introGuide.stage) {
       setIntroStage(introGuide.stage);
-      setIntroNeedsContinue(true);
+      if (introGuide.completeAfterWhite) {
+        setIntroNeedsContinue(false);
+        setIntroAwaitingChoice(true);
+        setIntroScriptOn(false);
+      } else {
+        setIntroNeedsContinue(true);
+      }
     }
   }, [introGuide]);
 
@@ -295,10 +333,7 @@ export default function useIntroSequence({
         introScriptDoneRef.current = introScriptStep;
         setIntroStage(step.stage);
         setIntroScriptStep((n) => n + 1);
-        if (introScriptStep + 1 >= INTRO_SCRIPT.length) {
-          setIntroScriptOn(false);
-          setIntroAwaitingChoice(true);
-        }
+        if (introScriptStep + 1 >= INTRO_SCRIPT.length) setIntroScriptOn(false);
       } else {
         // The visitor's play blocked the script — hand Black to the engine,
         // stop choreographing White, and leave whatever card is up alone.
@@ -314,7 +349,7 @@ export default function useIntroSequence({
     introSpeech,
     introSpeechOpen,
     introAwaitingChoice,
-    introNeedsContinue,
+    introNeedsContinue: introRequiresContinue,
     introGuide,
     introNudge,
     introScriptOn,

@@ -126,7 +126,8 @@ export default function App() {
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
-  const timeControl = useSelector((state) => state.settings.timeControl || '5+0');
+  const gameSettings = useSelector((state) => state.settings);
+  const timeControl = gameSettings.timeControl || '5+0';
   const moves = useSelector((state) => state.game.moves || []);
 
   const aiEnabledRef = useRef(false);
@@ -180,6 +181,7 @@ export default function App() {
     sideToMove,
     getPieceAtSquare,
     getLegalMoves,
+    getEnPassantMoves,
     movePiece,
     canCastleBetween,
     castlePieces,
@@ -233,8 +235,12 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const layout = useBoardLayout({ gameStarted, svgStyles });
-  const { isNarrow, boardSize, currentPieceSize } = layout;
+  const layout = useBoardLayout({
+    gameStarted,
+    svgStyles,
+    desktopCoachOpen: Boolean(intro.introSpeech && intro.introSpeechOpen),
+  });
+  const { isNarrow, isWide, boardSize, currentPieceSize } = layout;
 
   const isOnlineBars = isOnlineGameRef.current;
   const handleOpenAccountFromRating = useCallback(() => setAccountOpen(true), [setAccountOpen]);
@@ -628,7 +634,43 @@ export default function App() {
               />
             </div>
 
+            {isNarrow ? (
+              <div
+                className="qc-intro-speech-slot qc-intro-speech-slot--mobile"
+                ref={layout.coachLaneRef}
+              >
+                <IntroSpeechOverlay
+                  speech={intro.introSpeech}
+                  open={intro.introSpeechOpen}
+                  placement="mobile"
+                  awaitingChoice={intro.introAwaitingChoice}
+                  needsContinue={intro.introNeedsContinue}
+                  onCollapse={intro.collapseIntroSpeech}
+                  onInteract={intro.interactWithIntroSpeech}
+                  onContinueExplanation={intro.continueIntroExplanation}
+                  onContinue={intro.continueFromIntro}
+                  onRestart={handleRestartIntro}
+                />
+              </div>
+            ) : null}
+
             <div className="qc-board-row" style={styles.boardRow}>
+              {isWide ? (
+                <div className="qc-intro-speech-slot qc-intro-speech-slot--desktop qc-intro-speech-slot--desktop-left">
+                  <IntroSpeechOverlay
+                    speech={intro.introSpeech}
+                    open={intro.introSpeechOpen}
+                    placement="desktop"
+                    awaitingChoice={intro.introAwaitingChoice}
+                    needsContinue={intro.introNeedsContinue}
+                    onCollapse={intro.collapseIntroSpeech}
+                    onInteract={intro.interactWithIntroSpeech}
+                    onContinueExplanation={intro.continueIntroExplanation}
+                    onContinue={intro.continueFromIntro}
+                    onRestart={handleRestartIntro}
+                  />
+                </div>
+              ) : null}
               <div className="qc-board-holder" style={styles.boardHolder}>
                 <Board
                   orientation={userTeam}
@@ -661,17 +703,6 @@ export default function App() {
                 {!gameStarted && !intro.introFreePlay ? (
                   <StartGameCta pulse={startCtaPulse} onClick={promptStartGame} />
                 ) : null}
-                <IntroSpeechOverlay
-                  speech={intro.introSpeech}
-                  open={intro.introSpeechOpen}
-                  awaitingChoice={intro.introAwaitingChoice}
-                  needsContinue={intro.introNeedsContinue}
-                  onCollapse={intro.collapseIntroSpeech}
-                  onInteract={intro.interactWithIntroSpeech}
-                  onContinueExplanation={intro.continueIntroExplanation}
-                  onContinue={intro.continueFromIntro}
-                  onRestart={handleRestartIntro}
-                />
                 <IntroNudgeToast nudge={intro.introNudge} />
               </div>
               {!isNarrow ? (
@@ -682,6 +713,7 @@ export default function App() {
                   onOpenSettings={handleOpenSettings}
                   onOpenRules={handleOpenRules}
                   onStartGame={handleStartGame}
+                  initialGameSettings={gameSettings}
                   onSetHighlights={input.handleSetHighlights}
                   onClearHighlights={input.handleClearHighlights}
                   onSeekToIndex={handleSeekToIndex}
@@ -704,6 +736,22 @@ export default function App() {
                   attentionSignal={startCtaPulse}
                   onOpenTutorial={handleOpenTutorial}
                 />
+              ) : null}
+              {!isNarrow && !isWide ? (
+                <div className="qc-intro-speech-slot qc-intro-speech-slot--desktop qc-intro-speech-slot--desktop-right">
+                  <IntroSpeechOverlay
+                    speech={intro.introSpeech}
+                    open={intro.introSpeechOpen}
+                    placement="desktop"
+                    awaitingChoice={intro.introAwaitingChoice}
+                    needsContinue={intro.introNeedsContinue}
+                    onCollapse={intro.collapseIntroSpeech}
+                    onInteract={intro.interactWithIntroSpeech}
+                    onContinueExplanation={intro.continueIntroExplanation}
+                    onContinue={intro.continueFromIntro}
+                    onRestart={handleRestartIntro}
+                  />
+                </div>
               ) : null}
             </div>
 
@@ -760,6 +808,7 @@ export default function App() {
               setMobileNewGameOpen(false);
               handleStartGame(settings);
             }}
+            initialGameSettings={gameSettings}
             isPaid={isPaidUser}
             onRequirePremium={handleRequirePremium}
             auth={auth}

@@ -6,7 +6,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  gameMode: 'local', // 'local', 'ai', 'online'
+  // Match the setup panel's first-use defaults. Every submitted setup then
+  // replaces these values so reopening New Game starts where the player left
+  // off, including after entering or cancelling matchmaking.
+  gameMode: 'ai', // 'local', 'ai', 'online'
+  aiBotId: null,
   aiDifficulty: 'medium', // 'easy', 'medium', 'hard'
   preferredSide: 'random', // 'white', 'black', 'random' (AI games only)
   isRanked: false, // boolean
@@ -18,8 +22,9 @@ const settingsSlice = createSlice({
   initialState,
   reducers: {
     setGameSettings(state, action) {
-      const { gameMode, aiDifficulty, preferredSide, isRanked, timeControl } = action.payload || {};
+      const { gameMode, aiBotId, aiDifficulty, preferredSide, isRanked, timeControl } = action.payload || {};
       state.gameMode = gameMode ?? state.gameMode;
+      state.aiBotId = aiBotId ?? state.aiBotId;
       state.aiDifficulty = aiDifficulty ?? state.aiDifficulty;
       state.preferredSide = preferredSide ?? state.preferredSide;
       state.isRanked = isRanked ?? state.isRanked;

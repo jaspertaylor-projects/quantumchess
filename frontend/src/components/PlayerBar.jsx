@@ -118,7 +118,7 @@ const TYPE_TO_SVG = {
 // big pieces instead of shrinking everyone.
 const CAP_ICON_MIN = 12;
 const CAP_ICON_MAX = 44;
-const CAP_ICON_GAP = 4; // used only between the two rows
+const CAP_ICON_GAP = 2; // used only between the two rows
 const CAP_VISIBLE = 0.72;
 
 // Which glyph a captured piece renders as (lowest-value possible type).
@@ -397,8 +397,11 @@ export default function PlayerBar({
       gap: 2,
       fontSize: '0.9rem',
       width: '100%',
-      height: BAR_CONTENT_H,
-      maxHeight: BAR_CONTENT_H,
+      // The capture shelf may use the bar's full height. It is deliberately
+      // independent of BAR_CONTENT_H so larger two-row miniatures never
+      // disturb the avatar/name/tagline rhythm on the other side.
+      height: '100%',
+      maxHeight: 'none',
       overflow: 'hidden',
       boxSizing: 'border-box',
     },

@@ -76,6 +76,7 @@ export function IntroNudgeToast({ nudge }) {
 export function IntroSpeechOverlay({
   speech,
   open,
+  placement = 'mobile',
   awaitingChoice = false,
   needsContinue = false,
   onCollapse,
@@ -87,18 +88,14 @@ export function IntroSpeechOverlay({
   if (!speech || !open) return null;
   return (
     <section
-      className="qc-intro-speech-card"
+      className={`qc-intro-speech-card qc-intro-speech-card--${placement}`}
       role="dialog"
       aria-label="Opponent guidance"
       onPointerDown={onInteract}
       style={{
-        position: 'absolute',
-        left: 14,
-        top: 10,
         zIndex: 45,
-        width: 'min(calc(100% - 28px), 390px)',
         boxSizing: 'border-box',
-        padding: '20px 20px 17px',
+        padding: '16px 18px 14px',
         borderRadius: 16,
         border: '1px solid rgba(255, 200, 80, 0.75)',
         background: 'rgba(12, 15, 23, 0.96)',
@@ -107,33 +104,35 @@ export function IntroSpeechOverlay({
         backdropFilter: 'blur(5px)',
       }}
     >
-      <button
-        type="button"
-        className="qc-intro-speech-close"
-        onClick={(event) => {
-          event.stopPropagation();
-          onCollapse();
-        }}
-        aria-label="Collapse opponent message"
-        title="Collapse message"
-        style={{
-          position: 'absolute',
-          top: 7,
-          right: 7,
-          width: 30,
-          height: 30,
-          display: 'grid',
-          placeItems: 'center',
-          padding: 0,
-          borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.18)',
-          background: 'rgba(255,255,255,0.07)',
-          color: theme.textSecondary,
-          cursor: 'pointer',
-        }}
-      >
-        <X size={17} aria-hidden="true" />
-      </button>
+      {!needsContinue ? (
+        <button
+          type="button"
+          className="qc-intro-speech-close"
+          onClick={(event) => {
+            event.stopPropagation();
+            onCollapse();
+          }}
+          aria-label="Collapse opponent message"
+          title="Collapse message"
+          style={{
+            position: 'absolute',
+            top: 7,
+            right: 7,
+            width: 30,
+            height: 30,
+            display: 'grid',
+            placeItems: 'center',
+            padding: 0,
+            borderRadius: 8,
+            border: '1px solid rgba(255,255,255,0.18)',
+            background: 'rgba(255,255,255,0.07)',
+            color: theme.textSecondary,
+            cursor: 'pointer',
+          }}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
+      ) : null}
       <div
         style={{
           paddingRight: 22,

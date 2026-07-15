@@ -64,6 +64,7 @@ export default function SideTray({
   onOpenSettings = () => {},
   onOpenRules = () => {},
   onStartGame = () => {},
+  initialGameSettings = {},
   onSetHighlights = () => {},
   onClearHighlights = () => {},
   onSeekToIndex = () => {},
@@ -438,6 +439,7 @@ export default function SideTray({
         ) : view === 'new-game' ? (
           <NewGamePanel
             onStartGame={handleStartGame}
+            initialSettings={initialGameSettings}
             isPaid={isPaid}
             onRequirePremium={onRequirePremium}
             submitSignal={submitSignal}

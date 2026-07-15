@@ -176,17 +176,21 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
 // setup panel is already on screen).
 export default function NewGamePanel({
   onStartGame,
+  initialSettings = {},
   isPaid = false,
   onRequirePremium = null,
   submitSignal = 0,
   auth = null,
   onOpenAccount = () => {},
 }) {
-  const [gameMode, setGameMode] = useState('ai'); // 'local', 'ai', 'online'
-  const [aiBotId, setAiBotId] = useState(DEFAULT_BOT_ID);
-  const [preferredSide, setPreferredSide] = useState('random'); // 'white', 'black', 'random'
-  const [isRanked, setIsRanked] = useState(false); // boolean
-  const [timeControl, setTimeControl] = useState('5+0'); // '3+0', '5+0', '10+0'
+  // Seed each newly opened setup panel from the last submitted game. Queueing
+  // counts as submission, so cancelling a search does not throw away the
+  // player's chosen mode, match type, clock, side, or bot.
+  const [gameMode, setGameMode] = useState(() => initialSettings.gameMode || 'ai'); // 'local', 'ai', 'online'
+  const [aiBotId, setAiBotId] = useState(() => initialSettings.aiBotId || DEFAULT_BOT_ID);
+  const [preferredSide, setPreferredSide] = useState(() => initialSettings.preferredSide || 'random'); // 'white', 'black', 'random'
+  const [isRanked, setIsRanked] = useState(() => Boolean(initialSettings.isRanked)); // boolean
+  const [timeControl, setTimeControl] = useState(() => initialSettings.timeControl || '5+0'); // '3+0', '5+0', '10+0'
 
   const selectedBot = getBotById(aiBotId);
   // Dev playtest override (?allbots) skips the premium gate too.

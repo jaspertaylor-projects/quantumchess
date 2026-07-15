@@ -8,7 +8,7 @@ import React from 'react';
 import theme from '../theme.js';
 import NewGamePanel from '../tray/NewGamePanel.jsx';
 
-export default function MobileNewGameSheet({ open, onClose, onStartGame, isPaid, onRequirePremium, auth, onOpenAccount }) {
+export default function MobileNewGameSheet({ open, onClose, onStartGame, initialGameSettings, isPaid, onRequirePremium, auth, onOpenAccount }) {
   if (!open) return null;
   return (
     <div
@@ -39,6 +39,7 @@ export default function MobileNewGameSheet({ open, onClose, onStartGame, isPaid,
       >
         <NewGamePanel
           onStartGame={onStartGame}
+          initialSettings={initialGameSettings}
           isPaid={isPaid}
           onRequirePremium={onRequirePremium}
           auth={auth}
