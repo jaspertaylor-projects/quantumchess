@@ -47,7 +47,10 @@ self.addEventListener('message', (e) => {
   if (data.type === 'analyze') {
     const { id, payload } = data;
     try {
-      const res = analyzeRootMoves({
+      const runAnalyze = payload && payload.engine === 'fast'
+        ? analyzeRootMovesFast
+        : analyzeRootMoves;
+      const res = runAnalyze({
         pieces: (payload && payload.pieces) || [],
         sideToMove: (payload && payload.sideToMove) || 'white',
         lastMove: (payload && payload.lastMove) || null,
@@ -79,10 +82,16 @@ self.addEventListener('message', (e) => {
   if (data.type === 'bestScore') {
     const { id, payload } = data;
     try {
-      const res = searchBestMove({
+      const runSearch = payload && payload.engine === 'fast'
+        ? searchBestMoveFast
+        : searchBestMove;
+      const res = runSearch({
         pieces: (payload && payload.pieces) || [],
         sideToMove: (payload && payload.sideToMove) || 'white',
         lastMove: (payload && payload.lastMove) || null,
+        preferredMove: (payload && payload.preferredMove) || null,
+        openingVariety: false,
+        adaptiveDepth: false,
         bot: {
           search: {
             maxDepth: (payload && payload.depth) || 3,
@@ -106,12 +115,16 @@ self.addEventListener('message', (e) => {
   if (data.type === 'bestMove') {
     const { id, payload } = data;
     try {
-      const res = searchBestMove({
+      const runSearch = payload && payload.engine === 'fast'
+        ? searchBestMoveFast
+        : searchBestMove;
+      const res = runSearch({
         pieces: (payload && payload.pieces) || [],
         sideToMove: (payload && payload.sideToMove) || 'white',
         lastMove: (payload && payload.lastMove) || null,
         openingVariety: false,
         adaptiveDepth: false,
+        preferredMove: (payload && payload.preferredMove) || null,
         onDepthComplete: (partial) => {
           self.postMessage({
             type: 'bestMoveProgress',
@@ -126,6 +139,7 @@ self.addEventListener('message', (e) => {
             maxDepth: (payload && payload.depth) || 3,
             widths: (payload && payload.widths) || [176, 12, 8],
             timeMs: (payload && payload.timeMs) || 20000,
+            timeMode: (payload && payload.timeMode) || 'capped',
             noise: 0,
           },
         },
