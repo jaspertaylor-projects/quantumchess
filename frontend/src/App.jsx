@@ -25,7 +25,7 @@ import AppHeader from './components/AppHeader.jsx';
 import MobileBar from './components/MobileBar.jsx';
 import PlayerBar from './components/PlayerBar.jsx';
 import MobileNewGameSheet from './components/MobileNewGameSheet.jsx';
-import { StartGameCta, IntroNudgeToast } from './components/BoardOverlays.jsx';
+import { StartGameCta, IntroNudgeToast, IntroSpeechOverlay } from './components/BoardOverlays.jsx';
 import AppModals from './components/AppModals.jsx';
 import appLayoutStyles from './components/appLayoutStyles.js';
 import useLocalAi from './ai/useLocalAi.js';
@@ -189,6 +189,19 @@ export default function App() {
     setAiBot,
   });
   const { introGuide } = intro;
+
+  const handleRestartIntro = useCallback(() => {
+    dispatch(resetGame());
+    setGameInstanceId((n) => n + 1);
+    aiEnabledRef.current = false;
+    aiDifficultyRef.current = 'easy';
+    setAiBot(null);
+    dispatch(setUserTeam('white'));
+    setGameStarted(false);
+    setExternalGameOver({ over: false, text: '' });
+    setInfoMessage('');
+    intro.restartIntro();
+  }, [dispatch, intro]);
 
   const {
     accountOpen, setAccountOpen, pricingOpen, setPricingOpen,
@@ -581,7 +594,12 @@ export default function App() {
   const resolvedWinnerText = useMemo(() => (externalGameOver.over ? externalGameOver.text : winnerText), [externalGameOver, winnerText]);
 
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
-  const barCtx = { speech, introSpeech: intro.introSpeech, effectiveClock };
+  const barCtx = {
+    speech,
+    effectiveClock,
+    introSpeechCollapsed: Boolean(intro.introSpeech && !intro.introSpeechOpen),
+    onIntroSpeechExpand: intro.expandIntroSpeech,
+  };
 
   return (
     <div className="qc-app-container" style={styles.appContainer}>
@@ -643,6 +661,17 @@ export default function App() {
                 {!gameStarted && !intro.introFreePlay ? (
                   <StartGameCta pulse={startCtaPulse} onClick={promptStartGame} />
                 ) : null}
+                <IntroSpeechOverlay
+                  speech={intro.introSpeech}
+                  open={intro.introSpeechOpen}
+                  awaitingChoice={intro.introAwaitingChoice}
+                  needsContinue={intro.introNeedsContinue}
+                  onCollapse={intro.collapseIntroSpeech}
+                  onInteract={intro.interactWithIntroSpeech}
+                  onContinueExplanation={intro.continueIntroExplanation}
+                  onContinue={intro.continueFromIntro}
+                  onRestart={handleRestartIntro}
+                />
                 <IntroNudgeToast nudge={intro.introNudge} />
               </div>
               {!isNarrow ? (

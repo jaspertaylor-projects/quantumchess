@@ -174,7 +174,7 @@ button:hover {
   .qc-icon-button[style*="qc-onboard-pulse"] { animation: none !important; }
 }
 
-/* First-visit attract: the intro pawn pulses light until it is picked up */
+/* First-visit guide: each scripted White mover pulses until it is picked up. */
 @keyframes qc-attract-breathe {
   0%, 100% { opacity: 0.3; transform: scale(0.82); }
   50% { opacity: 1; transform: scale(1.14); }
@@ -184,10 +184,51 @@ button:hover {
   animation: qc-attract-breathe 1.6s ease-in-out infinite;
 }
 
-/* Intro narration bubble: a gentle, continuous golden pulse */
+/* Intro narration: avatar-connected board card folds into a glowing launcher. */
 @keyframes qc-speech-flash {
   0%, 100% { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
   50% { box-shadow: 0 0 0 2px rgba(255, 200, 80, 0.45), 0 0 12px rgba(255, 200, 80, 0.3); }
+}
+
+@keyframes qc-intro-speech-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.qc-intro-speech-card {
+  animation: qc-intro-speech-in 180ms ease-out;
+}
+
+.qc-intro-speech-tail {
+  position: absolute;
+  /* The board and player bar share a left edge. This puts the diamond's
+     point directly under the 46px opponent avatar centered at x=36px. */
+  left: 13px;
+  top: -28px;
+  width: 18px;
+  height: 18px;
+  background: rgba(12, 15, 23, 0.96);
+  border-left: 1px solid rgba(255, 200, 80, 0.75);
+  border-top: 1px solid rgba(255, 200, 80, 0.75);
+  transform: rotate(45deg);
+}
+
+@keyframes qc-intro-launcher-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 200, 80, 0.42), 0 0 8px rgba(255, 200, 80, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(255, 200, 80, 0), 0 0 18px rgba(255, 200, 80, 0.95);
+  }
+}
+
+.qc-intro-speech-launcher {
+  animation: qc-intro-launcher-glow 1.35s ease-in-out infinite;
+}
+
+.qc-intro-speech-close:hover,
+.qc-intro-choice:hover {
+  filter: brightness(1.18);
 }
 
 /* Choreographed destination: the target square pulses until the move lands */
@@ -217,6 +258,8 @@ button:hover {
 @media (prefers-reduced-motion: reduce) {
   .qc-attract-glow { animation: none !important; opacity: 0.7; }
   .qc-player-speech { animation: none !important; }
+  .qc-intro-speech-card { animation: none !important; }
+  .qc-intro-speech-launcher { animation: none !important; box-shadow: 0 0 10px rgba(255, 200, 80, 0.75); }
   .qc-guide-target { animation: none !important; opacity: 0.9; }
   .qc-intro-nudge { animation: none !important; }
 }
