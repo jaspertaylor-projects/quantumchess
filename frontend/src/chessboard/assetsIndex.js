@@ -36,7 +36,9 @@ import qUrlR from '../assets/quantum_r.svg?url';
 import qUrlQ from '../assets/quantum_q.svg?url';
 import qUrlK from '../assets/quantum_k.svg?url';
 
-const qUrlRStylish = `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`;
+// Match QuantumPiece.jsx: the dev-cache-busting param must not touch data:
+// URIs (production inlines the SVG, and a query suffix corrupts the image).
+const qUrlRStylish = qUrlR.startsWith('data:') ? qUrlR : `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`;
 
 const SINGLE_ASSET_URLS = [imgP, imgN, imgB, imgR, imgQ, imgK].filter(Boolean);
 

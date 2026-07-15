@@ -74,8 +74,10 @@ const quantumUrlMap = {
   n: qUrlN,
   b: qUrlB,
   // Explicit art revision keeps Vite's stable dev URL from reusing a
-  // pre-stylish in-memory/data-URL render of the quantum rook.
-  r: `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`,
+  // pre-stylish in-memory/data-URL render of the quantum rook. Production
+  // inlines this SVG as a data: URI, where a query suffix corrupts the image
+  // (and a data URI can never be stale) — so only real URLs get the param.
+  r: qUrlR.startsWith('data:') ? qUrlR : `${qUrlR}${qUrlR.includes('?') ? '&' : '?'}qcArt=stylish-v2`,
   q: qUrlQ,
   k: qUrlK,
 };
