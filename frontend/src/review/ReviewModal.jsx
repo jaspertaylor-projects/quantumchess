@@ -26,6 +26,7 @@ import { cacheEval, cacheHints, getCachedHints } from './evalCache.js';
 import useReviewVariation from './useReviewVariation.js';
 import EvalTraceGraph from './EvalTraceGraph.jsx';
 import styles from './reviewStyles.js';
+import { staysInSameDecisiveBand } from './reviewMoveMarks.js';
 
 const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
 const HIGHLIGHT_TO = 'rgba(246, 196, 69, 0.55)';
@@ -52,12 +53,40 @@ function describeHintMove(mv) {
   return `${mv.from} → ${mv.to}${mv.enPassant ? ' (en passant)' : ''}`;
 }
 
+function normalizeWorkerMove(move, score, depth) {
+  if (!move) return null;
+  if (move.type === 'castle' && move.plan) {
+    return {
+      from: move.plan.piece1_from,
+      to: move.plan.piece1_to,
+      castle: true,
+      enPassant: false,
+      score,
+      depth,
+    };
+  }
+  if (!move.from || !move.to) return null;
+  return {
+    from: move.from,
+    to: move.to,
+    castle: false,
+    enPassant: move.type === 'enpassant' || Boolean(move.enPassant),
+    score,
+    depth,
+  };
+}
+
+const sameHintMove = (a, b) => Boolean(a && b)
+  && a.from === b.from && a.to === b.to
+  && Boolean(a.castle) === Boolean(b.castle)
+  && Boolean(a.enPassant) === Boolean(b.enPassant);
+
 export default function ReviewModal({
   open = false,
   onClose = () => {},
   game = null, // { id, opponent, opponent_rating, user_side, result, created_at, headline? }
   moves = null, // stored qc_games.moves array
-  showEvalGraph = false, // dev/mined only: compute + show the whole-game eval graph strip
+  showEvalGraph = false, // dev/mined only: show the graph strip; move-list evals always compute
   pieceSvgStyles,
   indicators,
   squareColors,
@@ -74,58 +103,123 @@ export default function ReviewModal({
   const v = useReviewVariation({ open, snapshots, onClose });
   const { bounded, snap, variation, varSel } = v;
 
+  const actualNextMove = useMemo(() => {
+    if (variation || !timeline || bounded >= timeline.entries.length) return null;
+    const entry = timeline.entries[bounded];
+    if (!entry) return null;
+    if (entry.type === 'move') {
+      return {
+        from: entry.from,
+        to: entry.to,
+        enPassant: Boolean(entry.enPassant),
+        castle: false,
+      };
+    }
+    const played = snapshots[bounded + 1]?.lastMove;
+    return played ? { from: played.from, to: played.to, castle: true, enPassant: false } : null;
+  }, [variation, timeline, snapshots, bounded]);
+
   // Engine suggestions for the viewed position, computed off-thread: the
   // THREE strongest moves drawn as layered green arrows — the best one
-  // boldest. Two stages in one worker so arrows appear in ~a second (full
-  // root, depth 2) and then refine deeper. The deep stage is parity-matched
-  // to the graph's ruler (white d4 / black d3), so its best score doubles as
-  // the position's 'mid'-tier eval in the shared cache. A position whose
-  // deep hints were already computed (this session) skips the worker
-  // entirely; stale replies are ignored.
+  // boldest. A full-root depth-2 pass makes them appear quickly, then an
+  // iterative search keeps deepening through a long selected-position
+  // budget. Every completed layer refreshes the best arrow, eval bar, and
+  // move-list value. The game's actual continuation is pinned into the root
+  // beam so review never prunes the move it is trying to judge.
   const [hints, setHints] = useState(null); // [{ from, to, enPassant, castle, score }] best-first
+  const [hintDepth, setHintDepth] = useState(0);
   const reqIdRef = useRef(0);
   useEffect(() => {
     setHints(null);
+    setHintDepth(0);
     if (!open || !snap || snap.gameOver) return undefined;
     const sig = snap.positionSig || null;
     const cached = getCachedHints(sig);
     if (cached) {
       setHints(cached);
-      return undefined;
+      setHintDepth(Math.max(0, ...cached.map((move) => move.depth || 0)));
     }
     const reqId = ++reqIdRef.current;
-    const deepDepth = snap.sideToMove === 'white' ? 4 : 3;
     const worker = new Worker(new URL('../ai/aiWorker.js', import.meta.url), { type: 'module' });
-    const post = (stage, depth, widths, timeMs) => worker.postMessage({
+    let lastDepth = cached ? Math.max(0, ...cached.map((move) => move.depth || 0)) : 0;
+
+    const publishEval = (score, depth) => {
+      if (!Number.isFinite(score) || !Number.isFinite(depth) || depth < lastDepth) return;
+      lastDepth = depth;
+      setHintDepth(depth);
+      const whiteEval = Number((snap.sideToMove === 'white' ? score : -score).toFixed(2));
+      if (!variation) graph.recordEval(bounded, 'live', whiteEval);
+      const fixedTier = snap.sideToMove === 'white'
+        ? ({ 2: 'fast', 4: 'mid', 6: 'deep' })[depth]
+        : ({ 1: 'fast', 3: 'mid', 5: 'deep' })[depth];
+      if (fixedTier) {
+        if (variation) cacheEval(sig, fixedTier, whiteEval);
+        else graph.recordEval(bounded, fixedTier, whiteEval);
+      }
+    };
+
+    const publishBestMove = (move, score, depth) => {
+      if (depth < lastDepth) return;
+      const normalized = normalizeWorkerMove(move, score, depth);
+      publishEval(score, depth);
+      if (!normalized) return;
+      setHints((previous) => {
+        const next = [normalized, ...(previous || []).filter((candidate) => !sameHintMove(candidate, normalized))].slice(0, 3);
+        cacheHints(sig, next);
+        return next;
+      });
+    };
+
+    const postQuick = () => worker.postMessage({
       type: 'analyze',
-      id: `${reqId}:${stage}`,
+      id: `${reqId}:quick`,
       payload: {
+        engine: 'fast',
         pieces: snap.pieces,
         sideToMove: snap.sideToMove,
         lastMove: snap.lastMove || null,
-        depth,
-        widths,
-        timeMs,
+        depth: 2,
+        widths: [176, 10, 8],
+        timeMs: 8000,
+      },
+    });
+    const postDeepening = () => worker.postMessage({
+      type: 'bestMove',
+      id: `${reqId}:progress`,
+      payload: {
+        engine: 'fast',
+        pieces: snap.pieces,
+        sideToMove: snap.sideToMove,
+        lastMove: snap.lastMove || null,
+        depth: 64,
+        widths: [176, 12, 8, 6, 5, 4],
+        timeMs: 300000,
+        timeMode: 'until-timeout',
+        preferredMove: actualNextMove,
       },
     });
     worker.addEventListener('message', (e) => {
       const data = e.data || {};
-      if (reqId !== reqIdRef.current || data.type !== 'analysis') return;
-      if (data.moves) setHints(data.moves.slice(0, 3));
-      if (data.id === `${reqId}:deep` && data.moves && data.moves.length) {
-        cacheHints(sig, data.moves.slice(0, 3));
-        // The deep best score IS this position's mid-tier eval — bank it so
-        // the graph/moves list never re-searches what the hint box found.
-        const best = data.moves[0];
-        if (Number.isFinite(best.score)) {
-          cacheEval(sig, 'mid', Number((snap.sideToMove === 'white' ? best.score : -best.score).toFixed(2)));
+      if (reqId !== reqIdRef.current) return;
+      if (data.type === 'analysis' && data.id === `${reqId}:quick`) {
+        if (data.moves && data.moves.length) {
+          const quick = data.moves.slice(0, 3).map((move) => ({ ...move, depth: 2 }));
+          setHints(quick);
+          cacheHints(sig, quick);
+          publishEval(data.moves[0].score, 2);
         }
+        postDeepening();
+        return;
       }
-      if (data.id === `${reqId}:quick`) post('deep', deepDepth, [128, 12, 8, 6], 25000);
+      if ((data.type === 'bestMoveProgress' || data.type === 'bestMove')
+        && data.id === `${reqId}:progress`) {
+        publishBestMove(data.move, data.score, data.depth);
+      }
     });
-    post('quick', 2, [128, 10, 8], 8000);
+    if (cached) postDeepening();
+    else postQuick();
     return () => { worker.terminate(); };
-  }, [open, snap]);
+  }, [open, snap, bounded, variation, actualNextMove, graph.recordEval]);
 
   if (!open) return null;
 
@@ -148,7 +242,10 @@ export default function ReviewModal({
     const after = evalAt(i + 1);
     const haveBoth = before !== null && after !== null;
     const moverDrop = haveBoth ? (mover === 'white' ? -(after - before) : after - before) : 0;
-    const mark = !haveBoth ? '' : moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
+    const decisiveBeforeAndAfter = haveBoth && staysInSameDecisiveBand(before, after);
+    const mark = !haveBoth || decisiveBeforeAndAfter
+      ? ''
+      : moverDrop >= BLUNDER_DROP ? '??' : moverDrop >= MISTAKE_DROP ? '?' : '';
     const markTitle = mark === '??'
       ? `Blunder — the mover's eval dropped ${moverDrop.toFixed(1)} pawns`
       : mark === '?'
@@ -165,6 +262,16 @@ export default function ReviewModal({
     highlights.push({ square: snap.lastMove.from, color: HIGHLIGHT_FROM });
     highlights.push({ square: snap.lastMove.to, color: HIGHLIGHT_TO });
   }
+  const reviewZapMarks = snap?.lastMove?.zappedSquares || [];
+  const reviewHealMarks = snap?.lastMove?.healedSquares || [];
+  const reviewFizzleMarks = snap?.lastMove?.fizzledSquares || [];
+  const reviewPulseOrigin = snap?.lastMove
+    && (reviewZapMarks.length || reviewHealMarks.length || reviewFizzleMarks.length)
+    ? snap.lastMove.to
+    : null;
+  const reviewEffectKey = variation
+    ? `variation-${variation.baseIdx}-${variation.vIdx}`
+    : `mainline-${bounded}`;
 
   // Engine scores are mover-relative; show them white-positive to match the bar.
   const hintEvalWhite = (score) => (snap && snap.sideToMove === 'black' ? -score : score);
@@ -291,6 +398,11 @@ export default function ReviewModal({
                   highlights={varSel ? [...highlights, { square: varSel, color: 'rgba(79,195,247,0.45)' }] : highlights}
                   arrows={hintArrows}
                   pieces={snap.pieces}
+                  zapMarks={reviewZapMarks}
+                  healMarks={reviewHealMarks}
+                  fizzleMarks={reviewFizzleMarks}
+                  pulseOrigin={reviewPulseOrigin}
+                  effectKey={reviewEffectKey}
                   indicators={indicators}
                   maxVisualSize="100%"
                   borderColor="transparent"
@@ -327,7 +439,11 @@ export default function ReviewModal({
                 <div>
                   <div style={styles.hintHead}>
                     <Sparkles size={13} strokeWidth={2.5} />
-                    {snap.gameOver ? 'Final position' : hints && hints.length ? 'Engine suggests' : 'Engine is thinking…'}
+                    {snap.gameOver
+                      ? 'Final position'
+                      : hints && hints.length
+                        ? `Engine suggests${hintDepth ? ` · depth ${hintDepth}` : ''}`
+                        : 'Engine is thinking…'}
                   </div>
                   <div style={styles.hintBox}>
                     {snap.gameOver ? (

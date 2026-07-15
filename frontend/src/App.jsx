@@ -1,7 +1,7 @@
 // frontend/src/App.jsx
 // Purpose: The composition root — wires the engine timeline, board input,
 // and the extracted feature hooks (online play, intro choreography, player
-// bars, sayings, monetization, layout) into the rendered
+// bars, sayings, monetization, mined daily puzzle, and layout) into the rendered
 // app. The feature logic itself lives in hooks/ and the sibling modules.
 // Imports From: ./chessboard/*, ./hooks/*, ./components/*, ./tray/*, ./account/*, ./puzzle/*, ./sayings/*, ./settings/*, ./ai/*, ./store/*
 // Exported To: None
@@ -40,6 +40,7 @@ import useGameRecording from './hooks/useGameRecording.js';
 import useEffectiveClock from './hooks/useEffectiveClock.js';
 import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
+import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 
 export default function App() {
   // Increment this to reset the engine timeline (fresh game state)
@@ -211,29 +212,7 @@ export default function App() {
     handleRequirePremium, reviewGame, setReviewGame, handleReviewGame,
   } = useMonetization({ auth, showWinPopup, onRequirePremiumExtra: closeMobileNewGame });
 
-  // DEV-ONLY mined-puzzle previews: ?mined=N plays a mined chain in the
-  // one-chance gauge modal, ?minedGame=N opens a miner game in review. The
-  // daily puzzle stays PARKED — only the mined dev surface is hooked up.
-  const [minedPreviewPuzzle, setMinedPreviewPuzzle] = useState(null);
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    const params = new URLSearchParams(window.location.search);
-    const m = params.get('mined');
-    if (m !== null) {
-      import('./puzzle/minedPreview.js').then(async (mod) => {
-        const p = await mod.loadMinedPreview(Number(m) || 0);
-        if (p) setMinedPreviewPuzzle(p);
-      });
-      return;
-    }
-    const gm = params.get('minedGame');
-    if (gm !== null) {
-      import('./puzzle/minedGameLoader.js').then(async (mod) => {
-        const g = await mod.loadMinedGame(Number(gm) || 0);
-        if (g) setReviewGame(g);
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const puzzleLinks = usePuzzleDeepLinks({ dismissOnboarding, setReviewGame });
 
   const layout = useBoardLayout({
     gameStarted,
@@ -734,6 +713,8 @@ export default function App() {
                   isPaid={isPaidUser}
                   onRequirePremium={handleRequirePremium}
                   attentionSignal={startCtaPulse}
+                  onOpenPuzzle={puzzleLinks.handleOpenPuzzle}
+                  puzzleUnsolved={puzzleLinks.puzzleUnsolved}
                   onOpenTutorial={handleOpenTutorial}
                 />
               ) : null}
@@ -800,6 +781,8 @@ export default function App() {
             onResign={handleResign}
             onOfferDraw={handleOfferDraw}
             onCancelSearch={online.handleCancelSearch}
+            onOpenPuzzle={puzzleLinks.handleOpenPuzzle}
+            puzzleUnsolved={puzzleLinks.puzzleUnsolved}
           />
           <MobileNewGameSheet
             open={mobileNewGameOpen}
@@ -864,8 +847,9 @@ export default function App() {
         onClosePricing={() => setPricingOpen(false)}
         reviewGame={reviewGame}
         onCloseReview={() => setReviewGame(null)}
-        minedPreview={minedPreviewPuzzle}
-        onCloseMinedPreview={() => setMinedPreviewPuzzle(null)}
+        minedPreview={puzzleLinks.activePuzzle}
+        onCloseMinedPreview={puzzleLinks.handleClosePuzzle}
+        onCompleteMinedPreview={puzzleLinks.handlePuzzleComplete}
         confirmState={confirmState}
         setConfirmState={setConfirmState}
         svgStyles={svgStyles}

@@ -1,15 +1,15 @@
 // frontend/src/review/useGameEvalGraph.js
 // Purpose: Whole-game eval computation for the review modal (dev/mined
-// games): a small worker pool walks the snapshots in coarse-to-fine stride
-// passes so a rough curve appears in seconds, then deeper passes re-resolve
-// every point — the modal never waits on it. Depth pairs are parity-matched
+// games): a small worker pool walks the snapshots chronologically so the
+// opening move list fills first, then deeper passes re-resolve every point —
+// the modal never waits on it. Depth pairs are parity-matched
 // (white-to-move even, black-to-move odd: every lookahead ends after a Black
 // move) because a fixed depth flips who-moved-last each ply and saws the
 // curve. Extracted from ReviewModal.jsx.
 // Imports From: ../ai/aiWorker.js (as a Worker)
 // Exported To: ./ReviewModal.jsx
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cacheEval, getCachedEvals } from './evalCache.js';
 
 // Display STAGES, not raw tiers: white and black plies are trustworthy at
@@ -30,7 +30,7 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
   const [graphDeepening, setGraphDeepening] = useState(false); // false | 'd4/d3' | 'd6/d5'
 
   useEffect(() => {
-    if (!open || !showEvalGraph || !timeline || timeline.snapshots.length <= 1) return undefined;
+    if (!open || !timeline || timeline.snapshots.length <= 1) return undefined;
     const snaps = timeline.snapshots;
     // Seed every ply that a previous session (or another game passing through
     // the same positions) already resolved — a reopened review draws its full
@@ -61,36 +61,51 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
       mid: { tier: 'mid', depthW: 4, depthB: 3, widths: [176, 12, 8, 6], timeMs: 20000, deep: true },
       deep: { tier: 'deep', depthW: 6, depthB: 5, widths: [176, 12, 8, 6, 5, 4], timeMs: 45000, deep: true },
     };
-    // Staged by side: white plies at d2 land in seconds; black plies go
-    // straight to d3 (a d1 black eval is blind to the threat the next d2
-    // point sees, and d3-black NESTS into d2-white searches, so those pairs
-    // read exactly consistently); then white upgrades to d4, then the deep
-    // pass sweeps everything.
-    const phasePlan = [
-      { ...PHASES.fast, only: 'white' },
-      { ...PHASES.mid, only: 'black' },
-      { ...PHASES.mid, only: 'white' },
-      { ...PHASES.deep, only: null },
-    ];
-    for (const phase of phasePlan) {
-      const seen = new Set();
-      for (const stride of [8, 4, 2, 1]) {
-        for (let k = 0; k < snaps.length; k += stride) {
-          if (seen.has(k)) continue;
-          if (phase.only && snaps[k] && snaps[k].sideToMove !== phase.only) continue;
-          seen.add(k);
-          // Already resolved at this tier (this session or a persisted one).
-          const cached = snaps[k] ? getCachedEvals(snaps[k].positionSig) : null;
-          if (cached && cached[phase.tier] !== undefined) continue;
-          jobs.push({ id: nextId++, k, tier: phase.tier, depthW: phase.depthW, depthB: phase.depthB, widths: phase.widths, timeMs: phase.timeMs, deep: phase.deep });
-        }
-      }
+    const queue = (k, phase) => {
+      const cached = snaps[k] ? getCachedEvals(snaps[k].positionSig) : null;
+      if (cached && cached[phase.tier] !== undefined) return;
+      jobs.push({
+        id: nextId++, k, tier: phase.tier,
+        depthW: phase.depthW, depthB: phase.depthB,
+        widths: phase.widths, timeMs: phase.timeMs, deep: phase.deep,
+      });
+    };
+    // Baseline first, strictly in game order. Black goes straight to d3: a
+    // d1 Black eval misses the threat seen by the following d2 White point.
+    for (let k = 0; k < snaps.length; k++) {
+      queue(k, snaps[k].sideToMove === 'white' ? PHASES.fast : PHASES.mid);
+    }
+    // Upgrade White to the matched d4/d3 ruler, then deepen the whole game.
+    // Black's mid jobs are already in the baseline queue, so do not duplicate
+    // them before their results have had a chance to enter the cache.
+    for (let k = 0; k < snaps.length; k++) {
+      if (snaps[k].sideToMove === 'white') queue(k, PHASES.mid);
+    }
+    // The optional graph earns a whole-game deep pass. Standard review keeps
+    // the list at the matched mid ruler; its selected position still deepens
+    // continuously through ReviewModal's dedicated analyzer.
+    if (showEvalGraph) {
+      for (let k = 0; k < snaps.length; k++) queue(k, PHASES.deep);
     }
     setGraphPending(jobs.length);
     // A small pool: graph evals are embarrassingly parallel and the browser
     // has cores to spare even with the hint worker running.
     const POOL = 2; // leave headroom for the hint worker — arrows must feel instant
     const workers = [];
+    const playedContinuationAt = (k) => {
+      const entry = timeline.entries[k];
+      if (!entry) return null;
+      if (entry.type === 'move') {
+        return {
+          from: entry.from,
+          to: entry.to,
+          enPassant: Boolean(entry.enPassant),
+          castle: false,
+        };
+      }
+      const played = snaps[k + 1]?.lastMove;
+      return played ? { from: played.from, to: played.to, castle: true, enPassant: false } : null;
+    };
     const takeJob = (worker, state) => {
       if (stopped) return;
       const job = jobs.shift();
@@ -108,12 +123,14 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
         type: 'bestScore',
         id: job.id,
         payload: {
+          engine: 'fast',
           pieces: snap.pieces,
           sideToMove: snap.sideToMove,
           lastMove: snap.lastMove || null,
           depth: state.depthAsked,
           widths: job.widths,
           timeMs: job.timeMs,
+          preferredMove: playedContinuationAt(job.k),
         },
       });
     };
@@ -154,6 +171,26 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
     return () => { stopped = true; workers.forEach((w) => w.terminate()); };
   }, [open, showEvalGraph, timeline]);
 
+  // The selected-position analyzer can finish a ply before the background
+  // scanner reaches it. Publish that result into the same trace immediately
+  // so the move list, graph, and eval bar all update together.
+  const recordEval = useCallback((k, tier, value) => {
+    const snap = snapshots[k];
+    if (!snap || !Number.isFinite(value)) return;
+    // `live` is the selected position's continually deepening judgment. It
+    // belongs to this review session; fixed parity tiers remain persistent.
+    if (tier !== 'live') cacheEval(snap.positionSig, tier, value);
+    setGraphTrace((trace) => {
+      const previous = trace.find((point) => point.ply === k);
+      const point = {
+        ply: k,
+        side: snap.sideToMove,
+        vals: { ...(previous ? previous.vals : {}), [tier]: value },
+      };
+      return [...trace.filter((candidate) => candidate.ply !== k), point];
+    });
+  }, [snapshots]);
+
   const stage = useMemo(() => {
     const complete = (st) => graphTrace.length
       && graphTrace.every((p) => p.vals[st[p.side]] !== undefined);
@@ -165,6 +202,7 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
   // (a retry-exhausted ply borrows its more accurate future rather than
   // holding a '…' hostage; never a shallower one).
   const resolvePoint = (p) => {
+    if (p.vals.live !== undefined) return p.vals.live;
     const order = { fast: 0, mid: 1, deep: 2 };
     const want = stage[p.side];
     let v = p.vals[want];
@@ -204,5 +242,8 @@ export default function useGameEvalGraph({ open, showEvalGraph, timeline, snapsh
     return 0;
   };
 
-  return { graphTrace, graphPending, graphDeepening, lineTier, resolvePoint, evalAt, nearestEval };
+  return {
+    graphTrace, graphPending, graphDeepening, lineTier,
+    resolvePoint, evalAt, nearestEval, recordEval,
+  };
 }

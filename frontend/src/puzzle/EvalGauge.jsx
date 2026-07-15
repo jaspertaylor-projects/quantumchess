@@ -72,6 +72,9 @@ export default function EvalGauge({
   }, [value, reduceMotion]);
 
   const needleDeg = value === null ? wobbleDeg : angleFor(value, range);
+  const signedValue = value === null ? null
+    : Math.abs(value) < 0.05 ? '0.0'
+      : `${value > 0 ? '+' : ''}${value.toFixed(1)}`;
 
   return (
     <svg
@@ -81,7 +84,7 @@ export default function EvalGauge({
       role="img"
       aria-label={value === null
         ? 'Evaluation gauge in pawns, waiting for your move'
-        : `Evaluation gauge: ${value >= 0 ? 'White' : 'Black'} ${Math.abs(value).toFixed(1)} pawns`}
+        : `Evaluation gauge: ${signedValue} pawns`}
       style={{ display: 'block', margin: '0 auto', overflow: 'visible' }}
     >
       {/* Halves: Black's side of the dial on the left, White's on the right. */}
@@ -168,7 +171,7 @@ export default function EvalGauge({
       <text x={polar(cx, cy, R + 2, 9).x} y={cy + 16} fontSize="10" fontWeight="800" letterSpacing="0.1em" fill="rgba(255,255,255,0.55)" textAnchor="end">WHITE</text>
       {value !== null ? (
         <text x={cx} y={cy + 18} fontSize="13" fontWeight="800" textAnchor="middle" fill={value >= 0 ? '#e8e6e1' : '#9aa4b2'}>
-          {`${value >= 0 ? 'White' : 'Black'} +${Math.abs(value).toFixed(1)}`}
+          {signedValue}
         </text>
       ) : label ? (
         <text x={cx} y={cy + 18} fontSize="11" fontWeight="600" textAnchor="middle" fill="rgba(255,255,255,0.5)">{label}</text>

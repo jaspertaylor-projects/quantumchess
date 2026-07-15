@@ -3,8 +3,8 @@
 // canonical position signature), so closing and reopening a game review —
 // or reviewing another game that passes through the same positions — reuses
 // every eval instead of recomputing the whole curve. Eval numbers persist to
-// localStorage (they're tiny); hint move lists are session-only (they
-// recompute in ~a second and are bulky).
+// localStorage (they're tiny); progressively refined hint move lists are
+// session-only because they are bulkier and resume deepening when selected.
 // Tiers match useGameEvalGraph's parity-matched rulers: 'fast' (d2/d1),
 // 'mid' (d4/d3), 'deep' (d6/d5) — values are white-positive pawns.
 // Imports From: ../utils/rng.js
@@ -24,7 +24,7 @@ const keyOf = (sig) => hashString(sig).toString(16);
 
 // key -> { fast?, mid?, deep? }, insertion order = LRU order.
 const evals = new Map();
-// key -> hint move list (deep stage), session only.
+// key -> latest progressively refined hint move list, session only.
 const hints = new Map();
 
 function loadPersisted() {

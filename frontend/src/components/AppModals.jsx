@@ -39,7 +39,7 @@ export default function AppModals({
   pricingOpen, onClosePricing,
   reviewGame, onCloseReview,
   // mined-puzzle dev preview (?mined=N)
-  minedPreview, onCloseMinedPreview,
+  minedPreview, onCloseMinedPreview, onCompleteMinedPreview,
   // confirm
   confirmState, setConfirmState,
   svgStyles,
@@ -153,6 +153,7 @@ export default function AppModals({
       <MinedPuzzleModal
         open={Boolean(minedPreview)}
         onClose={onCloseMinedPreview}
+        onComplete={onCompleteMinedPreview}
         puzzle={minedPreview}
         svgStyleBySide={svgStyles}
         boardColors={boardColors}
