@@ -88,6 +88,7 @@ export function IntroSpeechOverlay({
   if (!speech || !open) return null;
   return (
     <section
+      key={typeof speech === 'string' ? speech : 'qc-intro-speech'}
       className={`qc-intro-speech-card qc-intro-speech-card--${placement}`}
       role="dialog"
       aria-label="Opponent guidance"
@@ -148,7 +149,7 @@ export function IntroSpeechOverlay({
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
           <button
             type="button"
-            className="qc-intro-choice qc-intro-choice--primary"
+            className="qc-intro-choice qc-intro-choice--primary qc-intro-continue-pulse"
             onClick={onContinueExplanation}
             style={{
               minWidth: 120,

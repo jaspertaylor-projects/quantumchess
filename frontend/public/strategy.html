@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Quantum Chess Strategy — how to think in superpositions</title>
-<meta name="description" content="A strategy guide for Quantum Chess: opening principles, when to zap versus capture, keeping your maybe-Kings plural, heal networks, shields, and how to force the final collapse." />
+<meta name="description" content="A strategy guide for Quantum Chess: opening principles, when to zap versus capture, heal networks, shields, revealing the King, and converting that information into checkmate." />
 <link rel="canonical" href="https://quantumchess.ninja/strategy.html" />
 <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5481833391571778" crossorigin="anonymous"></script>
@@ -53,32 +53,32 @@
 
   <h2>Zap or take?</h2>
   <p>The two measurements pull in opposite directions, and mixing them up is the most common beginner mistake. A <strong>capture collapses the victim to its cheapest identity</strong>: take a fresh superposition and you have spent a move killing what is almost certainly recorded as a mere pawn. A <strong>zap strips from the top</strong>: it deletes the victim&rsquo;s most expensive possibility &mdash; King first, then Queen, and so on down.</p>
-  <p>So the rhythm of good quantum play is: <em>zap first, capture later</em>. Zaps hollow a piece out from above; by the time you capture it, it has to die as something expensive. Better still, zaps are how you hunt the King &mdash; captures only ever remove one piece&rsquo;s worth of possibilities, but a zap campaign can erase King from the entire enemy army. The exception: capturing is right when you need the square, the tempo, or a forced spillover collapse that a shield is otherwise blocking.</p>
+  <p>So the rhythm of good quantum play is: <em>zap first, capture later</em>. Zaps hollow a piece out from above; by the time you capture it, it has to die as something expensive. Zaps also concentrate the royal identity: they can remove King while another maybe-King remains, but the final King is protected and the zap falls through to the next identity instead. Capture when you need the square, the tempo, or a forced spillover collapse that a shield is otherwise blocking.</p>
 
-  <h2>Keep your maybe-Kings plural</h2>
-  <p>You lose the moment no piece of yours can still be the King. Defense in Quantum Chess is therefore <em>redundancy management</em>: know at every moment how many of your pieces still hold King, and refuse to let that number get small. Practical rules of thumb:</p>
+  <h2>Shape the royal endgame</h2>
+  <p>You do not lose when King disappears from a possibility list, and Zap can never remove your final King possibility. Still, tracking the royal identity matters: fewer holders means your opponent is closer to revealing the one King that can be checked and mated. Practical rules of thumb:</p>
   <ul>
-    <li>Count your King-possible pieces every few moves. Six is comfort, three is caution, two is an emergency.</li>
-    <li>Spend your once-per-game castle when the count drops &mdash; a castled pair is two guaranteed Rook-or-King pieces, real cover bought in a single move.</li>
-    <li>Avoid moving your last few maybe-Kings in ways that shed King. A knight jump from a King-holding piece is a King possibility voluntarily destroyed.</li>
-    <li>Beware the quiet volley: an enemy piece landing with contact on two of your maybe-Kings at once can shear King off both in one move.</li>
+    <li>Count King-possible pieces every few moves. A wide royal spread delays the classical endgame; a narrow one makes concrete checkmate calculations possible.</li>
+    <li>Spend your once-per-game castle when flexibility matters &mdash; a castled pair gives you two Rook-or-King pieces in one move.</li>
+    <li>A knight jump from a King-holding piece voluntarily sheds King unless it is the final royal holder, so check the census before committing.</li>
+    <li>If a volley contacts every remaining maybe-King, the safeguard preserves King on each affected target and redirects their zaps down the value ladder.</li>
   </ul>
 
   <h2>Build heal networks</h2>
   <p>Heals turn defense into regeneration. Every friendly piece your move touches regains its cheapest missing identity, so an army arranged in mutual contact re-blurs faster than your opponent can strip it. Structure beats reaction here: pawn-chain-like clusters where each piece touches a neighbor mean every quiet move repairs somebody. Two further tricks:</p>
   <ul>
-    <li><strong>Aim the spillover.</strong> When the cheap identities are fully claimed elsewhere, heals overflow upward &mdash; with both Knights accounted for, healing a bare pawn makes it Pawn-or-Bishop. Late in the game a well-aimed heal can even restore Queen.</li>
+    <li><strong>Aim the spillover.</strong> When the cheap identities are fully claimed elsewhere, heals overflow upward &mdash; with both Knights accounted for, healing a bare pawn makes it Pawn-or-Bishop. Late in the game a well-aimed heal can restore Queen or even King.</li>
     <li><strong>Heal your zappers.</strong> A collapsed Knight can&rsquo;t re-blur past its own identity, but half-collapsed attackers can be topped back up into ambiguity, making them hard to evaluate and expensive to capture.</li>
   </ul>
 
   <h2>Shields, and how to break them</h2>
-  <p>A gold shield means the target belongs to a closed group &mdash; N pieces sharing exactly N identities &mdash; so no possibility can be shed cleanly. Don&rsquo;t keep throwing zaps at it; they will fizzle forever. Shields break from the outside: capture a member of the group, or force a collapse elsewhere that reopens the ledger. Conversely, engineering shields around your own maybe-Kings is premium defense &mdash; a King possibility inside a closed group can only be reached by capture or by the terminal zap.</p>
+  <p>A gold shield means the target belongs to a closed group &mdash; N pieces sharing exactly N identities &mdash; so no possibility can be shed cleanly. Don&rsquo;t keep throwing zaps at it; they will fizzle forever. Shields break from the outside: capture a member of the group, or force a collapse elsewhere that reopens the ledger. The royal safeguard is separate: when a King shed would erase every remaining royal branch, Zap tries the next clean identity instead.</p>
 
-  <h2>The endgame: forcing the collapse</h2>
-  <p>Endgames are counting exercises. Track exactly which enemy pieces still hold King and work out the cheapest sequence that erases all of them &mdash; remembering that the <em>terminal</em> zap ignores shields entirely. When the enemy King narrows to one known piece, the game turns classical: that king can be checked, cornered, and mated by the old rules, and your surviving blurs are suddenly worth their strongest remaining identity. And watch the fifty-move clock &mdash; pure heal-shuffling makes no information progress, so a materially winning position can still drift into a draw if you never commit to a measurement.</p>
+  <h2>The endgame: reveal, then mate</h2>
+  <p>Endgames are counting exercises. Track which enemy pieces still hold King and use movement, captures, and non-terminal zaps to concentrate that identity. The last King cannot be zapped away; once it narrows to one known piece, the game turns classical and that King can be checked, cornered, and mated by the old rules. A temporarily kingless side also remains alive and may heal King back. Watch the fifty-move clock &mdash; pure heal-shuffling makes no information progress, so an advantage can still drift into a draw.</p>
 
   <hr />
-  <p>The fastest way to internalize all of this is to lose a few games to the easy bots and review where your King count went. The daily puzzle is also, quietly, a strategy course &mdash; every position is mined from a real game at the moment one precise move mattered.</p>
+  <p>The fastest way to internalize all of this is to play a few games against the easy bots and review when each King possibility moved, vanished, or returned. The daily puzzle is also, quietly, a strategy course &mdash; every position is mined from a real game at the moment one precise move mattered.</p>
   <p><a class="cta" href="/">Play now &rarr;</a> &nbsp; <a href="/faq.html">Questions? Read the FAQ &rarr;</a></p>
 
   <hr />

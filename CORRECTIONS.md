@@ -4,12 +4,16 @@ Notes from a read-only review of the in-flight, uncommitted diff. Written
 2026-07-11 against the working tree as of that review — re-verify line
 references before acting on them.
 
+> Historical only: the current rules are documented in `README.md` and the
+> in-game rulebook. The 2026-07-15 royal-safeguard change removed victory by
+> wave-function collapse, made the final King possibility Zap-safe, and made
+> King recoverable through Heal.
+
 ## 1. Check machinery must be removed for the contact variant
 
-Jasper's ruling: **"since we're zapping kings, there is no such thing as a
-king in check anymore."** Kings die two ways only — the king possibility is
-zapped away, or the piece holding it is captured like any other piece. A side
-loses the moment it has zero pieces whose `possibleTypes` include `k`.
+This section records an earlier ruling and is superseded. The current rule is
+that a revealed King uses classical check/checkmate; a Zap that would remove
+every remaining King falls through to the next valuable identity instead.
 
 The current diff still routes the contact variant through all of the classic
 check logic:
@@ -27,9 +31,9 @@ check logic:
 - `evaluateTerminalAfterMove` (quantumEngine.js) still does the
   `isLostInCheck` reply-search (mate = every reply leaves you lost-in-check).
   For the contact variant, terminal should be simply:
-  - opponent has zero king-holders → mover wins ("wave function collapse")
-  - opponent has no legal replies → draw (no check ⇒ no checkmate; plain
-    stalemate). Rare, but decide it deliberately.
+  - a kingless position remains playable and can restore King through Heal
+  - no legal replies is checkmate only when the revealed King is attacked;
+    otherwise it is stalemate.
 - `computeThreatenedSquaresForSide` only counts ≤2-type pieces as attackers —
   that is one of the "≤2 special rules" the variant removes. After the two
   removals above, its remaining variant-path callers (castling-through-threat)

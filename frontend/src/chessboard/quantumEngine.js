@@ -1,8 +1,8 @@
 // frontend/src/chessboard/quantumEngine.js
 // Purpose: The Quantum Chess rules engine facade — move simulation
 // (standard / en passant / castling), the contact zap/heal resolution,
-// legal-reply generation, terminal evaluation (wave-function collapse +
-// revealed-king checkmate), and position signatures. The piece type-set
+// legal-reply generation, revealed-king checkmate/stalemate evaluation, and
+// position signatures. The piece type-set
 // shape, movement geometry, and the conservation solver live in
 // ./engineTypes.js, ./engineGeometry.js and ./engineConservation.js; their
 // public API is re-exported here so consumers import one module.
@@ -138,12 +138,13 @@ export function hasCollapsedKingCapturable(pieces, side) {
   return false;
 }
 
-// A side with NO legal replies is lost (checkmate) when it is kingless or its
-// unique king-holder stands in capture range; otherwise it is stalemated.
+// A side with NO legal replies is lost (checkmate) only when its unique
+// king-holder stands in capture range; otherwise it is stalemated. A side can
+// temporarily have no King possibility and heal one back later.
 // Shared by terminal evaluation and the AI's leaf scoring.
 export function isLostInCheck(pieces, side) {
   const holders = pieces.filter((p) => !p.captured && p.side === side && p.square && (p.possibleTypes || []).includes('k'));
-  if (holders.length === 0) return true;
+  if (holders.length === 0) return false;
   return holders.length === 1 && canSideCaptureSquare(pieces, otherSide(side), holders[0].square);
 }
 
@@ -266,19 +267,18 @@ function shedIsLocal(before, after, targetId, shedType) {
 // collapsing a piece is what arms its contact. Attack squares, so
 // friendly-occupied squares count — that is protection. Every enemy piece in
 // contact is ZAPPED: it sheds the most valuable possibility it can lose
-// CLEANLY, King included, trying k -> q -> r -> b -> n -> p. A shed is clean
+// CLEANLY, trying k -> q -> r -> b -> n -> p. A shed is clean
 // when, after conservation settles, the board's only change is that single
 // type leaving that single piece — a shed whose census cascade would strip
 // possibilities from ANY other piece (or narrow the target further) is
 // skipped and the zap walks down to the next type; if nothing sheds cleanly
-// the zap dissipates (no mark). One exception outranks the guard: a shed
-// that leaves the target's side with no possible King anywhere is the win by
-// wave-function collapse and always lands, cascade and all. A fully measured
-// piece (one possibility) has nothing left to shed. Every friendly piece in
-// contact is HEALED: it regains its least valuable feasible possibility
-// (never King; Pawn never returns to promoted pieces or on the promotion
-// rank; conservation must accept the regain — with two knights captured, a
-// lone pawn heals into a pawn-bishop).
+// the zap dissipates (no mark). A volley may never erase a side's final King
+// possibility: every King shed that would collectively do so falls through
+// to Queen, then Rook, Bishop, Knight, and Pawn. A fully measured piece (one
+// possibility) has nothing left to shed. Every friendly piece in contact is
+// HEALED: it regains its least valuable feasible possibility, including King
+// as the final option (Pawn never returns to promoted pieces or on the
+// promotion rank; conservation must accept the regain).
 // Deterministic: contacts resolve in algebraic square order, zaps before
 // heals. Returns { pieces, zappedSquares, healedSquares }.
 export function applyContactZapHeal(pieces, moverSide, moverIds) {
@@ -311,9 +311,9 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
   // target's shed is judged against the board AS THE MOVER LANDED (no zap
   // sees another's result), and all sheds land as ONE volley: if the
   // combined cascade would ripple beyond the struck pieces, the whole
-  // volley fizzles — they shed together or shield together. A volley that
-  // erases the target side's last maybe-king is the win by wave-function
-  // collapse and always lands, cascade and all.
+  // volley fizzles — they shed together or shield together. If all remaining
+  // King holders would shed King in that volley, those targets instead retry
+  // from Queen downward so Zap can never erase the final King possibility.
   const zappedSquares = [];
   const fizzledSquares = [];
   const preZap = current;
@@ -331,18 +331,47 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
       const trialTarget = trial.find((x) => x.id === live.id);
       restrictTypes(trialTarget, types.filter((t) => t !== shed));
       const constrained = applyQuantumConstraints(trial);
-      const winsByCollapse =
-        shed === 'k' &&
-        !constrained.some(
-          (p) => !p.captured && p.square && p.side === live.side && (p.possibleTypes || []).includes('k')
-        );
-      if (winsByCollapse || shedIsLocal(preZap, constrained, live.id, shed)) {
+      if (shedIsLocal(preZap, constrained, live.id, shed)) {
         found = { id: live.id, square: live.square, shed };
         break;
       }
     }
     if (found) candidates.push(found);
     else fizzledSquares.push(live.square);
+  }
+
+  const targetSide = otherSide(moverSide);
+  const kingHolderIds = preZap
+    .filter((p) => !p.captured && p.square && p.side === targetSide && (p.possibleTypes || []).includes('k'))
+    .map((p) => p.id);
+  const kingShedIds = new Set(candidates.filter((c) => c.shed === 'k').map((c) => c.id));
+  const wouldEraseFinalKing =
+    kingHolderIds.length > 0 && kingHolderIds.every((id) => kingShedIds.has(id));
+
+  if (wouldEraseFinalKing) {
+    for (let i = candidates.length - 1; i >= 0; i -= 1) {
+      const candidate = candidates[i];
+      if (candidate.shed !== 'k') continue;
+      const live = preZap.find((p) => p.id === candidate.id);
+      const types = live?.possibleTypes || [];
+      let fallback = null;
+      for (const shed of CONTACT_ZAP_ORDER.slice(1)) {
+        if (!types.includes(shed)) continue;
+        const trial = clonePieces(preZap);
+        const trialTarget = trial.find((x) => x.id === candidate.id);
+        restrictTypes(trialTarget, types.filter((t) => t !== shed));
+        const constrained = applyQuantumConstraints(trial);
+        if (shedIsLocal(preZap, constrained, candidate.id, shed)) {
+          fallback = { ...candidate, shed };
+          break;
+        }
+      }
+      if (fallback) candidates[i] = fallback;
+      else {
+        candidates.splice(i, 1);
+        fizzledSquares.push(candidate.square);
+      }
+    }
   }
 
   if (candidates.length > 0) {
@@ -352,10 +381,6 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
       restrictTypes(t, (t.possibleTypes || []).filter((y) => y !== c.shed));
     }
     const constrained = applyQuantumConstraints(volley);
-    const targetSide = otherSide(moverSide);
-    const winsByCollapse = !constrained.some(
-      (p) => !p.captured && p.square && p.side === targetSide && (p.possibleTypes || []).includes('k')
-    );
     const shedById = new Map(candidates.map((c) => [c.id, c.shed]));
     const afterById = new Map(constrained.map((p) => [p.id, p]));
     let jointClean = true;
@@ -373,7 +398,7 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
         break;
       }
     }
-    if (winsByCollapse || jointClean) {
+    if (jointClean) {
       current = constrained;
       for (const c of candidates) zappedSquares.push(c.square);
     } else {
@@ -386,11 +411,17 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
   // cheapest feasible regain against the POST-VOLLEY, PRE-HEAL state in
   // isolation; then all regains land at once. If the combined census lets
   // every regain take root (each healed piece still holds its regained
-  // type and grew), the volley commits — cascades to other pieces remain
+  // type and grew, or restored King), the volley commits — cascades to other pieces remain
   // allowed, as heals always did. If ANY regain fails to take root
   // jointly, the whole heal volley dissipates.
   const healedSquares = [];
   const preHeal = current;
+  const moverHasKing = preHeal.some(
+    (p) => !p.captured && p.square && p.side === moverSide && (p.possibleTypes || []).includes('k')
+  );
+  const healOrder = moverHasKing
+    ? HEAL_GAIN_ORDER
+    : ['k', ...HEAL_GAIN_ORDER.filter((t) => t !== 'k')];
   const healCandidates = []; // { id, square, gain, preLen }
   for (const c of contacts) {
     if (c.side !== moverSide) continue;
@@ -400,7 +431,7 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     const pos = fromAlgebraic(live.square);
     const promotionRank = live.side === 'white' ? 7 : 0;
     const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
-    for (const t of HEAL_GAIN_ORDER) {
+    for (const t of healOrder) {
       if (t === 'p' && (promoted || onPromotionRank)) continue;
       if (live.possibleTypes.includes(t)) continue;
       const trial = clonePieces(preHeal);
@@ -408,7 +439,9 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
       withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
       const constrained = applyQuantumConstraints(trial);
       const after = constrained.find((x) => x.id === live.id);
-      if (after && after.possibleTypes.includes(t) && after.possibleTypes.length > live.possibleTypes.length) {
+      const tookRoot = after && after.possibleTypes.includes(t) &&
+        (t === 'k' || after.possibleTypes.length > live.possibleTypes.length);
+      if (tookRoot) {
         healCandidates.push({ id: live.id, square: live.square, gain: t, preLen: live.possibleTypes.length });
         break;
       }
@@ -424,7 +457,9 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     let allHold = true;
     for (const c of healCandidates) {
       const after = constrained.find((x) => x.id === c.id);
-      if (!after || !after.possibleTypes.includes(c.gain) || after.possibleTypes.length <= c.preLen) {
+      const tookRoot = after && after.possibleTypes.includes(c.gain) &&
+        (c.gain === 'k' || after.possibleTypes.length > c.preLen);
+      if (!tookRoot) {
         allHold = false;
         break;
       }
@@ -702,14 +737,6 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
 // Returns 'checkmate', 'stalemate', or null (game continues).
 export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove = null) {
   const opponent = otherSide(moverSide);
-
-  // Kingless is an immediate loss — no reply could matter (the caller names
-  // it "wave function collapse"). Checking it
-  // first also skips the reply search on decided boards.
-  const hasKingHolder = finalPieces.some(
-    (p) => !p.captured && p.square && p.side === opponent && (p.possibleTypes || []).includes('k')
-  );
-  if (!hasKingHolder) return 'checkmate';
 
   const replies = generateLegalReplies(finalPieces, opponent, captureCounter, lastMove);
 

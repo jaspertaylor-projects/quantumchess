@@ -150,7 +150,7 @@ function buildAttackInfo(pieces, occ) {
 export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
   const occ = buildOccupancy(pieces);
 
-  // Kinglessness is a loss; catch it before anything else.
+  // Track King-holder spread for revealed-King safety and ambiguity value.
   let whiteHolders = 0;
   let blackHolders = 0;
   let whiteSoleHolder = null;
@@ -166,9 +166,6 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
       blackSoleHolder = p;
     }
   }
-  if (whiteHolders === 0) return -MATE;
-  if (blackHolders === 0) return MATE;
-
   const attacks = buildAttackInfo(pieces, occ);
 
   let score = 0;
@@ -315,8 +312,8 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
 class SearchTimeout extends Error {}
 
 // Score a no-legal-replies node from `side`'s perspective, mirroring the
-// game's terminal rules: lost when kingless (wave-function collapse) or when
-// the revealed king stands in capture range (checkmate); else stalemate.
+// game's terminal rules: lost when the revealed King stands in capture range;
+// otherwise no replies (including while temporarily kingless) is stalemate.
 function noReplyScore(pieces, side, ply) {
   return isLostInCheck(pieces, side) ? -MATE + ply : 0;
 }

@@ -1,5 +1,5 @@
 // frontend/src/chessboard/engineConservation.js
-// Purpose: Global conservation ("wave-function collapse") — a possibility is
+// Purpose: Global conservation — a possibility is
 // real iff some full seating of the side's 16 slots uses it. Promotion-aware:
 // a promo-origin identity occupies a PAWN slot (one pawn out, one heavy in).
 // Runs the cheap Hall-set pass when no promotions exist, exact Kuhn matching

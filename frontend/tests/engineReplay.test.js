@@ -67,18 +67,10 @@ describe('engine replay fixtures', () => {
             expect(p.possibleTypes.length).toBeGreaterThan(0);
           }
 
-          // A side can legally over-collapse until none of its pieces can be
-          // the king — the engine declares that loss after the opponent's
-          // NEXT move (evaluateTerminalAfterMove only inspects the opponent's
-          // holders). So kinglessness may appear at most one half-move before
-          // the end, never earlier.
-          const snapIndex = timeline.snapshots.indexOf(snap);
-          if (snapIndex < timeline.snapshots.length - 2) {
-            for (const side of ['white', 'black']) {
-              const holders = alive.filter((p) => p.side === side && p.possibleTypes.includes('k'));
-              expect(holders.length).toBeGreaterThan(0);
-            }
-          }
+          // Kinglessness is recoverable through Heal and is never itself a
+          // terminal result. Recorded games must not revive the retired
+          // wave-function-collapse victory reason.
+          expect(snap.gameOverReason).not.toBe('wave function collapse');
         }
       });
     });

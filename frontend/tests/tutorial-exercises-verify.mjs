@@ -1,6 +1,6 @@
 // Verifies every interactive tutorial exercise against the REAL engine: the
 // goal move must be legal in the lesson's position, and each success-text
-// claim (zaps, heals, shields, collapses, mate, wave-function collapse) must
+// claim (zaps, heals, shields, collapses, safeguards, mate) must
 // actually happen. Run on demand after touching lessons.js or the engine:
 //   docker exec -u 1000:1000 -w /app quantumchess-frontend-1 node tests/tutorial-exercises-verify.mjs
 import { LESSONS } from '../src/tutorial/lessons.js';
@@ -57,7 +57,7 @@ const CLAIMS = {
   },
   'the-heal/Protection regrows possibility': (sim) => {
     assert(sim.healedSquares.join(',') === 'e4', `heal e4 (got ${sim.healedSquares})`);
-    assert(types(sim.pieces, 'e4') === 'pnr', `e4 regrew knight (${types(sim.pieces, 'e4')})`);
+    assert(types(sim.pieces, 'e4') === 'prk', `e4 restored King first (${types(sim.pieces, 'e4')})`);
   },
   'the-heal/Heals obey the ledger': (sim) => {
     assert(sim.healedSquares.join(',') === 'e4', `heal e4 (got ${sim.healedSquares})`);
@@ -78,12 +78,11 @@ const CLAIMS = {
     assert(sim.fizzledSquares.join(',') === 'd5', `shield on d5 (got ${sim.fizzledSquares})`);
     assert(types(sim.pieces, 'd5') === 'rk', `d5 untouched (${types(sim.pieces, 'd5')})`);
   },
-  'winning/Wave function collapse': (sim) => {
+  'winning/The last King is protected': (sim) => {
     assert(sim.zappedSquares.join(',') === 'e5', `zap e5 (got ${sim.zappedSquares})`);
-    const kingless = !sim.pieces.some((p) => !p.captured && p.square && p.side === 'black' && p.possibleTypes.includes('k'));
-    assert(kingless, 'black is kingless — wave function collapse');
+    assert(types(sim.pieces, 'e5') === 'k', `final King kept; Queen shed instead (${types(sim.pieces, 'e5')})`);
     const lm = buildLastMoveRecord({ finalPieces: sim.pieces, moverId: 'WN', from: 'd2', to: 'f3', side: 'white', zappedSquares: sim.zappedSquares, healedSquares: sim.healedSquares, fizzledSquares: sim.fizzledSquares });
-    assert(evaluateTerminalAfterMove(sim.pieces, 'white', 0, lm) === 'checkmate', 'terminal: game over');
+    assert(evaluateTerminalAfterMove(sim.pieces, 'white', 0, lm) !== 'checkmate', 'royal safeguard: game continues');
   },
   'winning/The revealed king': (sim) => {
     const lm = buildLastMoveRecord({ finalPieces: sim.pieces, moverId: 'WR', from: 'a1', to: 'a8', side: 'white', zappedSquares: sim.zappedSquares, healedSquares: sim.healedSquares, fizzledSquares: sim.fizzledSquares });

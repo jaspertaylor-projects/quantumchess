@@ -39,7 +39,7 @@ function collapseValue(poss) {
 
 // REF: evaluatePosition. White-positive pawns.
 export function evaluateFast(bd, W) {
-  // King holders first (kinglessness short-circuits).
+  // Track King-holder spread for revealed-King safety and ambiguity value.
   let whiteHolders = 0;
   let blackHolders = 0;
   let whiteSoleSq = -1;
@@ -56,9 +56,6 @@ export function evaluateFast(bd, W) {
       whiteSoleSq = sqOf(w);
     }
   }
-  if (whiteHolders === 0) return -MATE;
-  if (blackHolders === 0) return MATE;
-
   // REF: buildAttackInfo — squares + cheapest attacker value per side.
   atkW.fill(0);
   atkB.fill(0);

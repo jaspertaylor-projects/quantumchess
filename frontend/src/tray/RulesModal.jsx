@@ -1,5 +1,5 @@
 // frontend/src/tray/RulesModal.jsx
-// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Describes superposition & collapse, the census, zaps/heals/shields, captures, wave-function collapse & revealed-king checkmate, quantum castling, en passant, promotion, and draws.
+// Purpose: Modal dialog that presents the Quantum Chess rulebook as a paginated book with bottom navigation and icon-only controls using the inverting IconButton style. Describes superposition & collapse, the census, zaps/heals/shields, captures, revealed-king checkmate, quantum castling, en passant, promotion, and draws.
 // Imports From: ../theme.js, ../components/IconButton.jsx, ../components/ModalShell.jsx
 // Exported To: ../App.jsx
 
@@ -46,7 +46,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'You touch as your CHEAPEST self: the reach comes from the least valuable type the mover still holds (P < N < B < R < Q < K). A fresh six-type blur pokes like a pawn; a confirmed queen sweeps like one. Collapsing your own pieces is what arms them.',
           'A zap removes the MOST valuable possibility the target can cleanly lose, trying King, then Queen, Rook, Bishop, Knight, Pawn. "Cleanly" means the loss changes nothing else on the board: a shed whose census cascade would rewrite any other piece is skipped, and the zap walks down to the next type.',
           'Zaps strike TOGETHER. Every struck piece is judged against the board exactly as your piece landed — no zap sees another zap\'s result — and all the sheds land as one volley. If the combined volley\'s census cascade would ripple beyond the struck pieces themselves, the WHOLE volley fizzles: a zap never chooses between victims. They shed together or shield together.',
-          'One exception outranks the guard: a zap that erases a side\'s LAST King possibility always lands, cascade and all — that is the win by wave function collapse (see Winning).',
+          'Royal safeguard: a zap can remove King while that side has another maybe-King. If the volley would remove King from EVERY remaining holder, each affected target instead retries the ladder from Queen downward. Zap can never erase a team\'s final King possibility.',
           'A fully known piece (one possibility) has nothing left to lose; zaps pass through it. A piece where nothing sheds cleanly shows a SHIELD instead (see Shields).',
           'Feedback: a red circle spins out over every piece your move zapped.',
         ],
@@ -54,9 +54,9 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
       {
         title: 'The Heal',
         content: [
-          'The same touch that zaps enemies HEALS friends: every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen.',
+          'The same touch that zaps enemies HEALS friends: every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen, and finally King.',
           'Heals bloom TOGETHER, like zaps: each touched friend finds its regain against the board as your piece landed, and all regains take root as one volley. If the census cannot let every regain take root at once, the whole volley dissipates — no piece is favored over another.',
-          'King never comes back. Pawn never returns to a promoted piece, or to a piece standing on its own promotion rank.',
+          'If your team has no King possibility, Heal tries King FIRST so the royal identity can return; conservation may immediately reveal that healed piece as the King. While a King still exists elsewhere, King remains the last rung after Queen. Pawn never returns to a promoted piece, or to a piece standing on its own promotion rank.',
           'The census must accept the regain. If an identity is fully claimed elsewhere the heal overflows upward: with both your knights known, a bare pawn you protect becomes a Pawn–BISHOP.',
           'Defense is regeneration: a protected army does not just hold its ground — it re-blurs. Leave a wounded piece unattended and it stays exactly as collapsed as your opponent made it.',
           'Feedback: a green circle blooms over every piece your move healed.',
@@ -69,7 +69,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Shields come from closed groups: N pieces sharing exactly N identities (say, three survivors that are exactly {Queen-King, Rook-King, Rook-Queen}). No member can lose anything locally.',
           'Break the group and the shield drops: capture a member, or force a collapse elsewhere that reopens the ledger.',
           'A volley shields together: when several struck pieces could each shed alone but not all at once, no one is chosen — every one of them shields. Symmetric situations resolve symmetrically; nothing in this game is decided by which square comes first in the alphabet.',
-          'The one zap a shield never stops: erasing the last King possibility a side has. The terminal zap ignores the guard.',
+          'The final King safeguard is separate from a shield: when a King shed would erase every remaining maybe-King, Zap tries Queen and then the rest of its normal ladder on each affected piece.',
           'Feedback: a gold ring pops over a shielded piece so a fizzled zap never reads as a bug.',
         ],
       },
@@ -79,15 +79,15 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'On capture, the captured piece collapses immediately to its least valuable possibility: P < N < B < R < Q — and King only when King is all it could be.',
           'Strip first, then take: capturing a fresh superposition usually kills a mere pawn. Zap a piece\'s cheap identities away first and it has to die as something expensive.',
           'The captured piece is displayed in the capturing player\'s bin, in its true colors, as the type it died as. Captured pieces count toward the census forever.',
-          'Kings die exactly two ways: their possibility is zapped off a piece, or the piece holding it is captured like any other piece. There is no check for a superposed king — only for a revealed one (see Winning).',
+          'A King possibility can be zapped while another maybe-King remains, and a captured superposition can take a King possibility with it. Neither creates an instant victory. The final King possibility is protected from Zap, and King can return through Heal.',
         ],
       },
       {
-        title: 'Winning: Collapse & Checkmate',
+        title: 'Winning: Checkmate',
         content: [
-          'Wave function collapse: you win the moment your opponent has NO piece that could still be the King — zapped off their last maybe-King, or captured with it. The game ends instantly.',
-          'The revealed king: when a side\'s King possibility narrows to a single KNOWN King, the classical rules return for it. It may never be left standing where it can be captured, and a revealed king with no escape is CHECKMATE, exactly as in classical chess.',
-          'The quantum midgame is checkless — a maybe-King is a possibility, not a target. Redundancy is the defense: keep your maybe-Kings plural.',
+          'Victory comes by CHECKMATE, not by erasing every King possibility. There is no victory by wave function collapse.',
+          'When a side\'s King possibility narrows to a single KNOWN King, the classical rules return for it. It may never be left standing where it can be captured, and a revealed King with no escape is checkmate, exactly as in classical chess.',
+          'The quantum midgame is checkless — a maybe-King is a possibility, not a target. If a side temporarily has no King possibility, play continues and a later Heal may restore King to a friendly piece.',
           'Check arrows and the pulsing red ring mark a revealed king under fire (Settings → Visual Reminders).',
         ],
       },
@@ -101,7 +101,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Requirement 2 — Meet in the middle: both pieces move simultaneously toward each other and finish on the two most central empty squares between them.',
           'Requirement 3 — Collapse set: after castling, both pieces reduce to Rook–King only; all other types are removed from their superposition.',
           'No strings attached: after the castle the two pieces are ordinary Rook-or-King superpositions — no special link between them. The census keeps the story straight: if either piece is ever confirmed as the King, no other piece can be one.',
-          'A castled pair is two extra maybe-Kings — real cover against wave function collapse. And like any friendly piece, a castled partner you touch can HEAL back toward a wider superposition.',
+          'A castled pair keeps the royal identity flexible. Like any friendly piece, a castled partner you touch can HEAL back toward a wider superposition.',
           'Castling never captures; all destination squares must be empty. The move consumes your entire turn. Conservation applies: if Rook or King capacity is exhausted, the castle is disallowed.',
         ],
       },
@@ -130,7 +130,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
       {
         title: 'Draws',
         content: [
-          'Stalemate: if the side to move has no legal move at all and is not lost (their revealed King is not capturable and they still hold a maybe-King), the game is drawn immediately.',
+          'Stalemate: if the side to move has no legal move at all and their revealed King is not capturable, the game is drawn immediately. This also applies to a temporarily kingless side with no legal move.',
           'Fifty-move rule: the game is drawn after 50 consecutive full moves with no progress. Progress means any capture, any definite pawn move, any promotion — or any net loss of possibilities anywhere on the board. Zaps and collapses are information gained, so active play never runs the clock down. Heals GIVE BACK possibilities, so pure heal-shuffling in a dead position walks straight into the draw.',
           'Threefold repetition: if the exact same position occurs three times, the game is drawn. "Exact" includes the full quantum state — every piece\'s possibility sets, promotion branches, first-move rights, castling state, side to move, and any live en passant window.',
           'Draws can also be agreed between players, and a player may resign at any time.',

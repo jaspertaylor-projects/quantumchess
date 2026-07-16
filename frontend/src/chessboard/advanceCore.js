@@ -147,13 +147,7 @@ export function moveOutcome(prev, sim, info) {
   if (terminal === 'checkmate') {
     gameOver = true;
     winner = side;
-    // A mate where the opponent has NO possible king left is the zap win —
-    // name it for what it is.
-    const opponent = side === 'white' ? 'black' : 'white';
-    const opponentKingless = !finalPieces.some(
-      (p) => !p.captured && p.square && p.side === opponent && (p.possibleTypes || []).includes('k')
-    );
-    gameOverReason = opponentKingless ? 'wave function collapse' : 'checkmate';
+    gameOverReason = 'checkmate';
   }
   else if (terminal === 'stalemate') { gameOver = true; gameOverReason = 'stalemate'; }
   else if (nextHalfmoveClock >= FIFTY_MOVE_HALFMOVES) { gameOver = true; gameOverReason = 'fifty-move rule'; }
@@ -260,6 +254,12 @@ export function advanceEntry(snap, entry, priorSnaps) {
   return {
     ok: true,
     snap: outcomeToSnapshot(snap, outcome, priorSnaps),
-    records: [{ from: entry.from, to: entry.to, side, enPassant: usedEnPassant }],
+    records: [{
+      from: entry.from,
+      to: entry.to,
+      side,
+      enPassant: usedEnPassant,
+      capture: outcome.didCapture,
+    }],
   };
 }

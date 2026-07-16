@@ -1,5 +1,5 @@
 // Smoke test for the contact zap/heal rules — random full games with
-// per-ply invariants (zap sheds cleanly, heals never regain king, terminal
+// per-ply invariants (zap sheds cleanly, heals may restore king, terminal
 // states legal). Not part of the vitest suite — run on demand:
 //   docker exec -u 1000:1000 -w /app quantumchess-frontend-1 node tests/contact-variant-smoke.mjs
 import { makeInitialSnapshot, advanceEntry } from '../src/chessboard/advanceCore.js';
@@ -91,15 +91,16 @@ for (const seed of [11, 42, 77]) {
       assert(gained.length === 0, `seed ${seed} ply ${plies}: zapped ${sq} gained nothing`);
       assert(lost.length >= 1, `seed ${seed} ply ${plies}: zapped ${sq} lost a possibility`);
     }
-    // Heal invariant: gained possibilities, never king.
+    // Heal invariant: the contacted piece gains a possibility, or a restored
+    // King immediately resolves it to the royal slot through conservation.
     for (const sq of lm.healedSquares || []) {
       healEvents += 1;
       const beforePiece = before.find((p) => !p.captured && p.square === sq);
       const afterPiece = snap.pieces.find((p) => beforePiece && p.id === beforePiece.id);
       if (!beforePiece || !afterPiece) continue;
       const gained = (afterPiece.possibleTypes || []).filter((t) => !beforePiece.possibleTypes.includes(t));
-      assert(gained.length >= 1, `seed ${seed} ply ${plies}: healed ${sq} gained a possibility`);
-      assert(!gained.includes('k'), `seed ${seed} ply ${plies}: heal never regains king`);
+      assert(gained.length >= 1 || afterPiece.possibleTypes.join('') === 'k',
+        `seed ${seed} ply ${plies}: healed ${sq} gained or restored King`);
     }
 
     // Dead-economy invariant: coherence/recohere/observed frozen at defaults.
@@ -110,11 +111,7 @@ for (const seed of [11, 42, 77]) {
     }
   }
 
-  const kingless = (side) => !snap.pieces.some((p) => !p.captured && p.square && p.side === side && (p.possibleTypes || []).includes('k'));
-  if (snap.gameOver && snap.gameOverReason === 'wave function collapse') {
-    const loser = snap.winner === 'white' ? 'black' : 'white';
-    assert(kingless(loser), `seed ${seed}: WFC loser is kingless`);
-  }
+  assert(snap.gameOverReason !== 'wave function collapse', `seed ${seed}: no WFC victory`);
   console.log(`seed ${seed}: plies=${plies} zaps=${zapEvents} heals=${healEvents} over=${snap.gameOver} reason=${snap.gameOverReason || '-'} winner=${snap.winner || '-'}`);
   assert(zapEvents > 0, `seed ${seed}: at least one zap happened`);
 }

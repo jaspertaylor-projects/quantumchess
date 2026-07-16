@@ -224,8 +224,8 @@ export const LESSONS = [
       {
         title: 'Protection regrows possibility',
         text: [
-          'The same touch that zaps enemies HEALS friends. Every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen. Never King.',
-          'A green ring marks each heal. Defended pieces do not just survive here — they recover.',
+          'The same touch that zaps enemies HEALS friends. Every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen, and finally King.',
+          'One royal exception: if your team has no King possibility, Heal restores King first. A green ring marks each heal. Defended pieces do not just survive here — they recover.',
         ],
         physics: "For friendly systems the contact coupling is restorative: the lowest-value amplitude missing from the state is re-populated, provided global conservation admits it.",
         interactive: {
@@ -237,14 +237,14 @@ export const LESSONS = [
             { id: 'B2', side: 'black', square: 'a8', types: 'pnbrqk' },
           ],
           goal: { kind: 'move', from: 'b1', to: 'c3' },
-          success: 'Healed! Your knight lands touching e4, and e4 regains its cheapest missing self: it can be a Knight again. Keep touching it and it keeps growing.',
+          success: 'Healed! Your knight jump removed White’s last King possibility, so the friendly piece on e4 received the royal-priority Heal. It can be King again. Keep protecting wounded pieces and they keep growing.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
             { sq: 'c3', side: 'white', types: 'n' },
-            { sq: 'e4', side: 'white', types: 'npr', heal: true },
+            { sq: 'e4', side: 'white', types: 'prk', heal: true },
           ],
           arrows: [{ from: 'c3', to: 'e4', side: 'white' }],
         },
@@ -252,10 +252,10 @@ export const LESSONS = [
       {
         title: 'Heals obey the ledger',
         text: [
-          'A heal can only return an identity the conservation ledger still allows. King never comes back. Pawn never returns to a promoted piece, or to any piece standing on its promotion rank.',
+          'A heal can only return an identity the conservation ledger allows. If your team has no King possibility, Heal tries King FIRST and may reveal the healed piece as King immediately. Otherwise King stays at the end of the ladder. Pawn never returns to a promoted piece, or to any piece standing on its promotion rank.',
           'And if an identity is fully claimed elsewhere — say both your knights are known — the heal skips it and gives the next one up the ladder.',
         ],
-        physics: "Recovery is constrained repopulation: an amplitude returns only if a consistent global assignment exists. Fully-claimed sectors are excluded; the royal amplitude, once lost, never refills.",
+        physics: "Recovery is constrained repopulation: an amplitude returns only if a consistent global assignment exists. Fully-claimed sectors are skipped in value order, with the royal amplitude available as the final rung.",
         interactive: {
           prompt: 'Both black knights are pinned down on this board. Heal your bare pawn anyway: d2 → d3 touches e4.',
           pieces: [
@@ -318,12 +318,12 @@ export const LESSONS = [
         },
       },
       {
-        title: 'Kings die two ways',
+        title: 'The royal safeguard',
         text: [
           'There is no check for a superposed king — a maybe-King is just a possibility, and possibilities cannot be threatened, only zapped away.',
-          'Kings leave the game exactly two ways: their possibility is zapped off a piece, or the piece holding it is captured like any other piece. Guard your maybe-Kings by keeping them plural.',
+          'Zap may remove King while another maybe-King remains, but it can never erase the final royal possibility. If a volley would do that, it zaps the next most valuable possibility on every affected piece instead.',
         ],
-        physics: "Royalty in superposition is not an observable a threat operator can act on. Only dissipation (zaps) or annihilation (capture) move royal amplitude — so redundancy IS the defense.",
+        physics: "Royal amplitude can move and recover, but the contact operator preserves at least one royal branch. Only a revealed King can be checkmated.",
       },
     ],
   },
@@ -425,16 +425,16 @@ export const LESSONS = [
   {
     id: 'winning',
     title: 'Winning the Game',
-    blurb: 'Erase every maybe-King — or corner a revealed one.',
-    rulesPage: 'Winning: Collapse & Checkmate',
+    blurb: 'Zap protects the last King; victory comes by checkmate.',
+    rulesPage: 'Winning: Checkmate',
     steps: [
       {
-        title: 'Wave function collapse',
+        title: 'The last King is protected',
         text: [
-          'You win the moment your opponent has NO piece that could still be the King. Zap the royal possibility off their last maybe-King and their army collapses — the game ends instantly.',
-          'This is the win the zap was built for. The only exception to the clean-shed guard: a zap that erases the LAST maybe-King always lands, cascade and all.',
+          'There is no victory by wave function collapse. If Zap would remove the final King possibility, it leaves King alone and tries the next most valuable identity on every affected piece.',
+          'A side that temporarily has no King possibility from some other resolution keeps playing. Protect a friendly piece and Heal can restore King when the cheaper identities are unavailable.',
         ],
-        physics: "Victory is the vanishing of royal amplitude across the entire enemy state: ⟨K|ψ_army⟩ = 0 in every branch. The guarded projection waives locality for the terminal measurement.",
+        physics: "The contact interaction preserves a royal branch: when the King projection would empty the royal sector, the zap operator falls through to the next permitted amplitude.",
         interactive: {
           prompt: 'Black’s only maybe-King is the Queen-or-King on e5. Jump d2 → f3 and touch it.',
           pieces: [
@@ -444,14 +444,14 @@ export const LESSONS = [
             { id: 'BB', side: 'black', square: 'h8', types: 'r', moved: true },
           ],
           goal: { kind: 'move', from: 'd2', to: 'f3' },
-          success: 'WAVE FUNCTION COLLAPSE. Your zap took the last King possibility Black had — no piece of theirs can be royal, so there is nothing left to play for. The game ends on the spot.',
+          success: 'ROYAL SAFEGUARD. King was the usual first target, but it was Black’s final royal possibility. Zap skipped it and removed Queen instead, leaving a revealed King. The game continues toward checkmate.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
             { sq: 'f3', side: 'white', types: 'n' },
-            { sq: 'e5', side: 'black', types: 'q', zap: true },
+            { sq: 'e5', side: 'black', types: 'k', zap: true },
             { sq: 'h6', side: 'black', types: 'r' },
           ],
         },
@@ -550,7 +550,7 @@ export const LESSONS = [
         title: 'Two maybe-kings',
         text: [
           'Both pieces collapse to exactly Rook-or-King. No special bond ties them afterward — the census alone keeps the story straight: the moment ANY piece is confirmed as the King, every other piece loses King from its possibilities.',
-          'A castled pair is also two extra maybe-Kings — real cover against wave function collapse.',
+          'A castled pair keeps the royal identity spread across two pieces, which can make the revealed-King endgame harder for your opponent to force.',
         ],
         physics: "The castle is a projective measurement onto the rook-king subspace — nothing more. Which piece is which stays undetermined until the census resolves it.",
         interactive: {

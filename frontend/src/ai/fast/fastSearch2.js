@@ -5,7 +5,7 @@
 // only ordering signal that works here), an ADAPTIVE beam (generous
 // eval-ranked width, extended to include every child within 0.8 of the best
 // — never a hard cutoff on a near-best move), late-move reductions inside
-// the beam, wave-function-collapse terminal detection at every node, capture
+// the beam, revealed-King mate detection at terminal nodes, capture
 // quiescence at the horizon, a Zobrist-keyed transposition table, aspiration
 // windows, in-tree en passant, and in-line repetition scoring. No null-move
 // pruning (quantum zugzwang breaks its assumption).
@@ -40,28 +40,6 @@ const sideBitOf = (s) => (s === 'black' ? BLACK : 0);
 const sideName = (b) => (b === BLACK ? 'black' : 'white');
 const otherB = (b) => b ^ BLACK;
 const signOf = (b) => (b === BLACK ? -1 : 1);
-
-// Wave-function collapse is an IMMEDIATE terminal: a kingless side has lost
-// even though its pieces still technically move. Every node must check this
-// before searching on (the V1 beam shortcut decisive children explicitly;
-// without this a won position gets searched as if alive, with no
-// mate-distance signal).
-// Returns +1 (side to move already won), -1 (lost), 0 (game alive).
-function collapseState(bd, side) {
-  let mine = false;
-  let theirs = false;
-  for (let i = 0; i < bd.n; i++) {
-    const w = bd.words[i];
-    if (w & CAPTURED) continue;
-    if (!(possibleOf(w) & TK)) continue;
-    if (sideBit(w) === side) mine = true;
-    else theirs = true;
-    if (mine && theirs) return 0;
-  }
-  if (!mine) return -1;
-  if (!theirs) return 1;
-  return 0;
-}
 
 // Collapse value of a victim (what a capture banks), by lowest non-king bit.
 const VICTIM_VAL = [1, 3, 3.1, 5, 9, 0];
@@ -119,9 +97,6 @@ function qsearch(bd, side, ply, alpha, beta, ctx, ep) {
   ctx.nodes += 1;
   if ((ctx.nodes & 63) === 0 && performance.now() > ctx.deadline) throw new SearchTimeout();
 
-  const term = collapseState(bd, side);
-  if (term !== 0) return term * (MATE - ply);
-
   const standPat = signOf(side) * evaluateFast(bd, ctx.W);
   if (standPat >= beta) return standPat;
   let best = standPat;
@@ -155,10 +130,6 @@ function qsearch(bd, side, ply, alpha, beta, ctx, ep) {
 function negamax2(bd, side, depth, ply, alpha, beta, ctx, ep) {
   ctx.nodes += 1;
   if ((ctx.nodes & 63) === 0 && performance.now() > ctx.deadline) throw new SearchTimeout();
-
-  // Wave-function collapse ends the game on the spot.
-  const term = collapseState(bd, side);
-  if (term !== 0) return term * (MATE - ply);
 
   // Mate-distance pruning.
   if (alpha < -MATE + ply) alpha = -MATE + ply;
@@ -236,8 +207,8 @@ function negamax2(bd, side, depth, ply, alpha, beta, ctx, ep) {
     for (let i = 0; i < limit; i++) {
       const c = children[i];
       let s;
-      // Decisive child (kingless side after the move) — terminal, no
-      // re-make needed (V1's shortcut, with mate distance).
+      // A mate-scored child is terminal, so no re-make is needed (V1's
+      // shortcut, with mate distance).
       if (c.ev >= MATE - 100) s = MATE - (ply + 1);
       else if (c.ev <= -MATE + 100) s = -MATE + (ply + 1);
       else {

@@ -26,6 +26,7 @@ import {
 
 export default function MobileBar({
   isPlaying = false,
+  hasGameHistory = false,
   searching = false,
   isOnlineGame = false,
   infoMessage = '',
@@ -56,16 +57,25 @@ export default function MobileBar({
       boxSizing: 'border-box',
     },
     info: {
+      // Floats above the bar instead of stacking inside it: an appearing
+      // info line must never push the button row (the intro toggles "Not
+      // your turn." constantly and the bar would bounce).
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: '100%',
       padding: '4px 12px',
       fontSize: 12,
       lineHeight: 1.35,
       color: 'rgba(255, 206, 84, 0.9)',
       textAlign: 'center',
+      borderTop: `1px solid ${theme.border}`,
       borderBottom: `1px solid ${theme.border}`,
-      background: 'rgba(255, 206, 84, 0.06)',
+      background: 'rgba(24, 20, 10, 0.97)',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
+      boxSizing: 'border-box',
     },
     row: {
       display: 'flex',
@@ -73,7 +83,9 @@ export default function MobileBar({
       justifyContent: 'space-around',
       gap: 6,
       padding: '8px 10px',
-      minHeight: 52,
+      // Same height in menu and in-game modes: the taller (labeled) home row
+      // sets the floor so switching modes never resizes the bar mid-intro.
+      minHeight: 63,
       boxSizing: 'border-box',
     },
     homeButton: (primary = false) => ({
@@ -152,7 +164,7 @@ export default function MobileBar({
         </button>
       </div>
     );
-  } else if (isPlaying) {
+  } else if (isPlaying || hasGameHistory) {
     const atStart = currentMoveIndex < 0;
     const atEnd = currentMoveIndex >= moveCount - 1;
     content = (
@@ -165,14 +177,14 @@ export default function MobileBar({
         {navBtn(ChevronRightIcon, 'Next move', () => onSeek(currentMoveIndex + 1), atEnd)}
         {navBtn(ChevronsRightIcon, 'Jump to latest', () => onSeek(moveCount - 1), atEnd)}
         <span style={styles.divider} />
-        {!isOnlineGame ? (
+        {(!isPlaying || !isOnlineGame) ? (
           <IconButton
             icon={PlusIcon}
             size={18}
             width={38}
             height={38}
-            title="New Game"
-            ariaLabel="End this game and start a new one"
+            title={isPlaying ? 'New Game' : 'Play another game'}
+            ariaLabel={isPlaying ? 'End this game and start a new one' : 'Start another game'}
             onClick={onNewGame}
             bg={'transparent'}
             color={theme.success}
@@ -181,34 +193,38 @@ export default function MobileBar({
             shadow="transparent"
           />
         ) : null}
-        <IconButton
-          icon={FlagIcon}
-          size={18}
-          width={38}
-          height={38}
-          title="Resign"
-          ariaLabel="Resign the current game"
-          onClick={onResign}
-          bg={'transparent'}
-          color={theme.danger || '#ff3b30'}
-          hoverInvert={true}
-          hoverColor={'#ffffff'}
-          shadow="transparent"
-        />
-        <IconButton
-          icon={HandshakeIcon}
-          size={18}
-          width={38}
-          height={38}
-          title="Offer Draw"
-          ariaLabel="Offer a draw"
-          onClick={onOfferDraw}
-          bg={'transparent'}
-          color={theme.warning || '#f5a524'}
-          hoverInvert={true}
-          hoverColor={theme.secondary}
-          shadow="transparent"
-        />
+        {isPlaying ? (
+          <>
+            <IconButton
+              icon={FlagIcon}
+              size={18}
+              width={38}
+              height={38}
+              title="Resign"
+              ariaLabel="Resign the current game"
+              onClick={onResign}
+              bg={'transparent'}
+              color={theme.danger || '#ff3b30'}
+              hoverInvert={true}
+              hoverColor={'#ffffff'}
+              shadow="transparent"
+            />
+            <IconButton
+              icon={HandshakeIcon}
+              size={18}
+              width={38}
+              height={38}
+              title="Offer Draw"
+              ariaLabel="Offer a draw"
+              onClick={onOfferDraw}
+              bg={'transparent'}
+              color={theme.warning || '#f5a524'}
+              hoverInvert={true}
+              hoverColor={theme.secondary}
+              shadow="transparent"
+            />
+          </>
+        ) : null}
       </div>
     );
   } else {

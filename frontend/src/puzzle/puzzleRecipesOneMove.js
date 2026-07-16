@@ -320,7 +320,7 @@ const R_MATE1 = {
       pieces,
       plies: [{
         subgoal: 'mate',
-        goalText: 'Mate in one. Not "check" — erase the last world where their King survives. Every reply must leave him capturable.',
+        goalText: 'Mate in one. Not merely check — every legal reply must leave the revealed King capturable.',
       }],
     };
   },

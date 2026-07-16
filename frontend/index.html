@@ -11,7 +11,7 @@ Exported To: None
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Quantum Chess</title>
-    <meta name="description" content="Chess where the pieces obey quantum mechanics: every piece is a superposition of all six types, every move is a measurement, and checkmate becomes wave function collapse. Free in your browser — no download." />
+    <meta name="description" content="Chess where every piece begins as a superposition of all six types, every move is a measurement, contact zaps enemies and heals friends, and victory comes by checkmate. Free in your browser — no download." />
     <link rel="canonical" href="https://quantumchess.ninja/" />
     <style>
       /* Critical pre-app rules, inlined so they apply at the very first paint
@@ -19,8 +19,15 @@ Exported To: None
          hold the full viewport, otherwise it collapses to 0 height and the
          below-the-fold section flashes at the top while the app loads.
          App.css repeats these once it loads. */
-      html, body { margin: 0; height: 100%; background: #0a0e1a; }
-      #root { height: 100vh; height: 100dvh; overflow: hidden; }
+      html, body {
+        margin: 0; height: 100%; background: #0a0e1a;
+        overscroll-behavior-y: none;
+      }
+      html { scroll-snap-type: y proximity; }
+      #root {
+        height: 100vh; height: 100dvh; overflow: hidden;
+        scroll-snap-align: start; scroll-snap-stop: always;
+      }
 
       /* Static below-the-fold content (crawlable; the game itself fills the
          first viewport, so players landing here never see this unless they
@@ -29,6 +36,7 @@ Exported To: None
         background: #0a0e1a; color: #dfe6f2;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
         line-height: 1.68;
+        scroll-snap-align: start;
       }
       #qc-below .qc-below-wrap { max-width: 780px; margin: 0 auto; padding: 48px 22px 80px; }
       #qc-below h2 { font-size: 1.6rem; margin: 0 0 4px; letter-spacing: 0.02em; }
@@ -71,7 +79,7 @@ Exported To: None
 
         <p>Moving is measuring: a piece may move like anything it might still be, but afterward it keeps only the identities consistent with that move. A knight&rsquo;s jump collapses a piece into a Knight forever; a quiet one-square push barely narrows it at all. And moving is touching: when your piece lands, it makes contact with everything it could capture from its new square. Enemy pieces it touches are <strong>zapped</strong> &mdash; a weak measurement that strips away their most valuable possibility, King first. Friendly pieces it touches are <strong>healed</strong> &mdash; a weak entanglement that restores their cheapest missing identity, so a protected army literally regenerates its ambiguity. Captures collapse the victim to its cheapest self, shields protect pieces whose every identity is load-bearing, and a strict conservation law keeps each side accountable for exactly one chess set at all times.</p>
 
-        <p>You win by <strong>wave function collapse</strong> &mdash; erasing the King possibility from your opponent&rsquo;s entire army &mdash; or by classical checkmate once their King has been cornered into a single known piece. There is no randomness anywhere: every zap, heal, and collapse resolves deterministically. Classical chess is just one of the many worlds this game can collapse into.</p>
+        <p>You win by <strong>checkmate</strong> once the opposing King has been narrowed to one known piece and cornered. Zap can remove King while another maybe-King remains, but protects the final royal possibility by falling through to the next most valuable identity. Heal can even restore a missing King when the census allows it. There is no randomness anywhere: every zap, heal, and collapse resolves deterministically.</p>
 
         <h3>Ways to play</h3>
         <ul>
@@ -83,7 +91,7 @@ Exported To: None
         </ul>
 
         <h3>Learn the game</h3>
-        <p>The <a href="/rules.html">complete rulebook</a> explains every rule on one page &mdash; superposition and collapse, zaps, heals, shields, quantum castling, en passant, promotion, and the draw rules. The <a href="/strategy.html">strategy guide</a> covers how to actually win: when to zap and when to capture, keeping your maybe-Kings plural, heal networks, and forcing the final collapse. The <a href="/faq.html">FAQ</a> answers everything else &mdash; daily puzzle scoring, streaks, accounts, ratings, and what Premium includes. And the <a href="/about.html">about page</a> tells the story of why this game exists.</p>
+        <p>The <a href="/rules.html">complete rulebook</a> explains every rule on one page &mdash; superposition and collapse, zaps, heals, shields, quantum castling, en passant, promotion, and the draw rules. The <a href="/strategy.html">strategy guide</a> covers how to actually win: when to zap and when to capture, heal networks, revealing the King, and converting that information into checkmate. The <a href="/faq.html">FAQ</a> answers everything else &mdash; daily puzzle scoring, streaks, accounts, ratings, and what Premium includes. And the <a href="/about.html">about page</a> tells the story of why this game exists.</p>
 
         <p class="qc-below-muted">Quantum Chess is an independent project built by one developer and published by Pura Viba LLC. It runs entirely in your browser &mdash; no download, no install, free to play.</p>
 

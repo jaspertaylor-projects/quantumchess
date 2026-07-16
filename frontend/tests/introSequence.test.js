@@ -33,6 +33,7 @@ describe('first-visit intro game', () => {
 
     for (let i = 0; i < INTRO_TURNS.length; i += 1) {
       const turn = INTRO_TURNS[i];
+      const beforeWhiteCaptures = snapshot.captureCounter;
       const whiteResult = advanceEntry(snapshot, {
         type: 'move',
         from: turn.white.from,
@@ -40,6 +41,9 @@ describe('first-visit intro game', () => {
         enPassant: Boolean(turn.white.enPassant),
       }, history);
       expect(whiteResult.ok, `white ${turn.white.from}-${turn.white.to}`).toBe(true);
+      expect(Boolean(whiteResult.records[0]?.capture)).toBe(
+        whiteResult.snap.captureCounter > beforeWhiteCaptures,
+      );
       snapshot = whiteResult.snap;
       history.push(snapshot);
 
@@ -47,8 +51,14 @@ describe('first-visit intro game', () => {
       const blackEntry = turn.black.castle
         ? { type: 'castle', piece1_from: turn.black.castle[0], piece2_from: turn.black.castle[1] }
         : { type: 'move', from: turn.black.from, to: turn.black.to, enPassant: false };
+      const beforeBlackCaptures = snapshot.captureCounter;
       const blackResult = advanceEntry(snapshot, blackEntry, history);
       expect(blackResult.ok, `black reply after round ${i + 1}`).toBe(true);
+      if (!turn.black.castle) {
+        expect(Boolean(blackResult.records[0]?.capture)).toBe(
+          blackResult.snap.captureCounter > beforeBlackCaptures,
+        );
+      }
       snapshot = blackResult.snap;
       history.push(snapshot);
     }

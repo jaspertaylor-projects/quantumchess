@@ -145,12 +145,29 @@ export async function loadMinedPreview(idx) {
 // The fixture's schedule map pins hand-picked chains to specific dates; any
 // unscheduled date rotates the corpus deterministically so the daily flow
 // never comes up empty while new puzzles are being mined.
+//
+// Chains flagged devOnly are ?mined=N preview material awaiting curation:
+// the daily NEVER serves them — neither scheduled nor in rotation — so a
+// fresh batch can land in the fixture without touching the live product.
 export async function loadDailyMinedPuzzle(date) {
   const data = (await import('./minedPreviewData.json')).default;
-  if (!data.chains.length) return null;
+  const eligible = data.chains
+    .map((chain, idx) => ({ chain, idx }))
+    .filter(({ chain }) => !chain.devOnly);
+  if (!eligible.length) return null;
   const scheduled = data.schedule ? data.schedule[date] : undefined;
   const dayNumber = Math.floor(new Date(`${date}T00:00:00`).getTime() / 86400000);
-  const rotated = ((dayNumber % data.chains.length) + data.chains.length) % data.chains.length;
-  const idx = Number.isInteger(scheduled) && data.chains[scheduled] ? scheduled : rotated;
-  return buildMinedPuzzle(data.chains[idx], idx, { date, isDaily: true });
+  const rotatedStart = ((dayNumber % eligible.length) + eligible.length) % eligible.length;
+  const scheduledOk = Number.isInteger(scheduled) && data.chains[scheduled] && !data.chains[scheduled].devOnly;
+  const candidates = [];
+  if (scheduledOk) candidates.push(scheduled);
+  for (let offset = 0; offset < eligible.length; offset += 1) {
+    const idx = eligible[(rotatedStart + offset) % eligible.length].idx;
+    if (!candidates.includes(idx)) candidates.push(idx);
+  }
+  for (const idx of candidates) {
+    const puzzle = buildMinedPuzzle(data.chains[idx], idx, { date, isDaily: true });
+    if (puzzle) return puzzle;
+  }
+  return null;
 }

@@ -23,9 +23,9 @@ import { applyConstraintsFast } from './fastConservation.js';
 
 const otherSideBit = (s) => s ^ BLACK;
 
-// REF: CONTACT_ZAP_ORDER k,q,r,b,n,p / HEAL_GAIN_ORDER p,n,b,r,q.
+// REF: CONTACT_ZAP_ORDER k,q,r,b,n,p / HEAL_GAIN_ORDER p,n,b,r,q,k.
 const ZAP_ORDER = [TK, TQ, TR, TB, TN, TP];
-const HEAL_ORDER = [TP, TN, TB, TR, TQ];
+const HEAL_ORDER = [TP, TN, TB, TR, TQ, TK];
 
 // --- Terminal / legality tests ---
 
@@ -52,7 +52,7 @@ export function lostInCheck(bd, side) {
       holderSq = sqOf(w);
     }
   }
-  if (holders === 0) return true;
+  if (holders === 0) return false;
   return holders === 1 && isSquareCapturableBy(bd, holderSq, otherSideBit(side));
 }
 
@@ -91,8 +91,9 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
   // Zaps strike TOGETHER (REF: the volley, rules change 2026-07-13). Every
   // target's candidate shed is judged in ISOLATION against the pre-zap
   // state (trial then rollback), then all candidates land as one volley:
-  // joint-clean (or kingless win) commits, anything else fizzles the whole
-  // volley. Order-independent by construction.
+  // joint-clean commits, anything else fizzles the whole volley. If the
+  // candidates would collectively shed every last King, each King target
+  // retries from Queen downward. Order-independent by construction.
   const volleyCandidates = []; // [pieceIdx, shedBit, preTypes] triplets, flat
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
@@ -101,47 +102,79 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     if (w & CAPTURED) continue;
     const types = possibleOf(w);
     if (popcount6(types) <= 1) continue;
-    const targetSide = sideBit(w);
     let found = false;
     for (let z = 0; z < 6 && !found; z++) {
       const shed = ZAP_ORDER[z];
       if (!(types & shed)) continue;
       const mark = watermark(bd);
       setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
-      applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
-
-      // REF: winsByCollapse — a king shed that leaves the side kingless.
-      let wins = false;
-      if (shed === TK) {
-        wins = true;
-        for (let j = 0; j < bd.n; j++) {
-          const wj = bd.words[j];
-          if (!(wj & CAPTURED) && sideBit(wj) === targetSide && (possibleOf(wj) & TK)) { wins = false; break; }
-        }
-      }
+      applyConstraintsFast(bd, sideBit(w) === 0 ? 1 : 2);
 
       // Isolated cleanliness via the journal (possible-mask comparison, as
       // the reference's shedIsLocal).
       let clean = true;
-      if (!wins) {
-        const j = bd.journal;
-        for (let k = mark; k < j.length; k += 2) {
-          if (j[k] !== i) { clean = false; break; }
-        }
-        if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
+      const j = bd.journal;
+      for (let k = mark; k < j.length; k += 2) {
+        if (j[k] !== i) { clean = false; break; }
       }
+      if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
 
       rollback(bd, mark); // isolation: the trial never persists
-      if (wins || clean) {
+      if (clean) {
         volleyCandidates.push(i, shed, types);
         found = true;
       }
     }
   }
 
+  let targetSide = -1;
+  for (let k = 0; k < volleyCandidates.length; k += 3) {
+    targetSide = sideBit(bd.words[volleyCandidates[k]]);
+    break;
+  }
+  const kingHolderIdxs = [];
+  if (targetSide >= 0) {
+    for (let i = 0; i < bd.n; i++) {
+      const w = bd.words[i];
+      if (!(w & CAPTURED) && sideBit(w) === targetSide && (possibleOf(w) & TK)) kingHolderIdxs.push(i);
+    }
+  }
+  const hasKingShed = (idx) => {
+    for (let q = 0; q < volleyCandidates.length; q += 3) {
+      if (volleyCandidates[q] === idx && volleyCandidates[q + 1] === TK) return true;
+    }
+    return false;
+  };
+  const wouldEraseFinalKing = kingHolderIdxs.length > 0 && kingHolderIdxs.every(hasKingShed);
+  if (wouldEraseFinalKing) {
+    for (let q = volleyCandidates.length - 3; q >= 0; q -= 3) {
+      if (volleyCandidates[q + 1] !== TK) continue;
+      const i = volleyCandidates[q];
+      const w = bd.words[i];
+      const types = volleyCandidates[q + 2];
+      let fallback = 0;
+      for (let z = 1; z < ZAP_ORDER.length; z++) {
+        const shed = ZAP_ORDER[z];
+        if (!(types & shed)) continue;
+        const mark = watermark(bd);
+        setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
+        applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
+        let clean = true;
+        const j = bd.journal;
+        for (let k = mark; k < j.length; k += 2) {
+          if (j[k] !== i) { clean = false; break; }
+        }
+        if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
+        rollback(bd, mark);
+        if (clean) { fallback = shed; break; }
+      }
+      if (fallback) volleyCandidates[q + 1] = fallback;
+      else volleyCandidates.splice(q, 3);
+    }
+  }
+
   if (volleyCandidates.length > 0) {
     const mark = watermark(bd);
-    let targetSide = -1;
     for (let k = 0; k < volleyCandidates.length; k += 3) {
       const i = volleyCandidates[k];
       const shed = volleyCandidates[k + 1];
@@ -151,38 +184,39 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     }
     applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
 
-    let wins = true;
-    for (let j = 0; j < bd.n; j++) {
-      const wj = bd.words[j];
-      if (!(wj & CAPTURED) && sideBit(wj) === targetSide && (possibleOf(wj) & TK)) { wins = false; break; }
-    }
-
     let jointClean = true;
-    if (!wins) {
-      const j = bd.journal;
-      for (let k = mark; k < j.length && jointClean; k += 2) {
-        const idx = j[k];
-        let isCandidate = false;
-        for (let q = 0; q < volleyCandidates.length; q += 3) {
-          if (volleyCandidates[q] === idx) { isCandidate = true; break; }
-        }
-        if (!isCandidate) jointClean = false;
+    const j = bd.journal;
+    for (let k = mark; k < j.length && jointClean; k += 2) {
+      const idx = j[k];
+      let isCandidate = false;
+      for (let q = 0; q < volleyCandidates.length; q += 3) {
+        if (volleyCandidates[q] === idx) { isCandidate = true; break; }
       }
-      for (let q = 0; q < volleyCandidates.length && jointClean; q += 3) {
-        const i = volleyCandidates[q];
-        const shed = volleyCandidates[q + 1];
-        const pre = volleyCandidates[q + 2];
-        if (possibleOf(bd.words[i]) !== (pre & ~shed)) jointClean = false;
-      }
+      if (!isCandidate) jointClean = false;
+    }
+    for (let q = 0; q < volleyCandidates.length && jointClean; q += 3) {
+      const i = volleyCandidates[q];
+      const shed = volleyCandidates[q + 1];
+      const pre = volleyCandidates[q + 2];
+      if (possibleOf(bd.words[i]) !== (pre & ~shed)) jointClean = false;
     }
 
-    if (!wins && !jointClean) rollback(bd, mark); // whole volley fizzles
+    if (!jointClean) rollback(bd, mark); // whole volley fizzles
   }
 
   // Heals bloom TOGETHER (REF: the heal volley, 2026-07-13). Isolated
   // candidate regains against the pre-heal state, then one joint commit:
-  // every healed piece must still hold its regain and have grown, or the
-  // whole volley dissipates.
+  // every healed piece must still hold its regain and have grown (or have
+  // restored King), or the whole volley dissipates.
+  let moverHasKing = false;
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if (!(w & CAPTURED) && sideBit(w) === moverSide && (possibleOf(w) & TK)) {
+      moverHasKing = true;
+      break;
+    }
+  }
+  const healOrder = moverHasKing ? HEAL_ORDER : [TK, TP, TN, TB, TR, TQ];
   const healCandidates = []; // [pieceIdx, gainBit, preCount] triplets, flat
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
@@ -194,8 +228,8 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     const onPromoRank = sideBit(w) === BLACK ? rank === 0 : rank === 7;
     const pre = possibleOf(w);
     const preCount = popcount6(pre);
-    for (let h = 0; h < 5; h++) {
-      const t = HEAL_ORDER[h];
+    for (let h = 0; h < healOrder.length; h++) {
+      const t = healOrder[h];
       if (t === TP && (promoted || onPromoRank)) continue;
       if (pre & t) continue;
       const mark = watermark(bd);
@@ -203,7 +237,7 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
       setWord(bd, i, withMasks(w, baseOf(w) | t, promoOf(w)));
       applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
       const after = possibleOf(bd.words[i]);
-      const took = (after & t) && popcount6(after) > preCount;
+      const took = (after & t) && (t === TK || popcount6(after) > preCount);
       rollback(bd, mark); // isolation: the trial never persists
       if (took) {
         healCandidates.push(i, t, preCount);
@@ -226,7 +260,7 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
       const t = healCandidates[k + 1];
       const preCount = healCandidates[k + 2];
       const after = possibleOf(bd.words[i]);
-      if (!(after & t) || popcount6(after) <= preCount) allHold = false;
+      if (!(after & t) || (t !== TK && popcount6(after) <= preCount)) allHold = false;
     }
     if (!allHold) rollback(bd, mark);
   }

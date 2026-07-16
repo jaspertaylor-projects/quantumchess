@@ -13,7 +13,7 @@ export const SIDES = {
   BLACK: 'black',
 };
 
-// Per-side baseline maximum piece counts used by global wave-function collapse logic.
+// Per-side baseline maximum piece counts used by global conservation logic.
 // Promotion credits may temporarily extend N/B/R/Q above these baselines.
 export const PIECE_LIMITS = {
   p: 8,
@@ -87,17 +87,18 @@ export function createStartingPieces() {
 // Capture collapse priority: lowest valuable non-king first (P < N < B < R < Q)
 export const CAPTURE_COLLAPSE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
-// A zap sheds the MOST valuable possibility it can lose cleanly — King
-// included, so stripping the last king possibility from a side is the win by
-// wave-function collapse.
+// A zap sheds the MOST valuable possibility it can lose cleanly. King is
+// normally first, but the contact resolver protects a side's final King
+// possibility and falls through to Queen (then the rest of this ladder).
 export const CONTACT_ZAP_ORDER = ['k', 'q', 'r', 'b', 'n', 'p'];
 
 // Least valuable first — the mover's contact reach projects from the first
 // type here it still holds, and heals walk it to pick the regained identity.
 export const LEAST_VALUABLE_ORDER = ['p', 'n', 'b', 'r', 'q', 'k'];
 
-// Heal regain order: least valuable first. King never comes back.
-export const HEAL_GAIN_ORDER = ['p', 'n', 'b', 'r', 'q'];
+// Normal Heal regain order: least valuable first, including King last. The
+// contact resolver moves King to the front while its side is kingless.
+export const HEAL_GAIN_ORDER = ['p', 'n', 'b', 'r', 'q', 'k'];
 
 export function isSide(value) {
   return value === SIDES.WHITE || value === SIDES.BLACK;

@@ -34,6 +34,12 @@ import useBoardLayout from './hooks/useBoardLayout.js';
 import useBoardInput from './hooks/useBoardInput.js';
 import useOnlineGame from './hooks/useOnlineGame.js';
 import useIntroSequence from './hooks/useIntroSequence.js';
+import { INTRO_DIALOGUE } from './hooks/introSequenceData.js';
+
+// Every intro narration page, flattened. The mobile speech lane renders these
+// as invisible ghosts so its height is the TALLEST card for the whole intro —
+// the board is measured against that fixed lane and never jumps between beats.
+const INTRO_SPEECH_GHOST_PAGES = [...new Set(Object.values(INTRO_DIALOGUE).flat())];
 import usePlayerBars from './hooks/usePlayerBars.js';
 import useMonetization from './hooks/useMonetization.js';
 import useGameRecording from './hooks/useGameRecording.js';
@@ -217,7 +223,10 @@ export default function App() {
   const layout = useBoardLayout({
     gameStarted,
     svgStyles,
-    desktopCoachOpen: Boolean(intro.introSpeech && intro.introSpeechOpen),
+    // Reserved for the intro's ENTIRE choreography, not per-card: budgeting
+    // the rail per speech beat made the board resize on every narration
+    // change (see the reserved speech lane below for the mobile analogue).
+    desktopCoachOpen: Boolean(intro.introChoreo || (intro.introSpeech && intro.introSpeechOpen)),
   });
   const { isNarrow, isWide, boardSize, currentPieceSize } = layout;
 
@@ -615,9 +624,21 @@ export default function App() {
 
             {isNarrow ? (
               <div
-                className="qc-intro-speech-slot qc-intro-speech-slot--mobile"
+                className={`qc-intro-speech-slot qc-intro-speech-slot--mobile${intro.introChoreo ? ' qc-intro-speech-slot--reserved' : ''}`}
                 ref={layout.coachLaneRef}
               >
+                {intro.introChoreo
+                  ? INTRO_SPEECH_GHOST_PAGES.map((text) => (
+                      <div key={text} className="qc-intro-speech-ghost" aria-hidden="true">
+                        <IntroSpeechOverlay
+                          speech={text}
+                          open
+                          placement="mobile"
+                          needsContinue
+                        />
+                      </div>
+                    ))
+                  : null}
                 <IntroSpeechOverlay
                   speech={intro.introSpeech}
                   open={intro.introSpeechOpen}
@@ -635,7 +656,7 @@ export default function App() {
 
             <div className="qc-board-row" style={styles.boardRow}>
               {isWide ? (
-                <div className="qc-intro-speech-slot qc-intro-speech-slot--desktop qc-intro-speech-slot--desktop-left">
+                <div className={`qc-intro-speech-slot qc-intro-speech-slot--desktop qc-intro-speech-slot--desktop-left${intro.introChoreo ? ' qc-intro-speech-slot--reserved' : ''}`}>
                   <IntroSpeechOverlay
                     speech={intro.introSpeech}
                     open={intro.introSpeechOpen}
@@ -765,6 +786,7 @@ export default function App() {
         <>
           <MobileBar
             isPlaying={isPlaying}
+            hasGameHistory={gameStarted || moves.length > 0}
             searching={online.mmActive}
             isOnlineGame={isOnlineGameRef.current}
             infoMessage={infoMessage}

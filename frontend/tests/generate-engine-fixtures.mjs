@@ -31,7 +31,7 @@ import { hashSig, mulberry32 } from './fixtureUtil.mjs';
 
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'engine-games.json');
 const SEEDS = Array.from({ length: 13 }, (_, i) => i + 1);
-// Random games take ~90 plies to reach wave-function collapse, so the cap
+// Random games can run deep before checkmate or a draw, so the cap
 // must sit comfortably above that for the set to include finished games.
 const MAX_HALFMOVES = 140;
 // Castles are rare under uniform random play; bias toward them so the fixture

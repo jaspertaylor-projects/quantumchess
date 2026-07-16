@@ -15,6 +15,11 @@ import {
 } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
 
+export function formatMoveLabel(move) {
+  if (!move) return '';
+  return `${move.from} ${move.capture ? '×' : '–'} ${move.to}`;
+}
+
 export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = () => {}, onClearHighlights = () => {}, onSeekToIndex = () => {}, externalIndex = undefined }) {
   const moves = useSelector((s) => s.game.moves);
 
@@ -106,7 +111,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         entries.push({ side, label: `${m.from} ⇄ ${nxt.from}`, firstIndex: i, index: i + 1 });
         i++;
       } else {
-        entries.push({ side, label: m ? `${m.from} - ${m.to}` : '', firstIndex: i, index: i });
+        entries.push({ side, label: formatMoveLabel(m), firstIndex: i, index: i });
       }
     }
     const out = [];

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadDailyMinedPuzzle } from '../src/puzzle/minedPreview.js';
+import { loadDailyMinedPuzzle, loadMinedPreview } from '../src/puzzle/minedPreview.js';
 import minedData from '../src/puzzle/minedPreviewData.json';
 import {
   getMinedPuzzleResult,
@@ -33,15 +33,36 @@ describe('mined daily puzzle', () => {
     expect(a.start.pieces.find((piece) => piece.id === moverBefore.id)?.square).toBe(a.mistake.to);
   });
 
-  it('serves the scheduled chain on pinned dates, rotation elsewhere', async () => {
+  it('serves a playable scheduled chain or falls back without going empty', async () => {
     for (const [date, idx] of Object.entries(minedData.schedule)) {
       const puzzle = await loadDailyMinedPuzzle(date);
       expect(puzzle, date).not.toBeNull();
       const chain = minedData.chains[idx];
-      expect(puzzle.mistake).toMatchObject({ from: chain.mistake.from, to: chain.mistake.to });
+      const direct = await loadMinedPreview(idx);
+      if (direct && !chain.devOnly) {
+        expect(puzzle.mistake).toMatchObject({ from: chain.mistake.from, to: chain.mistake.to });
+      }
     }
     // A date outside the schedule still resolves via rotation.
     expect(await loadDailyMinedPuzzle('2027-01-01')).not.toBeNull();
+  });
+
+  it('never serves a devOnly chain as the daily — scheduled or rotated', async () => {
+    // Flag every chain but one devOnly (module instances are shared, so the
+    // loader sees the same objects); restore before anyone else looks.
+    const keepIdx = 0;
+    try {
+      minedData.chains.forEach((chain, idx) => { if (idx !== keepIdx) chain.devOnly = true; });
+      for (const date of [...Object.keys(minedData.schedule), '2027-01-01', '2027-01-02']) {
+        const puzzle = await loadDailyMinedPuzzle(date);
+        const keep = minedData.chains[keepIdx];
+        expect(puzzle.mistake, date).toMatchObject({ from: keep.mistake.from, to: keep.mistake.to });
+      }
+      minedData.chains[keepIdx].devOnly = true;
+      expect(await loadDailyMinedPuzzle('2027-01-01')).toBeNull();
+    } finally {
+      minedData.chains.forEach((chain) => { delete chain.devOnly; });
+    }
   });
 
   it('never opens with a first-grab solution (the gauge-top move must not capture the mistake piece)', () => {

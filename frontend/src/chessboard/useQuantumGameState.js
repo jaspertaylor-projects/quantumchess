@@ -174,7 +174,13 @@ export default function useQuantumGameState(resetKey = 0) {
     // instead of reconstructing it (single source for saved-game data).
     return {
       success: true,
-      records: [{ from: fromSquareAlg, to: toSquare, side: sideToMove, enPassant: Boolean(enPassant) }],
+      records: [{
+        from: fromSquareAlg,
+        to: toSquare,
+        side: sideToMove,
+        enPassant: Boolean(enPassant),
+        capture: outcome.didCapture,
+      }],
     };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, enPassantMovesForSide, halfmoveClock, leavesKingCapturable]);
 
