@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ModalShell from '../components/ModalShell.jsx';
 import IconButton from '../components/IconButton.jsx';
 import { X as XIcon, Sparkles as SparklesIcon, Check as CheckIcon, Coffee as CoffeeIcon, Play as PlayIcon } from 'lucide-react';
-import { PREMIUM_FEATURES, PREMIUM_PRICE_LABEL, TIP_PRICE_LABEL, startCheckout, startTipCheckout } from './billing.js';
+import {
+  PREMIUM_FEATURES,
+  PREMIUM_PRICE_LABEL,
+  PREMIUM_PRICE_VALUE,
+  TIP_PRICE_LABEL,
+  TIP_PRICE_VALUE,
+  startCheckout,
+  startTipCheckout,
+} from './billing.js';
+import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import './PricingModal.css';
 
 export default function PricingModal({
@@ -11,23 +20,59 @@ export default function PricingModal({
 }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null);
+  const upsellViewedRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      upsellViewedRef.current = false;
+      return;
+    }
+    if (!upsellViewedRef.current) {
+      trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_VIEWED, { source: 'post_signup_pricing' });
+      upsellViewedRef.current = true;
+    }
+  }, [open]);
 
   if (!open) return null;
 
   const handleUpgrade = async () => {
+    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
+      source: 'post_signup_pricing',
+      offer: 'subscription',
+    });
     setBusy(true);
     setNotice(null);
     const { url, error } = await startCheckout();
-    if (url) { window.location.assign(url); return; }
+    if (url) {
+      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
+        source: 'post_signup_pricing',
+        offer: 'subscription',
+        value: PREMIUM_PRICE_VALUE,
+      });
+      window.location.assign(url);
+      return;
+    }
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
   };
 
   const handleTip = async () => {
+    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
+      source: 'post_signup_pricing',
+      offer: 'tip',
+    });
     setBusy(true);
     setNotice(null);
     const { url, error } = await startTipCheckout();
-    if (url) { window.location.assign(url); return; }
+    if (url) {
+      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
+        source: 'post_signup_pricing',
+        offer: 'tip',
+        value: TIP_PRICE_VALUE,
+      });
+      window.location.assign(url);
+      return;
+    }
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
   };

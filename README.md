@@ -198,7 +198,8 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
   (active for the main game application; standalone static pages are
   intentionally untagged). Consent-Mode-aware: analytics cookies default to
   denied; the consent banner's choice flips both ad and analytics consent.
-  Custom events via `trackEvent()` (`game_end` wired).
+  Product events and GA4 dashboard setup are documented in
+  `frontend/src/analytics/README.md`.
 
 ### Error alerts + uptime monitoring
 
@@ -415,8 +416,8 @@ Legend: [ ] not started · [~] in progress · [X] done
     6. Deploy:
        `QC_CF_DISTRIBUTION_ID=E3G9M8CYMWWNUF ./deploy/deploy-frontend.sh`
     7. Verify: open quantumchess.ninja, accept the consent banner, then GA4
-       → Reports → Realtime should show 1 user within ~60s. Finish a bot
-       game and `game_end` appears under Realtime → Event count.
+       → Reports → Realtime should show 1 user within ~60s. Make a move and
+       `first_move` appears under Realtime → Event count.
   - [ ] ACTIVATE error alerts — click-by-click (~5 min):
     1. Have the `qc-ses-smtp` SMTP credentials ready (same user/pass pair
        destined for the Supabase SMTP paste; SMTP username looks like
@@ -746,12 +747,12 @@ Legend: [ ] not started · [~] in progress · [X] done
       PUZZLE_VERSION bump needed); puzzle-miner.mjs is a CLI driver over
       tools/miner/{config,gameplay,themes,swing}.mjs; ReviewModal splits
       into useGameEvalGraph/useReviewVariation/EvalTraceGraph.
-- [ ] **Promote analytics from scaffold to product dashboard**:
-      `frontend/src/analytics/analytics.js` has the GA4 shell, but the useful
-      future layer is named events for activation and retention: first move,
-      tutorial step completed, daily opened/solved/shared, bot game finished,
-      premium upsell viewed/clicked, account created, checkout started, and
-      review opened. These answer which product ideas actually move the odds.
+- [X] **Promote analytics from scaffold to product dashboard** — stable,
+      privacy-safe events now cover first move, tutorial begin/step/finish,
+      daily opened/solved/shared, bot game finished, premium upsell
+      viewed/clicked, account created, checkout started, and review opened.
+      The GA4 custom dimensions, key events, and four recommended Explore
+      funnels are documented in `frontend/src/analytics/README.md`.
 
 ### Art
 - [X] `anonymous.png` and `stranger.png` for the human players

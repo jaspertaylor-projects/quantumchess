@@ -6,7 +6,7 @@
 //   ./lessons.js, ./MiniBoard.jsx
 // Exported To: ../App.jsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
@@ -14,16 +14,24 @@ import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRigh
 import { LESSONS } from './lessons.js';
 import MiniBoard from './MiniBoard.jsx';
 import InteractiveExercise from './InteractiveExercise.jsx';
+import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 
 export default function TutorialModal({ open = false, onClose = () => {}, initialLessonId = null, onOpenRules = null, pieceSvgStyles = null }) {
   const [lessonIdx, setLessonIdx] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
+  const completedStepsRef = useRef(new Set());
+  const fullTutorialRunRef = useRef(false);
 
   useEffect(() => {
     if (open) {
       const idx = initialLessonId ? Math.max(0, LESSONS.findIndex((l) => l.id === initialLessonId)) : 0;
       setLessonIdx(idx);
       setStepIdx(0);
+      completedStepsRef.current = new Set();
+      fullTutorialRunRef.current = !initialLessonId;
+      trackProductEvent(PRODUCT_EVENT.TUTORIAL_BEGIN, {
+        entry: initialLessonId ? 'rulebook' : 'full',
+      });
     }
   }, [open, initialLessonId]);
 
@@ -35,12 +43,25 @@ export default function TutorialModal({ open = false, onClose = () => {}, initia
   const isLastStep = lessonIdx === LESSONS.length - 1 && stepIdx === lesson.steps.length - 1;
 
   const goNext = () => {
+    const stepKey = `${lesson.id}:${stepIdx}`;
+    if (!completedStepsRef.current.has(stepKey)) {
+      completedStepsRef.current.add(stepKey);
+      trackProductEvent(PRODUCT_EVENT.TUTORIAL_STEP_COMPLETE, {
+        lessonId: lesson.id,
+        lessonNumber: lessonIdx + 1,
+        stepNumber: stepIdx + 1,
+      });
+    }
     if (stepIdx < lesson.steps.length - 1) {
       setStepIdx(stepIdx + 1);
     } else if (lessonIdx < LESSONS.length - 1) {
       setLessonIdx(lessonIdx + 1);
       setStepIdx(0);
     } else {
+      const totalSteps = LESSONS.reduce((sum, item) => sum + item.steps.length, 0);
+      if (fullTutorialRunRef.current && completedStepsRef.current.size === totalSteps) {
+        trackProductEvent(PRODUCT_EVENT.TUTORIAL_COMPLETE);
+      }
       onClose();
     }
   };

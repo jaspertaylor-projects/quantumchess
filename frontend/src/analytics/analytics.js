@@ -64,7 +64,8 @@ export function setAnalyticsConsent(granted) {
   }
 }
 
-// Fire-and-forget custom event. Params must be flat key/value pairs.
+// Fire-and-forget event. Params must be GA4-compatible values; ecommerce
+// events may include GA4's documented `items` array.
 export function trackEvent(name, params = {}) {
   if (!MEASUREMENT_ID || !initialized) return;
   try {

@@ -10,6 +10,7 @@ import {
   minedPuzzleDay,
   recordMinedPuzzleResult,
 } from './minedPuzzleProgress.js';
+import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 
 export default function usePuzzleDeepLinks({ dismissOnboarding, setReviewGame }) {
   // The buttons wear a dot until today's mined puzzle has been completed.
@@ -25,7 +26,13 @@ export default function usePuzzleDeepLinks({ dismissOnboarding, setReviewGame })
     const date = minedPuzzleDay();
     const mod = await import('./minedPreview.js');
     const puzzle = await mod.loadDailyMinedPuzzle(date);
-    if (puzzle) setDailyPuzzle(puzzle);
+    if (puzzle) {
+      trackProductEvent(PRODUCT_EVENT.DAILY_OPENED, {
+        date,
+        moves: puzzle.recipe?.moves,
+      });
+      setDailyPuzzle(puzzle);
+    }
   }, [dismissOnboarding]);
 
   const handleClosePuzzle = useCallback(() => {
@@ -37,6 +44,13 @@ export default function usePuzzleDeepLinks({ dismissOnboarding, setReviewGame })
   const handlePuzzleComplete = useCallback((result = {}) => {
     if (!result.date) return;
     recordMinedPuzzleResult(result.date, result);
+    trackProductEvent(PRODUCT_EVENT.DAILY_SOLVED, {
+      date: result.date,
+      moves: result.moves,
+      score: result.score,
+      grade: result.grade,
+      outcome: result.totalCollapse ? 'collapsed' : 'completed',
+    });
     setPuzzleStateBump((n) => n + 1);
   }, []);
 

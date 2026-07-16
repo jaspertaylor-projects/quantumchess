@@ -47,6 +47,7 @@ import useEffectiveClock from './hooks/useEffectiveClock.js';
 import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
+import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
 
 export default function App() {
   // Increment this to reset the engine timeline (fresh game state)
@@ -213,10 +214,22 @@ export default function App() {
   }, [dispatch, intro]);
 
   const {
-    accountOpen, setAccountOpen, pricingOpen, setPricingOpen,
+    accountOpen, setAccountOpen, accountUpsellSource, pricingOpen, setPricingOpen,
     billingReturn, setBillingReturn, isPaidUser,
     handleRequirePremium, reviewGame, setReviewGame, handleReviewGame,
-  } = useMonetization({ auth, showWinPopup, onRequirePremiumExtra: closeMobileNewGame });
+  } = useMonetization({
+    auth,
+    showWinPopup,
+    onRequirePremiumExtra: closeMobileNewGame,
+    aiBot,
+    winner,
+    userTeam,
+    moves,
+    gameOverReason,
+    externalGameOver,
+    gameInstanceId,
+    isOnlineGame: isOnlineGameRef.current,
+  });
 
   const puzzleLinks = usePuzzleDeepLinks({ dismissOnboarding, setReviewGame });
 
@@ -288,6 +301,31 @@ export default function App() {
       setShowWinPopup(true);
     }
   }, [externalGameOver]);
+
+  // Activation milestone: the first move made by the human side in each
+  // game. This deliberately ignores an AI's opening move when the player
+  // chose Black, and ignores scripted/opponent moves.
+  const firstMoveTrackedGameRef = useRef(null);
+  useEffect(() => {
+    if (!Array.isArray(moves) || moves.length === 0) return;
+    if (firstMoveTrackedGameRef.current === gameInstanceId) return;
+    if (!moves.some((move) => move && move.side === userTeam)) return;
+    const isIntro = Boolean(intro.introChoreo);
+    const gameMode = isIntro
+      ? 'intro'
+      : isOnlineGameRef.current
+        ? 'online'
+        : aiBot
+          ? 'bot'
+          : 'local';
+    trackProductEvent(PRODUCT_EVENT.FIRST_MOVE, {
+      gameMode,
+      playerSide: userTeam,
+      botTier: aiBot ? aiBot.tier : undefined,
+      intro: isIntro,
+    });
+    firstMoveTrackedGameRef.current = gameInstanceId;
+  }, [moves, userTeam, gameInstanceId, aiBot, intro.introChoreo, isOnlineGameRef]);
 
   // Start the game implicitly if a first move has been recorded
   useEffect(() => {
@@ -861,6 +899,7 @@ export default function App() {
         online={online}
         auth={auth}
         accountOpen={accountOpen}
+        accountUpsellSource={accountUpsellSource}
         onCloseAccount={() => { setAccountOpen(false); setBillingReturn(null); }}
         billingReturn={billingReturn}
         handleReviewGame={handleReviewGame}

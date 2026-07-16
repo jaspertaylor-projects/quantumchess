@@ -31,6 +31,7 @@ import { capturedPieces } from '../chessboard/boardUtils.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { devDebug } from '../devlog.js';
 import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleScoring.js';
+import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
 // static eval alone rates "hangs the queen" as fine. One ply of lookahead
@@ -163,6 +164,15 @@ export default function MinedPuzzleModal({
   const [showThinkingBrain, setShowThinkingBrain] = useState(false);
   const [totalCollapse, setTotalCollapse] = useState(false);
   const [copied, setCopied] = useState(false);
+  const startingTableEvals = Object.values(puzzle?.evalTables?.[0]?.evals || {})
+    .filter(Number.isFinite);
+  const startingMaxEval = startingTableEvals.length
+    ? Math.max(...startingTableEvals)
+    : puzzle?.parEvals?.[0] ?? 0;
+  const finalScore = phase === 'done'
+    ? puzzleFinalScore(finalLanding, startingMaxEval)
+    : null;
+  const letterGrade = finalScore === null ? null : puzzleLetterGrade(finalScore);
   const aliveRef = useRef(0); // bumps on reset; async work checks it
   const collapseRef = useRef(false);
   const completionReportedRef = useRef(false);
@@ -281,8 +291,14 @@ export default function MinedPuzzleModal({
   useEffect(() => {
     if (phase !== 'done' || !puzzle?.isDaily || completionReportedRef.current) return;
     completionReportedRef.current = true;
-    onComplete({ date: puzzle.date, totalCollapse });
-  }, [phase, puzzle, totalCollapse, onComplete]);
+    onComplete({
+      date: puzzle.date,
+      totalCollapse,
+      moves: totalMoves,
+      score: finalScore,
+      grade: letterGrade,
+    });
+  }, [phase, puzzle, totalCollapse, totalMoves, finalScore, letterGrade, onComplete]);
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
 
@@ -797,15 +813,6 @@ export default function MinedPuzzleModal({
 
   if (!open || !puzzle) return null;
 
-  const startingTableEvals = Object.values(puzzle.evalTables?.[0]?.evals || {})
-    .filter(Number.isFinite);
-  const startingMaxEval = startingTableEvals.length
-    ? Math.max(...startingTableEvals)
-    : puzzle.parEvals[0];
-  const finalScore = phase === 'done'
-    ? puzzleFinalScore(finalLanding, startingMaxEval)
-    : null;
-  const letterGrade = finalScore === null ? null : puzzleLetterGrade(finalScore);
   const squaresText = Array.from({ length: totalMoves }, (_, i) => GRADE_EMOJI[grades[i] || 'x']).join('');
   const shareText = phase === 'done'
     ? [
@@ -817,6 +824,14 @@ export default function MinedPuzzleModal({
 
   const copyShare = () => {
     if (navigator.clipboard) navigator.clipboard.writeText(shareText).then(() => {
+      if (puzzle.isDaily) {
+        trackProductEvent(PRODUCT_EVENT.DAILY_SHARED, {
+          date: puzzle.date,
+          method: 'clipboard',
+          score: finalScore,
+          grade: letterGrade,
+        });
+      }
       setCopied(true);
       later(() => setCopied(false), 1500);
     });

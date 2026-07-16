@@ -13,18 +13,21 @@ import { X as XIcon, User as UserIcon, Sparkles as SparklesIcon } from 'lucide-r
 import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
 import {
-  PREMIUM_FEATURES, PREMIUM_PRICE_LABEL, PREMIUM_PITCH, TIP_PITCH, TIP_PRICE_LABEL,
+  PREMIUM_FEATURES, PREMIUM_PRICE_LABEL, PREMIUM_PRICE_VALUE, PREMIUM_PITCH,
+  TIP_PITCH, TIP_PRICE_LABEL, TIP_PRICE_VALUE,
   startCheckout, startTipCheckout, openBillingPortal, isAdFree, isTipper,
   tipReviewAvailable, markTipReviewUsed,
 } from './billing.js';
 import { uploadAvatar } from './avatarUpload.js';
 import { taglineOptions } from '../sayings/sayingsCatalog.js';
+import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import './AccountModal.css';
 
 export default function AccountModal({
   open = false,
   onClose = () => {},
   auth, // the useAuth() bundle from App
+  upsellSource = 'account',
   billingReturn = null, // 'success' | 'cancelled' | null (from ?premium= redirect)
   onReviewGame = () => {}, // premium: open the game review modal for a saved game
   onAccountCreated = () => {}, // triggered after successful sign up
@@ -39,8 +42,10 @@ export default function AccountModal({
   const [usernameDraft, setUsernameDraft] = useState('');
   const [taglineDraft, setTaglineDraft] = useState('');
   const avatarInputRef = useRef(null);
+  const upsellViewedRef = useRef(false);
 
   const { authEnabled, user, profile, refreshProfile, signIn, signUp, signOut, resetPassword, updatePassword, recoveryMode } = auth;
+  const isPaid = Boolean(profile && profile.tier === 'paid');
 
   useEffect(() => {
     if (open) {
@@ -69,6 +74,17 @@ export default function AccountModal({
       else setGames([]);
     }
   }, [open, user, profile, billingReturn]);
+
+  useEffect(() => {
+    if (!open) {
+      upsellViewedRef.current = false;
+      return;
+    }
+    if (user && !isPaid && !upsellViewedRef.current) {
+      trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_VIEWED, { source: upsellSource });
+      upsellViewedRef.current = true;
+    }
+  }, [open, user, isPaid, upsellSource]);
 
   if (!open) return null;
 
@@ -108,6 +124,7 @@ export default function AccountModal({
       if (needsConfirmation) {
         setNotice({ kind: 'info', text: 'Account created — check your email for the confirmation link, then sign in.' });
       }
+      trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
       onAccountCreated();
     }
   };
@@ -157,19 +174,43 @@ export default function AccountModal({
 
   // All three redirect away from the app on success; busy stays on until then.
   const handleUpgrade = async () => {
+    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
+      source: upsellSource,
+      offer: 'subscription',
+    });
     setBusy(true);
     setNotice(null);
     const { url, error } = await startCheckout();
-    if (url) { window.location.assign(url); return; }
+    if (url) {
+      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
+        source: upsellSource,
+        offer: 'subscription',
+        value: PREMIUM_PRICE_VALUE,
+      });
+      window.location.assign(url);
+      return;
+    }
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
   };
 
   const handleTip = async () => {
+    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
+      source: upsellSource,
+      offer: 'tip',
+    });
     setBusy(true);
     setNotice(null);
     const { url, error } = await startTipCheckout();
-    if (url) { window.location.assign(url); return; }
+    if (url) {
+      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
+        source: upsellSource,
+        offer: 'tip',
+        value: TIP_PRICE_VALUE,
+      });
+      window.location.assign(url);
+      return;
+    }
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
   };
@@ -182,8 +223,6 @@ export default function AccountModal({
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not open the billing portal.' });
   };
-
-  const isPaid = Boolean(profile && profile.tier === 'paid');
 
   // Taglines are picked from the character roster, never typed — the draft
   // must be one of the unlocked characters' taglines (or empty to clear).
@@ -547,7 +586,7 @@ export default function AccountModal({
                             if (opened !== false) markTipReviewUsed(user.id);
                             return;
                           }
-                          setNotice({ kind: 'info', text: 'Game review with engine moves is a Premium feature — upgrade above for unlimited, or tip $5 for one review a day.' });
+                          setNotice({ kind: 'info', text: 'Game review with engine moves is a Premium feature — upgrade above for unlimited, or tip $3 for one review a day.' });
                         }}
                       >
                         Review

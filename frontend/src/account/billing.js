@@ -8,6 +8,8 @@ import { supabase } from './supabaseClient.js';
 
 export const PREMIUM_PRICE_LABEL = '$3/month';
 export const TIP_PRICE_LABEL = '$3';
+export const PREMIUM_PRICE_VALUE = 3;
+export const TIP_PRICE_VALUE = 3;
 
 // The pitch leads with the human: supporters pay because of the first
 // sentence, feature-shoppers pay because of the list under it — and the
@@ -89,7 +91,7 @@ export function startCheckout() {
   return invokeForUrl('stripe-checkout');
 }
 
-// One-time $5 tip -> a year of no ads (stacks if tipped again).
+// One-time $3 tip -> a year of no ads (stacks if tipped again).
 export function startTipCheckout() {
   return invokeForUrl('stripe-checkout', { kind: 'tip' });
 }

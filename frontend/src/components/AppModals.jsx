@@ -35,7 +35,7 @@ export default function AppModals({
   // friend wait
   online,
   // account/pricing/review
-  auth, accountOpen, onCloseAccount, billingReturn, handleReviewGame, onAccountCreated,
+  auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn, handleReviewGame, onAccountCreated,
   pricingOpen, onClosePricing,
   reviewGame, onCloseReview,
   // mined-puzzle dev preview (?mined=N)
@@ -107,6 +107,7 @@ export default function AppModals({
         open={accountOpen}
         onClose={onCloseAccount}
         auth={auth}
+        upsellSource={accountUpsellSource}
         billingReturn={billingReturn}
         onReviewGame={handleReviewGame}
         onAccountCreated={onAccountCreated}
