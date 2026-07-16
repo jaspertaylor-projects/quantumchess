@@ -195,9 +195,10 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
 
 - Logic: `frontend/src/analytics/analytics.js` — dormant until
   `VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX` is set in `frontend/.env.production`
-  (create the property at analytics.google.com, ~5 min). Consent-Mode-aware:
-  analytics cookies default to denied; the consent banner's choice flips both
-  ad and analytics consent. Custom events via `trackEvent()` (game_end wired).
+  (active for the main game application; standalone static pages are
+  intentionally untagged). Consent-Mode-aware: analytics cookies default to
+  denied; the consent banner's choice flips both ad and analytics consent.
+  Custom events via `trackEvent()` (`game_end` wired).
 
 ### Error alerts + uptime monitoring
 
@@ -401,7 +402,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       emails on failure. Live as soon as the workflows are pushed.
 - [X] GA4 analytics scaffold, consent-mode aware (`src/analytics/`), and
       SES error-alert emails from the backend (throttled) — code done.
-  - [ ] ACTIVATE analytics — click-by-click (~5 min):
+  - [X] ACTIVATE analytics — production Measurement ID configured 2026-07-16:
     1. Go to https://analytics.google.com → sign in with the same Google
        account as AdSense → Admin (gear, bottom-left) → **Create → Property**.
     2. Property name `Quantum Chess`, your timezone, currency USD → Next →
