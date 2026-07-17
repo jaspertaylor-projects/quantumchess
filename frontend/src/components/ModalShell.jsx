@@ -11,7 +11,7 @@
 //   ../account/AccountModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
 //   ../puzzle/MinedPuzzleModal.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import theme from '../theme.js';
 
 export default function ModalShell({
@@ -29,6 +29,12 @@ export default function ModalShell({
   children,
 }) {
   const escapeCloses = escapeToClose === null ? closeOnBackdrop : escapeToClose;
+
+  // A backdrop "click" must have STARTED on the backdrop too: drag-selecting
+  // text in an input and releasing over the scrim fires a click whose target
+  // is the backdrop (the common ancestor), which used to close the modal
+  // mid-selection.
+  const pressStartedOnBackdrop = useRef(false);
 
   useEffect(() => {
     if (!open || !escapeCloses || !onClose) return undefined;
@@ -53,7 +59,10 @@ export default function ModalShell({
     <div
       className={backdropClassName || undefined}
       style={backdropStyle}
-      onClick={closeOnBackdrop && onClose ? onClose : undefined}
+      onPointerDown={(e) => { pressStartedOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={closeOnBackdrop && onClose
+        ? (e) => { if (e.target === e.currentTarget && pressStartedOnBackdrop.current) onClose(); }
+        : undefined}
       aria-hidden={open ? undefined : true}
     >
       <div

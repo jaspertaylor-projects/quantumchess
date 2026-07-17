@@ -70,7 +70,7 @@ export default function AccountModal({
       setBusy(false);
       setUsernameDraft(profile && profile.username ? profile.username : '');
       setTaglineDraft(profile && profile.tagline ? profile.tagline : '');
-      if (user) fetchMyGames(user).then(setGames);
+      if (user && !auth.isDevPreview) fetchMyGames(user).then(setGames);
       else setGames([]);
     }
   }, [open, user, profile, billingReturn]);
@@ -85,6 +85,13 @@ export default function AccountModal({
       upsellViewedRef.current = true;
     }
   }, [open, user, isPaid, upsellSource]);
+
+  const blockDevPreviewAction = () => {
+    if (!import.meta.env.DEV || !auth.isDevPreview) return false;
+    setBusy(false);
+    setNotice({ kind: 'info', text: 'Dev account preview is visual only — no profile or billing changes were sent.' });
+    return true;
+  };
 
   if (!open) return null;
 
@@ -156,6 +163,7 @@ export default function AccountModal({
   };
 
   const handleSaveUsername = async () => {
+    if (blockDevPreviewAction()) return;
     if (!supabase || !user) return;
     const name = usernameDraft.trim().slice(0, 24);
     if (!name) return;
@@ -174,6 +182,7 @@ export default function AccountModal({
 
   // All three redirect away from the app on success; busy stays on until then.
   const handleUpgrade = async () => {
+    if (blockDevPreviewAction()) return;
     trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
       source: upsellSource,
       offer: 'subscription',
@@ -195,6 +204,7 @@ export default function AccountModal({
   };
 
   const handleTip = async () => {
+    if (blockDevPreviewAction()) return;
     trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
       source: upsellSource,
       offer: 'tip',
@@ -216,6 +226,7 @@ export default function AccountModal({
   };
 
   const handleManageSubscription = async () => {
+    if (blockDevPreviewAction()) return;
     setBusy(true);
     setNotice(null);
     const { url, error } = await openBillingPortal();
@@ -227,6 +238,7 @@ export default function AccountModal({
   // Taglines are picked from the character roster, never typed — the draft
   // must be one of the unlocked characters' taglines (or empty to clear).
   const handleSaveTagline = async () => {
+    if (blockDevPreviewAction()) return;
     if (!supabase || !user) return;
     const options = taglineOptions({ isPaid });
     const tagline = options.some((o) => o.tagline === taglineDraft) ? taglineDraft : '';
@@ -243,6 +255,7 @@ export default function AccountModal({
   const handleAvatarFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = ''; // allow re-picking the same file
+    if (blockDevPreviewAction()) return;
     if (!file || !user) return;
     setBusy(true);
     setNotice(null);
@@ -346,10 +359,15 @@ export default function AccountModal({
                 </p>
                 <div>
                   <div className="qc-am-label">Username (shown when you play)</div>
+                  {/* Display name, not a credential: without the explicit
+                      nickname autocomplete the browser autofills the SAVED
+                      login here when making a second account (it sits above
+                      email+password, so password managers guess "username"). */}
                   <input
                     className="qc-account-signup-username qc-am-input" value={signupUsername}
                     onChange={(e) => setSignupUsername(e.target.value)} maxLength={20}
                     placeholder="e.g. WaveFunctionWrecker"
+                    name="qc-display-name" autoComplete="nickname"
                   />
                 </div>
                 <div>
@@ -474,7 +492,10 @@ export default function AccountModal({
                       />
                       <button
                         type="button" className="qc-account-avatar-upload qc-am-ghost-btn" disabled={busy}
-                        onClick={() => avatarInputRef.current && avatarInputRef.current.click()}
+                        onClick={() => {
+                          if (blockDevPreviewAction()) return;
+                          if (avatarInputRef.current) avatarInputRef.current.click();
+                        }}
                       >
                         {busy ? 'Working…' : 'Upload profile pic'}
                       </button>
