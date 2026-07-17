@@ -322,6 +322,7 @@ export const LESSONS = [
         text: [
           'There is no check for a superposed king — a maybe-King is just a possibility, and possibilities cannot be threatened, only zapped away.',
           'Zap may remove King while another maybe-King remains, but it can never erase the final royal possibility. If a volley would do that, it zaps the next most valuable possibility on every affected piece instead.',
+          'If King Guard leaves a contacted piece with nothing it can lose, the shield animation plays so the blocked Zap never looks like it vanished.',
         ],
         physics: "Royal amplitude can move and recover, but the contact operator preserves at least one royal branch. Only a revealed King can be checkmated.",
       },
@@ -382,7 +383,7 @@ export const LESSONS = [
       {
         title: 'Census-locked',
         text: [
-          'Sometimes a zap finds NOTHING it can remove cleanly — every possibility the target holds is load-bearing, and removing any of them would force other pieces to change. The zap fizzles against a shield.',
+          'Whenever a zap finds NOTHING it can remove — whether the target is fully known, census-locked, or protected by King Guard — it fizzles against a shield.',
           'A gold ring marks the shield. These pieces are locked into a closed group: N pieces sharing exactly N identities. Break the group — capture one, or force a collapse — and the shield drops.',
         ],
         physics: "A maximally-entangled closed subgroup admits no local projection: removing any amplitude from one member forces a global rearrangement. The guarded zap refuses non-local action and dissipates instead.",

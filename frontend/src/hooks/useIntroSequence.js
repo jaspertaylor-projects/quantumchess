@@ -1,5 +1,5 @@
 // frontend/src/hooks/useIntroSequence.js
-// Purpose: The first-visit intro — a live board with a glowing first move,
+// Purpose: The welcome-page intro — a live board with a glowing first move,
 // a quietly-seated easy bot whose opening is scripted (INTRO_SCRIPT) and
 // narrated (INTRO_DIALOGUE), plus choreographed White moves (INTRO_GUIDE)
 // with off-script nudges. Extracted from App.jsx.
@@ -19,6 +19,7 @@ export { INTRO_GUIDE, INTRO_SCRIPT } from './introSequenceData.js';
 const INTRO_BOT_ID = 'isaac-steinitz';
 
 export default function useIntroSequence({
+  introRequested = false,
   auth,
   dispatch,
   gameStarted,
@@ -35,17 +36,11 @@ export default function useIntroSequence({
   aiDifficultyRef,
   setAiBot,
 }) {
-  // Never-visited first minute: the board is live immediately — no Start Game
-  // wall. A white pawn glows until it is picked up, and the first interaction
-  // quietly seats an easy bot as Black whose opening is scripted and
-  // narrated. Anonymous visitors only — a restored sign-in switches back to
-  // the normal home. Consumed once any game starts.
-  // Storage-blocked browsers (private windows with cookies/site-data blocked —
-  // localStorage ACCESS throws there) can never remember a visit, so every
-  // session is a first visit: show the intro rather than silently skipping it.
-  const [introFreePlay, setIntroFreePlay] = useState(() => {
-    try { return !localStorage.getItem('qcOnboardSeen'); } catch (_) { return true; }
-  });
+  // The welcome page explicitly selects this live lesson. The board is
+  // immediately playable, a white move glows, and the quietly seated easy bot
+  // follows the scripted Black replies. Normal /play visits no longer inherit
+  // an automatic tutorial from storage state.
+  const [introFreePlay, setIntroFreePlay] = useState(() => Boolean(introRequested));
   // Which intro dialogue card is showing (null = none).
   const [introStage, setIntroStage] = useState(() => (introFreePlay ? 'welcome' : null));
   // While true, Black's replies come from INTRO_SCRIPT and useLocalAi stays
@@ -58,9 +53,7 @@ export default function useIntroSequence({
   // The whole choreography (guided White moves included) lives under this
   // flag; unlike introFreePlay it survives the game starting, and dies on an
   // explicit new game, a restored sign-in, or a derailed script.
-  const [introChoreo, setIntroChoreo] = useState(() => {
-    try { return !localStorage.getItem('qcOnboardSeen'); } catch (_) { return true; }
-  });
+  const [introChoreo, setIntroChoreo] = useState(() => Boolean(introRequested));
   // Guided White moves already played (INTRO_GUIDE index).
   const [introGuideStep, setIntroGuideStep] = useState(0);
   // The final scripted Black move has landed. Keep both the real bot and the
@@ -199,14 +192,14 @@ export default function useIntroSequence({
     }
   }, [introFreePlay, gameStarted, dismissOnboarding]);
 
-  // The intro is for anonymous first-timers only: a signed-in session that
-  // restores before any game starts gets the normal home instead.
+  // Legacy automatic intros were for anonymous first-timers. An explicit
+  // welcome-page request should still be honored if auth restores mid-load.
   useEffect(() => {
-    if (auth.user && !gameStarted) {
+    if (auth.user && !gameStarted && !introRequested) {
       setIntroFreePlay(false);
       retireIntro();
     }
-  }, [auth.user, gameStarted, retireIntro]);
+  }, [auth.user, gameStarted, introRequested, retireIntro]);
 
   // The choreographed White move currently on offer, or null. Turn order is
   // the lockstep: Black's scripted replies hold sideToMove until they land,

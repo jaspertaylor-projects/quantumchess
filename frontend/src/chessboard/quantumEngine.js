@@ -272,15 +272,18 @@ function shedIsLocal(before, after, targetId, shedType) {
 // type leaving that single piece — a shed whose census cascade would strip
 // possibilities from ANY other piece (or narrow the target further) is
 // skipped and the zap walks down to the next type; if nothing sheds cleanly
-// the zap dissipates (no mark). A volley may never erase a side's final King
-// possibility: every King shed that would collectively do so falls through
-// to Queen, then Rook, Bishop, Knight, and Pawn. A fully measured piece (one
-// possibility) has nothing left to shed. Every friendly piece in contact is
+// the zap dissipates against a shield. A volley may never erase a side's
+// final King possibility: every King shed that would collectively do so
+// falls through to Queen, then Rook, Bishop, Knight, and Pawn. A fully
+// measured piece (one possibility) has nothing left to shed, so it shields.
+// Every friendly piece in contact is
 // HEALED: it regains its least valuable feasible possibility, including King
 // as the final option (Pawn never returns to promoted pieces or on the
 // promotion rank; conservation must accept the regain).
 // Deterministic: contacts resolve in algebraic square order, zaps before
-// heals. Returns { pieces, zappedSquares, healedSquares }.
+// heals. Every contacted enemy appears in exactly one feedback list:
+// zappedSquares when it shed a possibility, fizzledSquares when it did not.
+// Returns { pieces, zappedSquares, healedSquares, fizzledSquares }.
 export function applyContactZapHeal(pieces, moverSide, moverIds) {
   let current = pieces;
   const moverSet = new Set(moverIds);
@@ -337,7 +340,6 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
       }
     }
     if (found) candidates.push(found);
-    else fizzledSquares.push(live.square);
   }
 
   const targetSide = otherSide(moverSide);
@@ -369,7 +371,6 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
       if (fallback) candidates[i] = fallback;
       else {
         candidates.splice(i, 1);
-        fizzledSquares.push(candidate.square);
       }
     }
   }
@@ -401,8 +402,19 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     if (jointClean) {
       current = constrained;
       for (const c of candidates) zappedSquares.push(c.square);
-    } else {
-      for (const c of candidates) fizzledSquares.push(c.square);
+    }
+  }
+
+  // Feedback invariant: contact must never read as a missing animation. If
+  // an enemy was in Zap's reach but did not actually shed a possibility — a
+  // fully measured piece, a census-locked target, a failed volley, or the
+  // final-King safeguard with no lower identity available — show its shield.
+  // Deriving this as the complement of successful zaps makes future guards
+  // inherit the behavior automatically.
+  const zappedSet = new Set(zappedSquares);
+  for (const target of contacts) {
+    if (target.side !== moverSide && !zappedSet.has(target.square)) {
+      fizzledSquares.push(target.square);
     }
   }
 

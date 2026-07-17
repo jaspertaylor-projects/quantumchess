@@ -73,6 +73,44 @@ describe('royal safeguard', () => {
     expect(fastPieces.filter((p) => p.side === 'black').map((p) => p.possibleTypes)).toEqual([['r', 'k'], ['r', 'k'], ['r', 'k']]);
   });
 
+  it('shows a shield when King Guard leaves a contacted final King unchanged', () => {
+    const pieces = [
+      piece('WN', 'white', 'f3', ['n']),
+      piece('BK', 'black', 'e5', ['k']),
+    ];
+
+    const { reference, fastPieces } = resolveBoth(pieces, 'white', 'WN');
+    expect(reference.zappedSquares).toEqual([]);
+    expect(reference.fizzledSquares).toEqual(['e5']);
+    expect(reference.pieces.find((p) => p.id === 'BK').possibleTypes).toEqual(['k']);
+    expect(fastPieces.find((p) => p.id === 'BK').possibleTypes).toEqual(['k']);
+  });
+
+  it('shows a shield for any contacted measured piece that cannot shed', () => {
+    const pieces = [
+      piece('WN', 'white', 'f3', ['n']),
+      piece('BR', 'black', 'e5', ['r']),
+    ];
+
+    const { reference } = resolveBoth(pieces, 'white', 'WN');
+    expect(reference.zappedSquares).toEqual([]);
+    expect(reference.fizzledSquares).toEqual(['e5']);
+    expect(reference.pieces.find((p) => p.id === 'BR').possibleTypes).toEqual(['r']);
+  });
+
+  it('gives every enemy contact exactly one zap-or-shield result', () => {
+    const pieces = [
+      piece('WN', 'white', 'd4', ['n']),
+      piece('BA', 'black', 'b3', ['q', 'k']),
+      piece('BR', 'black', 'f3', ['r']),
+    ];
+
+    const { reference } = resolveBoth(pieces, 'white', 'WN');
+    expect(reference.zappedSquares).toEqual(['b3']);
+    expect(reference.fizzledSquares).toEqual(['f3']);
+    expect(reference.zappedSquares).not.toContain(reference.fizzledSquares[0]);
+  });
+
   it('heals a missing King back and allows conservation to reveal it', () => {
     const pieces = [
       piece('WP', 'white', 'e4', ['p']),
