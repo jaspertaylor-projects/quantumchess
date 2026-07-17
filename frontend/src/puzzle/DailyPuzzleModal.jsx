@@ -299,6 +299,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
               files={8}
               ranks={8}
               cell={Math.max(30, Math.min(52, Math.floor((Math.min(window.innerWidth * 0.94, 560) - 66) / 8)))}
+              showCoordinates={false}
               pieces={boardPieces}
               arrows={[
                 ...threats.map((t) => ({ from: t.from, to: t.to, side: t.side })),

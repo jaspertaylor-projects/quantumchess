@@ -98,6 +98,7 @@ export function buildMinedPuzzle(chain, idx, options = {}) {
   return {
     date: options.date || `#${idx}`,
     isDaily: Boolean(options.isDaily),
+    number: options.number ?? null, // daily # since launch; null for previews
     recipe: {
       key: 'mined-par',
       title: minedTitle(chain),
@@ -166,8 +167,19 @@ export async function loadDailyMinedPuzzle(date) {
     if (!candidates.includes(idx)) candidates.push(idx);
   }
   for (const idx of candidates) {
-    const puzzle = buildMinedPuzzle(data.chains[idx], idx, { date, isDaily: true });
+    const puzzle = buildMinedPuzzle(data.chains[idx], idx, {
+      date, isDaily: true, number: dailyPuzzleNumber(date),
+    });
     if (puzzle) return puzzle;
   }
   return null;
+}
+
+// Daily #1 was the mined daily's launch day (2026-07-14). Wordle-style: the
+// number identifies the day, not the chain, so it survives re-pins.
+const MINED_DAILY_EPOCH_DAY = Math.floor(new Date('2026-07-14T00:00:00').getTime() / 86400000);
+export function dailyPuzzleNumber(date) {
+  const t = new Date(`${date}T00:00:00`).getTime();
+  if (!Number.isFinite(t)) return null;
+  return Math.floor(t / 86400000) - MINED_DAILY_EPOCH_DAY + 1;
 }

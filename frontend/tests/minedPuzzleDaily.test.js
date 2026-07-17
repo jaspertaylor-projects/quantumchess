@@ -47,6 +47,13 @@ describe('mined daily puzzle', () => {
     expect(await loadDailyMinedPuzzle('2027-01-01')).not.toBeNull();
   });
 
+  it('numbers dailies from the 2026-07-14 launch', async () => {
+    const puzzle = await loadDailyMinedPuzzle('2026-07-16');
+    expect(puzzle.number).toBe(3);
+    const preview = await loadMinedPreview(0);
+    expect(preview.number).toBeNull();
+  });
+
   it('never serves a devOnly chain as the daily — scheduled or rotated', async () => {
     // Flag every chain but one devOnly (module instances are shared, so the
     // loader sees the same objects); restore before anyone else looks.

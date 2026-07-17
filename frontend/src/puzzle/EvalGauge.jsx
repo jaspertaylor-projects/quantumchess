@@ -126,19 +126,6 @@ export default function EvalGauge({
           </g>
         );
       })}
-      {/* Unit plate above the apex — the dial's make and model. */}
-      <text
-        x={cx}
-        y={cy - R - 20}
-        fontSize="8.5"
-        fontWeight="800"
-        letterSpacing="0.22em"
-        textAnchor="middle"
-        fill="rgba(255,255,255,0.42)"
-      >
-        ADVANTAGE · PAWNS
-      </text>
-
       {/* A faint neon-red line at every legal move's evaluation. */}
       {ticks.map((t, i) => {
         const d = angleFor(t, range);

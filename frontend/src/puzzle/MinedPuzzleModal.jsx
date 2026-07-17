@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, Pickaxe, Copy as CopyIcon } from 'lucide-react';
+import { X as XIcon, Pickaxe, Copy as CopyIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import EvalGauge from './EvalGauge.jsx';
@@ -28,6 +28,7 @@ import {
 } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { capturedPieces } from '../chessboard/boardUtils.js';
+import { puzzleQuoteForDate } from './puzzleQuotes.js';
 import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { devDebug } from '../devlog.js';
 import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleScoring.js';
@@ -164,6 +165,17 @@ export default function MinedPuzzleModal({
   const [showThinkingBrain, setShowThinkingBrain] = useState(false);
   const [totalCollapse, setTotalCollapse] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Review scrub: every position the puzzle has actually shown, in order
+  // (intro, mistake, each player move, each reply). viewBack counts steps
+  // back from the latest; > 0 renders a read-only past position. The gauge
+  // and grades never react to scrubbing, and the future is never visible —
+  // this exists purely to answer "wait, what did they just do?".
+  const [history, setHistory] = useState([]);
+  const [viewBack, setViewBack] = useState(0);
+  const pushSnapshot = (pieces, trail) => {
+    setHistory((h) => [...h, { pieces, trail }]);
+    setViewBack(0); // a new beat always snaps the view to live
+  };
   const startingTableEvals = Object.values(puzzle?.evalTables?.[0]?.evals || {})
     .filter(Number.isFinite);
   const startingMaxEval = startingTableEvals.length
@@ -203,7 +215,7 @@ export default function MinedPuzzleModal({
     later, clearTimers,
   } = usePuzzleBoard({
     ply: cur,
-    playing: phase === 'playing',
+    playing: phase === 'playing' && viewBack === 0,
     onMove: (from, to) => attemptMove(from, to),
   });
 
@@ -228,6 +240,11 @@ export default function MinedPuzzleModal({
     setShowThinkingBrain(false);
     setTotalCollapse(false);
     setCopied(false);
+    const mistakeTrail = puzzle.mistake ? { from: puzzle.mistake.from, to: puzzle.mistake.to } : null;
+    setHistory(hasIntro
+      ? [{ pieces: puzzle.intro.pieces, trail: null }, { pieces: puzzle.start.pieces, trail: mistakeTrail }]
+      : [{ pieces: puzzle.start.pieces, trail: mistakeTrail }]);
+    setViewBack(0);
     collapseRef.current = false;
     completionReportedRef.current = false;
     moveMadeRef.current = null;
@@ -301,6 +318,22 @@ export default function MinedPuzzleModal({
   }, [phase, puzzle, totalCollapse, totalMoves, finalScore, letterGrade, onComplete]);
 
   const keyOf = (m) => `${m.from}>${m.to}${m.enPassant ? 'ep' : ''}`;
+
+  // Desktop scrubbing: arrow keys step through the already-played positions.
+  const historyLenRef = useRef(0);
+  historyLenRef.current = history.length;
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (phase === 'intro-before' || phase === 'intro-move') return;
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') setViewBack((v) => Math.min(v + 1, Math.max(0, historyLenRef.current - 1)));
+      else setViewBack((v) => Math.max(0, v - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, phase]);
 
   // Mined chains ship precomputed gauge tables (tools/miner/swing.mjs
   // buildEvalTable — SAME depth/widths ruler as the worker request below),
@@ -725,6 +758,7 @@ export default function MinedPuzzleModal({
     // The move plays IMMEDIATELY — board shows the resolved result with its
     // zap/heal/shield effects, exactly like live play. No rewinding.
     setDisplay(move.after);
+    pushSnapshot(move.after, { from: fromSq, to: toSq });
     setEffects(effectsOfMove(move));
     bumpFx(move.to);
     setNeedleValue(landed !== null ? Number(landed.toFixed(2)) : null);
@@ -791,6 +825,7 @@ export default function MinedPuzzleModal({
         later(() => {
           if (aliveRef.current !== token) return;
           setDisplay(afterPieces);
+          pushSnapshot(afterPieces, { from: reply.from, to: reply.to });
           setEffects(replyEffects);
           bumpFx(reply.to);
           setReplyArrow({ from: reply.from, to: reply.to });
@@ -813,10 +848,36 @@ export default function MinedPuzzleModal({
 
   if (!open || !puzzle) return null;
 
+  // Null on dev previews (their `date` is '#N', not a calendar day).
+  const dailyQuote = puzzleQuoteForDate(puzzle.date);
+
+  // Scrub view: a read-only past position, never ahead of the live one.
+  // While active, the board swaps to the snapshot (no effects, no arrows,
+  // no input) and only the snapshot's from/to trail is highlighted.
+  const scrubMax = Math.max(0, history.length - 1);
+  const scrubActive = viewBack > 0 && history.length > 1;
+  const viewSnap = scrubActive ? history[history.length - 1 - viewBack] : null;
+  const scrubBack = () => setViewBack((v) => Math.min(v + 1, scrubMax));
+  const scrubForward = () => setViewBack((v) => Math.max(0, v - 1));
+  const snapBoardPieces = viewSnap ? viewSnap.pieces
+    .filter((p) => !p.captured && p.square)
+    .map((p) => ({
+      sq: p.square, side: p.side, types: p.possibleTypes.join(''),
+      pips: p.coherence, regain: Math.max(0, p.recohere || 0),
+      chevrons: Boolean(p.wasPromoted), sealed: false,
+      mark: false, zap: false, heal: false, shield: false,
+    })) : null;
+  const scrubHighlights = viewSnap && viewSnap.trail ? [
+    { sq: viewSnap.trail.from, color: 'rgba(79, 195, 247, 0.42)' },
+    { sq: viewSnap.trail.to, color: 'rgba(246, 196, 69, 0.5)' },
+  ] : [];
+  const scrubVisible = history.length > 1 && phase !== 'intro-before' && phase !== 'intro-move';
+
   const squaresText = Array.from({ length: totalMoves }, (_, i) => GRADE_EMOJI[grades[i] || 'x']).join('');
   const shareText = phase === 'done'
     ? [
-      `⚛️ Quantum Chess · mined ${puzzle.date}`,
+      ...(dailyQuote ? [`“${dailyQuote.q}” — ${dailyQuote.by}`, ''] : []),
+      `⚛️ Quantum Chess · ${puzzle.isDaily && puzzle.number ? `Daily #${puzzle.number}` : `mined ${puzzle.date}`}`,
       `${squaresText} ${finalScore}/100 · Grade ${letterGrade}`,
       ...(totalCollapse ? ['Complete and total collapse 💀'] : []),
     ].join('\n')
@@ -838,16 +899,27 @@ export default function MinedPuzzleModal({
   };
 
   // Fit width AND height: bars + gauge + chrome need ~470px of the card.
+  // Coordinates are hidden here, so every available pixel belongs to one of
+  // the eight files and the player bars can share the exact board width.
   const cell = Math.max(30, Math.min(
     52,
-    Math.floor((Math.min(window.innerWidth * 0.94, 560) - 66) / 8),
+    Math.floor((Math.min(window.innerWidth * 0.96, 600) - 32) / 8),
     Math.floor((window.innerHeight * 0.94 - 455) / 8)
   ));
+  const puzzleWidth = cell * 8;
+  // The gauge shares its row with two tall, skinny scrub arrows (meter
+  // height); on narrow screens it cedes the width they need instead of
+  // overflowing the card.
+  const gaugeWidth = Math.min(290, cell * 8 - 76);
+  // EvalGauge's own height formula: H = cy + 26 = (W/2 - 18 + 28) + 26.
+  const gaugeHeight = Math.round(gaugeWidth / 2 + 36);
   const styles = {
     card: {
       background: theme.cardBackground, border: `1px solid ${theme.border}`,
       borderRadius: 14, boxShadow: `0 18px 50px ${theme.shadow}`,
-      padding: '14px 16px 16px', width: 'min(96vw, 600px)',
+      // fit-content: the popup hugs the board, so board + player bars span
+      // its full width on every screen instead of floating in a 600px card.
+      padding: '14px 16px 16px', width: 'fit-content', maxWidth: '96vw',
       maxHeight: '94vh', overflowY: 'auto', boxSizing: 'border-box',
     },
     headRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
@@ -855,7 +927,10 @@ export default function MinedPuzzleModal({
       fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
       color: theme.textSecondary, display: 'flex', alignItems: 'center', gap: 6,
     },
-    boardWrap: { display: 'flex', justifyContent: 'center', margin: '4px 0', position: 'relative' },
+    boardWrap: {
+      display: 'flex', justifyContent: 'center', width: puzzleWidth,
+      maxWidth: '100%', margin: '4px auto', position: 'relative',
+    },
     // The result floats OVER the board (the done-state card was too tall
     // with banner + share stacked underneath).
     doneOverlay: {
@@ -869,14 +944,31 @@ export default function MinedPuzzleModal({
       borderRadius: 12, padding: '10px 12px', boxShadow: '0 12px 34px rgba(0,0,0,0.55)',
       backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
     },
-    barWrap: { margin: '4px 0', position: 'relative' },
+    barWrap: {
+      width: puzzleWidth, maxWidth: '100%', margin: '4px auto', position: 'relative',
+    },
     share: (kind) => ({
       margin: '10px auto 0', maxWidth: 340, background: 'rgba(255,255,255,0.05)',
       border: `1px solid ${kind === 'good' ? 'rgba(126,231,135,0.7)' : kind === 'mid' ? 'rgba(255,209,102,0.7)' : 'rgba(255,107,107,0.7)'}`,
       borderRadius: 10, padding: '10px 12px',
-      fontSize: 13, whiteSpace: 'pre', textAlign: 'center', fontVariantNumeric: 'tabular-nums',
+      // pre-wrap, not pre: the share text now leads with the quote of the
+      // day, which needs to wrap inside the card.
+      fontSize: 13, whiteSpace: 'pre-wrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums',
       position: 'relative', color: '#e8e6e1',
     }),
+    // Gauge row: the scrub arrows sit at the dial's sides (space always
+    // reserved; visibility toggles with relevance).
+    gaugeRow: {
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: 4, marginTop: 2,
+    },
+    // The chess×physics quote of the day (puzzleQuotes.js), under the header.
+    quote: {
+      margin: '2px 0 4px', padding: '0 6px', textAlign: 'center',
+      fontSize: 12, lineHeight: 1.45, color: 'rgba(210, 220, 238, 0.85)',
+      display: 'flex', flexDirection: 'column', gap: 2,
+    },
+    quoteBy: { fontSize: 11, color: 'rgba(157, 180, 255, 0.8)', fontWeight: 700 },
   };
 
   // Computer moves read like live play: a from/to trail of highlighted
@@ -920,7 +1012,7 @@ export default function MinedPuzzleModal({
     >
         <div style={styles.headRow}>
           <div style={styles.kicker}>
-            <Pickaxe size={13} /> {puzzle.isDaily ? 'Daily puzzle' : 'Mined puzzle'} · {totalMoves} moves
+            <Pickaxe size={13} /> {puzzle.isDaily ? `Daily puzzle${puzzle.number ? ` #${puzzle.number}` : ''}` : 'Mined puzzle'} · {totalMoves} moves
             {phase === 'intro-before' ? ' · one move earlier…'
                 : phase === 'intro-move' ? ' · Black makes the mistake…'
                   : phase === 'thinking' ? ' · the Stranger is thinking…'
@@ -929,6 +1021,13 @@ export default function MinedPuzzleModal({
           </div>
           <IconButton icon={XIcon} label="Close mined puzzle" onClick={onClose} />
         </div>
+
+        {dailyQuote ? (
+          <div style={styles.quote}>
+            <span style={{ fontStyle: 'italic' }}>&ldquo;{dailyQuote.q}&rdquo;</span>
+            <span style={styles.quoteBy}>&mdash; {dailyQuote.by}</span>
+          </div>
+        ) : null}
 
         <div style={styles.barWrap}>
           <PlayerBar
@@ -948,8 +1047,8 @@ export default function MinedPuzzleModal({
         <div style={styles.boardWrap}>
           {showThinkingBrain ? (
             <div style={{
-              position: 'absolute', top: 0, left: 'calc(50% + 8px)',
-              width: cell * 8, height: cell * 8, transform: 'translateX(-50%)',
+              position: 'absolute', inset: 0,
+              width: puzzleWidth, height: puzzleWidth,
               zIndex: 60, pointerEvents: 'none', overflow: 'hidden', borderRadius: 8,
             }}>
               <QuantumThinkingIndicator />
@@ -972,18 +1071,19 @@ export default function MinedPuzzleModal({
             files={8}
             ranks={8}
             cell={cell}
+            showCoordinates={false}
             squareColors={boardColors}
-            pieces={boardPieces}
-            arrows={arrows}
-            highlights={boardHighlights}
-            targets={targets}
+            pieces={scrubActive ? snapBoardPieces : boardPieces}
+            arrows={scrubActive ? [] : arrows}
+            highlights={scrubActive ? scrubHighlights : boardHighlights}
+            targets={scrubActive ? [] : targets}
             onSquareClick={handleSquareClick}
-            canDrag={phase === 'playing' ? canDragFrom : null}
+            canDrag={phase === 'playing' && !scrubActive ? canDragFrom : null}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
             svgStyleBySide={svgStyleBySide}
             effectKey={fx.key}
-            pulseOrigin={fx.origin}
+            pulseOrigin={scrubActive ? null : fx.origin}
           />
         </div>
 
@@ -1002,7 +1102,42 @@ export default function MinedPuzzleModal({
           />
         </div>
 
-        <EvalGauge ticks={ticks} value={needleValue} width={290} />
+        {/* Scrub arrows flank the gauge. They always RESERVE their space
+            (visibility, not unmount) so appearing never resizes the modal;
+            each is visible only when it can actually do something. */}
+        <div style={styles.gaugeRow}>
+          <IconButton
+            icon={ChevronLeft}
+            size={30}
+            width={34}
+            height={gaugeHeight}
+            radius={10}
+            title="Previous position (←)"
+            ariaLabel="Show previous position"
+            onClick={scrubBack}
+            bg="transparent"
+            color={theme.primary}
+            hoverInvert
+            shadow="transparent"
+            style={{ visibility: scrubVisible && viewBack < scrubMax ? 'visible' : 'hidden' }}
+          />
+          <EvalGauge ticks={ticks} value={needleValue} width={gaugeWidth} />
+          <IconButton
+            icon={ChevronRight}
+            size={30}
+            width={34}
+            height={gaugeHeight}
+            radius={10}
+            title="Next position (→)"
+            ariaLabel="Show next position"
+            onClick={scrubForward}
+            bg="transparent"
+            color={theme.primary}
+            hoverInvert
+            shadow="transparent"
+            style={{ visibility: scrubVisible && viewBack > 0 ? 'visible' : 'hidden' }}
+          />
+        </div>
         <MoveSquares grades={grades} total={totalMoves} />
         <RankLine rank={moveRank} />
 

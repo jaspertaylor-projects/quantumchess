@@ -44,6 +44,7 @@ export default function MiniBoard({
   onDrop = null, // (from, to) => void, when a dragged piece lands on another square
   svgStyleBySide = null, // live piece colors from the app; defaults otherwise
   squareColors = null, // { light, dark } from user settings; classic defaults otherwise
+  showCoordinates = true, // puzzle board hides these to align exactly with its player bars
   effectKey = 0, // bumps per move so zap/heal animations replay on repeat squares
   pulseOrigin = null, // mover's landing square: particle motes fly from here
 }) {
@@ -140,16 +141,18 @@ export default function MiniBoard({
       className="qc-tutorial-miniboard-frame"
       style={{
         display: 'grid',
-        gridTemplateColumns: `16px ${W}px`,
-        gridTemplateRows: `${H}px 16px`,
+        gridTemplateColumns: showCoordinates ? `16px ${W}px` : `${W}px`,
+        gridTemplateRows: showCoordinates ? `${H}px 16px` : `${H}px`,
         flex: 'none',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column' }} aria-hidden="true">
-        {Array.from({ length: ranks }, (_, row) => (
-          <div key={`rk-${row}`} style={{ ...coordStyle, height: cell }}>{ranks - row}</div>
-        ))}
-      </div>
+      {showCoordinates ? (
+        <div style={{ display: 'flex', flexDirection: 'column' }} aria-hidden="true">
+          {Array.from({ length: ranks }, (_, row) => (
+            <div key={`rk-${row}`} style={{ ...coordStyle, height: cell }}>{ranks - row}</div>
+          ))}
+        </div>
+      ) : null}
     <div
       className="qc-tutorial-miniboard"
       ref={boardRef}
@@ -407,12 +410,14 @@ export default function MiniBoard({
       ) : null}
     </div>
 
-      <div />
-      <div style={{ display: 'flex' }} aria-hidden="true">
-        {Array.from({ length: files }, (_, col) => (
-          <div key={`fl-${col}`} style={{ ...coordStyle, width: cell }}>{String.fromCharCode(97 + col)}</div>
-        ))}
-      </div>
+      {showCoordinates ? <div /> : null}
+      {showCoordinates ? (
+        <div style={{ display: 'flex' }} aria-hidden="true">
+          {Array.from({ length: files }, (_, col) => (
+            <div key={`fl-${col}`} style={{ ...coordStyle, width: cell }}>{String.fromCharCode(97 + col)}</div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
