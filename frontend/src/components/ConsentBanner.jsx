@@ -3,41 +3,66 @@
 // is made; the choice is stored and fed to the ad service (Google Consent
 // Mode v2 signals) so advertising respects it.
 // Imports From: ../theme.js, ../ads/adService.js
-// Exported To: ../App.jsx
+// Exported To: ../welcome/WelcomeLanding.jsx, ../App.jsx (silent preference restore)
 
 import React, { useEffect, useState } from 'react';
+import { LockKeyhole } from 'lucide-react';
 import theme from '../theme.js';
 import { setAdConsent } from '../ads/adService.js';
 import { setAnalyticsConsent } from '../analytics/analytics.js';
 
-const STORAGE_KEY = 'qcConsent'; // 'granted' | 'denied'
+export const CONSENT_STORAGE_KEY = 'qcConsent';
+export const CONSENT_CHOICE = Object.freeze({
+  GRANTED: 'granted',
+  DENIED: 'denied',
+});
 
-export default function ConsentBanner() {
+export function readStoredConsent(storage = null) {
+  try {
+    const source = storage || localStorage;
+    const value = source.getItem(CONSENT_STORAGE_KEY);
+    return value === CONSENT_CHOICE.GRANTED || value === CONSENT_CHOICE.DENIED
+      ? value
+      : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export default function ConsentBanner({
+  promptIfUnset = true,
+  forceOpen = false,
+  emphasizeChoices = false,
+  onDecision = null,
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    try {
-      const prior = localStorage.getItem(STORAGE_KEY);
-      if (prior === 'granted' || prior === 'denied') {
-        setAdConsent(prior === 'granted');
-        setAnalyticsConsent(prior === 'granted');
-      } else {
-        setVisible(true);
-      }
-    } catch (_) {
+    const prior = readStoredConsent();
+    if (prior) {
+      const granted = prior === CONSENT_CHOICE.GRANTED;
+      setAdConsent(granted);
+      setAnalyticsConsent(granted);
+    } else if (promptIfUnset) {
       setVisible(true);
     }
-  }, []);
+  }, [promptIfUnset]);
+
+  useEffect(() => {
+    if (forceOpen) setVisible(true);
+  }, [forceOpen]);
 
   const choose = (granted) => {
+    const choice = granted ? CONSENT_CHOICE.GRANTED : CONSENT_CHOICE.DENIED;
     try {
-      localStorage.setItem(STORAGE_KEY, granted ? 'granted' : 'denied');
+      localStorage.setItem(CONSENT_STORAGE_KEY, choice);
     } catch (_) {
       // ignore storage errors
     }
     setAdConsent(granted);
     setAnalyticsConsent(granted);
     setVisible(false);
+    if (onDecision) onDecision(choice);
   };
 
   if (!visible) return null;
@@ -72,30 +97,40 @@ export default function ConsentBanner() {
     link: { color: theme.primary, textDecoration: 'none', fontWeight: 700 },
     buttons: { display: 'flex', gap: 8, flex: '0 0 auto' },
     accept: {
-      padding: '9px 16px', borderRadius: 8, border: 'none',
+      minWidth: 118, padding: '9px 16px', borderRadius: 8, border: `1px solid ${theme.primary}`,
       background: theme.primary, color: theme.secondary, fontWeight: 800, fontSize: 13, cursor: 'pointer',
     },
     reject: {
-      padding: '9px 16px', borderRadius: 8, border: `1px solid ${theme.border}`,
-      background: 'transparent', color: theme.textPrimary, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+      minWidth: 118, padding: '9px 16px', borderRadius: 8, border: `1px solid ${theme.textSecondary}`,
+      background: 'rgba(255,255,255,0.07)', color: theme.textPrimary, fontWeight: 800, fontSize: 13, cursor: 'pointer',
     },
   };
 
   return (
-    <div className="qc-consent-banner" style={styles.wrap} role="dialog" aria-label="Cookie consent">
-      <div style={styles.panel}>
+    <div className={`qc-consent-banner${emphasizeChoices ? ' qc-consent-banner--unlock' : ''}`} style={styles.wrap} role="dialog" aria-label="Cookie consent">
+      <div className="qc-consent-panel" style={styles.panel}>
         <div style={styles.text}>
-          We use cookies to keep the game free through advertising. Accept to allow personalized
-          ads, or choose necessary-only. See our{' '}
+          We use optional cookies and similar technologies for analytics and personalized advertising.
+          Accept all to allow them, or choose Necessary only to keep optional storage denied. Either
+          choice unlocks play, and you can change it later under Privacy choices. See our{' '}
           <a href="/privacy.html" style={styles.link}>Privacy Policy</a>.
         </div>
-        <div style={styles.buttons}>
-          <button type="button" className="qc-consent-reject" style={styles.reject} onClick={() => choose(false)}>
-            Necessary only
-          </button>
-          <button type="button" className="qc-consent-accept" style={styles.accept} onClick={() => choose(true)}>
-            Accept all
-          </button>
+        <div className={`qc-consent-actions${emphasizeChoices ? ' qc-consent-actions--unlock' : ''}`}>
+          {emphasizeChoices ? (
+            <div className="qc-consent-unlock-cue" aria-hidden="true">
+              <span className="qc-consent-unlock-branch qc-consent-unlock-branch--left" />
+              <span className="qc-consent-unlock-lock"><LockKeyhole size={15} /></span>
+              <span className="qc-consent-unlock-branch qc-consent-unlock-branch--right" />
+            </div>
+          ) : null}
+          <div style={styles.buttons}>
+            <button type="button" className="qc-consent-reject" style={styles.reject} onClick={() => choose(false)}>
+              Necessary only
+            </button>
+            <button type="button" className="qc-consent-accept" style={styles.accept} onClick={() => choose(true)}>
+              Accept all
+            </button>
+          </div>
         </div>
       </div>
     </div>

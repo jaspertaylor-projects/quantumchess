@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  WELCOME_ACTION,
+  hasAppDeepLink,
+  playUrlFrom,
+  resolveWelcomeEntry,
+  welcomeActionFromSearch,
+} from '../src/welcome/welcomeRouting.js';
+
+describe('welcome routing', () => {
+  it('shows the welcome page only to a genuinely new root visitor', () => {
+    expect(resolveWelcomeEntry({ pathname: '/' })).toEqual({
+      surface: 'welcome',
+      action: null,
+      markSeen: false,
+    });
+  });
+
+  it('sends both new and legacy returning visitors to the game', () => {
+    expect(resolveWelcomeEntry({ pathname: '/', welcomeSeen: true }).surface).toBe('play');
+    expect(resolveWelcomeEntry({ pathname: '/', legacyOnboardSeen: true }).surface).toBe('play');
+  });
+
+  it('honors the three playable welcome choices', () => {
+    expect(welcomeActionFromSearch('?welcome=play')).toBe(WELCOME_ACTION.PLAY);
+    expect(welcomeActionFromSearch('?welcome=intro')).toBe(WELCOME_ACTION.INTRO);
+    expect(welcomeActionFromSearch('?welcome=puzzle')).toBe(WELCOME_ACTION.PUZZLE);
+    expect(welcomeActionFromSearch('?welcome=rules')).toBeNull();
+    expect(resolveWelcomeEntry({ pathname: '/play', search: '?welcome=intro' })).toEqual({
+      surface: 'play',
+      action: WELCOME_ACTION.INTRO,
+      markSeen: true,
+    });
+  });
+
+  it('never puts a deep link behind the welcome page', () => {
+    expect(hasAppDeepLink('?join=ABC123')).toBe(true);
+    expect(hasAppDeepLink('?puzzle=daily')).toBe(true);
+    expect(resolveWelcomeEntry({ pathname: '/', search: '?join=ABC123' }).surface).toBe('play');
+  });
+
+  it('cleans the one-time action while preserving other query parameters', () => {
+    expect(playUrlFrom('?welcome=intro&join=ABC123')).toBe('/play?join=ABC123');
+    expect(playUrlFrom('?welcome=play')).toBe('/play');
+  });
+});

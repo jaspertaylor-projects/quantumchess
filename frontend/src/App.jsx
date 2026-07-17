@@ -48,8 +48,10 @@ import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
+import useDevAccountPreview from './dev/useDevAccountPreview.js';
+import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
 
-export default function App() {
+export default function App({ entryAction = null }) {
   // Increment this to reset the engine timeline (fresh game state)
   const [gameInstanceId, setGameInstanceId] = useState(0);
   const {
@@ -130,7 +132,9 @@ export default function App() {
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
   const { indicators, setIndicators } = useIndicatorSettings();
-  const auth = useAuth();
+  const realAuth = useAuth();
+  const devAccountPreview = useDevAccountPreview(realAuth);
+  const auth = devAccountPreview.auth;
 
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
@@ -182,6 +186,7 @@ export default function App() {
   const isOnlineGameRef = online.isOnlineGameRef;
 
   const intro = useIntroSequence({
+    introRequested: entryAction === 'intro',
     auth,
     dispatch,
     gameStarted,
@@ -231,7 +236,23 @@ export default function App() {
     isOnlineGame: isOnlineGameRef.current,
   });
 
+  const handleDevAccountLevelChange = useCallback((level) => {
+    devAccountPreview.setLevel(level);
+    setAccountOpen(true, 'account');
+  }, [devAccountPreview.setLevel, setAccountOpen]);
+
   const puzzleLinks = usePuzzleDeepLinks({ dismissOnboarding, setReviewGame });
+
+  // Welcome page's "Daily Puzzle" door: open today's daily once on mount
+  // (same path as the tray/mobile buttons; the URL's ?puzzle deep link is
+  // handled inside usePuzzleDeepLinks).
+  const openPuzzleOnMount = useRef(entryAction === 'puzzle');
+  useEffect(() => {
+    if (!openPuzzleOnMount.current) return;
+    openPuzzleOnMount.current = false;
+    puzzleLinks.handleOpenPuzzle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const layout = useBoardLayout({
     gameStarted,
@@ -817,7 +838,9 @@ export default function App() {
         <a href="/terms.html" style={styles.footerLink}>Terms</a>
       </footer>
 
-      <ConsentBanner />
+      {/* Restore a saved choice for Consent Mode, but never interrupt play.
+          The actual Accept/Necessary prompt belongs to the welcome page. */}
+      <ConsentBanner promptIfUnset={false} />
       <HoverTip />
 
       {isNarrow ? (
@@ -858,6 +881,13 @@ export default function App() {
             onOpenAccount={handleOpenAccount}
           />
         </>
+      ) : null}
+
+      {import.meta.env.DEV ? (
+        <DevAccountSwitcher
+          level={devAccountPreview.level}
+          onChange={handleDevAccountLevelChange}
+        />
       ) : null}
 
       <AppModals

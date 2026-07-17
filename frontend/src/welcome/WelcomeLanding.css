@@ -1,0 +1,442 @@
+.qc-welcome-page {
+  --welcome-cyan: #67e8f9;
+  --welcome-violet: #c4a7ff;
+  --welcome-gold: #ffd166;
+  --welcome-green: #7ee787;
+  position: relative;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  color: #f5f7ff;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(83, 106, 255, 0.2), transparent 44%),
+    linear-gradient(155deg, #050712 0%, #080b18 48%, #0b0d1b 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  isolation: isolate;
+}
+
+html.qc-welcome-active,
+body.qc-welcome-active { overflow: hidden; }
+
+.qc-welcome-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.qc-welcome-stars {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.85) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(103,232,249,0.75) 0 1px, transparent 1.6px);
+  background-position: 0 0, 37px 51px;
+  background-size: 113px 127px, 173px 191px;
+  animation: qc-welcome-star-drift 24s linear infinite;
+}
+
+.qc-welcome-aurora {
+  position: fixed;
+  z-index: -1;
+  width: 42vw;
+  height: 42vw;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.11;
+  pointer-events: none;
+  animation: qc-welcome-aurora-drift 12s ease-in-out infinite alternate;
+}
+.qc-welcome-aurora--one { left: 5vw; top: 5vh; background: #00d9ff; }
+.qc-welcome-aurora--two { right: 5vw; top: 42vh; background: #9a5cff; animation-delay: -5s; }
+
+.qc-welcome-content {
+  width: min(1060px, calc(100% - 36px));
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(42px, 7vh, 76px) 0 42px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qc-welcome-content h1 {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(34px, 4.6vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-weight: 900;
+}
+.qc-welcome-content h1 span {
+  color: transparent;
+  background: linear-gradient(100deg, #e9fdff 2%, var(--welcome-cyan) 46%, var(--welcome-violet) 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 0 22px rgba(103,232,249,0.14));
+}
+
+.qc-welcome-tagline {
+  margin: 9px 0 clamp(28px, 4vh, 40px);
+  color: #7f8aa1;
+  text-align: center;
+  font-size: clamp(10px, 1.05vw, 13px);
+  font-weight: 550;
+  letter-spacing: 0.035em;
+}
+
+.qc-welcome-choice-grid {
+  width: 100%;
+  display: grid;
+  /* Four doors now: let the row break to 2×2 instead of squeezing. */
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px;
+}
+
+.qc-welcome-card {
+  position: relative;
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: 45px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 13px;
+  padding: 18px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+  box-shadow: 0 16px 38px rgba(0,0,0,0.24);
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+.qc-welcome-card:hover,
+.qc-welcome-card:focus-visible {
+  transform: translateY(-5px);
+  outline: none;
+  border-color: color-mix(in srgb, currentColor 52%, transparent);
+  box-shadow: 0 23px 48px rgba(0,0,0,0.34), 0 0 28px color-mix(in srgb, currentColor 11%, transparent);
+}
+.qc-welcome-card--cyan { color: var(--welcome-cyan); }
+.qc-welcome-card--gold { color: var(--welcome-gold); }
+.qc-welcome-card--violet { color: var(--welcome-violet); }
+.qc-welcome-card--green { color: var(--welcome-green); }
+.qc-welcome-card--featured {
+  border-color: rgba(255,209,102,0.34);
+  background: linear-gradient(145deg, rgba(255,209,102,0.11), rgba(255,255,255,0.025));
+}
+.qc-welcome-card--locked {
+  cursor: pointer;
+  filter: saturate(0.62);
+  opacity: 0.76;
+}
+.qc-welcome-card--locked:hover,
+.qc-welcome-card--locked:focus-visible {
+  transform: none;
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: 0 16px 38px rgba(0,0,0,0.24);
+}
+.qc-welcome-card-icon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 13px;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, currentColor 12%, transparent);
+}
+.qc-welcome-card-copy { min-width: 0; }
+.qc-welcome-card-copy strong {
+  display: block;
+  color: #fff;
+  font-size: clamp(14px, 1.5vw, 17px);
+  line-height: 1.2;
+}
+.qc-welcome-card-copy small {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #aeb8cd;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qc-welcome-card-recommended {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  color: var(--welcome-gold) !important;
+  font-weight: 750;
+}
+.qc-welcome-card-recommended svg { flex: 0 0 auto; }
+.qc-welcome-card-arrow { transition: transform 180ms ease; }
+.qc-welcome-card:hover .qc-welcome-card-arrow { transform: translateX(4px); }
+.qc-welcome-card-lock-seal {
+  position: relative;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  border: 1px solid rgba(255, 209, 102, 0.38);
+  border-radius: 50%;
+  color: #ffd166;
+  background: rgba(255, 209, 102, 0.08);
+  box-shadow: 0 0 0 0 rgba(255, 209, 102, 0.25);
+  animation: qc-consent-lock-pulse 2.2s ease-in-out infinite;
+}
+.qc-welcome-card-lock { color: currentColor; }
+
+/* The lock above the two privacy choices branches toward both buttons. The
+   matching seal and pulse on the home cards make the relationship visual. */
+.qc-consent-actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+.qc-consent-actions--unlock {
+  padding-top: 25px;
+}
+.qc-consent-unlock-cue {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 23px;
+  color: #ffd166;
+  pointer-events: none;
+}
+.qc-consent-unlock-lock {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 209, 102, 0.55);
+  border-radius: 50%;
+  background: #161927;
+  box-shadow: 0 0 0 0 rgba(255, 209, 102, 0.28);
+  transform: translateX(-50%);
+  animation: qc-consent-lock-pulse 2.2s ease-in-out infinite;
+}
+.qc-consent-unlock-branch {
+  position: absolute;
+  top: 11px;
+  width: calc(25% - 11px);
+  height: 12px;
+  border-top: 1px solid rgba(255, 209, 102, 0.65);
+}
+.qc-consent-unlock-branch::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid #ffd166;
+  border-bottom: 2px solid #ffd166;
+}
+.qc-consent-unlock-branch--left {
+  left: 25%;
+  border-left: 1px solid rgba(255, 209, 102, 0.65);
+  border-radius: 5px 0 0 0;
+}
+.qc-consent-unlock-branch--left::after {
+  left: -4px;
+  transform: rotate(45deg);
+}
+.qc-consent-unlock-branch--right {
+  right: 25%;
+  border-right: 1px solid rgba(255, 209, 102, 0.65);
+  border-radius: 0 5px 0 0;
+}
+.qc-consent-unlock-branch--right::after {
+  right: -4px;
+  transform: rotate(45deg);
+}
+.qc-consent-banner--unlock .qc-consent-reject,
+.qc-consent-banner--unlock .qc-consent-accept {
+  animation: qc-consent-choice-glow 2.2s ease-in-out infinite;
+}
+.qc-consent-banner--unlock .qc-consent-accept { animation-delay: 110ms; }
+.qc-welcome-page--consent-nudge .qc-welcome-card--locked {
+  animation: qc-welcome-locked-nudge 520ms ease both;
+}
+.qc-welcome-page--consent-nudge .qc-consent-panel {
+  animation: qc-consent-panel-nudge 720ms ease both;
+}
+.qc-welcome-page--consent-nudge .qc-consent-unlock-lock,
+.qc-welcome-page--consent-nudge .qc-consent-reject,
+.qc-welcome-page--consent-nudge .qc-consent-accept {
+  animation: qc-consent-choice-nudge 720ms ease both;
+}
+
+.qc-welcome-quantum {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(54vh, 500px, 82vw);
+  aspect-ratio: 1;
+  margin: clamp(30px, 5vh, 52px) auto 0;
+  filter: drop-shadow(0 25px 48px rgba(0,0,0,0.42));
+}
+
+.qc-welcome-quantum-glow {
+  position: absolute;
+  inset: 28%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(103,232,249,0.24), rgba(132,92,246,0.11) 48%, transparent 72%);
+  filter: blur(15px);
+  animation: qc-welcome-core-pulse 3.8s ease-in-out infinite;
+}
+
+.qc-welcome-piece-orbit {
+  position: absolute;
+  inset: var(--orbit-inset);
+  border: 1px solid rgba(126, 218, 255, 0.19);
+  border-radius: 50%;
+  animation: qc-welcome-orbit var(--orbit-duration) linear infinite;
+  animation-delay: var(--orbit-delay);
+}
+.qc-welcome-piece-orbit--n,
+.qc-welcome-piece-orbit--r,
+.qc-welcome-piece-orbit--k { border-color: rgba(196,167,255,0.2); }
+.qc-welcome-piece-orbit--q { border-color: rgba(255,209,102,0.2); }
+
+.qc-welcome-orbit-anchor {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: clamp(31px, 5.4vw, 48px);
+  height: clamp(31px, 5.4vw, 48px);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 9px rgba(103,232,249,0.35));
+}
+.qc-welcome-orbit-upright {
+  width: 100%;
+  height: 100%;
+  animation: qc-welcome-orbit var(--orbit-duration) linear infinite reverse;
+  animation-delay: var(--orbit-delay);
+}
+
+.qc-welcome-superposition {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(76px, 13vw, 118px);
+  height: clamp(76px, 13vw, 118px);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 16px rgba(103,232,249,0.5));
+  animation: qc-welcome-superposition-pulse 3.8s ease-in-out infinite;
+}
+
+.qc-welcome-footer-links {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px clamp(15px, 2.5vw, 28px);
+}
+.qc-welcome-footer-links a,
+.qc-welcome-footer-links button {
+  color: #667187;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  transition: color 160ms ease;
+}
+.qc-welcome-footer-links button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.qc-welcome-footer-links a:hover,
+.qc-welcome-footer-links a:focus-visible,
+.qc-welcome-footer-links button:hover,
+.qc-welcome-footer-links button:focus-visible {
+  color: #a9b8cf;
+  background: transparent;
+  outline: none;
+}
+
+@keyframes qc-welcome-star-drift { to { background-position: 113px 127px, -136px 242px; } }
+@keyframes qc-welcome-aurora-drift { to { transform: translate3d(0, -4vh, 0) scale(1.12); } }
+@keyframes qc-welcome-orbit { to { transform: rotate(360deg); } }
+@keyframes qc-welcome-core-pulse { 50% { transform: scale(1.22); opacity: 0.72; } }
+@keyframes qc-welcome-superposition-pulse { 50% { transform: translate(-50%, -50%) scale(1.055); } }
+@keyframes qc-consent-lock-pulse {
+  50% { border-color: rgba(255, 209, 102, 0.9); box-shadow: 0 0 0 5px rgba(255, 209, 102, 0), 0 0 15px rgba(255, 209, 102, 0.34); }
+}
+@keyframes qc-consent-choice-glow {
+  50% { border-color: #ffd166; box-shadow: 0 0 14px rgba(255, 209, 102, 0.2); }
+}
+@keyframes qc-welcome-locked-nudge {
+  30% { transform: translateY(3px); border-color: rgba(255, 209, 102, 0.75); }
+  65% { transform: translateY(-2px); border-color: rgba(255, 209, 102, 0.5); }
+}
+@keyframes qc-consent-panel-nudge {
+  35% { border-color: rgba(255, 209, 102, 0.95); box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.12), 0 8px 38px rgba(0,0,0,0.55); }
+}
+@keyframes qc-consent-choice-nudge {
+  35% { border-color: #ffd166; box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.16), 0 0 22px rgba(255, 209, 102, 0.34); transform: translateY(-2px); }
+}
+
+@media (max-width: 760px) {
+  .qc-welcome-content { padding-top: 34px; }
+  .qc-welcome-content h1 { font-size: clamp(32px, 9vw, 44px); }
+  .qc-welcome-tagline { margin-bottom: 24px; }
+  .qc-welcome-choice-grid { width: min(520px, 100%); grid-template-columns: 1fr; gap: 10px; }
+  .qc-welcome-card { min-height: 82px; padding: 13px 15px; }
+  .qc-welcome-quantum { width: min(88vw, 390px); margin-top: 34px; }
+}
+
+@media (max-width: 420px) {
+  .qc-welcome-content { width: calc(100% - 26px); padding-top: 28px; }
+  .qc-welcome-content h1 { max-width: 330px; }
+  .qc-welcome-tagline { max-width: 330px; margin-top: 7px; line-height: 1.4; }
+  .qc-welcome-card { grid-template-columns: 41px minmax(0, 1fr) 18px; }
+  .qc-welcome-card-icon { width: 39px; height: 39px; }
+  .qc-welcome-card-copy strong { font-size: 14px; }
+  .qc-welcome-card-copy small { font-size: 10px; }
+  .qc-welcome-footer-links { gap: 7px 16px; padding-top: 20px; }
+  .qc-welcome-footer-links a,
+  .qc-welcome-footer-links button { font-size: 9px; }
+  .qc-consent-actions { width: 100%; }
+  .qc-consent-actions > div:last-child { width: 100%; }
+  .qc-consent-actions button { flex: 1 1 0; min-width: 0 !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-welcome-stars,
+  .qc-welcome-aurora,
+  .qc-welcome-quantum-glow,
+  .qc-welcome-piece-orbit,
+  .qc-welcome-orbit-upright,
+  .qc-welcome-superposition { animation: none !important; }
+  .qc-welcome-card { transition: border-color 150ms ease; }
+  .qc-welcome-card:hover,
+  .qc-welcome-card:focus-visible { transform: none; }
+  .qc-welcome-card-lock-seal,
+  .qc-consent-unlock-lock,
+  .qc-consent-banner--unlock .qc-consent-reject,
+  .qc-consent-banner--unlock .qc-consent-accept { animation: none; }
+}
