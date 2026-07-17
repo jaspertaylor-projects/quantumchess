@@ -26,7 +26,7 @@ export default function useGameRecording({
       gameRecordedRef.current = false;
       return;
     }
-    if (gameRecordedRef.current || !auth.user) return;
+    if (gameRecordedRef.current || !auth.user || auth.isDevPreview) return;
     gameRecordedRef.current = true;
 
     const text = externalGameOver.over ? externalGameOver.text || '' : '';

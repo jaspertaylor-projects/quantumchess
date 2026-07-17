@@ -10,6 +10,8 @@ game IDs, room codes, or free-form text.
 
 | Product moment | GA4 event | Useful parameters |
 | --- | --- | --- |
+| First-visit welcome page is shown | `welcome_viewed` | — |
+| Visitor chooses a welcome path | `welcome_choice` | `welcome_choice` |
 | Human makes their first move in a game | `first_move` | `game_mode`, `player_side`, `bot_tier`, `intro` |
 | Tutorial opens | `tutorial_begin` | `tutorial_entry` |
 | Player advances past a tutorial step | `tutorial_step_complete` | `lesson_id`, `lesson_number`, `step_number` |
@@ -40,6 +42,7 @@ custom dimensions first:
 
 | Display name | Event parameter |
 | --- | --- |
+| Welcome choice | `welcome_choice` |
 | Game mode | `game_mode` |
 | Player side | `player_side` |
 | Bot | `bot_id` |
@@ -66,8 +69,8 @@ Recommended key events:
 
 Recommended Explore funnels:
 
-1. Activation: `session_start` → `first_move` → `tutorial_step_complete` →
-   `sign_up`.
+1. Activation: `welcome_viewed` → `welcome_choice` → `first_move` →
+   `sign_up`, broken down by `welcome_choice`.
 2. Daily loop: `daily_opened` → `daily_solved` → `share`, filtered to
    `content_type = daily_puzzle` on the share step.
 3. Revenue: `premium_upsell_viewed` → `premium_upsell_clicked` →

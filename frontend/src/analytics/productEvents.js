@@ -7,6 +7,8 @@
 import { trackEvent } from './analytics.js';
 
 export const PRODUCT_EVENT = Object.freeze({
+  WELCOME_VIEWED: 'welcome_viewed',
+  WELCOME_CHOICE: 'welcome_choice',
   FIRST_MOVE: 'first_move',
   TUTORIAL_BEGIN: 'tutorial_begin',
   TUTORIAL_STEP_COMPLETE: 'tutorial_step_complete',
@@ -44,6 +46,15 @@ const dailyId = (date) => `daily_${safeText(date, 'unknown')}`;
 // live GA Measurement ID. Unknown detail fields are deliberately discarded.
 export function buildProductEvent(type, details = {}) {
   switch (type) {
+    case PRODUCT_EVENT.WELCOME_VIEWED:
+      return { name: 'welcome_viewed', params: {} };
+
+    case PRODUCT_EVENT.WELCOME_CHOICE:
+      return {
+        name: 'welcome_choice',
+        params: { welcome_choice: safeText(details.choice) },
+      };
+
     case PRODUCT_EVENT.FIRST_MOVE:
       return {
         name: 'first_move',

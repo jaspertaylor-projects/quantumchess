@@ -45,10 +45,8 @@ export function setAdConsent(granted) {
       ad_user_data: granted ? 'granted' : 'denied',
       ad_personalization: granted ? 'granted' : 'denied',
     });
-    if (!granted) {
-      window.adsbygoogle = window.adsbygoogle || [];
-      window.adsbygoogle.requestNonPersonalizedAds = 1;
-    }
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adsbygoogle.requestNonPersonalizedAds = granted ? 0 : 1;
   } catch (_) {
     // consent signaling is best-effort
   }

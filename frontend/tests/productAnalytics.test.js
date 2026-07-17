@@ -16,6 +16,8 @@ describe('product analytics event contract', () => {
 
   it('keeps the custom product event names stable', () => {
     expect([
+      PRODUCT_EVENT.WELCOME_VIEWED,
+      PRODUCT_EVENT.WELCOME_CHOICE,
       PRODUCT_EVENT.FIRST_MOVE,
       PRODUCT_EVENT.TUTORIAL_STEP_COMPLETE,
       PRODUCT_EVENT.DAILY_OPENED,
@@ -25,6 +27,8 @@ describe('product analytics event contract', () => {
       PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED,
       PRODUCT_EVENT.REVIEW_OPENED,
     ].map((type) => buildProductEvent(type).name)).toEqual([
+      'welcome_viewed',
+      'welcome_choice',
       'first_move',
       'tutorial_step_complete',
       'daily_opened',
@@ -34,6 +38,16 @@ describe('product analytics event contract', () => {
       'premium_upsell_clicked',
       'review_opened',
     ]);
+  });
+
+  it('tracks the welcome decision without attaching visitor identity', () => {
+    expect(buildProductEvent(PRODUCT_EVENT.WELCOME_CHOICE, {
+      choice: 'intro',
+      email: 'do-not-send@example.com',
+    })).toEqual({
+      name: 'welcome_choice',
+      params: { welcome_choice: 'intro' },
+    });
   });
 
   it('builds a complete subscription checkout payload', () => {
