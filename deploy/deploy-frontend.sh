@@ -20,9 +20,11 @@ fi
 cd frontend
 
 echo "==> Syncing to s3://$BUCKET"
-# Hashed assets: cache forever.
+# Hashed assets: cache forever. NO --delete: sessions loaded before a deploy
+# still lazy-import the OLD hashed chunks (daily puzzle, review…) — deleting
+# them turned every open tab's next click into a silent no-op. Old assets are
+# pennies; prune manually once in a while if it bothers you.
 aws s3 sync dist "s3://$BUCKET" \
-  --delete \
   --exclude "index.html" \
   --cache-control "public, max-age=31536000, immutable"
 # Root files that change but aren't content-hashed must always revalidate.

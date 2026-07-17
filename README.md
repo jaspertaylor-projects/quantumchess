@@ -7,10 +7,12 @@ King, while Zap protects the final King possibility. Quantum castling, quantum
 promotion, census conservation — deterministic throughout, no dice anywhere.
 
 - **Live:** https://quantumchess.ninja
-- **Status:** launched, but there are **no real users or paying customers
-  yet** — every existing account is a disposable test account that can be
-  nuked. Deploys and even destructive migrations don't need a
-  customer-safety review until that changes; update this line when it does.
+- **Status:** built and deployed, but **NOT LAUNCHED** — zero promotion so
+  far, not even friends-and-family. The site has no real users or paying
+  customers **because nobody has been told it exists yet**, not because it
+  failed with anyone. Every existing account is a disposable test account
+  that can be nuked; deploys and even destructive migrations don't need a
+  customer-safety review until real users arrive. Update this line at launch.
 - **Play:** vs 24 AI bots (12 free, 12 premium-locked), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
@@ -46,6 +48,9 @@ dormant. One engine, one ruleset.
   victory by wave-function collapse. A temporarily kingless side keeps
   playing and can Heal King back. **Check exists only for a revealed King**
   (`possibleTypes === ['k']`): victory comes by real checkmate.
+- **Zap feedback invariant**: every contacted enemy either loses a possibility
+  and shows the red zap, or loses nothing and shows the gold shield. This also
+  covers fully known pieces and King Guard with no lower identity to shed.
 - Captures collapse the victim to its least valuable identity. Castling,
   en passant, and promotion carry over
   (castle-through-threat is gone with the check rule).
@@ -68,20 +73,20 @@ Where things stand after the adoption commit:
   Census/Winning pages; lesson → rules-page links intact).
 - **Fixtures**: `tests/fixtures/engine-games.json` regenerated under the new
   rules (140-halfmove cap); `tests/contact-variant-smoke.mjs` is the rules smoke.
-- **Daily puzzle: PARKED.** The composed generator + weekly arc were built
-  on classic semantics and are unreachable (entry buttons, deep links, and
-  modals unhooked — same pattern as `unstableLine/`). Redesign it for
-  contact-native goals (zap chains, heal saves, checkmate finishes) before
-  re-wiring; `dailypuzzle.md` still describes the classic-era system.
+- **Daily puzzle: the MINED daily is LIVE (2026-07-14).** The Daily button
+  serves `loadDailyMinedPuzzle` (chains mined from real twin-bot games,
+  `minedPreviewData.json`: date-pinned `schedule` + rotation fallback +
+  `devOnly` staging flag). The old composed generator survives only as the
+  dev-only `?puzzleDate` practice preview.
 - **Miner**: pipeline runs on the new rules (and on the FAST engine, ~15x);
-  theme tagging keys on zaps/heals (`zap3`, `heal2`). First contact-rules
-  harvest landed 2026-07-12 (seed-2: 24 games at playMs 500/strongMs 1000,
-  6 chains, **gate 7/7 = 100% at depth 6** — the 95% go-signal, though 11/18
-  verify plies still timed out). Chains now carry `evalTables` — per-par-
-  position root-move scores at the modal's exact gauge ruler, sig-keyed —
-  so the mined-puzzle gauge loads instantly instead of running a 176-wide
-  analyze in the browser. `src/puzzle/mined*Data.json` refreshed from that
-  run (`?mined=N` / `?minedGame=N` dev previews).
+  theme tagging keys on zaps/heals. Canonical batch = `./tools/mine-twins.sh
+  <seed>` — 24 twin games (identical bots; strong twin +5 beam widths &
+  4000ms vs 1000ms), mirror pass, first-grab filter, and the **depth-8
+  verification gate ON** (never pass `--verifyCap 0`: seeds 6/8 did, and
+  shipped ungated). Chains carry `evalTables` (instant gauge) and `intro`
+  (pre-mistake snapshot). The 2026-07-15 royal-rules finalization
+  invalidated one old chain (the replay guard in `minedPreview.js` refuses
+  drifted chains); seed-13 is the first post-finalization batch.
 - **Old saved games** in `qc_games` replay under the new rules and will NOT
   reproduce (zero real users — nuke the rows whenever convenient).
 
@@ -93,7 +98,7 @@ Where things stand after the adoption commit:
 | Backend | FastAPI WebSocket relay for online 1v1 only | One EC2 box behind Caddy (`api.quantumchess.ninja`) |
 | Accounts | Auth, profiles, ratings, saved games | Supabase (`qc_`-prefixed tables) |
 | Auth email | Signup confirmation emails | Amazon SES (domain verified; Supabase SMTP paste + prod-access pending) |
-| Ads | Dormant AdSense interstitial at game end | Google AdSense (applied; in review) |
+| Ads | Dormant AdSense interstitial at game end | Google AdSense (rejected 2026-07-12; content fix deployed 2026-07-14; re-review pending) |
 
 Bot and local games touch nothing but the CDN, so a traffic spike is cheap.
 Only online 1v1 hits the backend. See `deploy/README.md` for the full
@@ -290,20 +295,20 @@ Legend: [ ] not started · [~] in progress · [X] done
         session creation verified). Live ids:
         `~/.config/quantumchess-stripe-live.env`; sandbox secrets remain in
         `~/.config/quantumchess-stripe-deploy.env` for test-mode work.
-  - [ ] **GATE (also before live)**: set up the contact@quantumchess.ninja
-        inbox (Proton custom domain — see Auth email section). It is now the
-        published support address on /terms.html, /privacy.html, /about.html
-        and where refund requests go; mail must actually arrive before real
-        cards are charged.
+  - [X] **GATE cleared (2026-07-16)**: contact@quantumchess.ninja inbox is
+        set up (Proton custom domain) and receiving. It is the published
+        support/refund address on /terms.html, /privacy.html, /about.html,
+        /faq.html.
   - [X] Terms of service + refund policy (2026-07-06): `/terms.html` —
         recurring-billing disclosure, 14-day no-questions refund (covers
         subscription AND tip), one-time tip terms, Hawaii governing law.
         Linked from all static-page footers + the app footer; renewal/terms/
         refund text sits under the upgrade button in `AccountModal.jsx`.
         Public contact email switched to contact@quantumchess.ninja.
-  - [ ] **One-time $5 tip → a year ad-free + one engine review/day** (code
-        done, 2026-07-06; wiring pending). The AccountModal pitch now leads
-        with the human ("built and run by one person…") and offers "Tip $5"
+  - [ ] **One-time $3 tip → a year ad-free + one engine review/day** (code
+        done, 2026-07-06; live pricing is $3 — `TIP_PRICE_LABEL` in
+        `billing.js`). The AccountModal pitch leads
+        with the human ("built and run by one person…") and offers "Tip $3"
         next to the subscription; the webhook stamps
         `ad_free_until = now + 1 year` (stacks on repeat tips), ads gate on
         tier OR `ad_free_until` (`isAdFree` in `billing.js`). Tippers also
@@ -313,9 +318,9 @@ Legend: [ ] not started · [~] in progress · [X] done
         `20260709000000_qc_tip_adfree.sql`. Remaining wiring:
     - [X] Tip prices created (sandbox + live, part of the 2026-07-06
           live-mode swap; `STRIPE_TIP_PRICE_ID` set in both env files).
-    - [ ] Test with the 4242 card: tip → `?premium=tip_thanks` → profile
-          shows "ad-free until <date>"; ad gating off; tip again → date
-          extends by another year.
+    - [ ] Test with the 4242 card (still not done as of 2026-07-16): tip →
+          `?premium=tip_thanks` → profile shows "ad-free until <date>"; ad
+          gating off; tip again → date extends by another year.
   - [ ] Cleanup: two e2e test accounts exist (qc-e2e-test-1/2@example.com,
         E2ETester1/2) — delete via Dashboard or SQL when convenient.
 - [ ] **Premium tier — promised features** ($3/month). These have been promised
@@ -389,9 +394,9 @@ Legend: [ ] not started · [~] in progress · [X] done
       readJoinCode), invite card + `?join=` hook in `App.jsx`.
       Also fixed a relay bug this exposed: a reconnect (same clientId, new
       socket) no longer gets kicked when the old socket finishes closing.
-- [ ] **Deploy the backend** for this to work in production (ssh + compose
-      rebuild per "Backend" runbook above) — frontend-only deploys will show
-      the button but fail to create rooms until the API box is updated.
+- [X] Backend deployed with private-room support (verified 2026-07-16: the
+      API box is at `df04c72`, which contains the matchmaking private-room
+      code) — challenge links work in production.
 
 ### Tests, monitoring, analytics (added 2026-07-06)
 - [X] Engine replay regression tests: vitest + 13 fixture games
@@ -450,15 +455,20 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [X] Dedicated send-only `qc-ses-smtp` IAM user + SMTP credentials created
 - [X] Production-access request submitted to AWS (auto-exits sandbox on
       approval, usually <24h — no changes needed when it lands)
-- [ ] **Paste SMTP creds into Supabase** → Authentication → Emails → SMTP
+- [~] **SMTP creds into Supabase** — believed configured via CLI/Management
+      API (unconfirmed 2026-07-16: the CLI keyring token isn't readable from
+      the repo, and `qc-deployer` is correctly denied `ses:GetAccount`, so
+      neither the paste nor SES production access could be verified from
+      here). VERIFY the cheap way: create a fresh account with a real email
+      and see whether the confirmation mail arrives. Dashboard location if
+      it needs doing: Authentication → Emails → SMTP
       (host email-smtp.us-east-1.amazonaws.com:587, sender
-      noreply@quantumchess.ninja). Works for verified test addresses now;
-      for everyone once AWS grants production access.
+      noreply@quantumchess.ninja).
 - [X] Security cleanup: temporary SES/Route53/IAM policies detached from
       `qc-deployer` (verified: SES + Route53 now denied, S3 deploy intact).
-- [ ] Branded receiving inbox contact@quantumchess.ninja — NO LONGER optional:
-      it is the published support/refund address (see Stripe gate above) — via
-      Proton custom domain — separate DNS, coexists with SES sending.
+- [X] Branded receiving inbox contact@quantumchess.ninja — set up and
+      receiving (Proton custom domain; confirmed 2026-07-16). Coexists with
+      SES sending.
 
 ### Ads (Google AdSense)
 - [X] Privacy policy (/privacy.html) + About (/about.html), crawlable static
@@ -467,7 +477,17 @@ Legend: [ ] not started · [~] in progress · [X] done
       AdSense dashboard during application)
 - [X] Applied to AdSense (pub-5481833391571778): ownership verified via the
       `<head>` snippet, real ads.txt live, review requested
-- [ ] Waiting on Google's decision email (days to ~2 weeks)
+- [X] First review REJECTED 2026-07-12 ("screens without publisher content"
+      + "low value content" — the crawler doesn't run the React app, so
+      ad-tagged pages looked empty)
+- [X] Fix deployed 2026-07-14 (see `AdSenseApprovalPlan.md`): static
+      below-the-fold content on the homepage, real rules/strategy/faq pages
+      + about rewrite, ad script stripped from privacy/terms, shared footer
+      nav, sitemap.xml + robots.txt — all crawlable without JS, UX unchanged.
+- [ ] Request re-review (~24-48h after the fix deploy, so from 2026-07-16):
+      AdSense → Sites → click the quantumchess.ninja row → Request review
+      (or Policy center if greyed out). Then wait days to ~2 weeks; don't
+      toggle ad code or click own ads during review.
 - [ ] ON APPROVAL — turn ads on: set
       `VITE_ADSENSE_CLIENT=ca-pub-5481833391571778` in
       `frontend/.env.production`, delete `<ConsentBanner/>` from App.jsx (now
@@ -516,85 +536,46 @@ Legend: [ ] not started · [~] in progress · [X] done
       some with scripted Black replies).
 
 #### Retention (pre-launch)
-- [X] **Daily puzzle** (2026-07-07) — one seeded quantum puzzle per local
-      day, deterministic and backend-free (same puzzle for everyone; cached
-      per device). Weekly difficulty arc: Mon/Tue 1-movers, Wed/Thu 2-move
-      chains, Fri/Sat 3-move chains, Sun a 4-move hunt. Quantum-native goals:
-      The Instrument (measure 3 at once), The Census (collapse a piece you
-      never touch), The Seal, The Snap (the royal {q,k} pair: capturing one member forces
-      both identities through conservation alone), The Phantom (en passant
-      discovered check), Collapse Mate, plus chains (Snap Trap, Ledger = census→seal,
-      The Hunt / Long Hunt rook ladders, The Investigation). Every player
-      move is verified by the engine to be the UNIQUE move achieving that
-      step's goal; scripted Black replies between steps. Soundness rule: no
-      legal Black reply may capture the piece that just made the solution
-      move (no "the king just takes back" refutations) — enforced by the
-      verifier at every ply. Puzzles are FULL GAME STATES: both sides are
-      padded to all 16 pieces with an explicit captured list (definite,
-      non-king types, shown above the board), so the engine's conservation
-      behaves exactly as in a live game — a lone king-carrier is forced to
-      be the king by the census itself, and ambiguity exists only as CLOSED
-      GROUPS (N pieces sharing exactly N open slots), the real game's
-      structure. 3 attempts, streak, Wordle-style share card. Code:
-      `frontend/src/puzzle/` (generator, progress/streak/share, modal);
-      entry buttons with an "unplayed" dot in the side tray + mobile bar.
-      Validated by harness over 180 consecutive days: 0 failures, avg
-      137ms, max ~3.2s generation (cached per device after first open).
-  - [ ] BEFORE LAUNCH: set `PUZZLE_EPOCH` in
-        `frontend/src/puzzle/puzzleGenerator.js` to launch day (puzzle #1).
-  - Dev preview: `http://localhost:5175/?puzzleDate=YYYY-MM-DD` opens any
-    date's puzzle in practice mode (nothing recorded, streak untouched).
-    Dev builds only. Weekday map: Mon 1-move Instrument, Tue 1-move
-    wildcard, Wed Snap Trap (2), Thu Ledger (2), Fri Hunt (3), Sat
-    Investigation (3), Sun Long Hunt (4).
-  - Dev preview (mined): `?mined=N` plays chain N of the mined-puzzle
-    fixture (`frontend/src/puzzle/minedPreviewData.json`) through the
-    one-chance eval-gauge modal. Practice mode, dev builds only.
+- [X] **Daily puzzle — MINED, LIVE since 2026-07-14.** One mined position
+      per local day, the same for everyone: a real twin-bot game at the
+      moment Black's first mistake from balance mattered. The player answers
+      in par mode against the live engine and is graded on the eval gauge
+      (star→skull); streaks + a Wordle-style share card.
+      `loadDailyMinedPuzzle` serves `minedPreviewData.json`, honoring its
+      date-keyed `schedule` map (seed-8 chains pinned 2026-07-15..20 by
+      trickiness), falling back through rotation candidates when a chain no
+      longer replays; chains flagged `devOnly` are staging-only and never
+      served as the daily. Entry: primary Daily Puzzle buttons (side tray +
+      mobile bar) with an unsolved dot.
+  - Mining runbook: `./tools/mine-twins.sh <seed>` (see the Miner note near
+    the top; gate must stay ON). New batches land as `devOnly`, get curated
+    via `?mined=N`, then get scheduled. More puzzles needed before
+    2026-07-21 (seed-13 in flight under the finalized royal rules).
+  - Dev preview (mined): `?mined=N` plays chain N of
+    `frontend/src/puzzle/minedPreviewData.json`. Practice mode, dev only.
+  - Dev preview (legacy composed): `?puzzleDate=YYYY-MM-DD` opens the OLD
+    composed generator in practice mode — the composed system (2026-07-07:
+    weekly arc, quantum-native goals, 180-day harness validation) is
+    RETIRED from the daily path but its generator + `tools/puzzle-harness.mjs`
+    remain for reference; `dailypuzzle.md` documents that era.
   - **PRODUCT RULE — the daily is the only puzzle.** Users must only ever
     see TODAY's puzzle. Never ship an archive, date picker, "tomorrow"
-    peek, or any other user-facing path to past or future puzzles.
-    Puzzles generate deterministically client-side, so any
-    date-addressable UI leaks every future puzzle — and the once-a-day
-    scarcity is the retention mechanic. Both preview params
+    peek, or any other user-facing path to past or future puzzles — the
+    fixture ships future chains, so any date-addressable UI leaks them, and
+    the once-a-day scarcity is the retention mechanic. Both preview params
     (`?puzzleDate`, `?mined`) are hard-gated to dev builds in `App.jsx`
     (`import.meta.env.DEV`); the only production deep link is `/?puzzle`,
     which opens today's. Keep it that way.
-  - **Tuning workflow — how to fix a bad puzzle.** When a day's puzzle feels
-    wrong (a refutation, a giveaway, too cluttered), don't patch that one
-    day — codify the complaint as a VERIFIER rule so it can never ship
-    again (e.g. the soundness rule above started as "their king could just
-    take back my bishop"). Then re-certify:
-    1. `node tools/puzzle-harness.mjs 180 2026-07-10` — generates 180
-       consecutive days and independently re-verifies every ply (uniqueness,
-       reply legality, weekly arc, timing). Must end `fails: 0`; drift days
-       (a chain falling back to a 1-mover) show as `*`.
-    2. If a weekday stops converging, `debugRecipe(dateStr, recipeKey)`
-       (exported from `puzzleGenerator.js`) reports exactly where all 150
-       candidates died — `p0:unsound`, `p0:multiHit`, or build-stage
-       counters (`BUILD_FAIL`) for the recipe's placement filters. Loosen
-       construction or tighten placement until `ok > 0` on the worst dates.
-    3. Bump `PUZZLE_VERSION` — this invalidates every device's cached
-       puzzle so the fixed generator takes effect everywhere, same day.
-    Difficulty knobs live in the recipes: piece counts, decoys,
-    `minChoices` (minimum legal moves so the find is a real search), and
-    `TRIES_PER_RECIPE`.
-- [~] **Daily puzzle v2 — mined from real games** (see `dailypuzzle.md` for
-      the full plan + status). Bot self-play → only-move mining → theme
-      tagging → double-depth verification gate, in `tools/puzzle-miner.mjs`
-      (run in Docker — see Local development note). The composed generator
-      above stays live until mined puzzles pass the 95% agreement gate at
-      scale. End state: one-chance eval-bar daily (engine plays Black live),
-      emoji-bar share card, puzzles.json published to the CDN.
-- [ ] **First-60-seconds onboarding / "first move theater"**: first visit
-      should teach the core magic without a modal wall. One glowing piece,
-      one obvious move, instant collapse animation, and a tiny line like
-      "Every piece starts as every piece. Move it to find out what it was."
-      Goal: get a brand-new player to the first "oh, I get it" moment before
-      asking them to read rules or choose settings.
-- [ ] **Bias the home screen toward today's loop**: make the default first
-      choices feel like "Daily Puzzle", "Start bot game", and "Challenge
-      friend". Daily should feel like the scarce Wordle-style habit, not a
-      side feature hiding in the tray.
+- [X] **First-60-seconds onboarding / "first move theater"** — shipped as
+      the first-visit intro (2026-07-14..16): the board is live immediately
+      (no Start wall), e2 glows, and the first interaction quietly seats a
+      scripted, narrated easy bot that walks a full guided opening (zaps,
+      heals, census, castle, en passant, promotion) with speech cards and a
+      pulsing Continue. Layout is jump-free on phone and desktop (reserved
+      speech lane; `useIntroSequence` + `introSequenceData`).
+- [X] **Bias the home screen toward today's loop** — tray menu v2: Play
+      Game / Daily Puzzle (primary, with unsolved dot) / Tutorial / Rules as
+      big buttons; mobile bar gets the same Daily Puzzle button + dot.
 - [ ] **Post-move "Explain why" affordance**: when a surprising collapse,
       coherence shed, king prune, en passant, or checkmate happens, offer a
       tiny contextual explanation. Not a rules essay: one sentence such as
@@ -625,69 +606,12 @@ Legend: [ ] not started · [~] in progress · [X] done
   - [ ] Remaining: surface the unlocked tagline/sayings/character flavor
         in the profile and bot picker (the clear + `unlocked_flavor_at`
         timestamp are already recorded per account).
-- **SHELVED — post-launch, not in the product** · **Enter the Unstable
-  Line**: the roguelite run mode below is parked. The code is kept at
-  `frontend/src/unstableLine/` but is imported by NOTHING, so none of it is
-  bundled or reachable on the live site; its `qc_unstable_runs` migration
-  was removed (only `qc_bot_progress` shipped). Do not re-wire it until the
-  run modifiers (clock pressure, pawn starts, takebacks…) are real gameplay
-  rather than labels. Design notes preserved below.
-  - [ ] **Unstable Line unlock**: after clearing the first 2 beginner ladder
-        bots, show a large Daily Puzzle-style button: "Enter the Unstable
-        Line". Signed-out players see "Sign in free to save bot unlocks."
-        Premium bots remain premium and are NOT part of this mode.
-  - [ ] **Unstable Line map**: a route map, not a blind random queue. The
-        player charts a 4-fight course toward Rudolf Einstein. Each node
-        shows a bot avatar/name/rating; the main boss is fixed as
-        `rudolf-einstein`. With the current 12-free-bot roster, the first 2
-        beginner clears unlock the mode, then every run places the remaining
-        9 non-boss free bots somewhere on the map plus Rudolf Einstein as the
-        collapse point. The shortest route to the boss is 3 bot fights +
-        Rudolf Einstein for a 4-game run. Longer routes are allowed for
-        players who want extra pickups or to target specific bot unlocks. This
-        lets players choose the bot problems they want to carry instead of
-        praying a blind pool serves them.
-  - [ ] **Double-slit theme**: visually frame the map as a double-slit
-        experiment. The run begins as one beam, splits into two or more
-        possible paths, interferes across branching bot choices, and collapses
-        into the chosen route toward Rudolf Einstein. Unchosen nodes can stay
-        faint/ghosted as "paths not observed yet"; chosen fights become the
-        measured timeline. This should feel quantumy without making the map
-        harder to understand.
-  - [ ] **Persistent run modifiers**: bot nodes add the downside, and
-        in-between spaces add the upside. Both should generally stick for the
-        whole run, so the player is not just picking the next fight; they are
-        deciding which problems to carry and which tools to accumulate before
-        Rudolf Einstein.
-  - [ ] **Pickup spaces**: mix non-fight nodes into the map so the player is
-        not only choosing opponents. Good first pickups: +1 takeback for the
-        run, one free "observe" hint, restore a collapsed pawn at the start of
-        each remaining fight, clear one carried disadvantage, reroll a future
-        pickup, or reveal nearby hidden nodes. These should be small enough
-        that the run still belongs to the chess, but meaningful enough that
-        route choice feels strategic.
-  - [ ] **Bot-flavored instability**: tie the carried disadvantages to the
-        bots you choose to fight. Each bot can have a signature pressure
-        pattern so opponents feel distinct even before their search strength
-        matters: fast bots create clock pressure, tricky bots start with more
-        ambiguous pieces, defensive bots reduce your early capture clarity,
-        and chaos bots add recoherence/collapse volatility. This gives every
-        bot a recognizable "feel" inside the mode while preserving normal
-        fair games in the ladder.
-  - [ ] **Run structure**: the map itself owns the choices. Picking a bot node
-        means accepting that bot's carried downside; winning the fight awards
-        the pickup on the following in-between space. Keep early modifiers
-        readable and agency-preserving (no "make the opponent's move" power).
-        Good first set: clock pressure, collapsed pawn starts, lower
-        coherence starts with stronger pulses, recoherence-clock
-        buffs/debuffs, pre-observed pieces, and small run tools such as
-        takebacks or observe hints.
-  - [ ] **Rewards**: beating any free bot for the first time, in ladder or
-        Unstable Line, unlocks that bot's tagline/sayings/character flavor
-        for the account. Beating a bot inside Unstable Line also marks it as
-        unlocked/cleared for future targeting. Premium subscription still
-        unlocks premium bots separately; Unstable Line never grants premium
-        bot access.
+- **SHELVED** · **Enter the Unstable Line** — the post-launch roguelite run
+  mode is parked: code kept at `frontend/src/unstableLine/` but imported by
+  nothing (unbundled, unreachable); its `qc_unstable_runs` migration was
+  removed. Don't re-wire until run modifiers are real gameplay rather than
+  labels. Full design notes live in git history (this README before
+  2026-07-16).
 - [ ] **Make premium desire-timed instead of account-panel-only**: upsell at
       the moment the player wants the thing — locked premium bot selected,
       "Analyze this game" after a loss, saved-game cap reached, profile
