@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+# /play is the app shell (same document as /, minus the crawlable copy) —
+# keep it out of the index so it never competes with the front page.
+Disallow: /play
 
 Sitemap: https://quantumchess.ninja/sitemap.xml

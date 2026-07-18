@@ -1,8 +1,29 @@
-# Minimal Supabase CLI config — used for `supabase functions deploy`.
-# The database schema itself is applied via the GitHub integration
-# (supabase/migrations/), not `supabase db push`.
+# Minimal Supabase CLI config — used for `supabase functions deploy` and
+# `supabase config push` (auth URLs below). The database schema itself is
+# applied via the GitHub integration (supabase/migrations/), not
+# `supabase db push`.
 
 project_id = "QuantumChess"
+
+# Where auth emails (confirmation, password reset) send people. Without this
+# the project sat on the default http://localhost:3000 — every confirmation
+# link bounced users to localhost. Pushed 2026-07-17 via `supabase config push`.
+[auth]
+site_url = "https://quantumchess.ninja"
+additional_redirect_urls = [
+  "https://quantumchess.ninja",
+  "https://quantumchess.ninja/**",
+  "http://localhost:5175",
+  "http://localhost:5175/**",
+]
+
+# CAUTION: `config push` flattens the WHOLE auth section to CLI defaults for
+# anything not declared here. These three restore the remote values the first
+# push (2026-07-17) silently reset — keep them declared.
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
 
 [functions.stripe-checkout]
 verify_jwt = true

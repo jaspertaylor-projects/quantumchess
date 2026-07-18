@@ -45,6 +45,21 @@ export default function ModalShell({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, escapeCloses, onClose]);
 
+  // While ANY modal is open the page behind must not scroll (on mobile a
+  // swipe on the scrim used to reveal the page below the game). Ref-counted
+  // so stacked modals don't unlock early.
+  useEffect(() => {
+    if (!open) return undefined;
+    const count = Number(document.body.dataset.qcModalLocks || 0) + 1;
+    document.body.dataset.qcModalLocks = String(count);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      const left = Number(document.body.dataset.qcModalLocks || 1) - 1;
+      document.body.dataset.qcModalLocks = String(Math.max(0, left));
+      if (left <= 0) document.body.style.overflow = '';
+    };
+  }, [open]);
+
   const backdropStyle = {
     position: 'fixed',
     inset: 0,

@@ -129,7 +129,10 @@ export default function AccountModal({
       setNotice({ kind: 'error', text: error.message });
     } else {
       if (needsConfirmation) {
-        setNotice({ kind: 'info', text: 'Account created — check your email for the confirmation link, then sign in.' });
+        // Its own page, not a one-line notice: people missed that signup
+        // isn't finished until the emailed link is clicked.
+        setNotice(null);
+        setAuthMode('confirm-sent');
       }
       trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
       onAccountCreated();
@@ -285,7 +288,7 @@ export default function AccountModal({
       panelStyle={{}}
     >
         <div className="qc-am-header">
-          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {user ? 'Your Account' : 'Sign In'}</h2>
+          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {user ? 'Your Account' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
           <IconButton
             icon={XIcon} size={20} title="Close" ariaLabel="Close account panel"
             className="qc-account-close" onClick={onClose} width={36} height={36} radius={8}
@@ -396,6 +399,28 @@ export default function AccountModal({
                   </div>
                 </div>
               </>
+            )}
+
+            {authMode === 'confirm-sent' && (
+              <div style={{ textAlign: 'center', padding: '10px 4px 4px' }}>
+                <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 12 }} aria-hidden="true">📬</div>
+                <h3 style={{ margin: '0 0 10px', fontSize: 18 }}>Check your email</h3>
+                <p style={{ margin: '0 0 6px', fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.55 }}>
+                  We sent a confirmation link to
+                  <br />
+                  <strong style={{ fontSize: 14.5 }}>{email.trim()}</strong>
+                </p>
+                <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>
+                  Your account isn&rsquo;t active until you click it. The email comes
+                  from noreply@quantumchess.ninja — check spam if it&rsquo;s not there
+                  within a minute. The link brings you straight back here, signed in.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                    Back to Sign In
+                  </button>
+                </div>
+              </div>
             )}
 
             {authMode === 'forgot' && (

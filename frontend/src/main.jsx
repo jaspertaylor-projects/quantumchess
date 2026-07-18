@@ -82,6 +82,15 @@ const setWelcomeScrollLock = (locked) => {
   document.body.classList.toggle('qc-welcome-active', locked);
 };
 
+// The static below-the-fold section (index.html #qc-below) is publisher
+// content for the FRONT page only — crawlers read it without JS on '/'.
+// The game surface must not carry it: on /play it was reachable by scroll
+// under the board and popped out from behind modals on mobile.
+const setBelowFoldVisible = (visible) => {
+  const el = document.getElementById('qc-below');
+  if (el) el.style.display = visible ? '' : 'none';
+};
+
 const resolveInitialEntry = () => {
   const entry = resolveWelcomeEntry({
     pathname: window.location.pathname,
@@ -97,6 +106,7 @@ const resolveInitialEntry = () => {
       window.history.replaceState({}, '', cleanPlayUrl);
     }
   }
+  setBelowFoldVisible(entry.surface === 'welcome');
   return entry;
 };
 
@@ -110,6 +120,7 @@ function RootExperience() {
     rememberWelcomeChoice();
     setWelcomeScrollLock(false);
     if (action === WELCOME_ACTION.RULES) return;
+    setBelowFoldVisible(false);
     const cleanPlayUrl = `${playUrlFrom(window.location.search)}${window.location.hash}`;
     window.history.replaceState({}, '', cleanPlayUrl);
     setEntry({ surface: 'play', action });

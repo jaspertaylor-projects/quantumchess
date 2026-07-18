@@ -59,7 +59,10 @@ export default function useAuth() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      // The confirmation link lands in the app, on THIS origin (prod or dev
+      // — both are in the project's redirect allowlist; the remote site_url
+      // fallback is quantumchess.ninja, never localhost:3000).
+      options: { data: { username }, emailRedirectTo: `${window.location.origin}/play` },
     });
     // When email confirmation is on, a user is returned but no session.
     const needsConfirmation = Boolean(!error && data && data.user && !data.session);
