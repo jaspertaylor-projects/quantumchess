@@ -425,6 +425,10 @@ export default function App({ entryAction = null }) {
     () => (lastMove && Array.isArray(lastMove.healedSquares) ? lastMove.healedSquares : []),
     [lastMove]
   );
+  const failedHealMarks = useMemo(
+    () => (lastMove && Array.isArray(lastMove.failedHealSquares) ? lastMove.failedHealSquares : []),
+    [lastMove]
+  );
   // Census-locked zap targets: contacted, but no possibility could shed
   // without collateral collapse elsewhere — shown as a shield, not silence.
   const fizzleMarks = useMemo(
@@ -434,8 +438,8 @@ export default function App({ entryAction = null }) {
   // Where the pulse came from: the moved piece's landing square, so the
   // board can fly particles from the mover to each contacted square.
   const pulseOrigin = useMemo(
-    () => (lastMove && (zapMarks.length || healMarks.length || fizzleMarks.length) ? lastMove.to : null),
-    [lastMove, zapMarks, healMarks, fizzleMarks]
+    () => (lastMove && (zapMarks.length || healMarks.length || failedHealMarks.length || fizzleMarks.length) ? lastMove.to : null),
+    [lastMove, zapMarks, healMarks, failedHealMarks, fizzleMarks]
   );
 
   // Engaging with a glowing onboarding button also retires the glow.
@@ -574,7 +578,7 @@ export default function App({ entryAction = null }) {
     }
   }, [sideToMove, getPieceAtSquare, movePiece, canCastleBetween, castlePieces, commitEngineResult, isOnlineGameRef]);
 
-  useLocalAi({
+  const aiThinking = useLocalAi({
     // The engine never moves during the intro choreography — Black belongs
     // to INTRO_SCRIPT until the whole act retires (or aborts), not merely
     // between scripted replies.
@@ -650,6 +654,7 @@ export default function App({ entryAction = null }) {
   const barCtx = {
     speech,
     effectiveClock,
+    botThinking: aiThinking,
     introSpeechCollapsed: Boolean(intro.introSpeech && !intro.introSpeechOpen),
     onIntroSpeechExpand: intro.expandIntroSpeech,
   };
@@ -745,6 +750,7 @@ export default function App({ entryAction = null }) {
                   selectedId={selectedId}
                   zapMarks={zapMarks}
                   healMarks={healMarks}
+                  failedHealMarks={failedHealMarks}
                   fizzleMarks={fizzleMarks}
                   pulseOrigin={pulseOrigin}
                   effectKey={historyLength}
@@ -933,7 +939,12 @@ export default function App({ entryAction = null }) {
         onCloseAccount={() => { setAccountOpen(false); setBillingReturn(null); }}
         billingReturn={billingReturn}
         handleReviewGame={handleReviewGame}
-        onAccountCreated={() => { setAccountOpen(false); setPricingOpen(true); }}
+        onAccountCreated={(needsConfirmation) => {
+          // No pricing pitch at signup (it was burying the check-your-email
+          // page). Premium stays desire-timed: locked bots, review-after-loss,
+          // save cap, and the signed-in account panel.
+          if (!needsConfirmation) setAccountOpen(false);
+        }}
         pricingOpen={pricingOpen}
         onClosePricing={() => setPricingOpen(false)}
         reviewGame={reviewGame}

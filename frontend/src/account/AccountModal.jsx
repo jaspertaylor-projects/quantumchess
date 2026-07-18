@@ -7,9 +7,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
-import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
+import { User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
 import {
@@ -135,7 +135,9 @@ export default function AccountModal({
         setAuthMode('confirm-sent');
       }
       trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
-      onAccountCreated();
+      // The parent must NOT tear this modal down while the confirm-sent
+      // page is what tells the user to go click the email link.
+      onAccountCreated(needsConfirmation);
     }
   };
 
@@ -289,11 +291,7 @@ export default function AccountModal({
     >
         <div className="qc-am-header">
           <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {user ? 'Your Account' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
-          <IconButton
-            icon={XIcon} size={20} title="Close" ariaLabel="Close account panel"
-            className="qc-account-close" onClick={onClose} width={36} height={36} radius={8}
-            bg="rgba(255,255,255,0.1)" color="#fff" hoverInvert={true} shadow="transparent"
-          />
+          <ModalCloseButton ariaLabel="Close account panel" className="qc-account-close" onClick={onClose} />
         </div>
 
         {!authEnabled ? (
