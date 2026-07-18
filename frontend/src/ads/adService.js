@@ -96,6 +96,24 @@ export function initAds() {
   adConfig({ preloadAdBreaks: 'on', sound: 'off' });
 }
 
+// Rewarded gate for the free-tier post-game review: the user OPTED IN by
+// clicking, so show the rewarded ad immediately. onGranted fires when the ad
+// was watched — or straight away when ads are dormant (pre-approval builds)
+// or Google has nothing to show; an unfilled ad must never block the feature.
+// Closing the ad early simply doesn't grant (the button stays there).
+export function showRewardedReviewAd({ onGranted }) {
+  if (!CLIENT || !adBreakFn) { onGranted('ads-dormant'); return; }
+  let offered = false;
+  adBreakFn({
+    type: 'reward',
+    name: 'game_review',
+    beforeReward: (showAdFn) => { offered = true; showAdFn(); },
+    adViewed: () => { lastAdShownAt = Date.now(); onGranted('ad-viewed'); },
+    adDismissed: () => {},
+    adBreakDone: () => { if (!offered) onGranted('no-fill'); },
+  });
+}
+
 // Call when a game genuinely ends (winner popup opens). Counts the game and,
 // if the frequency caps allow, requests an interstitial. Google returns
 // control automatically when the ad closes (or immediately if none fills).

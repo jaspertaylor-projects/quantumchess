@@ -25,6 +25,7 @@ import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
 export default function AppModals({
   // game end
   showWinPopup, resolvedWinnerText, externalGameOver, winner, onCloseWinPopup,
+  onPlayAgain, onGameReview, reviewAccess, reviewDisabled, showTipPromo, onTipPromo,
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
   // settings
@@ -56,6 +57,12 @@ export default function AppModals({
         winnerText={resolvedWinnerText}
         title={externalGameOver.over ? 'Game Over' : (winner ? 'Checkmate' : 'Draw')}
         onClose={onCloseWinPopup}
+        onPlayAgain={onPlayAgain}
+        onGameReview={onGameReview}
+        reviewAccess={reviewAccess}
+        reviewDisabled={reviewDisabled}
+        showTipPromo={showTipPromo}
+        onTipPromo={onTipPromo}
       />
 
       <EnPassantChoiceModal

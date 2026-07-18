@@ -48,6 +48,8 @@ import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
+import { adsEnabled, showRewardedReviewAd } from './ads/adService.js';
+import { isAdFree, isTipper, tipReviewAvailable, markTipReviewUsed } from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
 
@@ -650,6 +652,44 @@ export default function App({ entryAction = null }) {
 
   const resolvedWinnerText = useMemo(() => (externalGameOver.over ? externalGameOver.text : winnerText), [externalGameOver, winnerText]);
 
+  // --- Game-over actions ---------------------------------------------------
+  // Play Again re-enters the SAME queue: gameSettings still holds the mode
+  // (same bot, same online matchmaking settings, same local setup) and
+  // handleStartGame does the rest, including online re-queueing.
+  const handlePlayAgain = useCallback(() => {
+    setShowWinPopup(false);
+    handleStartGame(gameSettings);
+  }, [gameSettings, handleStartGame]);
+
+  // Review access: premium reviews free; a tipper spends today's free one;
+  // free users voluntarily watch a rewarded ad (only once ads are actually
+  // serving — dormant builds just open it).
+  const postGameReviewAccess = isPaidUser ? 'free'
+    : (isTipper(auth.profile) && tipReviewAvailable(auth.user && auth.user.id)) ? 'tip'
+      : adsEnabled() ? 'ad' : 'free';
+
+  const handlePostGameReview = useCallback(() => {
+    const openReview = () => {
+      if (postGameReviewAccess === 'tip') markTipReviewUsed(auth.user && auth.user.id);
+      setShowWinPopup(false);
+      setReviewGame({
+        game: {
+          user_side: userTeam,
+          opponent: (aiBot && aiBot.name) || 'Opponent',
+          headline: resolvedWinnerText || 'Game review',
+        },
+        moves,
+      });
+      trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
+        accessType: isPaidUser ? 'premium' : postGameReviewAccess === 'free' ? 'standard' : postGameReviewAccess,
+        gameResult: resolvedWinnerText,
+        moveCount: moves.length,
+      });
+    };
+    if (postGameReviewAccess === 'ad') showRewardedReviewAd({ onGranted: openReview });
+    else openReview();
+  }, [postGameReviewAccess, auth.user, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setReviewGame]);
+
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
   const barCtx = {
     speech,
@@ -902,6 +942,12 @@ export default function App({ entryAction = null }) {
         externalGameOver={externalGameOver}
         winner={winner}
         onCloseWinPopup={() => setShowWinPopup(false)}
+        onPlayAgain={handlePlayAgain}
+        onGameReview={handlePostGameReview}
+        reviewAccess={postGameReviewAccess}
+        reviewDisabled={moves.length === 0}
+        showTipPromo={!isAdFree(auth.profile)}
+        onTipPromo={() => { setShowWinPopup(false); setAccountOpen(true, 'game_end_promo'); }}
         pendingEpChoice={input.pendingEpChoice}
         performMove={performMove}
         onCancelEpChoice={() => {
