@@ -89,7 +89,7 @@ function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected
           {bot.name}
         </span>
         <span style={{ fontSize: 11, color: theme.textSecondary, fontWeight: 700 }}>
-          {boss ? (premium ? '★ Premium final boss' : 'Final boss') : premium ? `★ Premium · ${TIER_TAG[bot.tier] || bot.tier}` : TIER_TAG[bot.tier] || bot.tier} · {bot.rating}
+          {boss ? (premium ? `★ Premium · ${TIER_TAG[bot.tier] || bot.tier}` : 'Final boss') : premium ? `★ Premium · ${TIER_TAG[bot.tier] || bot.tier}` : TIER_TAG[bot.tier] || bot.tier} · {bot.rating}
         </span>
       </span>
       {trigger ? (

@@ -430,7 +430,7 @@ export const BOTS = [
     name: 'Ernest Smyslov',
     rating: 2250,
     tier: 'hard',
-    tagline: 'The premium final boss. Your defense is mostly empty space — he fires straight through it.',
+    tagline: 'Your defense is mostly empty space — he fires straight through it.',
     sayings: {
       win: 'Straight through. As predicted.',
       loss: 'Sometimes the foil fires back.',

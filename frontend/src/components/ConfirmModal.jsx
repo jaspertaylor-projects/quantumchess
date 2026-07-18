@@ -5,6 +5,7 @@
 // Exported To: ../App.jsx
 
 import React from 'react';
+import { Flag, Handshake } from 'lucide-react';
 import theme from '../theme.js';
 import ModalShell from './ModalShell.jsx';
 
@@ -15,60 +16,108 @@ export default function ConfirmModal({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   danger = false,
+  variant = null,
   onConfirm = () => {},
   onCancel = () => {},
 }) {
   if (!open) return null;
 
+  const kind = variant || (danger ? 'resign' : 'draw');
+  const isDraw = kind === 'draw' || kind === 'draw-declined';
+  const accent = isDraw ? '#7fe7ff' : '#ff6b6b';
+  const accentSoft = isDraw ? 'rgba(127, 231, 255, 0.18)' : 'rgba(255, 107, 107, 0.18)';
+  const accentGlow = isDraw ? 'rgba(82, 199, 255, 0.32)' : 'rgba(255, 76, 96, 0.32)';
+  const Emblem = isDraw ? Handshake : Flag;
+  const eyebrow = kind === 'draw-declined'
+    ? 'Offer answered'
+    : isDraw ? 'Peace across the board'
+      : kind === 'end-game' ? 'Leave this branch' : 'Concede the game';
+
   const styles = {
     panel: {
-      width: 'min(92vw, 380px)',
-      borderRadius: 12,
-      border: `1px solid ${theme.border}`,
-      backgroundColor: theme.cardBackground,
-      boxShadow: `0 12px 32px ${theme.shadow}`,
+      width: 'min(92vw, 410px)',
+      borderRadius: 18,
+      border: `1px solid ${accent}73`,
+      background: `radial-gradient(circle at 50% -15%, ${accentSoft}, transparent 46%), linear-gradient(155deg, rgba(24, 29, 42, 0.99), rgba(9, 12, 20, 0.99))`,
+      boxShadow: `0 22px 55px ${theme.shadow}, 0 0 28px ${accentGlow}, inset 0 1px 0 rgba(255,255,255,0.07)`,
       color: theme.textPrimary,
-      padding: 20,
+      padding: '22px 22px 20px',
       boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
-      gap: 12,
+      alignItems: 'center',
+      gap: 11,
+      overflow: 'hidden',
+      animation: 'qc-confirm-panel-in 220ms cubic-bezier(.2,.8,.2,1) both',
+    },
+    emblem: {
+      position: 'relative',
+      width: 70,
+      height: 70,
+      display: 'grid',
+      placeItems: 'center',
+      borderRadius: '50%',
+      color: accent,
+      background: `radial-gradient(circle, ${accentSoft} 0 42%, rgba(9,12,20,0.9) 44% 58%, ${accentSoft} 60% 61%, transparent 63%)`,
+      filter: `drop-shadow(0 0 10px ${accentGlow})`,
+    },
+    eyebrow: {
+      marginTop: -3,
+      color: accent,
+      fontSize: 10,
+      fontWeight: 900,
+      letterSpacing: '0.16em',
+      textTransform: 'uppercase',
     },
     title: {
       margin: 0,
-      fontSize: '1.05rem',
+      fontSize: 'clamp(1.18rem, 4vw, 1.42rem)',
       fontWeight: 900,
-      letterSpacing: '0.03em',
+      letterSpacing: '0.015em',
+      textAlign: 'center',
     },
     message: {
       margin: 0,
       fontSize: 14,
-      lineHeight: 1.5,
+      lineHeight: 1.55,
       color: theme.textSecondary,
+      textAlign: 'center',
+      width: '100%',
+      padding: '11px 13px',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 11,
+      background: 'rgba(255,255,255,0.035)',
+      boxSizing: 'border-box',
     },
     buttons: {
       display: 'flex',
-      justifyContent: 'flex-end',
-      gap: 8,
-      marginTop: 4,
+      justifyContent: 'stretch',
+      gap: 10,
+      marginTop: 3,
+      width: '100%',
     },
     cancelBtn: {
-      padding: '8px 14px',
-      borderRadius: 8,
+      flex: '1 1 0',
+      minHeight: 42,
+      padding: '9px 14px',
+      borderRadius: 10,
       border: `1px solid ${theme.border}`,
-      background: 'transparent',
+      background: 'rgba(255,255,255,0.035)',
       color: theme.textPrimary,
-      fontWeight: 700,
+      fontWeight: 800,
       fontSize: 13,
       cursor: 'pointer',
     },
     confirmBtn: {
-      padding: '8px 16px',
-      borderRadius: 8,
-      border: 'none',
-      background: danger ? (theme.danger || '#ff3b30') : theme.primary,
-      color: danger ? '#ffffff' : theme.secondary,
-      fontWeight: 800,
+      flex: '1 1 0',
+      minHeight: 42,
+      padding: '9px 16px',
+      borderRadius: 10,
+      border: `1px solid ${accent}`,
+      background: `linear-gradient(135deg, ${accent}, ${isDraw ? '#9b83ff' : '#d73555'})`,
+      color: isDraw ? '#07131a' : '#ffffff',
+      boxShadow: `0 5px 18px ${accentGlow}`,
+      fontWeight: 900,
       fontSize: 13,
       cursor: 'pointer',
     },
@@ -85,12 +134,19 @@ export default function ConfirmModal({
       panelClassName="qc-confirm-panel"
       panelStyle={styles.panel}
     >
+      <div className={`qc-confirm-emblem qc-confirm-emblem--${kind}`} style={styles.emblem} aria-hidden="true">
+        <span className="qc-confirm-emblem__orbit" />
+        <Emblem size={29} strokeWidth={2.1} />
+      </div>
+      <div style={styles.eyebrow}>{eyebrow}</div>
       <h2 id="qc-confirm-title" style={styles.title}>{title}</h2>
       {message ? <p style={styles.message}>{message}</p> : null}
       <div style={styles.buttons}>
-        <button type="button" className="qc-confirm-cancel" style={styles.cancelBtn} onClick={onCancel}>
-          {cancelLabel}
-        </button>
+        {cancelLabel ? (
+          <button type="button" className="qc-confirm-cancel" style={styles.cancelBtn} onClick={onCancel}>
+            {cancelLabel}
+          </button>
+        ) : null}
         <button type="button" className="qc-confirm-accept" style={styles.confirmBtn} onClick={onConfirm}>
           {confirmLabel}
         </button>

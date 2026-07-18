@@ -9,11 +9,15 @@ describe('new-game settings persistence', () => {
       aiDifficulty: 'hard',
       preferredSide: 'black',
       isRanked: true,
-      timeControl: '10+0',
     };
 
     const state = settingsReducer(undefined, setGameSettings(queued));
 
     expect(state).toMatchObject(queued);
+  });
+
+  it('normalizes any submitted clock to the one canonical online format', () => {
+    const state = settingsReducer(undefined, setGameSettings({ gameMode: 'online', timeControl: '10+0' }));
+    expect(state.timeControl).toBe('5+5');
   });
 });

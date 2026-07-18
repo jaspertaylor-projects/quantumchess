@@ -14,8 +14,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, Pickaxe, Copy as CopyIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pickaxe, Copy as CopyIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
 import EvalGauge from './EvalGauge.jsx';
@@ -33,6 +34,19 @@ import { evaluatePosition } from '../ai/alphaBetaEngine.js';
 import { devDebug } from '../devlog.js';
 import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleScoring.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
+import { CONTACT_PARTICLE_MAX_ARRIVAL_MS } from '../chessboard/contactParticles.js';
+
+const STANDARD_EFFECT_BEAT_MS = 1400;
+const FAILED_HEAL_ANIMATION_MS = 1100;
+const SHIELD_ANIMATION_MS = 1300;
+const FAILED_HEAL_EFFECT_BEAT_MS = CONTACT_PARTICLE_MAX_ARRIVAL_MS + FAILED_HEAL_ANIMATION_MS + 50;
+const SHIELD_EFFECT_BEAT_MS = CONTACT_PARTICLE_MAX_ARRIVAL_MS + SHIELD_ANIMATION_MS + 50;
+
+const effectBeatMs = (effects) => {
+  if (effects?.shields?.length) return SHIELD_EFFECT_BEAT_MS;
+  if (effects?.failedHeals?.length) return FAILED_HEAL_EFFECT_BEAT_MS;
+  return STANDARD_EFFECT_BEAT_MS;
+};
 
 // A move's honest worth is what it leaves you AFTER Black's best answer —
 // static eval alone rates "hangs the queen" as fine. One ply of lookahead
@@ -209,7 +223,7 @@ export default function MinedPuzzleModal({
   };
 
   const {
-    display, setDisplay, setMarks, setEffects, selectedSq, setSelectedSq,
+    display, setDisplay, setMarks, effects, setEffects, selectedSq, setSelectedSq,
     targets, moves, boardPieces,
     handleSquareClick, canDragFrom, handleDragStart, handleDrop,
     later, clearTimers,
@@ -230,7 +244,7 @@ export default function MinedPuzzleModal({
     setFinalLanding(null);
     setDisplay(hasIntro ? puzzle.intro.pieces : puzzle.start.pieces);
     setMarks([]);
-    setEffects({ zaps: [], heals: [], shields: [] });
+    setEffects({ zaps: [], heals: [], failedHeals: [], shields: [] });
     setSelectedSq(null);
     setNeedleValue(null);
     setMoveRank(null);
@@ -269,6 +283,7 @@ export default function MinedPuzzleModal({
           setEffects({
             zaps: last.zappedSquares || [],
             heals: last.healedSquares || [],
+            failedHeals: last.failedHealSquares || [],
             shields: last.fizzledSquares || [],
           });
           bumpFx(puzzle.mistake?.to || last.to || null);
@@ -292,9 +307,9 @@ export default function MinedPuzzleModal({
       if (aliveRef.current !== token) return;
       clearEffects();
       setPhase('playing');
-    }, 1400);
+    }, effectBeatMs(effects));
     return () => clearTimeout(timer);
-  }, [open, puzzle, phase]);
+  }, [open, puzzle, phase, effects]);
 
   // The hint gets a quiet reading beat before the old bouncing-brain search
   // animation arrives. If Black answers sooner, the brain never flashes.
@@ -654,16 +669,17 @@ export default function MinedPuzzleModal({
   const effectsOfMove = (mv) => ({
     zaps: mv.zappedSquares || [],
     heals: mv.healedSquares || [],
+    failedHeals: mv.failedHealSquares || [],
     shields: mv.fizzledSquares || [],
   });
-  const clearEffects = () => setEffects({ zaps: [], heals: [], shields: [] });
+  const clearEffects = () => setEffects({ zaps: [], heals: [], failedHeals: [], shields: [] });
 
   const finishPuzzle = (landed, landing = null, collapsed = false) => {
     if (collapsed) setTotalCollapse(true);
     setFinalLanding(landed !== null ? Number(landed.toFixed(2)) : null);
     if (landing) {
       setDisplay(landing.pieces);
-      setEffects(landing.effects || { zaps: [], heals: [], shields: [] });
+      setEffects(landing.effects || { zaps: [], heals: [], failedHeals: [], shields: [] });
     }
     setPhase('final-effects');
   };
@@ -703,7 +719,7 @@ export default function MinedPuzzleModal({
           if (aliveRef.current !== token) return;
           setRevealArrowIfRough();
           setPhase('done');
-        }, 1400);
+        }, effectBeatMs(effects));
       });
     });
     return () => {
@@ -711,7 +727,7 @@ export default function MinedPuzzleModal({
       cancelAnimationFrame(secondFrame);
       clearTimeout(timer);
     };
-  }, [phase]);
+  }, [phase, effects]);
 
   const attemptMove = (fromSq, toSq) => {
     setSelectedSq(null);
@@ -791,8 +807,8 @@ export default function MinedPuzzleModal({
       return;
     }
 
-    // Mid-line: the effects beat (1.4s), then the hint arrow while Black
-    // thinks, then Black answers and the board re-arms.
+    // Mid-line: the standard effects beat is 1.4s; a failed Heal gets enough
+    // time for its particles to land before its impact response plays.
     later(() => {
       if (aliveRef.current !== token) return;
       setPhase('thinking');
@@ -807,12 +823,17 @@ export default function MinedPuzzleModal({
         // ep replies use the reply's own result (effects skipped —
         // vanishingly rare here).
         let afterPieces = reply.resultPieces;
-        let replyEffects = { zaps: [], heals: [], shields: [] };
+        let replyEffects = { zaps: [], heals: [], failedHeals: [], shields: [] };
         if (reply.type === 'move' && mover) {
           const sim = simulateStandardMove(move.after, mover.id, reply.to, move.nextCC);
           if (sim.ok) {
             afterPieces = sim.pieces;
-            replyEffects = { zaps: sim.zappedSquares || [], heals: sim.healedSquares || [], shields: sim.fizzledSquares || [] };
+            replyEffects = {
+              zaps: sim.zappedSquares || [],
+              heals: sim.healedSquares || [],
+              failedHeals: sim.failedHealSquares || [],
+              shields: sim.fizzledSquares || [],
+            };
           }
         }
         const lastMove = blackLastMove(afterPieces, mover ? mover.id : null, reply.from, reply.to, wasFirstMove, []);
@@ -840,10 +861,10 @@ export default function MinedPuzzleModal({
             setRound(roundIdx + 1);
             setDisplay(afterPieces);
             setPhase('playing');
-          }, 1800);
+          }, Math.max(1800, effectBeatMs(replyEffects)));
         }, 300);
       });
-    }, 1400);
+    }, effectBeatMs(effectsOfMove(move)));
   };
 
   if (!open || !puzzle) return null;
@@ -866,6 +887,7 @@ export default function MinedPuzzleModal({
       pips: p.coherence, regain: Math.max(0, p.recohere || 0),
       chevrons: Boolean(p.wasPromoted), sealed: false,
       mark: false, zap: false, heal: false, shield: false,
+      healFail: false,
     })) : null;
   const scrubHighlights = viewSnap && viewSnap.trail ? [
     { sq: viewSnap.trail.from, color: 'rgba(79, 195, 247, 0.42)' },
@@ -907,22 +929,25 @@ export default function MinedPuzzleModal({
     Math.floor((window.innerHeight * 0.94 - 455) / 8)
   ));
   const puzzleWidth = cell * 8;
-  // The gauge shares its row with two tall, skinny scrub arrows (meter
-  // height); on narrow screens it cedes the width they need instead of
-  // overflowing the card.
-  const gaugeWidth = Math.min(290, cell * 8 - 76);
-  // EvalGauge's own height formula: H = cy + 26 = (W/2 - 18 + 28) + 26.
+  const puzzleSideGutter = 8;
+  // Leave room for edge-anchored history controls on narrow boards.
+  const gaugeWidth = Math.min(290, puzzleWidth - 100);
+  // EvalGauge's rendered height is W/2 + 36. Matching it makes each
+  // chevron a full-height rail beside the meter.
   const gaugeHeight = Math.round(gaugeWidth / 2 + 36);
   const styles = {
     card: {
       background: theme.cardBackground, border: `1px solid ${theme.border}`,
       borderRadius: 14, boxShadow: `0 18px 50px ${theme.shadow}`,
-      // fit-content: the popup hugs the board, so board + player bars span
-      // its full width on every screen instead of floating in a 600px card.
-      padding: '14px 16px 16px', width: 'fit-content', maxWidth: '96vw',
-      maxHeight: '94vh', overflowY: 'auto', boxSizing: 'border-box',
+      // The popup hugs the board with only a small eight-pixel breathing gutter.
+      // +2 accounts for the popup border itself.
+      padding: '14px 0 16px', width: puzzleWidth + puzzleSideGutter * 2 + 2, maxWidth: '96vw',
+      maxHeight: '94vh', overflowX: 'hidden', overflowY: 'auto', boxSizing: 'border-box',
     },
-    headRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    headRow: {
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: 8, marginBottom: 8, padding: '0 16px', boxSizing: 'border-box',
+    },
     kicker: {
       fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
       color: theme.textSecondary, display: 'flex', alignItems: 'center', gap: 6,
@@ -959,12 +984,12 @@ export default function MinedPuzzleModal({
     // Gauge row: the scrub arrows sit at the dial's sides (space always
     // reserved; visibility toggles with relevance).
     gaugeRow: {
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: 4, marginTop: 2,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      width: puzzleWidth, margin: '2px auto 0',
     },
     // The chess×physics quote of the day (puzzleQuotes.js), under the header.
     quote: {
-      margin: '2px 0 4px', padding: '0 6px', textAlign: 'center',
+      margin: '2px 0 4px', padding: '0 16px', textAlign: 'center',
       fontSize: 12, lineHeight: 1.45, color: 'rgba(210, 220, 238, 0.85)',
       display: 'flex', flexDirection: 'column', gap: 2,
     },
@@ -1019,7 +1044,7 @@ export default function MinedPuzzleModal({
                     : phase === 'final-effects' ? ' · resolving…'
               : phase !== 'done' ? ` · move ${Math.min(round + 1, totalMoves)} of ${totalMoves}` : ''}
           </div>
-          <IconButton icon={XIcon} label="Close mined puzzle" onClick={onClose} />
+          <ModalCloseButton ariaLabel="Close mined puzzle" className="qc-puzzle-close" onClick={onClose} />
         </div>
 
         {dailyQuote ? (
@@ -1109,33 +1134,43 @@ export default function MinedPuzzleModal({
           <IconButton
             icon={ChevronLeft}
             size={30}
-            width={34}
+            width={42}
             height={gaugeHeight}
-            radius={10}
+            radius={12}
             title="Previous position (←)"
+            suppressTitle
             ariaLabel="Show previous position"
             onClick={scrubBack}
-            bg="transparent"
+            bg="rgba(79, 195, 247, 0.08)"
             color={theme.primary}
             hoverInvert
             shadow="transparent"
-            style={{ visibility: scrubVisible && viewBack < scrubMax ? 'visible' : 'hidden' }}
+            style={{
+              visibility: scrubVisible && viewBack < scrubMax ? 'visible' : 'hidden',
+              border: '1px solid rgba(79, 195, 247, 0.55)',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.035)',
+            }}
           />
           <EvalGauge ticks={ticks} value={needleValue} width={gaugeWidth} />
           <IconButton
             icon={ChevronRight}
             size={30}
-            width={34}
+            width={42}
             height={gaugeHeight}
-            radius={10}
+            radius={12}
             title="Next position (→)"
+            suppressTitle
             ariaLabel="Show next position"
             onClick={scrubForward}
-            bg="transparent"
+            bg="rgba(79, 195, 247, 0.08)"
             color={theme.primary}
             hoverInvert
             shadow="transparent"
-            style={{ visibility: scrubVisible && viewBack > 0 ? 'visible' : 'hidden' }}
+            style={{
+              visibility: scrubVisible && viewBack > 0 ? 'visible' : 'hidden',
+              border: '1px solid rgba(79, 195, 247, 0.55)',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.035)',
+            }}
           />
         </div>
         <MoveSquares grades={grades} total={totalMoves} />

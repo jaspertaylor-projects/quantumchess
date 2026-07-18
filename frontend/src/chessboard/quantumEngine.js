@@ -158,6 +158,7 @@ function resolveMoveTail(next, moverSide, moverIds) {
     pieces: contact.pieces,
     zappedSquares: contact.zappedSquares,
     healedSquares: contact.healedSquares,
+    failedHealSquares: contact.failedHealSquares,
     fizzledSquares: contact.fizzledSquares,
   };
 }
@@ -234,6 +235,7 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
     didCapture,
     zappedSquares: tail.zappedSquares,
     healedSquares: tail.healedSquares,
+    failedHealSquares: tail.failedHealSquares,
     fizzledSquares: tail.fizzledSquares,
   };
 }
@@ -283,7 +285,10 @@ function shedIsLocal(before, after, targetId, shedType) {
 // Deterministic: contacts resolve in algebraic square order, zaps before
 // heals. Every contacted enemy appears in exactly one feedback list:
 // zappedSquares when it shed a possibility, fizzledSquares when it did not.
-// Returns { pieces, zappedSquares, healedSquares, fizzledSquares }.
+// Every contacted friendly likewise appears in healedSquares or
+// failedHealSquares, so attempted Heals never disappear from the UI.
+// Returns { pieces, zappedSquares, healedSquares, failedHealSquares,
+// fizzledSquares }.
 export function applyContactZapHeal(pieces, moverSide, moverIds) {
   let current = pieces;
   const moverSet = new Set(moverIds);
@@ -419,14 +424,16 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
   }
 
   // Heals bloom TOGETHER (same 2026-07-13 ruling as the zap volley — no
-  // hidden square-order tie-breaks). Each friendly contact finds its
-  // cheapest feasible regain against the POST-VOLLEY, PRE-HEAL state in
-  // isolation; then all regains land at once. If the combined census lets
-  // every regain take root (each healed piece still holds its regained
-  // type and grew, or restored King), the volley commits — cascades to other pieces remain
-  // allowed, as heals always did. If ANY regain fails to take root
-  // jointly, the whole heal volley dissipates.
-  const healedSquares = [];
+  // hidden square-order tie-breaks). Candidate regains are searched as a
+  // JOINT census event: a pair such as +Knight on one contact and +Pawn on
+  // another may be legal together even when neither can take root alone.
+  // Prefer the volley that heals the most contacts; among equal-size
+  // volleys, algebraic contact order and HEAL_GAIN_ORDER deterministically
+  // choose the least-valuable combination. Cascades to other pieces remain
+  // allowed, as heals always did.
+  const healContactSquares = contacts
+    .filter((target) => target.side === moverSide)
+    .map((target) => target.square);
   const preHeal = current;
   const moverHasKing = preHeal.some(
     (p) => !p.captured && p.square && p.side === moverSide && (p.possibleTypes || []).includes('k')
@@ -434,7 +441,7 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
   const healOrder = moverHasKing
     ? HEAL_GAIN_ORDER
     : ['k', ...HEAL_GAIN_ORDER.filter((t) => t !== 'k')];
-  const healCandidates = []; // { id, square, gain, preLen }
+  const healTargets = []; // { id, square, preLen, options }
   for (const c of contacts) {
     if (c.side !== moverSide) continue;
     const live = preHeal.find((p) => p.id === c.id && !p.captured && p.square);
@@ -443,46 +450,101 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     const pos = fromAlgebraic(live.square);
     const promotionRank = live.side === 'white' ? 7 : 0;
     const onPromotionRank = Boolean(pos && pos.rankIndex === promotionRank);
-    for (const t of healOrder) {
-      if (t === 'p' && (promoted || onPromotionRank)) continue;
-      if (live.possibleTypes.includes(t)) continue;
-      const trial = clonePieces(preHeal);
-      const trialPiece = trial.find((x) => x.id === live.id);
-      withTypes(trialPiece, [...getBaseTypes(trialPiece), t], getPromoTypes(trialPiece));
-      const constrained = applyQuantumConstraints(trial);
-      const after = constrained.find((x) => x.id === live.id);
-      const tookRoot = after && after.possibleTypes.includes(t) &&
-        (t === 'k' || after.possibleTypes.length > live.possibleTypes.length);
-      if (tookRoot) {
-        healCandidates.push({ id: live.id, square: live.square, gain: t, preLen: live.possibleTypes.length });
-        break;
-      }
-    }
+    const options = healOrder.filter((t) => {
+      if (t === 'p' && (promoted || onPromotionRank)) return false;
+      return !live.possibleTypes.includes(t);
+    });
+    healTargets.push({
+      id: live.id,
+      square: live.square,
+      preLen: live.possibleTypes.length,
+      options,
+    });
   }
-  if (healCandidates.length > 0) {
+
+  const applyHealSelection = (selection, includeAllFrom = -1) => {
     const volley = clonePieces(preHeal);
-    for (const c of healCandidates) {
-      const t = volley.find((x) => x.id === c.id);
-      withTypes(t, [...getBaseTypes(t), c.gain], getPromoTypes(t));
+    for (let i = 0; i < healTargets.length; i += 1) {
+      const target = healTargets[i];
+      const gains = includeAllFrom >= 0 && i >= includeAllFrom
+        ? target.options
+        : (selection[i] ? [selection[i]] : []);
+      if (!gains.length) continue;
+      const piece = volley.find((x) => x.id === target.id);
+      withTypes(piece, [...getBaseTypes(piece), ...gains], getPromoTypes(piece));
     }
     const constrained = applyQuantumConstraints(volley);
-    let allHold = true;
-    for (const c of healCandidates) {
-      const after = constrained.find((x) => x.id === c.id);
-      const tookRoot = after && after.possibleTypes.includes(c.gain) &&
-        (c.gain === 'k' || after.possibleTypes.length > c.preLen);
-      if (!tookRoot) {
-        allHold = false;
-        break;
-      }
+    for (let i = 0; i < healTargets.length; i += 1) {
+      const gain = selection[i];
+      if (!gain) continue;
+      const target = healTargets[i];
+      const after = constrained.find((x) => x.id === target.id);
+      const tookRoot = after && after.possibleTypes.includes(gain) &&
+        (gain === 'k' || after.possibleTypes.length > target.preLen);
+      if (!tookRoot) return null;
     }
-    if (allHold) {
-      current = constrained;
-      for (const c of healCandidates) healedSquares.push(c.square);
+    return constrained;
+  };
+
+  // One optimistic census pass removes any regain that cannot survive even
+  // with every other contact option available. This is a sound monotonic
+  // prune and keeps ordinary move generation out of an exponential search.
+  if (healTargets.length > 1) {
+    const expanded = applyHealSelection(new Array(healTargets.length).fill(null), 0);
+    if (expanded) {
+      for (const target of healTargets) {
+        const after = expanded.find((piece) => piece.id === target.id);
+        target.options = target.options.filter((gain) => after?.possibleTypes.includes(gain));
+      }
     }
   }
 
-  return { pieces: current, zappedSquares, healedSquares, fizzledSquares };
+  let bestSelection = new Array(healTargets.length).fill(null);
+  let bestPieces = preHeal;
+  let bestCount = -1;
+  const selection = new Array(healTargets.length).fill(null);
+
+  const searchJointHeals = (index, count) => {
+    if (bestCount === healTargets.length) return;
+    if (count + (healTargets.length - index) < bestCount) return;
+
+    if (index === healTargets.length) {
+      const constrained = applyHealSelection(selection);
+      if (constrained && count > bestCount) {
+        bestCount = count;
+        bestSelection = [...selection];
+        bestPieces = constrained;
+      }
+      return;
+    }
+
+    for (const gain of healTargets[index].options) {
+      selection[index] = gain;
+      searchJointHeals(index + 1, count + 1);
+      if (bestCount === healTargets.length) return;
+    }
+
+    selection[index] = null;
+    searchJointHeals(index + 1, count);
+  };
+
+  searchJointHeals(0, 0);
+  if (bestCount > 0) current = bestPieces;
+
+  const healedSquares = healTargets
+    .filter((_, index) => Boolean(bestSelection[index]))
+    .map((target) => target.square);
+
+  const healedSet = new Set(healedSquares);
+  const failedHealSquares = healContactSquares.filter((square) => !healedSet.has(square));
+
+  return {
+    pieces: current,
+    zappedSquares,
+    healedSquares,
+    failedHealSquares,
+    fizzledSquares,
+  };
 }
 
 // --- En passant (phantom capture) ---
@@ -549,6 +611,7 @@ export function simulateEnPassant(prevPieces, pieceId, toSquare, victimId, captu
     didCapture: true,
     zappedSquares: tail.zappedSquares,
     healedSquares: tail.healedSquares,
+    failedHealSquares: tail.failedHealSquares,
     fizzledSquares: tail.fizzledSquares,
   };
 }
@@ -696,6 +759,7 @@ export function simulateCastle(prevPieces, plan) {
     pieces: tail.pieces,
     zappedSquares: tail.zappedSquares,
     healedSquares: tail.healedSquares,
+    failedHealSquares: tail.failedHealSquares,
     fizzledSquares: tail.fizzledSquares,
   };
 }

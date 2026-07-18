@@ -15,7 +15,9 @@
       "mcp__playwright__browser_find",
       "Bash(python3 -c ' *)",
       "Bash(aws sesv2 *)",
-      "Bash(supabase projects *)"
+      "Bash(supabase projects *)",
+      "Bash(supabase db *)",
+      "Bash(supabase migration *)"
     ]
   }
 }

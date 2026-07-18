@@ -33,11 +33,11 @@ export function getOrCreateClientId() {
   return newId;
 }
 
-export async function joinQueue({ clientId }) {
+export async function joinQueue({ clientId, ranked = false }) {
   const res = await fetch('/api/matchmaking/join', {
     method: 'POST',
     headers: JSON_HEADERS,
-    body: JSON.stringify({ clientId }),
+    body: JSON.stringify({ clientId, ranked: Boolean(ranked) }),
   });
   if (!res.ok) throw new Error(`joinQueue failed: ${res.status}`);
   return await res.json();
@@ -298,4 +298,12 @@ export function sendCastleWs(api, { roomId, clientId, side, plan, measureTargetI
 export function sendGameOverWs(api, { roomId, clientId, winner = null, reason = 'rules' }) {
   if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
   api.send({ type: 'game_over', roomId, clientId, winner, reason });
+}
+
+// Persistent, turn-independent draw negotiation. The server owns the pending
+// offer and broadcasts every transition to both seats.
+export function sendDrawOfferWs(api, { roomId, clientId, action }) {
+  if (!api || !api.ws || api.ws.readyState !== WebSocket.OPEN) return;
+  if (!['offer', 'retract', 'accept', 'decline'].includes(action)) return;
+  api.send({ type: 'draw_offer', roomId, clientId, action });
 }

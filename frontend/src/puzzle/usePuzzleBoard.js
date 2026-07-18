@@ -24,7 +24,7 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
   // Contact-effect squares for the shown position: red spin-out (zap),
   // green bloom (heal), gold ring (shield) — same visual language as the
   // live board and the tutorial.
-  const [effects, setEffects] = useState({ zaps: [], heals: [], shields: [] });
+  const [effects, setEffects] = useState({ zaps: [], heals: [], failedHeals: [], shields: [] });
   const [selectedSq, setSelectedSq] = useState(null);
   const timersRef = useRef([]);
   const later = (fn, ms) => { timersRef.current.push(setTimeout(fn, ms)); };
@@ -99,6 +99,7 @@ export default function usePuzzleBoard({ ply, playing, onMove, onSelect = null }
     mark: marks.includes(p.square),
     zap: effects.zaps.includes(p.square),
     heal: effects.heals.includes(p.square),
+    healFail: (effects.failedHeals || []).includes(p.square),
     shield: effects.shields.includes(p.square),
   })), [live, display, marks, threats, effects]);
 

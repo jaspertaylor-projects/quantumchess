@@ -204,10 +204,11 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     if (!jointClean) rollback(bd, mark); // whole volley fizzles
   }
 
-  // Heals bloom TOGETHER (REF: the heal volley, 2026-07-13). Isolated
-  // candidate regains against the pre-heal state, then one joint commit:
-  // every healed piece must still hold its regain and have grown (or have
-  // restored King), or the whole volley dissipates.
+  // Heals bloom TOGETHER (REF: the joint heal search). A regain that fails
+  // alone may be supported by a simultaneous regain on another contact, so
+  // search combinations against one shared census. Maximize the number of
+  // healed contacts, then retain contact order + HEAL_ORDER as the stable
+  // least-value tie-break.
   let moverHasKing = false;
   for (let i = 0; i < bd.n; i++) {
     const w = bd.words[i];
@@ -217,7 +218,7 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     }
   }
   const healOrder = moverHasKing ? HEAL_ORDER : [TK, TP, TN, TB, TR, TQ];
-  const healCandidates = []; // [pieceIdx, gainBit, preCount] triplets, flat
+  const healTargets = []; // { i, preCount, options }
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
     const w = bd.words[i];
@@ -228,41 +229,99 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     const onPromoRank = sideBit(w) === BLACK ? rank === 0 : rank === 7;
     const pre = possibleOf(w);
     const preCount = popcount6(pre);
+    const options = [];
     for (let h = 0; h < healOrder.length; h++) {
       const t = healOrder[h];
       if (t === TP && (promoted || onPromoRank)) continue;
       if (pre & t) continue;
-      const mark = watermark(bd);
-      // REF: heals add the regained identity to the BASE set.
-      setWord(bd, i, withMasks(w, baseOf(w) | t, promoOf(w)));
-      applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
-      const after = possibleOf(bd.words[i]);
-      const took = (after & t) && (t === TK || popcount6(after) > preCount);
-      rollback(bd, mark); // isolation: the trial never persists
-      if (took) {
-        healCandidates.push(i, t, preCount);
-        break;
-      }
+      options.push(t);
     }
+    healTargets.push({ i, preCount, options });
   }
-  if (healCandidates.length > 0) {
+
+  const selection = new Int32Array(healTargets.length);
+  const bestSelection = new Int32Array(healTargets.length);
+  let bestCount = -1;
+
+  const selectionTakesRoot = (includeAllFrom = -1) => {
     const mark = watermark(bd);
-    for (let k = 0; k < healCandidates.length; k += 3) {
-      const i = healCandidates[k];
-      const t = healCandidates[k + 1];
-      const w = bd.words[i];
-      setWord(bd, i, withMasks(w, baseOf(w) | t, promoOf(w)));
+    for (let k = 0; k < healTargets.length; k++) {
+      const target = healTargets[k];
+      let gains = selection[k];
+      if (includeAllFrom >= 0 && k >= includeAllFrom) {
+        gains = 0;
+        for (let h = 0; h < target.options.length; h++) gains |= target.options[h];
+      }
+      if (!gains) continue;
+      const w = bd.words[target.i];
+      setWord(bd, target.i, withMasks(w, baseOf(w) | gains, promoOf(w)));
     }
     applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
     let allHold = true;
-    for (let k = 0; k < healCandidates.length && allHold; k += 3) {
-      const i = healCandidates[k];
-      const t = healCandidates[k + 1];
-      const preCount = healCandidates[k + 2];
-      const after = possibleOf(bd.words[i]);
-      if (!(after & t) || (t !== TK && popcount6(after) <= preCount)) allHold = false;
+    for (let k = 0; k < healTargets.length && allHold; k++) {
+      const gain = selection[k];
+      if (!gain) continue;
+      const target = healTargets[k];
+      const after = possibleOf(bd.words[target.i]);
+      if (!(after & gain) || (gain !== TK && popcount6(after) <= target.preCount)) allHold = false;
     }
-    if (!allHold) rollback(bd, mark);
+    rollback(bd, mark);
+    return allHold;
+  };
+
+  // REF optimistic prune: an option stripped even when every joint option
+  // is present can never participate in a narrower valid selection.
+  if (healTargets.length > 1) {
+    const mark = watermark(bd);
+    for (let k = 0; k < healTargets.length; k++) {
+      const target = healTargets[k];
+      let gains = 0;
+      for (let h = 0; h < target.options.length; h++) gains |= target.options[h];
+      if (!gains) continue;
+      const w = bd.words[target.i];
+      setWord(bd, target.i, withMasks(w, baseOf(w) | gains, promoOf(w)));
+    }
+    applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
+    for (let k = 0; k < healTargets.length; k++) {
+      const target = healTargets[k];
+      const possible = possibleOf(bd.words[target.i]);
+      target.options = target.options.filter((gain) => possible & gain);
+    }
+    rollback(bd, mark);
+  }
+
+  const searchJointHeals = (index, count) => {
+    if (bestCount === healTargets.length) return;
+    if (count + (healTargets.length - index) < bestCount) return;
+    if (index === healTargets.length) {
+      if (selectionTakesRoot() && count > bestCount) {
+        bestCount = count;
+        bestSelection.set(selection);
+      }
+      return;
+    }
+
+    const target = healTargets[index];
+    for (let h = 0; h < target.options.length; h++) {
+      selection[index] = target.options[h];
+      searchJointHeals(index + 1, count + 1);
+      if (bestCount === healTargets.length) return;
+    }
+
+    selection[index] = 0;
+    searchJointHeals(index + 1, count);
+  };
+
+  searchJointHeals(0, 0);
+  if (bestCount > 0) {
+    for (let k = 0; k < healTargets.length; k++) {
+      const gain = bestSelection[k];
+      if (!gain) continue;
+      const target = healTargets[k];
+      const w = bd.words[target.i];
+      setWord(bd, target.i, withMasks(w, baseOf(w) | gain, promoOf(w)));
+    }
+    applyConstraintsFast(bd, moverSide === 0 ? 1 : 2);
   }
 }
 

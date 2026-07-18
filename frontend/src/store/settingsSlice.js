@@ -14,7 +14,7 @@ const initialState = {
   aiDifficulty: 'medium', // 'easy', 'medium', 'hard'
   preferredSide: 'random', // 'white', 'black', 'random' (AI games only)
   isRanked: false, // boolean
-  timeControl: '5+0', // '3+0', '5+0', '10+0'
+  timeControl: '5+5', // fixed for online games; local and AI are untimed
 };
 
 const settingsSlice = createSlice({
@@ -22,13 +22,15 @@ const settingsSlice = createSlice({
   initialState,
   reducers: {
     setGameSettings(state, action) {
-      const { gameMode, aiBotId, aiDifficulty, preferredSide, isRanked, timeControl } = action.payload || {};
+      const { gameMode, aiBotId, aiDifficulty, preferredSide, isRanked } = action.payload || {};
       state.gameMode = gameMode ?? state.gameMode;
       state.aiBotId = aiBotId ?? state.aiBotId;
       state.aiDifficulty = aiDifficulty ?? state.aiDifficulty;
       state.preferredSide = preferredSide ?? state.preferredSide;
       state.isRanked = isRanked ?? state.isRanked;
-      state.timeControl = timeControl ?? state.timeControl;
+      // Keep one canonical online format even if an older caller or cached
+      // setup submits a retired clock value.
+      state.timeControl = '5+5';
     },
   },
 });

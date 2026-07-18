@@ -9,8 +9,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, GraduationCap as GraduationCapIcon, BookOpen as BookOpenIcon, Atom as AtomIcon } from 'lucide-react';
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, GraduationCap as GraduationCapIcon, BookOpen as BookOpenIcon, Atom as AtomIcon } from 'lucide-react';
 import { LESSONS } from './lessons.js';
 import MiniBoard from './MiniBoard.jsx';
 import InteractiveExercise from './InteractiveExercise.jsx';
@@ -209,20 +210,11 @@ export default function TutorialModal({ open = false, onClose = () => {}, initia
               <h2 id="qc-tutorial-title" style={styles.title}>{lesson.title}</h2>
             </div>
           </div>
-          <IconButton
-            icon={XIcon}
-            size={20}
+          <ModalCloseButton
             title="Close tutorial"
             ariaLabel="Close tutorial"
             className="qc-tutorial-close"
             onClick={onClose}
-            width={36}
-            height={36}
-            radius={8}
-            bg={theme.secondary}
-            color={theme.error}
-            hoverInvert={true}
-            shadow="transparent"
           />
         </div>
 

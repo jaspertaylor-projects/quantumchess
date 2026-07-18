@@ -5,8 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import theme from '../theme.js';
-import { X, RotateCcw, ChevronDown } from 'lucide-react';
+import { RotateCcw, ChevronDown } from 'lucide-react';
 import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import { DEFAULT_INDICATORS, INDICATOR_LABELS, INDICATOR_PRESETS, PRESET_LABELS, matchIndicatorPreset } from './useIndicatorSettings.js';
 import SayingsEditor from '../sayings/SayingsEditor.jsx';
@@ -289,20 +290,11 @@ export default function SettingsModal({
       </style>
       <div className="qc-settings-header" style={styles.header}>
           <h2 id="qc-settings-title" className="qc-settings-title" style={styles.title}>Settings</h2>
-          <IconButton
-            icon={X}
-            size={20}
+          <ModalCloseButton
             title="Close settings"
             ariaLabel="Close settings"
             className="qc-settings-close"
             onClick={onClose}
-            width={36}
-            height={36}
-            radius={8}
-            bg={theme.secondary}
-            color={theme.error}
-            hoverInvert={true}
-            shadow="transparent"
           />
         </div>
 

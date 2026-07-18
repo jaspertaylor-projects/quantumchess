@@ -264,9 +264,10 @@ export default function ReviewModal({
   }
   const reviewZapMarks = snap?.lastMove?.zappedSquares || [];
   const reviewHealMarks = snap?.lastMove?.healedSquares || [];
+  const reviewFailedHealMarks = snap?.lastMove?.failedHealSquares || [];
   const reviewFizzleMarks = snap?.lastMove?.fizzledSquares || [];
   const reviewPulseOrigin = snap?.lastMove
-    && (reviewZapMarks.length || reviewHealMarks.length || reviewFizzleMarks.length)
+    && (reviewZapMarks.length || reviewHealMarks.length || reviewFailedHealMarks.length || reviewFizzleMarks.length)
     ? snap.lastMove.to
     : null;
   const reviewEffectKey = variation
@@ -400,6 +401,7 @@ export default function ReviewModal({
                   pieces={snap.pieces}
                   zapMarks={reviewZapMarks}
                   healMarks={reviewHealMarks}
+                  failedHealMarks={reviewFailedHealMarks}
                   fizzleMarks={reviewFizzleMarks}
                   pulseOrigin={reviewPulseOrigin}
                   effectKey={reviewEffectKey}
@@ -483,7 +485,7 @@ export default function ReviewModal({
                     ))}
                     <span style={styles.variationExit}>
                       <IconButton
-                        icon={Undo2} size={15} title="Back to game" ariaLabel="Leave the variation and return to the game"
+                        icon={Undo2} size={15} title="Back to game" suppressTitle ariaLabel="Leave the variation and return to the game"
                         onClick={() => v.goMainline(variation.baseIdx)} width={30} height={26} radius={7}
                         bg="rgba(255,107,107,0.12)" color="#ff8f8f" hoverInvert shadow="transparent"
                       />
@@ -521,10 +523,10 @@ export default function ReviewModal({
                       ? `Variation ${variation.vIdx} / ${variation.snaps.length - 1}`
                       : `Move ${bounded} / ${snapshots.length - 1}`}
                   </span>
-                  <IconButton icon={SkipBack} size={16} title="Start" ariaLabel="Jump to start" onClick={v.seekStart} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronLeft} size={18} title="Previous move (←)" ariaLabel="Previous move" onClick={v.seekPrev} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronRight} size={18} title="Next move (→)" ariaLabel="Next move" onClick={v.seekNext} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={SkipForward} size={16} title="End" ariaLabel="Jump to end" onClick={v.seekEnd} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={SkipBack} size={16} title="Start" suppressTitle ariaLabel="Jump to start" onClick={v.seekStart} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronLeft} size={18} title="Previous move (←)" suppressTitle ariaLabel="Previous move" onClick={v.seekPrev} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronRight} size={18} title="Next move (→)" suppressTitle ariaLabel="Next move" onClick={v.seekNext} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={SkipForward} size={16} title="End" suppressTitle ariaLabel="Jump to end" onClick={v.seekEnd} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
                 </div>
                 {showEvalGraph ? (
                   <EvalTraceGraph

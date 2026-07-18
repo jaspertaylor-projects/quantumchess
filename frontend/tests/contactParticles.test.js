@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildContactParticles,
   CONTACT_PARTICLE_LAUNCH_DELAY_MS,
+  CONTACT_PARTICLE_MAX_ARRIVAL_MS,
 } from '../src/chessboard/contactParticles.js';
 
 describe('contact particle paths', () => {
@@ -20,6 +21,7 @@ describe('contact particle paths', () => {
       expect(particle.tx).toBe(10);
       expect(particle.ty).toBe(-10);
       expect(particle.delay).toBeGreaterThanOrEqual(CONTACT_PARTICLE_LAUNCH_DELAY_MS);
+      expect(particle.delay + particle.dur).toBeLessThanOrEqual(CONTACT_PARTICLE_MAX_ARRIVAL_MS);
     }
   });
 });

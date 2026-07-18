@@ -10,7 +10,22 @@ import { supabase, accountsEnabled } from './supabaseClient.js';
 export default function useAuth() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(() => {
+    try { return new URLSearchParams(window.location.search).has('reset'); } catch (_) { return false; }
+  });
+
+  // The query marker is only a bootstrap hint; remove it once consumed so a
+  // later ordinary reload does not reopen the completed reset flow. Preserve
+  // Supabase's hash/code parameters while it establishes the recovery session.
+  useEffect(() => {
+    if (!recoveryMode) return;
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('reset')) return;
+      url.searchParams.delete('reset');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch (_) { /* URL cleanup is cosmetic; recovery can continue */ }
+  }, [recoveryMode]);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -79,7 +94,10 @@ export default function useAuth() {
   const resetPassword = useCallback(async (email) => {
     if (!supabase) return { error: { message: 'Accounts are not configured.' } };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/?reset=1'
+      // Land directly on the game surface. The reset marker is also treated
+      // as a deep link so older emails targeting /?reset=1 still bypass the
+      // first-visit welcome screen.
+      redirectTo: window.location.origin + '/play?reset=1'
     });
     return { error };
   }, []);

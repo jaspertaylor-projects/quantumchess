@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseTimeControlString, clampMs, formatClock } from './clockUtils.js';
 
-export default function useChessClock({ timeControl = '5+0', sideToMove = 'white', isLive = true, moves = [], gameInstanceId = 0 }) {
+export default function useChessClock({ timeControl = '5+5', sideToMove = 'white', isLive = true, moves = [], gameInstanceId = 0 }) {
   const { baseMinutes, incrementSeconds } = useMemo(() => parseTimeControlString(timeControl), [timeControl]);
   const startMs = useMemo(() => clampMs(baseMinutes * 60 * 1000), [baseMinutes]);
   const incMs = useMemo(() => clampMs(incrementSeconds * 1000), [incrementSeconds]);

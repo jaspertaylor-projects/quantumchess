@@ -184,6 +184,8 @@ self.addEventListener('message', (e) => {
         if (!baselineSent) {
           baselineSent = true;
           self.postMessage({ type: 'baseline', id, move: minifyMove(partial.move), score: partial.score, depth: partial.depth });
+        } else {
+          self.postMessage({ type: 'progress', id, move: minifyMove(partial.move), score: partial.score, depth: partial.depth });
         }
       },
     });

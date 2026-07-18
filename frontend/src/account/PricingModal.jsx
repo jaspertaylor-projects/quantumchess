@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ModalShell from '../components/ModalShell.jsx';
-import IconButton from '../components/IconButton.jsx';
-import { X as XIcon, Sparkles as SparklesIcon, Check as CheckIcon, Coffee as CoffeeIcon, Play as PlayIcon } from 'lucide-react';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
+import { Sparkles as SparklesIcon, Check as CheckIcon, Coffee as CoffeeIcon, Play as PlayIcon } from 'lucide-react';
 import {
   PREMIUM_FEATURES,
   PREMIUM_PRICE_LABEL,
@@ -177,11 +177,7 @@ export default function PricingModal({
       </div>
       
       <div style={{ position: 'absolute', top: 16, right: 16 }}>
-        <IconButton
-          icon={XIcon} size={20} title="Close" ariaLabel="Close pricing panel"
-          className="qc-account-close" onClick={onClose} width={36} height={36} radius={8}
-          bg="rgba(255,255,255,0.1)" color="#fff" hoverInvert={true} shadow="transparent"
-        />
+        <ModalCloseButton ariaLabel="Close pricing panel" className="qc-account-close" onClick={onClose} />
       </div>
     </ModalShell>
   );

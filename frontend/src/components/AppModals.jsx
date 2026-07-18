@@ -18,6 +18,7 @@ import { DEFAULT_PLAYER_BAR_COLORS } from '../settings/usePlayerBarColors.js';
 import RulesModal from '../tray/RulesModal.jsx';
 import TutorialModal from '../tutorial/TutorialModal.jsx';
 import AccountModal from '../account/AccountModal.jsx';
+import AdminStatsModal from '../admin/AdminStatsModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
 import ReviewModal from '../review/ReviewModal.jsx';
 import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
@@ -39,6 +40,8 @@ export default function AppModals({
   auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn, handleReviewGame, onAccountCreated,
   pricingOpen, onClosePricing,
   reviewGame, onCloseReview,
+  // admin stats dashboard
+  adminStatsOpen, onOpenAdminStats, onCloseAdminStats,
   // mined-puzzle dev preview (?mined=N)
   minedPreview, onCloseMinedPreview, onCompleteMinedPreview,
   // confirm
@@ -118,6 +121,13 @@ export default function AppModals({
         billingReturn={billingReturn}
         onReviewGame={handleReviewGame}
         onAccountCreated={onAccountCreated}
+        onOpenAdminStats={onOpenAdminStats}
+      />
+
+      <AdminStatsModal
+        open={Boolean(adminStatsOpen)}
+        onClose={onCloseAdminStats}
+        auth={auth}
       />
 
       <PricingModal
@@ -141,6 +151,8 @@ export default function AppModals({
         title={confirmState ? confirmState.title : ''}
         message={confirmState ? confirmState.message : ''}
         confirmLabel={confirmState ? confirmState.confirmLabel : 'Confirm'}
+        cancelLabel={confirmState ? confirmState.cancelLabel : 'Cancel'}
+        variant={confirmState ? confirmState.variant : null}
         danger={Boolean(confirmState && confirmState.danger)}
         onCancel={() => setConfirmState(null)}
         onConfirm={() => {

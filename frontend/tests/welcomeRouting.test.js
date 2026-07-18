@@ -38,6 +38,8 @@ describe('welcome routing', () => {
     expect(hasAppDeepLink('?join=ABC123')).toBe(true);
     expect(hasAppDeepLink('?puzzle=daily')).toBe(true);
     expect(resolveWelcomeEntry({ pathname: '/', search: '?join=ABC123' }).surface).toBe('play');
+    expect(hasAppDeepLink('?reset=1')).toBe(true);
+    expect(resolveWelcomeEntry({ pathname: '/', search: '?reset=1' }).surface).toBe('play');
   });
 
   it('cleans the one-time action while preserving other query parameters', () => {

@@ -6,6 +6,7 @@
 
 import React from 'react';
 import theme from '../theme.js';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import UnstableLinePanel from './UnstableLinePanel.jsx';
 
 export default function UnstableLinePage({
@@ -103,26 +104,11 @@ export default function UnstableLinePage({
             </p>
           </div>
 
-          <button
-            type="button"
+          <ModalCloseButton
             onClick={onClose}
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.18)',
-              background: 'rgba(255,255,255,0.06)',
-              color: theme.textPrimary,
-              fontSize: 20,
-              fontWeight: 900,
-              lineHeight: 1,
-              cursor: 'pointer',
-            }}
-            aria-label="Close Unstable Line"
+            ariaLabel="Close Unstable Line"
             title="Close"
-          >
-            x
-          </button>
+          />
         </header>
 
         <UnstableLinePanel

@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getOrCreateClientId, joinQueue, waitForMatch, leaveQueue, getStatus,
-  connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs,
+  connectToRoomWs, sendMoveWs, sendCastleWs, sendGameOverWs, sendDrawOfferWs,
   createPrivateRoom, joinPrivateRoom, buildInviteLink, readJoinCode, stripJoinCode,
 } from '../tray/matchmakingClient.js';
 import { clampMs } from './clockUtils.js';
@@ -60,6 +60,7 @@ export default function useOnlineGame({
   const wsMessageHandlerRef = useRef(null);
 
   const [serverClock, setServerClock] = useState(IDLE_CLOCK);
+  const [drawOffer, setDrawOffer] = useState(null); // { offeredBy: 'white'|'black' } | null
 
   // Challenge a friend: while waiting in a private room, show the invite
   // card. Cleared by the room_state broadcast when the friend connects.
@@ -95,8 +96,22 @@ export default function useOnlineGame({
     sendCastleWs(wsApiRef.current, { roomId: mmRoomIdRef.current, clientId: mmClientIdRef.current, side, plan });
   }, []);
 
-  // Resign / draw agreement: tell the server (so the opponent hears about it
-  // too) and detach. No-op offline.
+  const sendDrawAction = useCallback((action) => {
+    if (!isOnlineGameRef.current || !relaysReady()) return;
+    sendDrawOfferWs(wsApiRef.current, {
+      roomId: mmRoomIdRef.current,
+      clientId: mmClientIdRef.current,
+      action,
+    });
+  }, []);
+
+  const offerDraw = useCallback(() => sendDrawAction('offer'), [sendDrawAction]);
+  const retractDrawOffer = useCallback(() => sendDrawAction('retract'), [sendDrawAction]);
+  const acceptDrawOffer = useCallback(() => sendDrawAction('accept'), [sendDrawAction]);
+  const declineDrawOffer = useCallback(() => sendDrawAction('decline'), [sendDrawAction]);
+
+  // Manual terminal reports (currently resignation): tell the server so the
+  // opponent hears too, then detach. Agreed draws use the offer protocol.
   const reportManualGameOver = useCallback(({ winner: winSide, reason }) => {
     if (!isOnlineGameRef.current) return;
     if (relaysReady()) {
@@ -147,6 +162,9 @@ export default function useOnlineGame({
       if (msg.type === 'welcome') {
         devDebug('[WS][client] welcome', { you: msg.you, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
+        setDrawOffer(msg.drawOffer?.offeredBy === 'white' || msg.drawOffer?.offeredBy === 'black'
+          ? { offeredBy: msg.drawOffer.offeredBy }
+          : null);
         // Rejoin: the server replays the room's move history; rebuild the
         // engine timeline from it when this client has no moves yet.
         if (Array.isArray(msg.history) && msg.history.length > 0 && moves.length === 0) {
@@ -162,6 +180,9 @@ export default function useOnlineGame({
       if (msg.type === 'room_state') {
         devDebug('[WS][client] room_state', { connected: msg.connected, turn: msg.turn, seq: msg.seq });
         maybeApplyClock(msg.clock);
+        setDrawOffer(msg.drawOffer?.offeredBy === 'white' || msg.drawOffer?.offeredBy === 'black'
+          ? { offeredBy: msg.drawOffer.offeredBy }
+          : null);
         // The invited friend just connected: the challenge is on.
         if (friendWaitRef.current && Array.isArray(msg.connected) && msg.connected.length >= 2) {
           setFriendWait(null);
@@ -177,6 +198,16 @@ export default function useOnlineGame({
         const detail = typeof msg.detail === 'string' ? msg.detail : 'Server rejected the last action.';
         console.warn('[WS][client] error', { detail });
         setInfoMessage(detail);
+        return;
+      }
+
+      if (msg.type === 'draw_offer') {
+        const offeredBy = msg.offeredBy === 'white' || msg.offeredBy === 'black'
+          ? msg.offeredBy
+          : null;
+        setDrawOffer(offeredBy ? { offeredBy } : null);
+        if (msg.resolution === 'declined') setInfoMessage('Draw offer declined.');
+        else if (msg.resolution === 'retracted') setInfoMessage('Draw offer retracted.');
         return;
       }
 
@@ -197,6 +228,7 @@ export default function useOnlineGame({
           text = `${winSide[0].toUpperCase()}${winSide.slice(1)} wins by ${reason}.`;
         }
         detachFromRoom();
+        setDrawOffer(null);
         // Voided games (no winner, never really played) skip the winner
         // popup — and with it the game-record path — on purpose.
         const voided = !winSide && (reason === 'first-move timeout' || reason === 'abandonment');
@@ -402,6 +434,7 @@ export default function useOnlineGame({
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
     setServerClock(IDLE_CLOCK);
+    setDrawOffer(null);
   }, []);
 
   // handleStartGame's online branches. Returns true when the settings chose
@@ -455,7 +488,7 @@ export default function useOnlineGame({
         // Detach from any previous room first: a finished game would
         // otherwise "re-match" us straight back into its dead room.
         try { await leaveQueue(clientId); } catch (_) {}
-        const join = await joinQueue({ clientId });
+        const join = await joinQueue({ clientId, ranked: Boolean(settings.isRanked) });
         if (join.status === 'matched') {
           seatIntoRoom((join.side === 'white' || join.side === 'black') ? join.side : 'white', join.roomId);
           return;
@@ -505,6 +538,7 @@ export default function useOnlineGame({
     isOnlineGameRef,
     mmActive,
     serverClock,
+    drawOffer,
     friendWait,
     inviteCopied,
     handleCopyInvite,
@@ -514,6 +548,10 @@ export default function useOnlineGame({
     teardownForNewGame,
     relayMove,
     relayCastle,
+    offerDraw,
+    retractDrawOffer,
+    acceptDrawOffer,
+    declineDrawOffer,
     reportManualGameOver,
   };
 }

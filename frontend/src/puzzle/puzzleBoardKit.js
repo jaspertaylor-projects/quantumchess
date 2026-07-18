@@ -137,7 +137,7 @@ function applyBlackReply(pieces, reply) {
   if (hasCollapsedKingCapturable(sim.pieces, 'black')) return null;
   return {
     pieces: sim.pieces,
-    lastMove: buildLastMove(sim.pieces, mover, reply.from, reply.to, false, sim.measuredSquares, 'black'),
+    lastMove: buildLastMove(sim.pieces, mover, reply.from, reply.to, false, sim.measuredSquares, 'black', sim),
   };
 }
 

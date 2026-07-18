@@ -24,6 +24,7 @@ const OPTIONS = [
   { value: DEV_ACCOUNT_LEVEL.FREE, label: 'Free account', detail: 'Standard access' },
   { value: DEV_ACCOUNT_LEVEL.SUPPORTER, label: 'Supporter account', detail: 'Tip · ad-free + daily review' },
   { value: DEV_ACCOUNT_LEVEL.PREMIUM, label: 'Premium account', detail: 'All access' },
+  { value: DEV_ACCOUNT_LEVEL.ADMIN, label: 'Admin account', detail: 'Premium + stats dashboard' },
 ];
 
 function loadPosition() {

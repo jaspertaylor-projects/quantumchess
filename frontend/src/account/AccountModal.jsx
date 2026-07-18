@@ -31,6 +31,7 @@ export default function AccountModal({
   billingReturn = null, // 'success' | 'cancelled' | null (from ?premium= redirect)
   onReviewGame = () => {}, // premium: open the game review modal for a saved game
   onAccountCreated = () => {}, // triggered after successful sign up
+  onOpenAdminStats = () => {}, // admin: open the site stats dashboard
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -290,7 +291,7 @@ export default function AccountModal({
       panelStyle={{}}
     >
         <div className="qc-am-header">
-          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {user ? 'Your Account' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
+          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {recoveryMode ? 'Reset Password' : user ? 'Your Account' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
           <ModalCloseButton ariaLabel="Close account panel" className="qc-account-close" onClick={onClose} />
         </div>
 
@@ -306,6 +307,7 @@ export default function AccountModal({
               <input
                 className="qc-account-password qc-am-input" type="password" value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password" autoFocus
               />
             </div>
             {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
@@ -643,9 +645,16 @@ export default function AccountModal({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16 }}>
               <span style={{ fontSize: 12.5, color: '#a8b2d1' }}>Logged in as <strong style={{color: '#fff'}}>{user.email}</strong></span>
-              <button type="button" className="qc-account-signout qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={() => { signOut(); }}>
-                Sign Out
-              </button>
+              <span style={{ display: 'flex', gap: 8 }}>
+                {profile?.is_admin ? (
+                  <button type="button" className="qc-account-admin-stats qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={onOpenAdminStats}>
+                    Site Stats
+                  </button>
+                ) : null}
+                <button type="button" className="qc-account-signout qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={() => { signOut(); }}>
+                  Sign Out
+                </button>
+              </span>
             </div>
           </>
         )}

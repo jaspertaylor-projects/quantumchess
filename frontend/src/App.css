@@ -66,6 +66,57 @@ button:hover {
   background-color: var(--color-buttonGenericBackgroundHover);
 }
 
+@keyframes qc-confirm-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes qc-confirm-orbit {
+  to { transform: rotate(360deg); }
+}
+
+.qc-confirm-emblem__orbit {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px dashed currentColor;
+  opacity: 0.62;
+  animation: qc-confirm-orbit 9s linear infinite;
+}
+
+.qc-confirm-cancel,
+.qc-confirm-accept {
+  transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+
+.qc-confirm-cancel:hover,
+.qc-confirm-accept:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.qc-confirm-cancel:active,
+.qc-confirm-accept:active { transform: translateY(0) scale(0.98); }
+
+.qc-online-draw-action {
+  flex: none;
+  min-height: 26px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qc-online-draw-action--accept { background: #268a55; }
+.qc-online-draw-action--decline { background: #a63d48; }
+.qc-online-draw-action--retract { background: rgba(246, 196, 69, 0.18); color: #f6c445; }
+.qc-online-draw-action:hover { filter: brightness(1.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-confirm-panel { animation: none !important; }
+  .qc-confirm-emblem__orbit { animation: none !important; }
+}
+
 /* Measurement target ring: rotating dashed reticle over the marked enemy piece */
 @keyframes qc-target-spin {
   from { transform: rotate(0deg); }
@@ -100,6 +151,23 @@ button:hover {
   animation: qc-heal-bloom 1100ms ease-out forwards;
 }
 
+/* A Heal made contact but exhausted every regain identity. The dashed green
+   ring arrives with the same energy, shudders, then contracts instead of
+   blooming so failure cannot be mistaken for silence or success. */
+@keyframes qc-heal-fail {
+  0%   { opacity: 0; transform: scale(0.55) rotate(0deg); }
+  24%  { opacity: 0.95; transform: scale(1) rotate(30deg); }
+  42%  { opacity: 0.9; transform: scale(0.92) rotate(-18deg); }
+  60%  { opacity: 0.85; transform: scale(0.98) rotate(12deg); }
+  100% { opacity: 0; transform: scale(0.42) rotate(90deg); }
+}
+
+.qc-heal-fail-circle {
+  /* `both` applies the invisible 0% frame during the impact delay too, so
+     the crossed Heal emblem cannot flash before its particles arrive. */
+  animation: qc-heal-fail 1100ms ease-out both;
+}
+
 /* Contact variant: a census-locked target shrugs the zap off — the shield
    pops in, holds just long enough to read, and fades */
 @keyframes qc-shield-block {
@@ -111,7 +179,9 @@ button:hover {
 }
 
 .qc-fizzle-shield {
-  animation: qc-shield-block 1300ms ease-out forwards;
+  /* Shields are impact responses as well: remain hidden while their motes
+     travel, then pop from the 0% keyframe at contact. */
+  animation: qc-shield-block 1300ms ease-out both;
 }
 
 /* Contact variant: soft motes fly from the mover to each contacted square,
@@ -150,7 +220,10 @@ button:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .qc-zap-circle, .qc-heal-circle, .qc-fizzle-shield { animation-duration: 1ms !important; }
+  .qc-zap-circle, .qc-heal-circle, .qc-heal-fail-circle, .qc-fizzle-shield {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
   .qc-pulse-particle { display: none; }
 }
 
@@ -259,6 +332,105 @@ button:hover {
     animation: none;
     background-position: 33.333% 50%;
   }
+}
+
+/* Live bot status: the worker's full search and its minimum-think hold both
+   keep this compact quantum-brain badge active in the opponent bar. */
+.qc-bot-thinking {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  height: 24px;
+  padding: 1px 8px 1px 2px;
+  border-radius: 999px;
+  color: rgba(220, 248, 255, 0.96);
+  background: rgba(12, 27, 43, 0.72);
+  box-shadow: 0 0 9px rgba(0, 229, 255, 0.18);
+  font-size: clamp(0.68rem, 1.5vw, 0.8rem);
+  font-style: italic;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  line-height: 1;
+  text-transform: none;
+  overflow: hidden;
+}
+
+.qc-bot-thinking__progress-track {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(127, 231, 255, 0.14);
+}
+
+.qc-bot-thinking__progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7fe7ff, #8f7cff, #e47cff);
+  box-shadow: 0 0 5px rgba(127, 231, 255, 0.85);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation-name: qc-bot-thinking-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes qc-bot-thinking-progress {
+  to { transform: scaleX(1); }
+}
+
+.qc-bot-thinking__brain {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-image: url('/sprites/quantum-brain-thinking.png');
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+  filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.72));
+  animation: qc-quantum-brain-frames 1.2s linear infinite;
+}
+
+.qc-bot-thinking__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.qc-bot-thinking__dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #7fe7ff;
+  box-shadow: 0 0 4px rgba(127, 231, 255, 0.8);
+  animation: qc-bot-thinking-dot 900ms ease-in-out infinite;
+}
+
+.qc-bot-thinking__dots i:nth-child(2) { animation-delay: 150ms; }
+.qc-bot-thinking__dots i:nth-child(3) { animation-delay: 300ms; }
+
+@keyframes qc-bot-thinking-dot {
+  0%, 70%, 100% { opacity: 0.3; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (max-width: 430px) {
+  .qc-bot-thinking__label { display: none; }
+  .qc-bot-thinking { gap: 3px; padding-right: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-bot-thinking__brain,
+  .qc-bot-thinking__dots i { animation: none !important; }
+  .qc-bot-thinking__brain { background-position: 33.333% 50%; }
+  .qc-bot-thinking__dots i { opacity: 0.75; }
 }
 
 /* Onboarding coach-marks: pulse glow on key buttons for first-time visitors */

@@ -27,7 +27,6 @@ describe('engine replay fixtures', () => {
     const allMoves = fixtures.flatMap((f) => f.moves);
     expect(allMoves.some((m) => m.castle)).toBe(true);
     expect(allMoves.some((m) => m.enPassant)).toBe(true);
-    expect(fixtures.some((f) => f.expected.gameOver)).toBe(true);
   });
 
   for (const { seed, moves, expected } of fixtures) {

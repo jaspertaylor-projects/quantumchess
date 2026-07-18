@@ -460,7 +460,7 @@ export default function UnstableLinePanel({
         aiBotId: bot.id,
         aiDifficulty: bot.tier,
         preferredSide: 'random',
-        timeControl: '5+0',
+        timeControl: '5+5',
         unstableLine: {
           runId: nextRun.id,
           nodeId: latestNode.id,

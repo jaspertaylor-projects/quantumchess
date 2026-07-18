@@ -18,7 +18,10 @@ import { hexToRgbString } from '../settings/useMeasurementColors.js';
 import { arrowGeometry } from './arrowGeometry.js';
 import { DEFAULT_INDICATORS } from '../settings/useIndicatorSettings.js';
 import { listCheckThreats } from './quantumEngine.js';
-import { buildContactParticles } from './contactParticles.js';
+import {
+  buildContactParticles,
+  CONTACT_PARTICLE_MAX_ARRIVAL_MS,
+} from './contactParticles.js';
 
 export default function Board({
   orientation = 'white',
@@ -34,6 +37,7 @@ export default function Board({
   selectedId = null,
   zapMarks = [], // contact variant: squares zapped by the last move (red spin-out circle)
   healMarks = [], // contact variant: squares healed by the last move (green bloom circle)
+  failedHealMarks = [], // friendly contacts where every regain was rejected (green failed ring)
   fizzleMarks = [], // contact variant: census-locked zap targets (shield pop, nothing shed)
   pulseOrigin = null, // contact variant: the mover's landing square — particles fly from here to each mark
   effectKey = 0, // bumps per move so zap/heal animations replay on repeat squares
@@ -212,6 +216,16 @@ export default function Board({
       zIndex: 8,
       boxSizing: 'border-box',
     },
+    failedHealCircle: {
+      position: 'absolute',
+      inset: '10%',
+      border: '3px dashed rgba(46, 204, 113, 0.92)',
+      borderRadius: '50%',
+      boxShadow: '0 0 12px rgba(46, 204, 113, 0.5), inset 0 0 10px rgba(46, 204, 113, 0.22)',
+      pointerEvents: 'none',
+      zIndex: 8,
+      boxSizing: 'border-box',
+    },
     fizzleShield: {
       position: 'absolute',
       inset: '18%',
@@ -373,12 +387,12 @@ export default function Board({
       centerOf: squareCenterPx,
       effectKey,
       groups: [
-      { squares: zapMarks, cls: 'qc-particle--zap' },
-      { squares: healMarks, cls: 'qc-particle--heal' },
-      { squares: fizzleMarks, cls: 'qc-particle--fizzle' },
+        { squares: zapMarks, cls: 'qc-particle--zap' },
+        { squares: Array.from(new Set([...healMarks, ...failedHealMarks])), cls: 'qc-particle--heal' },
+        { squares: fizzleMarks, cls: 'qc-particle--fizzle' },
       ],
     });
-  }, [pulseOrigin, zapMarks, healMarks, fizzleMarks, squareCenterPx, dimensions.cell, effectKey]);
+  }, [pulseOrigin, zapMarks, healMarks, failedHealMarks, fizzleMarks, squareCenterPx, dimensions.cell, effectKey]);
 
   return (
     <div
@@ -458,11 +472,32 @@ export default function Board({
                 />
               ) : null}
 
+              {failedHealMarks.includes(squareAlg) ? (
+                <div
+                  key={`heal-fail-${squareAlg}-${effectKey}`}
+                  className="qc-heal-fail-circle"
+                  style={{
+                    ...styles.failedHealCircle,
+                    animationDelay: `${CONTACT_PARTICLE_MAX_ARRIVAL_MS}ms`,
+                  }}
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" width="100%" height="100%">
+                    <path d="M12 6 V18 M6 12 H18" stroke="rgba(78, 224, 140, 0.98)" strokeWidth="2.4" strokeLinecap="round" />
+                    <path d="M5.5 18.5 L18.5 5.5" stroke="rgba(15, 74, 44, 0.95)" strokeWidth="3.8" strokeLinecap="round" />
+                    <path d="M5.5 18.5 L18.5 5.5" stroke="rgba(126, 241, 174, 0.98)" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                </div>
+              ) : null}
+
               {fizzleMarks.includes(squareAlg) ? (
                 <div
                   key={`fizzle-${squareAlg}-${effectKey}`}
                   className="qc-fizzle-shield"
-                  style={styles.fizzleShield}
+                  style={{
+                    ...styles.fizzleShield,
+                    animationDelay: `${CONTACT_PARTICLE_MAX_ARRIVAL_MS}ms`,
+                  }}
                   aria-hidden="true"
                 >
                   <svg viewBox="0 0 24 24" width="100%" height="100%">

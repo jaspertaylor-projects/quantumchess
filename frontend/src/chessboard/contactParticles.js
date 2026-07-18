@@ -2,6 +2,17 @@
 // The mover gets a short landing beat, then every mote travels center-to-center.
 
 export const CONTACT_PARTICLE_LAUNCH_DELAY_MS = 180;
+const CONTACT_PARTICLE_DELAY_JITTER_MS = 120;
+const CONTACT_PARTICLE_MIN_TRAVEL_MS = 430;
+const CONTACT_PARTICLE_TRAVEL_JITTER_MS = 240;
+
+// Impact-only effects use this upper bound so they begin after every mote has
+// reached the contacted square, without changing the particle animation.
+export const CONTACT_PARTICLE_MAX_ARRIVAL_MS =
+  CONTACT_PARTICLE_LAUNCH_DELAY_MS
+  + CONTACT_PARTICLE_DELAY_JITTER_MS
+  + CONTACT_PARTICLE_MIN_TRAVEL_MS
+  + CONTACT_PARTICLE_TRAVEL_JITTER_MS;
 
 function jitter01(str) {
   let h = 2166136261;
@@ -38,8 +49,8 @@ export function buildContactParticles({
           y0: origin.y,
           tx: target.x - origin.x,
           ty: target.y - origin.y,
-          delay: CONTACT_PARTICLE_LAUNCH_DELAY_MS + Math.round(delayJitter * 120),
-          dur: Math.round(430 + speedJitter * 240),
+          delay: CONTACT_PARTICLE_LAUNCH_DELAY_MS + Math.round(delayJitter * CONTACT_PARTICLE_DELAY_JITTER_MS),
+          dur: Math.round(CONTACT_PARTICLE_MIN_TRAVEL_MS + speedJitter * CONTACT_PARTICLE_TRAVEL_JITTER_MS),
         });
       }
     }

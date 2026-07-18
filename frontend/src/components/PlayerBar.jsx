@@ -231,6 +231,8 @@ export default function PlayerBar({
   avatar = null,
   tagline = null,
   speech = null, // transient saying shown as a speech bubble (string|null)
+  thinking = false, // local bot worker is searching or waiting out its minimum think timer
+  thinkingMaxMs = 0, // worker watchdog cap; drives the badge's elapsed-time bar
   // Attention mode for narration (the first-visit intro): the bubble may
   // wrap to two lines, wears a gold accent, and flashes softly on arrival.
   speechFlash = false,
@@ -302,7 +304,7 @@ export default function PlayerBar({
       display: 'flex',
       flexDirection: 'column',
       // Two lines spread across the avatar's height; a lone name centers.
-      justifyContent: (showClock || tagline || speech) ? 'space-between' : 'center',
+      justifyContent: (showClock || tagline || speech || thinking) ? 'space-between' : 'center',
       alignItems: 'flex-start',
       alignSelf: 'center',
       height: BAR_CONTENT_H,
@@ -510,7 +512,29 @@ export default function PlayerBar({
               {clockText}
             </span>
           )}
-          {speech ? (
+          {thinking ? (
+            <span
+              className="qc-bot-thinking"
+              role="status"
+              aria-live="polite"
+              aria-label={`${playerName} is thinking`}
+              title={`${playerName} is thinking`}
+            >
+              <span className="qc-bot-thinking__brain" aria-hidden="true" />
+              <span className="qc-bot-thinking__label" aria-hidden="true">Thinking</span>
+              <span className="qc-bot-thinking__dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="qc-bot-thinking__progress-track" aria-hidden="true">
+                <span
+                  className="qc-bot-thinking__progress-fill"
+                  style={{ animationDuration: `${Math.max(1, thinkingMaxMs)}ms` }}
+                />
+              </span>
+            </span>
+          ) : speech ? (
             // A saying briefly takes over the tagline's spot as a bubble.
             // Keyed by text so a new line replays its entrance (and flash).
             <span
@@ -523,11 +547,12 @@ export default function PlayerBar({
                 opacity: 1,
                 color: '#fff',
                 background: 'rgba(20, 24, 32, 0.96)',
-                border: speechFlash ? '1px solid rgba(255, 200, 80, 0.6)' : '1px solid rgba(126, 231, 135, 0.55)',
                 borderRadius: 10,
                 borderBottomLeftRadius: 3,
-                padding: '2px 10px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                padding: '2px 6px',
+                boxShadow: speechFlash
+                  ? '0 0 9px rgba(255, 200, 80, 0.2)'
+                  : '0 2px 8px rgba(0,0,0,0.28)',
                 animation: speechFlash
                   ? 'qc-speech-pop 180ms ease-out, qc-speech-flash 2.2s ease-in-out 0.2s infinite'
                   : 'qc-speech-pop 180ms ease-out',

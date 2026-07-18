@@ -30,6 +30,7 @@ import AppModals from './components/AppModals.jsx';
 import appLayoutStyles from './components/appLayoutStyles.js';
 import useLocalAi from './ai/useLocalAi.js';
 import { getBotById, DEFAULT_BOT_ID } from './ai/bots.js';
+import { decideBotDrawOffer } from './ai/drawDecision.js';
 import useBoardLayout from './hooks/useBoardLayout.js';
 import useBoardInput from './hooks/useBoardInput.js';
 import useOnlineGame from './hooks/useOnlineGame.js';
@@ -141,7 +142,7 @@ export default function App({ entryAction = null }) {
   const dispatch = useDispatch();
   const userTeam = useSelector((state) => state.game.userTeam || 'white');
   const gameSettings = useSelector((state) => state.settings);
-  const timeControl = gameSettings.timeControl || '5+0';
+  const timeControl = gameSettings.timeControl || '5+5';
   const moves = useSelector((state) => state.game.moves || []);
 
   const aiEnabledRef = useRef(false);
@@ -242,6 +243,9 @@ export default function App({ entryAction = null }) {
     devAccountPreview.setLevel(level);
     setAccountOpen(true, 'account');
   }, [devAccountPreview.setLevel, setAccountOpen]);
+
+  // Admin-only site stats dashboard, opened from the account panel.
+  const [adminStatsOpen, setAdminStatsOpen] = useState(false);
 
   const puzzleLinks = usePuzzleDeepLinks({ dismissOnboarding, setReviewGame });
 
@@ -580,11 +584,18 @@ export default function App({ entryAction = null }) {
     }
   }, [sideToMove, getPieceAtSquare, movePiece, canCastleBetween, castlePieces, commitEngineResult, isOnlineGameRef]);
 
+  const [confirmState, setConfirmState] = useState(null); // { variant, title, message, confirmLabel, danger, run }
+
   const aiThinking = useLocalAi({
     // The engine never moves during the intro choreography — Black belongs
     // to INTRO_SCRIPT until the whole act retires (or aborts), not merely
     // between scripted replies.
-    enabled: !isOnlineGameRef.current && aiEnabledRef.current && !intro.introScriptOn && !intro.introChoreo,
+    enabled: !isOnlineGameRef.current
+      && aiEnabledRef.current
+      && !intro.introScriptOn
+      && !intro.introChoreo
+      && !confirmState
+      && !externalGameOver.over,
     aiSide,
     difficulty: aiDifficultyRef.current,
     botId: aiBot ? aiBot.id : null,
@@ -599,8 +610,6 @@ export default function App({ entryAction = null }) {
 
   const isPlaying = useMemo(() => gameStarted && !gameOver && !externalGameOver.over, [gameStarted, gameOver, externalGameOver]);
 
-  const [confirmState, setConfirmState] = useState(null); // { title, message, confirmLabel, danger, run }
-
   const handleResign = useCallback(() => {
     // In local hotseat the side to move resigns; otherwise the human's side.
     const isHotseat = !isOnlineGameRef.current && !aiEnabledRef.current;
@@ -611,6 +620,7 @@ export default function App({ entryAction = null }) {
       title: `Resign as ${side}?`,
       message: `${opp} will win the game.`,
       confirmLabel: 'Resign',
+      variant: 'resign',
       danger: true,
       run: () => {
         online.reportManualGameOver({ winner: resigning === 'white' ? 'black' : 'white', reason: 'resignation' });
@@ -621,10 +631,54 @@ export default function App({ entryAction = null }) {
   }, [userTeam, sideToMove, online, isOnlineGameRef]);
 
   const handleOfferDraw = useCallback(() => {
+    if (isOnlineGameRef.current) {
+      online.offerDraw();
+      return;
+    }
+
+    const versusBot = !isOnlineGameRef.current && aiEnabledRef.current && aiBot;
+    if (versusBot) {
+      setConfirmState({
+        title: `Offer ${aiBot.name} a draw?`,
+        message: 'Your opponent will judge the position before accepting or declining.',
+        confirmLabel: 'Send Offer',
+        variant: 'draw',
+        danger: false,
+        run: () => {
+          const decision = decideBotDrawOffer({
+            pieces,
+            bot: aiBot,
+            aiSide,
+            sideToMove,
+            moveCount: moves.length,
+            repetitionSigs: positionSigCounts,
+            lastMove,
+          });
+          if (decision.accept) {
+            setExternalGameOver({ over: true, text: 'Draw by agreement.' });
+            setInfoMessage(`${aiBot.name} accepted the draw.`);
+            return;
+          }
+          setInfoMessage(`${aiBot.name} declined the draw.`);
+          setConfirmState({
+            title: 'Draw declined',
+            message: decision.reason,
+            confirmLabel: 'Keep Playing',
+            cancelLabel: null,
+            variant: 'draw-declined',
+            danger: false,
+            run: null,
+          });
+        },
+      });
+      return;
+    }
+
     setConfirmState({
       title: 'Agree to a draw?',
       message: 'The game ends immediately as a draw by agreement.',
       confirmLabel: 'Draw',
+      variant: 'draw',
       danger: false,
       run: () => {
         online.reportManualGameOver({ winner: null, reason: 'agreement' });
@@ -632,7 +686,7 @@ export default function App({ entryAction = null }) {
         setInfoMessage('Draw agreed.');
       },
     });
-  }, [online]);
+  }, [online, aiBot, pieces, aiSide, sideToMove, moves.length, positionSigCounts, lastMove, isOnlineGameRef]);
 
   const [newGameSignal, setNewGameSignal] = useState(0);
   const handleRequestNewGame = useCallback(() => {
@@ -640,6 +694,7 @@ export default function App({ entryAction = null }) {
       title: 'End this game?',
       message: 'The current game will be abandoned and you can set up a new one.',
       confirmLabel: 'End & New Game',
+      variant: 'end-game',
       danger: true,
       run: () => {
         setExternalGameOver({ over: true, text: 'Game abandoned.', silent: true });
@@ -691,6 +746,9 @@ export default function App({ entryAction = null }) {
   }, [postGameReviewAccess, auth.user, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setReviewGame]);
 
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
+  const onlineDrawOfferRole = isOnlineGameRef.current && online.drawOffer
+    ? (online.drawOffer.offeredBy === userTeam ? 'offered' : 'received')
+    : null;
   const barCtx = {
     speech,
     effectiveClock,
@@ -826,6 +884,10 @@ export default function App({ entryAction = null }) {
                   isPlaying={isPlaying}
                   onResign={handleResign}
                   onOfferDraw={handleOfferDraw}
+                  drawOfferRole={onlineDrawOfferRole}
+                  onRetractDrawOffer={online.retractDrawOffer}
+                  onAcceptDrawOffer={online.acceptDrawOffer}
+                  onDeclineDrawOffer={online.declineDrawOffer}
                   onRequestNewGame={handleRequestNewGame}
                   isOnlineGame={isOnlineGameRef.current}
                   searching={online.mmActive}
@@ -909,6 +971,10 @@ export default function App({ entryAction = null }) {
             onOpenSettings={handleOpenSettings}
             onResign={handleResign}
             onOfferDraw={handleOfferDraw}
+            drawOfferRole={onlineDrawOfferRole}
+            onRetractDrawOffer={online.retractDrawOffer}
+            onAcceptDrawOffer={online.acceptDrawOffer}
+            onDeclineDrawOffer={online.declineDrawOffer}
             onCancelSearch={online.handleCancelSearch}
             onOpenPuzzle={puzzleLinks.handleOpenPuzzle}
             puzzleUnsolved={puzzleLinks.puzzleUnsolved}
@@ -995,6 +1061,9 @@ export default function App({ entryAction = null }) {
         onClosePricing={() => setPricingOpen(false)}
         reviewGame={reviewGame}
         onCloseReview={() => setReviewGame(null)}
+        adminStatsOpen={adminStatsOpen}
+        onOpenAdminStats={() => setAdminStatsOpen(true)}
+        onCloseAdminStats={() => setAdminStatsOpen(false)}
         minedPreview={puzzleLinks.activePuzzle}
         onCloseMinedPreview={puzzleLinks.handleClosePuzzle}
         onCompleteMinedPreview={puzzleLinks.handlePuzzleComplete}

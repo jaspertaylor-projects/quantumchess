@@ -6,8 +6,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import theme from '../theme.js';
 import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { X as XIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, BookOpen as BookOpenIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon } from 'lucide-react';
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, BookOpen as BookOpenIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon } from 'lucide-react';
 import { LESSONS } from '../tutorial/lessons.js';
 
 export default function RulesModal({ open = false, onClose = () => {}, onPlayLesson = null, initialPageTitle = null }) {
@@ -55,11 +56,11 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
         title: 'The Heal',
         content: [
           'The same touch that zaps enemies HEALS friends: every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen, and finally King.',
-          'Heals bloom TOGETHER, like zaps: each touched friend finds its regain against the board as your piece landed, and all regains take root as one volley. If the census cannot let every regain take root at once, the whole volley dissipates — no piece is favored over another.',
+          'Heals bloom TOGETHER, like zaps: the census tests the touched friends as one shared volley. Two regains may support each other — for example, returning Knight to one piece and Pawn to another can be legal together even when neither works alone. Heal restores as many contacts as the census permits, then chooses the least-valuable valid combination in board order.',
           'If your team has no King possibility, Heal tries King FIRST so the royal identity can return; conservation may immediately reveal that healed piece as the King. While a King still exists elsewhere, King remains the last rung after Queen. Pawn never returns to a promoted piece, or to a piece standing on its own promotion rank.',
           'The census must accept the regain. If an identity is fully claimed elsewhere the heal overflows upward: with both your knights known, a bare pawn you protect becomes a Pawn–BISHOP.',
           'Defense is regeneration: a protected army does not just hold its ground — it re-blurs. Leave a wounded piece unattended and it stays exactly as collapsed as your opponent made it.',
-          'Feedback: a green circle blooms over every piece your move healed.',
+          'Feedback: green particles always travel to every friendly contact. A solid green circle blooms over a successful Heal; a contracting dashed green circle shows that every joint regain was exhausted.',
         ],
       },
       {
@@ -77,6 +78,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
         title: 'Captures',
         content: [
           'On capture, the captured piece collapses immediately to its least valuable possibility: P < N < B < R < Q — and King only when King is all it could be.',
+          'Resolution order is fixed: the mover lands; the captured piece resolves and leaves the board; conservation collapses both teams; only then do contact particles launch and the Zap/Heal volley resolve.',
           'Strip first, then take: capturing a fresh superposition usually kills a mere pawn. Zap a piece\'s cheap identities away first and it has to die as something expensive.',
           'The captured piece is displayed in the capturing player\'s bin, in its true colors, as the type it died as. Captured pieces count toward the census forever.',
           'A King possibility can be zapped while another maybe-King remains, and a captured superposition can take a King possibility with it. Neither creates an instant victory. The final King possibility is protected from Zap, and King can return through Heal.',
@@ -349,20 +351,11 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
             <BookOpenIcon size={20} color={theme.primary} />
             <h2 id="qc-rules-title" className="qc-rules-title" style={styles.title}>Quantum Chess Rulebook</h2>
           </div>
-          <IconButton
-            icon={XIcon}
-            size={20}
+          <ModalCloseButton
             title="Close rulebook"
             ariaLabel="Close rulebook"
             className="qc-rules-close"
             onClick={onClose}
-            width={36}
-            height={36}
-            radius={8}
-            bg={theme.secondary}
-            color={theme.error}
-            hoverInvert={true}
-            shadow="transparent"
           />
         </div>
 
@@ -447,6 +440,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
             icon={ChevronLeftIcon}
             size={18}
             title="Previous page"
+            suppressTitle
             ariaLabel="Previous page"
             className="qc-rules-prev"
             onClick={handlePrev}
@@ -467,6 +461,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
             icon={ChevronRightIcon}
             size={18}
             title="Next page"
+            suppressTitle
             ariaLabel="Next page"
             className="qc-rules-next"
             onClick={handleNext}

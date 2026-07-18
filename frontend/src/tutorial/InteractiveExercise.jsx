@@ -39,10 +39,11 @@ function buildPieces(specs) {
   }));
 }
 
-const EMPTY_MARKS = { zaps: [], heals: [], shields: [] };
+const EMPTY_MARKS = { zaps: [], heals: [], failedHeals: [], shields: [] };
 const marksFromSim = (sim) => ({
   zaps: sim.zappedSquares || [],
   heals: sim.healedSquares || [],
+  failedHeals: sim.failedHealSquares || [],
   shields: sim.fizzledSquares || [],
 });
 
@@ -175,6 +176,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     chevrons: Boolean(p.wasPromoted),
     zap: marks.zaps.includes(p.square),
     heal: marks.heals.includes(p.square),
+    healFail: marks.failedHeals.includes(p.square),
     shield: marks.shields.includes(p.square),
   }));
   const arrows = threats.map((t) => ({ from: t.from, to: t.to, side: t.side }));

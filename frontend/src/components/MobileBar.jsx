@@ -40,6 +40,10 @@ export default function MobileBar({
   onOpenSettings = () => {},
   onResign = () => {},
   onOfferDraw = () => {},
+  drawOfferRole = null,
+  onRetractDrawOffer = () => {},
+  onAcceptDrawOffer = () => {},
+  onDeclineDrawOffer = () => {},
   onCancelSearch = () => {},
   onOpenPuzzle = () => {},
   puzzleUnsolved = false,
@@ -76,6 +80,24 @@ export default function MobileBar({
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
       boxSizing: 'border-box',
+    },
+    drawOffer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: '100%',
+      minHeight: 28,
+      padding: '2px 8px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      color: '#f6c445',
+      background: 'rgba(24, 20, 10, 0.98)',
+      borderTop: `1px solid ${theme.border}`,
+      borderBottom: `1px solid ${theme.border}`,
+      boxSizing: 'border-box',
+      fontSize: 11,
+      fontWeight: 850,
     },
     row: {
       display: 'flex',
@@ -144,6 +166,7 @@ export default function MobileBar({
       width={38}
       height={38}
       title={label}
+      suppressTitle
       ariaLabel={label}
       onClick={disabled ? () => {} : onClick}
       bg={'transparent'}
@@ -266,7 +289,46 @@ export default function MobileBar({
 
   return (
     <nav className="qc-mobile-bar" style={styles.root} aria-label="Game controls">
-      {infoMessage ? <div className="qc-mobile-bar-info" style={styles.info}>{infoMessage}</div> : null}
+      {drawOfferRole ? (
+        <div
+          className={`qc-mobile-draw-line qc-mobile-draw-line--${drawOfferRole}`}
+          style={styles.drawOffer}
+          role="status"
+        >
+          <HandshakeIcon size={14} aria-hidden="true" />
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {drawOfferRole === 'offered' ? 'Draw offered' : 'Opponent offers a draw'}
+          </span>
+          {drawOfferRole === 'offered' ? (
+            <button
+              type="button"
+              className="qc-online-draw-action qc-online-draw-action--retract"
+              onClick={onRetractDrawOffer}
+            >
+              Retract
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="qc-online-draw-action qc-online-draw-action--accept"
+                onClick={onAcceptDrawOffer}
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                className="qc-online-draw-action qc-online-draw-action--decline"
+                onClick={onDeclineDrawOffer}
+              >
+                Decline
+              </button>
+            </>
+          )}
+        </div>
+      ) : infoMessage ? (
+        <div className="qc-mobile-bar-info" style={styles.info}>{infoMessage}</div>
+      ) : null}
       {content}
     </nav>
   );

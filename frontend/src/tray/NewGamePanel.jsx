@@ -185,12 +185,11 @@ export default function NewGamePanel({
 }) {
   // Seed each newly opened setup panel from the last submitted game. Queueing
   // counts as submission, so cancelling a search does not throw away the
-  // player's chosen mode, match type, clock, side, or bot.
+  // player's chosen mode, queue, side, or bot.
   const [gameMode, setGameMode] = useState(() => initialSettings.gameMode || 'ai'); // 'local', 'ai', 'online'
   const [aiBotId, setAiBotId] = useState(() => initialSettings.aiBotId || DEFAULT_BOT_ID);
   const [preferredSide, setPreferredSide] = useState(() => initialSettings.preferredSide || 'random'); // 'white', 'black', 'random'
   const [isRanked, setIsRanked] = useState(() => Boolean(initialSettings.isRanked)); // boolean
-  const [timeControl, setTimeControl] = useState(() => initialSettings.timeControl || '5+0'); // '3+0', '5+0', '10+0'
 
   const selectedBot = getBotById(aiBotId);
   // Dev playtest override (?allbots) skips the premium gate too.
@@ -211,7 +210,7 @@ export default function NewGamePanel({
       aiDifficulty: bot ? bot.tier : 'medium',
       preferredSide,
       isRanked,
-      timeControl,
+      timeControl: '5+5',
     });
   };
 
@@ -369,21 +368,11 @@ export default function NewGamePanel({
         <div className="qc-animated-section-online" style={styles.animatedSection(gameMode === 'online')}>
           <div className="qc-new-game-section" style={styles.section}>
             <span className="qc-new-game-label" style={styles.label}>
-              Match Type
+              Queue · 5 + 5
             </span>
             <div className="qc-new-game-button-group" style={styles.buttonGroup}>
               <OptionButton label="Unranked" selected={!isRanked} onClick={() => setIsRanked(false)} />
               <OptionButton label="Ranked" selected={isRanked} onClick={() => setIsRanked(true)} />
-            </div>
-          </div>
-          <div className="qc-new-game-section" style={styles.section}>
-            <span className="qc-new-game-label" style={styles.label}>
-              Time Control
-            </span>
-            <div className="qc-new-game-button-group" style={styles.buttonGroup}>
-              <OptionButton label="3 + 0" selected={timeControl === '3+0'} onClick={() => setTimeControl('3+0')} />
-              <OptionButton label="5 + 0" selected={timeControl === '5+0'} onClick={() => setTimeControl('5+0')} />
-              <OptionButton label="10 + 0" selected={timeControl === '10+0'} onClick={() => setTimeControl('10+0')} />
             </div>
           </div>
           <div className="qc-new-game-section" style={styles.section}>
@@ -399,7 +388,7 @@ export default function NewGamePanel({
                 privateFriend: true,
                 preferredSide,
                 isRanked: false,
-                timeControl,
+                timeControl: '5+5',
               })}
             >
               ⚔ Challenge a Friend — get a link

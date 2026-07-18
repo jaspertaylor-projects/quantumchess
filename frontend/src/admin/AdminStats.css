@@ -1,0 +1,254 @@
+/* frontend/src/admin/AdminStats.css
+   Purpose: Admin stats dashboard modal — tiles, chart chrome, and the chart
+   color roles (validated against the app's dark surface #282c34).
+   Exported To: ./AdminStatsModal.jsx */
+
+.qc-admin-panel {
+  --qc-viz-surface: #282c34;
+  --qc-viz-ink: #ffffff;
+  --qc-viz-ink-2: #a8b2d1;
+  --qc-viz-muted: #8b93a7;
+  --qc-viz-grid: rgba(255, 255, 255, 0.08);
+  --qc-viz-axis: rgba(255, 255, 255, 0.22);
+  --qc-viz-players: #3987e5; /* line: players online */
+  --qc-viz-games: #199e70;   /* line: games in progress */
+  --qc-viz-bot: #c98500;     /* bars: bot games */
+  --qc-viz-online: #9085e9;  /* bars: online games */
+
+  position: relative;
+  width: min(720px, 94vw);
+  max-height: min(86vh, 780px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 18px 20px 20px;
+  border: 1px solid #444444;
+  border-radius: 14px;
+  background: var(--qc-viz-surface);
+  color: var(--qc-viz-ink);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.qc-admin-panel h2 {
+  margin: 0 0 2px;
+  font-size: 1.25rem;
+}
+
+.qc-admin-sub {
+  margin: 0 0 14px;
+  color: var(--qc-viz-muted);
+  font-size: 0.8rem;
+}
+
+.qc-admin-error {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff9b9b;
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------------------ tiles */
+.qc-admin-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.qc-admin-tile {
+  padding: 10px 12px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.qc-admin-tile-label {
+  color: var(--qc-viz-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.qc-admin-tile-value {
+  margin-top: 3px;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.qc-admin-tile-detail {
+  margin-top: 2px;
+  color: var(--qc-viz-ink-2);
+  font-size: 0.72rem;
+}
+
+.qc-admin-tile--live .qc-admin-tile-label::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #7ee787;
+  vertical-align: 1px;
+}
+
+/* ----------------------------------------------------------------- header */
+.qc-admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.qc-admin-range {
+  display: inline-flex;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qc-admin-range button {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--qc-viz-ink-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qc-admin-range button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.qc-admin-range button.is-active {
+  background: rgba(97, 218, 251, 0.16);
+  color: #ffffff;
+}
+
+.qc-admin-table-toggle {
+  margin-left: auto;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--qc-viz-ink-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qc-admin-table-toggle.is-active {
+  background: rgba(97, 218, 251, 0.16);
+  color: #ffffff;
+}
+
+/* ----------------------------------------------------------------- charts */
+.qc-admin-chart {
+  margin-bottom: 16px;
+}
+
+.qc-admin-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-bottom: 6px;
+}
+
+.qc-admin-chart-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.qc-admin-legend {
+  display: inline-flex;
+  gap: 12px;
+  color: var(--qc-viz-ink-2);
+  font-size: 0.72rem;
+}
+
+.qc-admin-legend-chip {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+
+.qc-admin-chart-body {
+  position: relative;
+}
+
+.qc-admin-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.qc-admin-tooltip {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  background: #1c202a;
+  color: var(--qc-viz-ink);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+.qc-admin-tooltip b {
+  font-weight: 800;
+}
+
+.qc-admin-empty {
+  padding: 18px 0 6px;
+  color: var(--qc-viz-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ table */
+.qc-admin-table {
+  width: 100%;
+  margin-bottom: 16px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.qc-admin-table th,
+.qc-admin-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.qc-admin-table th:first-child,
+.qc-admin-table td:first-child {
+  text-align: left;
+}
+
+.qc-admin-table th {
+  color: var(--qc-viz-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+}
+
+.qc-admin-foot {
+  color: var(--qc-viz-muted);
+  font-size: 0.7rem;
+}

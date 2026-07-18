@@ -225,6 +225,7 @@ export const LESSONS = [
         title: 'Protection regrows possibility',
         text: [
           'The same touch that zaps enemies HEALS friends. Every friendly piece your move touches regains its cheapest missing identity — Pawn first, then Knight, Bishop, Rook, Queen, and finally King.',
+          'All touched friends heal as one census event. Regains can support each other, so the engine checks joint combinations and restores as many contacts as it can before moving up the value ladder.',
           'One royal exception: if your team has no King possibility, Heal restores King first. A green ring marks each heal. Defended pieces do not just survive here — they recover.',
         ],
         physics: "For friendly systems the contact coupling is restorative: the lowest-value amplitude missing from the state is re-populated, provided global conservation admits it.",

@@ -11,6 +11,7 @@ export const DEV_ACCOUNT_LEVEL = Object.freeze({
   FREE: 'free',
   SUPPORTER: 'supporter',
   PREMIUM: 'premium',
+  ADMIN: 'admin',
 });
 
 const LEVELS = new Set(Object.values(DEV_ACCOUNT_LEVEL));
@@ -65,6 +66,18 @@ export function previewProfileFor(level) {
       tier: 'paid',
       avatar_url: '/avatars/premium/quantum-fox.png',
       tagline: 'Sly in nine tails and nine timelines.',
+    };
+  }
+  if (level === DEV_ACCOUNT_LEVEL.ADMIN) {
+    // Admin UI chrome only — the stats dashboard's Supabase reads still
+    // require a REAL signed-in admin, so its data shows the error state here.
+    return {
+      ...common,
+      username: 'Admin Preview',
+      tier: 'paid',
+      is_admin: true,
+      avatar_url: '/avatars/premium/quantum-fox.png',
+      tagline: 'Sees all timelines at once.',
     };
   }
   return null;

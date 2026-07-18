@@ -14,7 +14,10 @@ import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import { arrowGeometry } from '../chessboard/arrowGeometry.js';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import theme from '../theme.js';
-import { buildContactParticles } from '../chessboard/contactParticles.js';
+import {
+  buildContactParticles,
+  CONTACT_PARTICLE_MAX_ARRIVAL_MS,
+} from '../chessboard/contactParticles.js';
 
 const LIGHT = theme.boardLight;
 const DARK = theme.boardDark;
@@ -34,7 +37,7 @@ export default function MiniBoard({
   files = 6,
   ranks = 6,
   cell = 48,
-  pieces = [], // { sq, side, types, chevrons, mark, zap, heal, shield }
+  pieces = [], // { sq, side, types, chevrons, mark, zap, heal, healFail, shield }
   arrows = [], // { from, to, side } or review-style { from, to, kind: 'hint', opacity }
   highlights = [], // squares tinted amber
   targets = [], // squares showing a legal-move dot
@@ -118,7 +121,7 @@ export default function MiniBoard({
       effectKey,
       groups: [
         { cls: 'qc-particle--zap', squares: pieces.filter((p) => p.zap).map((p) => p.sq) },
-        { cls: 'qc-particle--heal', squares: pieces.filter((p) => p.heal).map((p) => p.sq) },
+        { cls: 'qc-particle--heal', squares: pieces.filter((p) => p.heal || p.healFail).map((p) => p.sq) },
         { cls: 'qc-particle--fizzle', squares: pieces.filter((p) => p.shield).map((p) => p.sq) },
       ],
     });
@@ -237,6 +240,28 @@ export default function MiniBoard({
           </div>
         );
       })}
+      {pieces.filter((p) => p.healFail).map((p) => {
+        const { col, row } = sqToRC(p.sq, ranks);
+        return (
+          <div key={`heal-fail-${p.sq}-${effectKey}`} style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, pointerEvents: 'none', zIndex: 30 }} aria-hidden="true">
+            <div
+              className="qc-heal-fail-circle"
+              style={{
+                position: 'absolute', inset: '10%', borderRadius: '50%', boxSizing: 'border-box',
+                border: '3px dashed rgba(46, 204, 113, 0.92)',
+                boxShadow: '0 0 12px rgba(46, 204, 113, 0.5), inset 0 0 10px rgba(46, 204, 113, 0.22)',
+                animationDelay: `${CONTACT_PARTICLE_MAX_ARRIVAL_MS}ms`,
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="100%" height="100%">
+                <path d="M12 6 V18 M6 12 H18" stroke="rgba(78, 224, 140, 0.98)" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M5.5 18.5 L18.5 5.5" stroke="rgba(15, 74, 44, 0.95)" strokeWidth="3.8" strokeLinecap="round" />
+                <path d="M5.5 18.5 L18.5 5.5" stroke="rgba(126, 241, 174, 0.98)" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+        );
+      })}
       {pieces.filter((p) => p.shield).map((p) => {
         const { col, row } = sqToRC(p.sq, ranks);
         return (
@@ -246,6 +271,7 @@ export default function MiniBoard({
               style={{
                 position: 'absolute', inset: '18%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 filter: 'drop-shadow(0 0 8px rgba(170, 190, 220, 0.75))',
+                animationDelay: `${CONTACT_PARTICLE_MAX_ARRIVAL_MS}ms`,
               }}
             >
               <svg viewBox="0 0 24 24" width="100%" height="100%">

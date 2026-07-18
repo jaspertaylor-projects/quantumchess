@@ -31,8 +31,9 @@ import { hashSig, mulberry32 } from './fixtureUtil.mjs';
 
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'engine-games.json');
 const SEEDS = Array.from({ length: 13 }, (_, i) => i + 1);
-// Random games can run deep before checkmate or a draw, so the cap
-// must sit comfortably above that for the set to include finished games.
+// Random games can run very deep now that joint Heals sustain more pieces;
+// the fixed cap keeps fixture generation bounded. Terminal-rule coverage is
+// pinned separately by the tutorial verifier's explicit mate positions.
 const MAX_HALFMOVES = 140;
 // Castles are rare under uniform random play; bias toward them so the fixture
 // set is guaranteed to exercise that replay path.

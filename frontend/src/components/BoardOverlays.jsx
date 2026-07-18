@@ -7,7 +7,8 @@
 
 import React from 'react';
 import theme from '../theme.js';
-import { RotateCcw, Swords, X } from 'lucide-react';
+import ModalCloseButton from './ModalCloseButton.jsx';
+import { RotateCcw, Swords } from 'lucide-react';
 
 export function StartGameCta({ pulse, onClick }) {
   return (
@@ -106,33 +107,20 @@ export function IntroSpeechOverlay({
       }}
     >
       {!needsContinue ? (
-        <button
-          type="button"
+        <ModalCloseButton
           className="qc-intro-speech-close"
           onClick={(event) => {
             event.stopPropagation();
             onCollapse();
           }}
-          aria-label="Collapse opponent message"
+          ariaLabel="Collapse opponent message"
           title="Collapse message"
           style={{
             position: 'absolute',
             top: 7,
             right: 7,
-            width: 30,
-            height: 30,
-            display: 'grid',
-            placeItems: 'center',
-            padding: 0,
-            borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.18)',
-            background: 'rgba(255,255,255,0.07)',
-            color: theme.textSecondary,
-            cursor: 'pointer',
           }}
-        >
-          <X size={17} aria-hidden="true" />
-        </button>
+        />
       ) : null}
       <div
         style={{

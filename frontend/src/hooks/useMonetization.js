@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { initAds, maybeShowGameEndAd } from '../ads/adService.js';
 import { initAnalytics } from '../analytics/analytics.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
+import { sendBotGameFinished } from '../analytics/statsPing.js';
 import { consumeCheckoutReturn, isAdFree, isTipper } from '../account/billing.js';
 import { fetchGameMoves } from '../account/gameSync.js';
 
@@ -62,7 +63,7 @@ export default function useMonetization({
     if (!showWinPopup) return;
     if (aiBot && !isOnlineGame && finishedTrackedGameRef.current !== gameInstanceId) {
       const winnerSide = winnerSideFrom({ winner, externalGameOver });
-      trackProductEvent(PRODUCT_EVENT.BOT_GAME_FINISHED, {
+      const finishedDetails = {
         result: winnerSide === undefined
           ? 'unknown'
           : winnerSide === null
@@ -74,7 +75,9 @@ export default function useMonetization({
         botTier: aiBot.tier,
         moveCount: Array.isArray(moves) ? moves.length : 0,
         endReason: endReasonFrom({ gameOverReason, externalGameOver }),
-      });
+      };
+      trackProductEvent(PRODUCT_EVENT.BOT_GAME_FINISHED, finishedDetails);
+      sendBotGameFinished(finishedDetails);
       finishedTrackedGameRef.current = gameInstanceId;
     }
     if (!isAdFree(auth.profile) && adShownGameRef.current !== gameInstanceId) {
@@ -101,6 +104,13 @@ export default function useMonetization({
     setAccountOpenState(Boolean(nextOpen));
   }, []);
   const [pricingOpen, setPricingOpen] = useState(false);
+
+  // Supabase signs the recovery-link visitor into a temporary recovery
+  // session. Open the account panel immediately so the new-password form is
+  // the first thing they see instead of making them find Account themselves.
+  useEffect(() => {
+    if (auth.recoveryMode) setAccountOpen(true, 'password_recovery');
+  }, [auth.recoveryMode, setAccountOpen]);
 
   // Stripe Checkout returns to /?premium=success|cancelled. The webhook flips
   // the tier server-side, so after a success poll the profile briefly until

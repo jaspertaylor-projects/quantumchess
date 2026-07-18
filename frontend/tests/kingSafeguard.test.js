@@ -125,6 +125,57 @@ describe('royal safeguard', () => {
     expect(fastPieces.find((p) => p.id === 'WQ').possibleTypes).toEqual(['k']);
   });
 
+  it('keeps walking the Heal ladder when Pawn and Knight cannot take root', () => {
+    const pieces = [
+      piece('WP', 'white', 'e4', ['p']),
+      piece('WT', 'white', 'd5', ['q']),
+      piece('WK', 'white', 'h1', ['k']),
+      ...capturedSet('white', { p: 7, n: 2 }),
+      piece('BK', 'black', 'h8', ['k']),
+    ];
+
+    const { reference, fastPieces } = resolveBoth(pieces, 'white', 'WP');
+    expect(reference.healedSquares).toEqual(['d5']);
+    expect(reference.failedHealSquares).toEqual([]);
+    expect(reference.pieces.find((p) => p.id === 'WT').possibleTypes).toEqual(['b', 'q']);
+    expect(fastPieces.find((p) => p.id === 'WT').possibleTypes).toEqual(['b', 'q']);
+  });
+
+  it('keeps walking the Zap ladder through three blocked identities', () => {
+    const pieces = [
+      piece('WN', 'white', 'f3', ['n']),
+      piece('BT', 'black', 'e5', ['b', 'r', 'q', 'k']),
+      piece('B1', 'black', 'a8', ['r']),
+      piece('B2', 'black', 'b8', ['b', 'q']),
+      piece('B3', 'black', 'c8', ['b', 'r']),
+      piece('B4', 'black', 'd8', ['b', 'k']),
+      piece('B5', 'black', 'f8', ['b']),
+      ...capturedSet('black', { p: 8, n: 2 }),
+    ];
+
+    const { reference, fastPieces } = resolveBoth(pieces, 'white', 'WN');
+    expect(reference.zappedSquares).toEqual(['e5']);
+    expect(reference.fizzledSquares).toEqual([]);
+    // King, Queen, and Rook all trigger a conservation cascade here; Bishop
+    // is the first clean shed and must still be reached.
+    expect(reference.pieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['r', 'q', 'k']);
+    expect(fastPieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['r', 'q', 'k']);
+  });
+
+  it('reports a failed Heal after exhausting every identity', () => {
+    const pieces = [
+      piece('WP', 'white', 'e4', ['p']),
+      piece('WF', 'white', 'd5', ['p', 'n', 'b', 'r', 'q', 'k']),
+      piece('BK', 'black', 'h8', ['k']),
+    ];
+
+    const { reference } = resolveBoth(pieces, 'white', 'WP');
+    expect(reference.healedSquares).toEqual([]);
+    expect(reference.failedHealSquares).toEqual(['d5']);
+    expect(reference.pieces.find((p) => p.id === 'WF').possibleTypes)
+      .toEqual(['p', 'n', 'b', 'r', 'q', 'k']);
+  });
+
   it('does not treat a temporarily kingless side as already lost', () => {
     const pieces = [
       piece('WP', 'white', 'e4', ['p']),

@@ -7,8 +7,9 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import MoveHistoryPanel from './MoveHistoryPanel.jsx';
 import NewGamePanel from './NewGamePanel.jsx';
 import IconButton from '../components/IconButton.jsx';
+import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import theme from '../theme.js';
-import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon, X as XIcon } from 'lucide-react';
+import { Settings as SettingsIcon, BookOpen as BookOpenIcon, Plus as PlusIcon, Flag as FlagIcon, Handshake as HandshakeIcon, User as UserIcon, Puzzle as PuzzleIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon } from 'lucide-react';
 
 // Big labeled home-menu button. The pre-game tray is a menu, not a form:
 // setup, puzzle, tutorial, rules, account, settings each get a full-width
@@ -80,6 +81,10 @@ export default function SideTray({
   accountSignedIn = false,
   auth = null,
   onOfferDraw = () => {},
+  drawOfferRole = null, // 'offered' | 'received' for a pending online offer
+  onRetractDrawOffer = () => {},
+  onAcceptDrawOffer = () => {},
+  onDeclineDrawOffer = () => {},
   onboarding = false,
   onDismissOnboarding = () => {},
   isPaid = false,
@@ -217,6 +222,53 @@ export default function SideTray({
       {(isPlaying || view !== 'menu' || onboarding) ? (
       <div className="qc-side-tray-header" style={styles.header}>
         <div className="qc-side-tray-header-top" style={styles.headerTopRow}>
+          {drawOfferRole ? (
+            <div
+              className={`qc-online-draw-line qc-online-draw-line--${drawOfferRole}`}
+              role="status"
+              style={{
+                width: '100%',
+                minHeight: 32,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                color: '#f6c445',
+                fontSize: 12,
+                fontWeight: 850,
+              }}
+            >
+              <HandshakeIcon size={16} aria-hidden="true" />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                {drawOfferRole === 'offered' ? 'Draw offered' : 'Opponent offers a draw'}
+              </span>
+              {drawOfferRole === 'offered' ? (
+                <button
+                  type="button"
+                  className="qc-online-draw-action qc-online-draw-action--retract"
+                  onClick={onRetractDrawOffer}
+                >
+                  Retract
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="qc-online-draw-action qc-online-draw-action--accept"
+                    onClick={onAcceptDrawOffer}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    className="qc-online-draw-action qc-online-draw-action--decline"
+                    onClick={onDeclineDrawOffer}
+                  >
+                    Decline
+                  </button>
+                </>
+              )}
+            </div>
+          ) : null}
           {/* Pre-game the title sits inline with the lone X/menu row; the
               two-row split only earns its space in-game with many icons. */}
           {!isPlaying && view !== 'menu' ? (
@@ -224,24 +276,21 @@ export default function SideTray({
               {titleText}
             </span>
           ) : null}
-          <div className="qc-side-tray-actions-right" style={styles.actionGroup}>
+          <div
+            className="qc-side-tray-actions-right"
+            style={{ ...styles.actionGroup, display: drawOfferRole ? 'none' : 'flex' }}
+          >
             {!isPlaying ? (
               // Pre-game the tray is a two-level menu: the home view needs no
               // header buttons (everything is a big row below); the setup and
               // post-game views get a single X back to the menu.
               view === 'menu' ? null : (
-                <IconButton
-                  icon={XIcon}
-                  size={18}
-                  width={32}
-                  height={32}
+                <ModalCloseButton
                   title="Back to menu"
+                  suppressTitle
                   ariaLabel="Back to menu"
                   className="qc-side-tray-back-btn"
                   onClick={() => setView('menu')}
-                  bg={theme.secondary}
-                  color={theme.error}
-                  hoverInvert={true}
                 />
               )
             ) : searching ? null : (

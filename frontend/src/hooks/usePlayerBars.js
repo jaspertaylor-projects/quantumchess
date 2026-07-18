@@ -88,6 +88,7 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
   const barPropsFor = (side, {
     speech,
     effectiveClock,
+    botThinking = { active: false, maxMs: 0 },
     introSpeechCollapsed,
     onIntroSpeechExpand,
   }) => (side === 'white' ? {
@@ -98,6 +99,8 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
     avatar: avatarFor('white'),
     tagline: taglineFor('white'),
     speech: speech.white,
+    thinking: Boolean(botThinking.active && botSide === 'white'),
+    thinkingMaxMs: botThinking.maxMs,
     clockText: effectiveClock.whiteText,
     clockActive: effectiveClock.whiteActive,
     clockLow: effectiveClock.whiteLow,
@@ -113,6 +116,8 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
     avatar: avatarFor('black'),
     tagline: taglineFor('black'),
     speech: speech.black,
+    thinking: Boolean(botThinking.active && botSide === 'black'),
+    thinkingMaxMs: botThinking.maxMs,
     introSpeechCollapsed,
     onIntroSpeechExpand,
     clockText: effectiveClock.blackText,

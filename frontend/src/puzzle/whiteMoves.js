@@ -20,7 +20,7 @@ import {
 } from '../chessboard/quantumEngine.js';
 
 // buildLastMoveRecord signature adapter for the scanner's call sites.
-export function buildLastMove(afterPieces, mover, from, to, enPassant, measuredSquares, side = 'white') {
+export function buildLastMove(afterPieces, mover, from, to, enPassant, measuredSquares, side = 'white', effects = null) {
   return buildLastMoveRecord({
     finalPieces: afterPieces,
     moverId: mover.id,
@@ -30,6 +30,10 @@ export function buildLastMove(afterPieces, mover, from, to, enPassant, measuredS
     usedEnPassant: enPassant,
     wasFirstMove: (mover.moveCount || 0) === 0,
     measuredSquares,
+    zappedSquares: effects?.zappedSquares || [],
+    healedSquares: effects?.healedSquares || [],
+    failedHealSquares: effects?.failedHealSquares || [],
+    fizzledSquares: effects?.fizzledSquares || [],
   });
 }
 
@@ -55,8 +59,9 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
       measuredSquares: sim.measuredSquares || [],
       zappedSquares: sim.zappedSquares || [],
       healedSquares: sim.healedSquares || [],
+      failedHealSquares: sim.failedHealSquares || [],
       fizzledSquares: sim.fizzledSquares || [],
-      nextLastMove: buildLastMove(sim.pieces, mover, mover.square, ep.to, true, sim.measuredSquares),
+      nextLastMove: buildLastMove(sim.pieces, mover, mover.square, ep.to, true, sim.measuredSquares, 'white', sim),
     });
   }
 
@@ -79,8 +84,9 @@ export function enumerateWhiteMoves(pieces, lastMove = null, captureCounter = 0)
         measuredSquares: sim.measuredSquares || [],
         zappedSquares: sim.zappedSquares || [],
         healedSquares: sim.healedSquares || [],
+        failedHealSquares: sim.failedHealSquares || [],
         fizzledSquares: sim.fizzledSquares || [],
-        nextLastMove: buildLastMove(sim.pieces, p, p.square, to, false, sim.measuredSquares),
+        nextLastMove: buildLastMove(sim.pieces, p, p.square, to, false, sim.measuredSquares, 'white', sim),
       });
     }
   }

@@ -19,8 +19,10 @@ export default function appLayoutStyles(isNarrow) {
       justifyContent: 'flex-start',
       paddingTop: 'env(safe-area-inset-top)',
       paddingRight: 'env(safe-area-inset-right)',
-      // Narrow layout reserves room for the fixed bottom action bar.
-      paddingBottom: isNarrow ? 'calc(env(safe-area-inset-bottom) + 66px)' : 'calc(env(safe-area-inset-bottom) + 12px)',
+      // Phones reserve both the fixed 66px action row and its ~28px status
+      // lane. The status line is absolutely positioned above MobileBar, so
+      // omitting this second reservation lets messages cover captured pieces.
+      paddingBottom: isNarrow ? 'calc(env(safe-area-inset-bottom) + 94px)' : 'calc(env(safe-area-inset-bottom) + 12px)',
       paddingLeft: 'env(safe-area-inset-left)',
       boxSizing: 'border-box',
       gap: '0.5rem',
@@ -79,8 +81,10 @@ export default function appLayoutStyles(isNarrow) {
     },
     footer: {
       textAlign: 'center',
-      padding: '10px 0 16px',
-      fontSize: 12,
+      // Recover most of the mobile status-lane reservation from decorative
+      // footer whitespace rather than shrinking the board.
+      padding: isNarrow ? '2px 0 4px' : '10px 0 16px',
+      fontSize: isNarrow ? 10 : 12,
       color: theme.textSecondary,
       opacity: 0.7,
     },

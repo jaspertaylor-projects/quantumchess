@@ -331,6 +331,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
           width={36}
           height={36}
           title="Previous move"
+          suppressTitle
           ariaLabel="Previous move"
           className="qc-move-history-prev"
           onClick={handlePrev}
@@ -357,6 +358,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
           width={36}
           height={36}
           title="Next move"
+          suppressTitle
           ariaLabel="Next move"
           className="qc-move-history-next"
           onClick={handleNext}
