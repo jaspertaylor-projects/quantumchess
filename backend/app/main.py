@@ -4,6 +4,7 @@
 # Exported To: ./bootstrap.py
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 import logging.config
@@ -265,6 +266,27 @@ app.add_middleware(
 from app.matchmaking.router import router as matchmaking_router
 
 app.include_router(matchmaking_router)
+
+# ---- Stats: bot-game intake + concurrency sampler -----------------------------
+from app.stats import sampler as stats_sampler
+from app.stats import supabase_writer as stats_writer
+from app.stats.router import router as stats_router
+
+app.include_router(stats_router)
+
+
+@app.on_event("startup")
+async def start_stats_sampler() -> None:
+    # Peaks are tracked even without Supabase credentials; persistence just
+    # stays off (supabase_writer no-ops) until the env vars are set.
+    asyncio.get_running_loop().create_task(stats_sampler.run_sampler())
+    if not stats_writer.enabled():
+        # print, not logger: the log config only records ERROR, and a missing
+        # optional config is stdout-note material, not an alert email.
+        print(
+            "stats: QC_SUPABASE_URL/QC_SUPABASE_SERVICE_KEY unset; snapshots and "
+            "finished-game rows will not be persisted"
+        )
 
 
 # ---- Endpoints: Health --------------------------------------------------------

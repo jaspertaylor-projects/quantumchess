@@ -1,6 +1,6 @@
 # backend/app/matchmaking/router.py
 # Purpose: FastAPI router exposing RESTful matchmaking endpoints and a WebSocket endpoint to relay real-time game events and authoritative server-side chess clock state per room.
-# Imports From: .models, .service
+# Imports From: .models, .service, app.stats.sampler, app.stats.supabase_writer
 # Exported To: app.main
 
 from __future__ import annotations
@@ -11,6 +11,9 @@ import time
 from typing import Any, Callable, Dict, Optional
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+
+from app.stats import sampler as stats_sampler
+from app.stats import supabase_writer
 
 from . import service
 from .models import (
@@ -27,7 +30,7 @@ router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])  # noqa: E23
 
 @router.post("/join", response_model=MatchResponse)
 def matchmaking_join(payload: JoinPayload) -> MatchResponse:
-    return service.join(payload.clientId)
+    return service.join(payload.clientId, ranked=payload.ranked)
 
 
 @router.get("/status/{client_id}", response_model=MatchResponse)
@@ -59,7 +62,11 @@ def matchmaking_heartbeat(payload: HeartbeatPayload) -> Dict[str, Any]:
 
 @router.get("/metrics")
 def matchmaking_metrics() -> Dict[str, Any]:
-    return service.metrics()
+    m = service.metrics()
+    stats_sampler.observe(m)
+    m["activeGames"] = int(m.get("rooms", 0)) - int(m.get("openRooms", 0))
+    m.update(stats_sampler.peaks_view())
+    return m
 
 
 # ------------------------------ WebSocket Game Relay ---------------------------
@@ -68,6 +75,7 @@ def matchmaking_metrics() -> Dict[str, Any]:
 # { room_id: { "conns": { clientId: WebSocket }, "turn": "white"|"black", "seq": int, "lock": asyncio.Lock,
 #              "clock": { "baseMs": int, "incMs": int, "whiteMs": int, "blackMs": int, "active": str,
 #                         "lastMono": float, "started": bool }, "clock_task": asyncio.Task|None,
+#              "draw_offer_by": "white"|"black"|None,
 #              "ended": bool, "winner": str|None, "end_reason": str|None, "announced_end": bool } }
 _WS_ROOMS: Dict[str, Dict[str, Any]] = {}
 
@@ -99,12 +107,14 @@ def _get_room_state(room_id: str) -> Dict[str, Any]:
             "end_reason": None,
             "announced_end": False,
             "history": [],
+            "draw_offer_by": None,
             "both_connected_at": None,
             "dc_at": {},
-            # Default to 5+0 control. Single source of truth on the server.
+            # The initial online release has one server-authoritative clock:
+            # five minutes with five seconds added after every move.
             "clock": {
                 "baseMs": 5 * 60 * 1000,
-                "incMs": 0,
+                "incMs": 5 * 1000,
                 "whiteMs": 5 * 60 * 1000,
                 "blackMs": 5 * 60 * 1000,
                 "active": "none",  # "white" | "black" | "none"
@@ -121,9 +131,75 @@ def _end_game_locked(state: Dict[str, Any], winner: Optional[str], reason: str) 
     state["ended"] = True
     state["winner"] = winner
     state["end_reason"] = reason
+    state["draw_offer_by"] = None
     clk = state.get("clock", {})
     clk["active"] = "none"
     state["clock"] = clk
+
+
+def _draw_offer_view(state: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    offered_by = state.get("draw_offer_by")
+    return {"offeredBy": offered_by} if offered_by in ("white", "black") else None
+
+
+def _transition_draw_offer_locked(state: Dict[str, Any], side: str, action: str) -> Dict[str, Any]:
+    """Apply one draw-offer action while the room lock is held.
+
+    Offers are independent of turn and survive normal moves. Accept/decline
+    belongs only to the opponent; retract belongs only to the offerer.
+    """
+    if state.get("ended"):
+        return {"error": "game_over"}
+    if side not in ("white", "black"):
+        return {"error": "unknown_side"}
+
+    offered_by = state.get("draw_offer_by")
+    if action == "offer":
+        if offered_by and offered_by != side:
+            return {"error": "draw_offer_pending"}
+        state["draw_offer_by"] = side
+        return {"status": "pending", "offeredBy": side, "resolution": "offered"}
+
+    if action == "retract":
+        if offered_by != side:
+            return {"error": "no_owned_draw_offer"}
+        state["draw_offer_by"] = None
+        return {"status": "cleared", "offeredBy": None, "resolution": "retracted"}
+
+    if action in ("accept", "decline"):
+        if offered_by not in ("white", "black"):
+            return {"error": "no_draw_offer"}
+        if offered_by == side:
+            return {"error": "offerer_cannot_answer"}
+        state["draw_offer_by"] = None
+        if action == "accept":
+            _end_game_locked(state, None, "agreement")
+            return {"status": "cleared", "offeredBy": None, "resolution": "accepted", "gameOver": True}
+        return {"status": "cleared", "offeredBy": None, "resolution": "declined"}
+
+    return {"error": "invalid_draw_offer_action"}
+
+
+def _record_finished_online_game(state: Dict[str, Any]) -> None:
+    """Persist an online game's outcome for the admin stats dashboard.
+    Fire-and-forget (threaded insert); safe to call under the room lock."""
+    winner = state.get("winner")
+    reason = state.get("end_reason") or "rules"
+    if winner in ("white", "black"):
+        result = winner
+    elif state.get("seq", 0) == 0 and reason in ("first-move timeout", "abandonment"):
+        result = "void"  # nobody ever moved (first-move timeout / instant abandon)
+    else:
+        result = "draw"
+    supabase_writer.insert_row(
+        "qc_finished_games",
+        {
+            "mode": "online",
+            "result": result,
+            "end_reason": reason[:40],
+            "move_count": int(state.get("seq", 0)),
+        },
+    )
 
 
 def _game_over_payload_locked(room_id: str, state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -132,6 +208,7 @@ def _game_over_payload_locked(room_id: str, state: Dict[str, Any]) -> Optional[D
     if state.get("announced_end"):
         return None
     state["announced_end"] = True
+    _record_finished_online_game(state)
     return {
         "type": "game_over",
         "roomId": room_id,
@@ -464,6 +541,7 @@ async def matchmaking_ws(
             "turn": state["turn"],
             "seq": state["seq"],
             "clock": _clock_view(state),
+            "drawOffer": _draw_offer_view(state),
             # Full move history so a rejoining client can rebuild the game.
             "history": list(state.get("history", [])),
         },
@@ -481,6 +559,7 @@ async def matchmaking_ws(
             "turn": state["turn"],
             "seq": state["seq"],
             "clock": _clock_view(state),
+            "drawOffer": _draw_offer_view(state),
         },
     )
 
@@ -555,6 +634,45 @@ async def matchmaking_ws(
                 )
                 continue
 
+            if mtype == "draw_offer":
+                # Non-blocking agreement flow. This state is deliberately
+                # independent of turn and ordinary moves do not clear it.
+                m_room = str(msg.get("roomId") or "")
+                m_cid = str(msg.get("clientId") or "")
+                action = str(msg.get("action") or "")
+                if m_room != room_id or m_cid != cid:
+                    await _send(websocket, {"type": "error", "detail": "room_or_client_mismatch"})
+                    continue
+
+                true_side = service.get_side_for_client(room_id, cid)
+                draw_payload: Optional[Dict[str, Any]] = None
+                over_payload: Optional[Dict[str, Any]] = None
+                error: Optional[str] = None
+                async with state["lock"]:
+                    result = _transition_draw_offer_locked(state, str(true_side or ""), action)
+                    error = result.get("error")
+                    if not error:
+                        if result.get("gameOver"):
+                            over_payload = _game_over_payload_locked(room_id, state)
+                        else:
+                            draw_payload = {
+                                "type": "draw_offer",
+                                "roomId": room_id,
+                                "status": result.get("status"),
+                                "offeredBy": result.get("offeredBy"),
+                                "resolution": result.get("resolution"),
+                                "by": true_side,
+                                "seq": state.get("seq", 0),
+                            }
+
+                if error:
+                    await _send(websocket, {"type": "error", "detail": error})
+                elif over_payload is not None:
+                    await _broadcast(room_id, over_payload)
+                elif draw_payload is not None:
+                    await _broadcast(room_id, draw_payload)
+                continue
+
             if mtype == "game_over":
                 # Client-reported rules-based end (checkmate/stalemate/draw).
                 # Both clients evaluate the rules deterministically, so the
@@ -568,6 +686,9 @@ async def matchmaking_ws(
                 raw_winner = msg.get("winner")
                 report_winner = raw_winner if raw_winner in ("white", "black") else None
                 report_reason = str(msg.get("reason") or "rules")[:64]
+                if report_reason == "agreement":
+                    await _send(websocket, {"type": "error", "detail": "use_draw_offer_protocol"})
+                    continue
 
                 over_payload: Optional[Dict[str, Any]] = None
                 async with state["lock"]:
@@ -625,6 +746,7 @@ async def matchmaking_ws(
                     "turn": room_state.get("turn", "white"),
                     "seq": room_state.get("seq", 0),
                     "clock": _clock_view(room_state),
+                    "drawOffer": _draw_offer_view(room_state),
                 },
             )
 

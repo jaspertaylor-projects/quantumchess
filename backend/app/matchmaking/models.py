@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 class JoinPayload(BaseModel):
     clientId: str = Field(..., min_length=6, max_length=128)
+    ranked: bool = False
 
 
 class LeavePayload(BaseModel):
@@ -38,3 +39,4 @@ class MatchResponse(BaseModel):
     opponentPresent: Optional[bool] = None
     position: Optional[int] = None
     code: Optional[str] = None  # private-room invite code (challenge a friend)
+    ranked: Optional[bool] = None

@@ -13,8 +13,10 @@ from typing import Any, Dict, List, Optional
 
 from .models import MatchResponse
 
-# In-memory state (process-local)
-_MM_QUEUE: List[str] = []
+# In-memory state (process-local). Ranked and unranked are deliberately
+# independent pools: a player can only be paired inside the pool they chose.
+_MM_QUEUES: Dict[str, List[str]] = {"unranked": [], "ranked": []}
+_MM_CLIENT_QUEUE: Dict[str, str] = {}
 _MM_ROOMS: Dict[str, Dict[str, Any]] = {}
 _MM_CLIENT_ROOM: Dict[str, str] = {}
 _MM_CLIENT_LAST_SEEN: Dict[str, float] = {}
@@ -41,13 +43,9 @@ def _cleanup_stale() -> None:
             stale_clients.add(c)
 
     if stale_clients:
-        # Remove stale clients from queue
-        for c in list(_MM_QUEUE):
-            if c in stale_clients:
-                try:
-                    _MM_QUEUE.remove(c)
-                except ValueError:
-                    pass
+        # Remove stale clients from either matchmaking pool.
+        for c in stale_clients:
+            _remove_from_queue(c)
 
         # Remove stale clients from rooms; drop empty rooms
         for rid, room in list(_MM_ROOMS.items()):
@@ -68,7 +66,7 @@ def _cleanup_stale() -> None:
 
     # Prune unknown last_seen entries for fully removed clients
     for c in list(_MM_CLIENT_LAST_SEEN.keys()):
-        if c in stale_clients and c not in _MM_CLIENT_ROOM and c not in _MM_QUEUE:
+        if c in stale_clients and c not in _MM_CLIENT_ROOM and c not in _MM_CLIENT_QUEUE:
             _MM_CLIENT_LAST_SEEN.pop(c, None)
 
     # Drop invite codes whose room is gone
@@ -100,15 +98,41 @@ def _begin_op(client_id_raw: str) -> Optional[str]:
     return client_id
 
 
+def _queue_name(ranked: bool) -> str:
+    return "ranked" if ranked else "unranked"
+
+
+def _remove_from_queue(client_id: str) -> None:
+    queue_name = _MM_CLIENT_QUEUE.pop(client_id, None)
+    if queue_name in _MM_QUEUES:
+        try:
+            _MM_QUEUES[queue_name].remove(client_id)
+        except ValueError:
+            pass
+
+
 def _queued_view(client_id: str) -> MatchResponse:
-    return MatchResponse(status="queued", position=_MM_QUEUE.index(client_id) + 1)
+    queue_name = _MM_CLIENT_QUEUE.get(client_id, "unranked")
+    queue = _MM_QUEUES[queue_name]
+    return MatchResponse(
+        status="queued",
+        position=queue.index(client_id) + 1,
+        ranked=queue_name == "ranked",
+    )
 
 
-def _make_room(room_id: str, players: List[str], sides: Dict[str, str]) -> Dict[str, Any]:
+def _make_room(
+    room_id: str,
+    players: List[str],
+    sides: Dict[str, str],
+    *,
+    ranked: bool = False,
+) -> Dict[str, Any]:
     return {
         "id": room_id,
         "players": players,
         "sides": sides,
+        "ranked": ranked,
         "created_at": time.time(),
         "last_heartbeat": {pid: _now() for pid in players},
     }
@@ -121,13 +145,14 @@ def _room_view_for(client_id: str, room: Dict[str, Any]) -> MatchResponse:
     side = sides.get(client_id)
     opponent_present = len(players) == 2
     return MatchResponse(
-        status="matched", roomId=rid, side=side, opponentPresent=opponent_present
+        status="matched", roomId=rid, side=side, opponentPresent=opponent_present,
+        ranked=bool(room.get("ranked", False)),
     )
 
 
 # Public operations -------------------------------------------------------------
 
-def join(client_id_raw: str) -> MatchResponse:
+def join(client_id_raw: str, ranked: bool = False) -> MatchResponse:
     client_id = _begin_op(client_id_raw)
     if not client_id:
         return MatchResponse(status="error")
@@ -141,32 +166,41 @@ def join(client_id_raw: str) -> MatchResponse:
         else:
             _MM_CLIENT_ROOM.pop(client_id, None)
 
-    # Already queued
-    if client_id in _MM_QUEUE:
+    queue_name = _queue_name(ranked)
+    queue = _MM_QUEUES[queue_name]
+
+    # An idempotent retry stays in its chosen pool. If the player changed
+    # their choice, atomically move them instead of occupying both queues.
+    existing_queue = _MM_CLIENT_QUEUE.get(client_id)
+    if existing_queue == queue_name and client_id in queue:
         return _queued_view(client_id)
+    if existing_queue:
+        _remove_from_queue(client_id)
 
     # Try to match with earliest waiting distinct player
     partner: Optional[str] = None
-    for queued_id in list(_MM_QUEUE):
+    for queued_id in list(queue):
         if queued_id != client_id:
             partner = queued_id
             break
 
     if partner is None:
         # No partner available; enqueue
-        _MM_QUEUE.append(client_id)
+        queue.append(client_id)
+        _MM_CLIENT_QUEUE[client_id] = queue_name
         return _queued_view(client_id)
 
     # Create a room with partner and client
     try:
-        _MM_QUEUE.remove(partner)
+        queue.remove(partner)
     except ValueError:
         pass
+    _MM_CLIENT_QUEUE.pop(partner, None)
 
     room_id = uuid.uuid4().hex
     players = [partner, client_id]
     sides = {partner: "white", client_id: "black"}  # deterministic assignment
-    room = _make_room(room_id, players, sides)
+    room = _make_room(room_id, players, sides, ranked=ranked)
     _MM_ROOMS[room_id] = room
     for pid in players:
         _MM_CLIENT_ROOM[pid] = room_id
@@ -196,11 +230,7 @@ def create_private(client_id_raw: str) -> MatchResponse:
         # Detach from any other (or dead) room before opening a fresh one.
         leave(client_id)
 
-    if client_id in _MM_QUEUE:
-        try:
-            _MM_QUEUE.remove(client_id)
-        except ValueError:
-            pass
+    _remove_from_queue(client_id)
 
     room_id = uuid.uuid4().hex
     code = _new_invite_code()
@@ -234,7 +264,7 @@ def join_private(client_id_raw: str, code_raw: str) -> MatchResponse:
         return MatchResponse(status="room_full")
 
     # Detach the joiner from any previous queue spot or room.
-    if _MM_CLIENT_ROOM.get(client_id) or client_id in _MM_QUEUE:
+    if _MM_CLIENT_ROOM.get(client_id) or client_id in _MM_CLIENT_QUEUE:
         leave(client_id)
 
     players.append(client_id)
@@ -256,7 +286,7 @@ def get_status(client_id_raw: str) -> MatchResponse:
         room = _MM_ROOMS[rid]
         return _room_view_for(client_id, room)
 
-    if client_id in _MM_QUEUE:
+    if client_id in _MM_CLIENT_QUEUE:
         return _queued_view(client_id)
 
     return MatchResponse(status="idle")
@@ -268,11 +298,7 @@ def leave(client_id_raw: str) -> Dict[str, Any]:
         return {"status": "error"}
 
     # Remove from queue
-    try:
-        if client_id in _MM_QUEUE:
-            _MM_QUEUE.remove(client_id)
-    except ValueError:
-        pass
+    _remove_from_queue(client_id)
 
     # Remove from room and drop empty rooms
     rid = _MM_CLIENT_ROOM.pop(client_id, None)
@@ -313,6 +339,7 @@ def heartbeat(client_id_raw: str) -> Dict[str, Any]:
             "roomId": rid,
             "side": side,
             "opponentPresent": opponent_present,
+            "ranked": bool(room.get("ranked", False)),
         }
 
     return {"status": "ok"}
@@ -325,7 +352,9 @@ def metrics() -> Dict[str, Any]:
     rooms_total = len(_MM_ROOMS)
     open_rooms = sum(1 for r in _MM_ROOMS.values() if len(r.get("players", [])) == 1)
     return {
-        "queued": len(_MM_QUEUE),
+        "queued": sum(len(queue) for queue in _MM_QUEUES.values()),
+        "rankedQueued": len(_MM_QUEUES["ranked"]),
+        "unrankedQueued": len(_MM_QUEUES["unranked"]),
         "rooms": rooms_total,
         "openRooms": open_rooms,
         "playersOnline": len(set(online)),
@@ -347,6 +376,7 @@ def get_room_snapshot(room_id: str) -> Optional[Dict[str, Any]]:
         "id": room.get("id"),
         "players": list(room.get("players", [])),
         "sides": dict(room.get("sides", {})),
+        "ranked": bool(room.get("ranked", False)),
         "created_at": room.get("created_at"),
     }
 

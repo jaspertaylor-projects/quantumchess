@@ -58,6 +58,10 @@ services:
       # Keep runtime venv installs but pin uv to the image's Python 3.12 to avoid CPython drift/hangs.
       - UV_PYTHON_PREFER_SYSTEM=1
       - UV_PYTHON=python3.12
+      # Admin stats persistence (optional in dev; leave unset to keep the
+      # sampler in-memory only). Same vars as deploy/api/docker-compose.prod.yml.
+      - QC_SUPABASE_URL=${QC_SUPABASE_URL:-}
+      - QC_SUPABASE_SERVICE_KEY=${QC_SUPABASE_SERVICE_KEY:-}
     ports:
       # Publish to a free host port by default (published: 0). Override with HOST_BACKEND_PORT if you want a fixed port.
       - target: 8000

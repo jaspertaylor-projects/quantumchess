@@ -38,7 +38,9 @@ dormant. One engine, one ruleset.
     cascade would ripple beyond the struck pieces, the WHOLE volley fizzles.
     A zap never chooses between victims (no square-order tie-breaks); they
     shed together or shield together. Heals bloom as a volley the same way:
-    every regain takes root at once or the volley dissipates.
+    the census searches joint regain combinations, so two identities can
+    support each other even when neither would survive alone. It heals the
+    most contacts possible, then chooses the least-value valid combination.
   - Friendly contacts are **healed**: each regains its cheapest missing
     feasible identity, including King as the last rung; when the team is
     kingless, Heal tries King first so it can return (never Pawn on promoted
@@ -51,6 +53,8 @@ dormant. One engine, one ruleset.
 - **Zap feedback invariant**: every contacted enemy either loses a possibility
   and shows the red zap, or loses nothing and shows the gold shield. This also
   covers fully known pieces and King Guard with no lower identity to shed.
+- Resolution order is mover lands → captured victim resolves → conservation
+  collapses both sides → contact particles launch → Zap/Heal volley resolves.
 - Captures collapse the victim to its least valuable identity. Castling,
   en passant, and promotion carry over
   (castle-through-threat is gone with the check rule).
@@ -205,6 +209,33 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
   denied; the consent banner's choice flips both ad and analytics consent.
   Product events and GA4 dashboard setup are documented in
   `frontend/src/analytics/README.md`.
+
+### Admin stats dashboard (first-party analytics)
+
+Signed-in accounts flagged `is_admin` get a **Site Stats** button in the
+account panel: live players-online/games-in-progress tiles (backend
+`/api/matchmaking/metrics`, polled), concurrency + games-per-day charts, and
+account counts. Grant admin in the Supabase SQL Editor:
+```sql
+update qc_profiles set is_admin = true where lower(username) = lower('<name>');
+```
+
+Plumbing (schema: `supabase/migrations/20260718000000_qc_admin_stats.sql`):
+
+- **Concurrency history**: `backend/app/stats/sampler.py` samples matchmaking
+  every 20s and writes minute-maxes to `qc_stat_snapshots` (skips all-zero
+  stretches; hourly heartbeat row). Peak-since-deploy also rides on the
+  metrics endpoint.
+- **Finished games**: online games are recorded server-side at the relay's
+  exactly-once game-over broadcast; bot games arrive via an unauthenticated,
+  rate-limited `POST /api/stats/game-finished` ping from the client
+  (`frontend/src/analytics/statsPing.js`) — treat bot counts as approximate.
+- **Writes need the service-role key**: set `QC_SUPABASE_URL` +
+  `QC_SUPABASE_SERVICE_KEY` in `deploy/api/.env` on the API box (same flow as
+  the alert vars below). Unset = sampler still runs, nothing persists.
+- **Reads are RLS-gated**: only admins can select the stats tables
+  (`qc_is_admin()` policies); the dashboard reads Supabase directly from the
+  browser.
 
 ### Error alerts + uptime monitoring
 
@@ -387,7 +418,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       "⚔ Challenge a Friend" button → private room + invite link
       (`/?join=CODE`, 6-char unambiguous code). Creator waits (White) with a
       copy-link card; the friend opens the link and is seated as Black; the
-      game starts on the standard relay (5+0, first-move/abandon timers).
+      game starts on the standard relay (5+5, first-move/abandon timers).
       Backend: `create-private`/`join-private` in `matchmaking/{service,router}.py`
       (invite codes are in-memory — lost on API restart, like all rooms).
       Frontend: `matchmakingClient.js` (createPrivateRoom/joinPrivateRoom/
@@ -514,6 +545,14 @@ Legend: [ ] not started · [~] in progress · [X] done
       (deterministic engine). Server-side timers end stuck games: >60s
       disconnected = forfeit, the remaining player wins (voided if nobody had
       moved yet); >30s without a first move = game voided.
+- [X] Online draw offers are server-authoritative and non-blocking: a pending
+      offer occupies the side-tray header (or mobile status lane), survives
+      ordinary moves and reconnects, and exposes Retract to the offerer or
+      Accept/Decline to the opponent. Only acceptance broadcasts the agreed
+      draw game-over event.
+- [X] Public matchmaking has exactly two isolated pools, Ranked and Unranked.
+      Both use the server-authoritative 5+5 clock; local and AI games are
+      untimed.
 - [X] Sealed pieces — nearly-defined pieces that conservation leaves nothing
       to regain — show a solid line instead of a forever-cycling clock
       (`canPieceRecohere` in the engine). Taught in the tutorial: "Growing

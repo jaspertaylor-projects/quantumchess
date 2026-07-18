@@ -19,6 +19,13 @@ services:
       - QC_ALERT_SMTP_PASS=${QC_ALERT_SMTP_PASS:-}
       - QC_ALERT_TO=${QC_ALERT_TO:-}
       - QC_ALERT_FROM=${QC_ALERT_FROM:-noreply@quantumchess.ninja}
+      # Admin stats persistence (optional; stats writes are off unless both are
+      # set). URL is the Supabase project URL (https://<ref>.supabase.co); the
+      # key is the SERVICE ROLE key (Dashboard -> Settings -> API) — it bypasses
+      # RLS, so it lives only in ./.env on this box, never in the repo or the
+      # frontend.
+      - QC_SUPABASE_URL=${QC_SUPABASE_URL:-}
+      - QC_SUPABASE_SERVICE_KEY=${QC_SUPABASE_SERVICE_KEY:-}
     volumes:
       - api_logs:/logs
     expose:
