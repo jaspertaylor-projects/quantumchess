@@ -135,6 +135,33 @@ docker compose up            # frontend on :5175, backend on :8001
 The frontend hot-reloads. Engine/UI live in `frontend/src/`; the relay in
 `backend/app/`.
 
+## Operator CLIs on the dev box (what an agent here can pull off)
+
+Everything below is installed AND authenticated on this machine (verified
+2026-07-18). Practical upshot: an agent working in this repo can ship
+schema, backend, and frontend to production end-to-end without waiting on a
+human — the full loop was exercised on 2026-07-18.
+
+| Tool | Authed as / scope | What it's for here |
+|------|-------------------|--------------------|
+| `supabase` | Personal token; project **Quantum Chess** (`idulanhleydkejrumpzf`) is `--linked` | `supabase db push` applies `supabase/migrations/` to prod; `supabase migration list` shows drift; `supabase projects api-keys --project-ref idulanhleydkejrumpzf` returns the **anon and service_role keys** |
+| `aws` | IAM user `qc-deployer`, account `192366194234` | S3 sync to `quantumchess-ninja-site`, CloudFront invalidation (distribution `E3G9M8CYMWWNUF`), SES (`aws sesv2 …`) — everything `deploy-frontend.sh` needs |
+| `gh` / git | GitHub `jaspertaylor-projects` (https, keyring) | Full push access incl. `main` — pushing `main` is a prod act (Supabase migration integration + the API box pulls it) |
+| `ssh` | Key `/home/anonymous/qc_pem/qc-api-key.pem` → `ubuntu@api.quantumchess.ninja` | Full control of the prod API box: `quantumchess/` checkout, `deploy/api/.env` (secrets live ONLY there), compose rebuilds, `docker logs api-backend-1` |
+| `stripe` | Pura Viba LLC **sandbox** (test mode; key expires 2026-10-04) | Test-mode products/prices/webhooks only — live mode is NOT configured |
+| `docker` | Local daemon | The dev stack (see warning above) — all builds/tests run in the containers |
+| MCP browser (Claude sessions) | Playwright against any URL | Drive the dev server or prod site headlessly — screenshots, flows, console-error checks |
+
+No `psql`: ad-hoc prod SQL goes through PostgREST/GoTrue admin APIs with the
+service_role key (`…/rest/v1/`, `…/auth/v1/admin/…`), or becomes a proper
+migration. Host `node` exists but is only for the dependency-free
+`tools/*.mjs` — app builds stay in Docker.
+
+**Handling the service_role key**: fetch it into a shell variable at use
+time (`SK=$(supabase projects api-keys … | jq -r '…')`), pipe it over ssh
+stdin if it must land on the box — never echo it, never commit it, never
+put it in a command line that gets logged.
+
 ---
 
 ## How to update each part
