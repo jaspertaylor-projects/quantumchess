@@ -19,13 +19,13 @@ export const PREMIUM_PITCH =
   '$3/month keeps the servers on and the ads off, and gets you:';
 
 export const TIP_PITCH =
-  'Not a subscription person? Tip $5 for three months with no ads, plus 5 engine game reviews a day.';
+  'Not a subscription person? Tip $5 for three months with no ads, 5 engine game reviews a day, and the 3 Supporter bots.';
 
 export const PREMIUM_FEATURES = [
   'No ads',
   'Unlimited game reviews with engine moves',
   'Up to 1,000 saved games',
-  'Premium bots to battle',
+  'All 12 active bots, including 3 Premium-only opponents',
   'Custom profile pic & tagline',
   'The full character roster — 32 more taglines & sayings',
 ];
@@ -43,6 +43,15 @@ export function isAdFree(profile) {
 // A tipper: inside a tipped ad-free window, but not a subscriber.
 export function isTipper(profile) {
   return isAdFree(profile) && !(profile && profile.tier === 'paid');
+}
+
+// Bot access is intentionally separate from win-based unlock progression.
+// A free player may earn a locked Supporter/Premium bot card, but the account
+// tier still has to permit that roster before the bot can be played.
+export function botAccountAccess(profile) {
+  if (profile && profile.tier === 'paid') return 'premium';
+  if (isTipper(profile)) return 'supporter';
+  return 'free';
 }
 
 export const FREE_REVIEW_CAP = 3;

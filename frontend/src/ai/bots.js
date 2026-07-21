@@ -1,8 +1,7 @@
 // frontend/src/ai/bots.js
-// Purpose: The bot roster — 12 free opponents (4 easy, 4 medium, 4 hard)
-// plus 12 premium-only bots, each a physicist/scientist × chess-legend
-// mashup with a made-up rating and a personality expressed as search-config and
-// evaluation-weight overrides for the engine.
+// Purpose: The active 12-bot roster — six Free, three Supporter-or-Premium,
+// and three Premium opponents — plus a shelved legacy roster retained only so
+// old saved games can still resolve their opponent identity.
 // Legal guardrail: both halves of every mashup must be deceased, and avatar
 // art must not depict a real person's likeness or imply endorsement.
 // Avatar source of truth: this roster owns bot ids and tiers. Drop a PNG at
@@ -143,6 +142,7 @@ export const BOTS = [
       collapse: 'Estimated, then confirmed: all of it.',
     },
     hue: 45,
+    access: 'supporter',
     search: { noise: 0 },
     weights: {
       friendlyContact: 0.24, extraType: 0.16,
@@ -165,6 +165,7 @@ export const BOTS = [
       collapse: 'Every box on your side is open.',
     },
     hue: 265,
+    access: 'supporter',
     search: {
       noise: 0, widths: [176, 176, 2, 2], adaptiveBeam: false,
       timeMs: 7000,
@@ -188,6 +189,7 @@ export const BOTS = [
       collapse: 'Total decoherence. Nothing left uncertain.',
     },
     hue: 180,
+    access: 'supporter',
     search: {},
     weights: {
       enemyContact: 0.16, friendlyContact: 0.16, extraType: 0.16,
@@ -209,6 +211,7 @@ export const BOTS = [
       collapse: 'No uncertainty left anywhere on your side.',
     },
     hue: 95,
+    access: 'premium',
     search: { widths: [28, 18, 12, 10] },
     weights: { mobility: 0.03, center: 0.075, extraType: 0.11, development: 0.1, enemyContact: 0.07 },
   },
@@ -227,6 +230,7 @@ export const BOTS = [
       collapse: 'Your whole grid is lit.',
     },
     hue: 285,
+    access: 'premium',
     search: { widths: [24, 14, 11] },
     weights: {
       material: 0.86, kingHunt: 0.42,
@@ -249,6 +253,7 @@ export const BOTS = [
       collapse: 'Everything observable has been observed.',
     },
     hue: 215,
+    access: 'premium',
     search: { timeMs: 13500, widths: [32, 20, 14, 12] },
     weights: {
       material: 1.05, mobility: 0.02, center: 0.05,
@@ -260,10 +265,9 @@ export const BOTS = [
     },
   },
 
-  // ---------------------------- PREMIUM -----------------------------
-  // Paid-tier roster (12 bots, 1300-2250, sorted by rating; the 2250 boss
-  // outranks the whole free roster). `premium: true` gates them in
-  // NewGamePanel; the engine treats them like any other bot of their tier.
+  // ----------------------- SHELVED LEGACY ROSTER --------------------
+  // These identities remain readable for old saved games, but are excluded
+  // from every active roster, unlock offer, and opponent picker.
   {
     id: 'freeman-morphy',
     name: 'Freeman Morphy',
@@ -512,7 +516,32 @@ export const BOT_INSPIRATIONS = {
   'ernest-smyslov': { scientist: 'Ernest Rutherford', chess: 'Vasily Smyslov' },
 };
 
-export const DEFAULT_BOT_ID = 'boris-bohr';
+export const STARTER_BOT_ID = 'isaac-steinitz';
+export const DEFAULT_BOT_ID = STARTER_BOT_ID;
+
+export const BOT_ACCESS = Object.freeze({
+  FREE: 'free',
+  SUPPORTER: 'supporter',
+  PREMIUM: 'premium',
+});
+
+const ACTIVE_BOT_IDS = new Set([
+  'isaac-steinitz',
+  'emmy-menchik',
+  'galileo-greco',
+  'wolfgang-nimzowitsch',
+  'boris-bohr',
+  'marie-lane',
+  'enrico-capablanca',
+  'erwin-fischer',
+  'akiba-oppenheimer',
+  'werner-lasker',
+  'nikola-tal',
+  'rudolf-einstein',
+]);
+
+export const ACTIVE_BOTS = BOTS.filter((bot) => ACTIVE_BOT_IDS.has(bot.id));
+export const SHELVED_BOTS = BOTS.filter((bot) => !ACTIVE_BOT_IDS.has(bot.id));
 
 export const BOT_AVATAR_BASE = '/bots';
 
@@ -521,11 +550,28 @@ export function getBotAvatarUrl(botOrId) {
   return id ? `${BOT_AVATAR_BASE}/${id}.png` : null;
 }
 
-export const FREE_BOTS = BOTS.filter((b) => !b.premium);
-export const PREMIUM_BOTS = BOTS.filter((b) => b.premium);
+export function botAccess(bot) {
+  return (bot && bot.access) || BOT_ACCESS.FREE;
+}
 
-// Dev-only playtest override: open the app with ?allbots to make every rung
-// AND the premium roster pickable (ladder + premium gates skipped). Hard-dead
+export function canAccessBot(bot, accountAccess = BOT_ACCESS.FREE) {
+  const rank = { [BOT_ACCESS.FREE]: 0, [BOT_ACCESS.SUPPORTER]: 1, [BOT_ACCESS.PREMIUM]: 2 };
+  return (rank[accountAccess] ?? 0) >= (rank[botAccess(bot)] ?? 0);
+}
+
+export function botAccessLabel(bot) {
+  const access = botAccess(bot);
+  if (access === BOT_ACCESS.SUPPORTER) return 'Supporter + Premium';
+  if (access === BOT_ACCESS.PREMIUM) return 'Premium';
+  return 'Free';
+}
+
+export const FREE_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.FREE);
+export const SUPPORTER_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.SUPPORTER);
+export const PREMIUM_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.PREMIUM);
+
+// Dev-only playtest override: open the app with ?allbots to make every active
+// opponent pickable (progression + account gates skipped). Hard-dead
 // in production builds, like the puzzle preview params.
 export function devUnlockAllBots() {
   try {
@@ -539,6 +585,10 @@ export function devUnlockAllBots() {
 
 export function getBotById(id) {
   return BOTS.find((b) => b.id === id) || null;
+}
+
+export function getActiveBotById(id) {
+  return ACTIVE_BOTS.find((bot) => bot.id === id) || null;
 }
 
 export function botInitials(bot) {

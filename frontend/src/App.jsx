@@ -29,7 +29,7 @@ import { StartGameCta, IntroNudgeToast, IntroSpeechOverlay } from './components/
 import AppModals from './components/AppModals.jsx';
 import appLayoutStyles from './components/appLayoutStyles.js';
 import useLocalAi from './ai/useLocalAi.js';
-import { getBotById, DEFAULT_BOT_ID } from './ai/bots.js';
+import { canAccessBot, devUnlockAllBots, getActiveBotById, DEFAULT_BOT_ID } from './ai/bots.js';
 import { decideBotDrawOffer } from './ai/drawDecision.js';
 import useBoardLayout from './hooks/useBoardLayout.js';
 import useBoardInput from './hooks/useBoardInput.js';
@@ -44,6 +44,7 @@ const INTRO_SPEECH_GHOST_PAGES = [...new Set(Object.values(INTRO_DIALOGUE).flat(
 import usePlayerBars from './hooks/usePlayerBars.js';
 import useMonetization from './hooks/useMonetization.js';
 import useGameRecording from './hooks/useGameRecording.js';
+import useBotUnlockReward from './hooks/useBotUnlockReward.js';
 import useEffectiveClock from './hooks/useEffectiveClock.js';
 import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
@@ -51,7 +52,7 @@ import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
 import { showRewardedAd } from './ads/adService.js';
 import {
-  isAdFree, isTipper, markReviewUsed, reviewCapFor, reviewsRemaining,
+  botAccountAccess, isAdFree, isTipper, markReviewUsed, reviewCapFor, reviewsRemaining,
 } from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
@@ -319,6 +320,30 @@ export default function App({ entryAction = null }) {
     moves,
   });
 
+  const didUserBeatBot = Boolean(
+    showWinPopup
+    && aiBot
+    && !isOnlineGameRef.current
+    && gameOver
+    && winner === userTeam
+  );
+  const handleBotUnlocked = useCallback((bot) => {
+    if (!bot) return;
+    dispatch(setGameSettings({
+      ...gameSettings,
+      gameMode: 'ai',
+      aiBotId: bot.id,
+      aiDifficulty: bot.tier,
+    }));
+  }, [dispatch, gameSettings]);
+  const botUnlock = useBotUnlockReward({
+    active: didUserBeatBot,
+    auth,
+    gameKey: gameInstanceId,
+    beatenBotId: aiBot && aiBot.id,
+    onUnlocked: handleBotUnlocked,
+  });
+
   useEffect(() => {
     if (gameOver) setShowWinPopup(true);
   }, [gameOver]);
@@ -457,6 +482,14 @@ export default function App({ entryAction = null }) {
   const handleOpenTutorial = useCallback(() => { setTutorialOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
 
   const handleStartGame = useCallback((settings) => {
+    const requestedBot = settings && settings.gameMode === 'ai'
+      ? getActiveBotById(settings.aiBotId || DEFAULT_BOT_ID) || getActiveBotById(DEFAULT_BOT_ID)
+      : null;
+    if (requestedBot && !devUnlockAllBots() && !canAccessBot(requestedBot, botAccountAccess(auth.profile))) {
+      setAccountOpen(true, 'bot_unlock');
+      return;
+    }
+
     online.teardownForNewGame();
     intro.retireIntro();
 
@@ -478,7 +511,7 @@ export default function App({ entryAction = null }) {
 
     if (settings && settings.gameMode === 'ai') {
       aiEnabledRef.current = true;
-      const bot = getBotById((settings && settings.aiBotId) || DEFAULT_BOT_ID) || getBotById(DEFAULT_BOT_ID);
+      const bot = requestedBot;
       setAiBot(bot);
       aiDifficultyRef.current = bot ? bot.tier : aiDifficultyRef.current;
       const pref = settings && typeof settings.preferredSide === 'string' ? settings.preferredSide : 'random';
@@ -496,7 +529,7 @@ export default function App({ entryAction = null }) {
     // Local 2 Player always seats Anonymous as White at the bottom.
     dispatch(setUserTeam('white'));
     setInfoMessage('New local game started.');
-  }, [dispatch, online, intro]);
+  }, [auth.profile, dispatch, online, intro, setAccountOpen]);
 
   function colorsEqual(a, b) {
     if (!a || !b) return false;
@@ -1033,6 +1066,13 @@ export default function App({ entryAction = null }) {
         winner={winner}
         onCloseWinPopup={() => setShowWinPopup(false)}
         onPlayAgain={handlePlayAgain}
+        playAgainLabel={botUnlock.reward && botUnlock.reward.selectedBot
+          ? `Play ${botUnlock.reward.selectedBot.name}`
+          : 'Play Again'}
+        botUnlockReward={didUserBeatBot ? botUnlock.reward : null}
+        onChooseBot={botUnlock.choose}
+        onRequireBotAccess={() => setAccountOpen(true, 'bot_unlock')}
+        onSignInForBots={() => setAccountOpen(true, 'bot_unlock')}
         onGameReview={handlePostGameReview}
         reviewAccess={postGameReviewAccess}
         reviewRemaining={postGameReviewsRemaining}

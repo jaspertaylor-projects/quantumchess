@@ -14,8 +14,8 @@ import { canRunIntroReply, INTRO_DIALOGUE, INTRO_GUIDE, INTRO_SCRIPT } from './i
 export { INTRO_GUIDE, INTRO_SCRIPT } from './introSequenceData.js';
 
 // Opponent quietly seated when a first-time visitor moves a piece on the
-// intro board (see introFreePlay). Easiest bot: the first minute should feel
-// magical, not punishing.
+// intro board (see introFreePlay). Isaac is also the always-unlocked starter,
+// so beating the introduction can award the same roster choice as any game.
 const INTRO_BOT_ID = 'isaac-steinitz';
 
 export default function useIntroSequence({

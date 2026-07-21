@@ -1,9 +1,6 @@
 // frontend/src/ladder/BotLadderPanel.jsx
-// Purpose: The vs-AI opponent picker — a dropdown whose trigger is the selected
-// bot's character card and whose menu is the unlock ladder: free bots easiest
-// first, cleared rungs checked, the next rung highlighted, locked rungs faded
-// behind a lock (hover: "Beat <previous bot> to unlock"). Subscribers get the
-// premium roster appended; everyone else gets a one-line premium teaser.
+// Purpose: The vs-AI opponent picker for the branching bot roster. Wins unlock
+// chosen opponents, while Free/Supporter/Premium access remains a separate gate.
 // Imports From: react, ../theme.js, ../components/ChevronBadge.jsx, ../ai/bots.js, ../account/botProgress.js
 // Exported To: ../tray/NewGamePanel.jsx
 
@@ -11,13 +8,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import theme from '../theme.js';
 import { Lock as LockIcon } from 'lucide-react';
 import ChevronBadge from '../components/ChevronBadge.jsx';
-import { FREE_BOTS, PREMIUM_BOTS, getBotById, getBotAvatarUrl, devUnlockAllBots } from '../ai/bots.js';
-import { fetchBotProgress, BOT_PROGRESS_EVENT } from '../account/botProgress.js';
+import {
+  ACTIVE_BOTS, BOT_ACCESS, STARTER_BOT_ID, botAccess, botAccessLabel,
+  canAccessBot, getActiveBotById, getBotAvatarUrl, devUnlockAllBots,
+} from '../ai/bots.js';
+import { fetchBotProgress, fetchBotUnlocks, BOT_PROGRESS_EVENT } from '../account/botProgress.js';
+import { botAccountAccess } from '../account/billing.js';
 
 const TIER_TAG = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 
-function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected, onClick, trigger = false, open = false }) {
-  const accent = boss || premium ? 'rgba(246,196,69,' : 'rgba(127,231,255,';
+function BotCard({ bot, boss, cleared, next = false, locked, lockHint, selected, onClick, onLockedClick = null, trigger = false, open = false }) {
+  const paidAccess = botAccess(bot) !== BOT_ACCESS.FREE;
+  const accent = boss || paidAccess ? 'rgba(246,196,69,' : 'rgba(127,231,255,';
   // Locked cards fade their contents (not the button itself) so the hover
   // tooltip overlay renders at full strength on top of them.
   const [hovered, setHovered] = useState(false);
@@ -25,16 +27,16 @@ function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected
   return (
     <button
       type="button"
-      onClick={locked ? undefined : onClick}
+      onClick={locked ? onLockedClick || undefined : onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
       aria-pressed={trigger ? undefined : selected}
       aria-expanded={trigger ? open : undefined}
-      aria-disabled={locked || undefined}
+      aria-disabled={(locked && !onLockedClick) || undefined}
       aria-label={locked ? `${bot.name} — ${lockHint}` : undefined}
-      title={locked ? undefined : trigger ? 'Choose your opponent' : `Play ${bot.name}`}
+      title={locked ? lockHint : trigger ? 'Choose your opponent' : `Play ${bot.name}`}
       style={{
         position: 'relative',
         display: 'grid',
@@ -58,7 +60,7 @@ function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected
               ? `linear-gradient(90deg, ${accent}0.1), rgba(255,255,255,0.04))`
               : 'rgba(255,255,255,0.03)',
         color: theme.textPrimary,
-        cursor: locked ? 'not-allowed' : 'pointer',
+        cursor: locked && !onLockedClick ? 'not-allowed' : 'pointer',
         textAlign: 'left',
         opacity: cleared && !selected && !trigger ? 0.82 : 1,
       }}
@@ -89,11 +91,11 @@ function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected
           {bot.name}
         </span>
         <span style={{ fontSize: 11, color: theme.textSecondary, fontWeight: 700 }}>
-          {boss ? (premium ? `★ Premium · ${TIER_TAG[bot.tier] || bot.tier}` : 'Final boss') : premium ? `★ Premium · ${TIER_TAG[bot.tier] || bot.tier}` : TIER_TAG[bot.tier] || bot.tier} · {bot.rating}
+          {boss ? '★ Final boss' : botAccessLabel(bot)} · {TIER_TAG[bot.tier] || bot.tier} · {bot.rating}
         </span>
       </span>
       {trigger ? (
-        <ChevronBadge open={open} gold={boss || premium} />
+        <ChevronBadge open={open} gold={boss || paidAccess} />
       ) : (
         <span
           style={{
@@ -108,12 +110,12 @@ function BotCard({ bot, boss, premium, cleared, next, locked, lockHint, selected
               ? 'rgba(255,255,255,0.8)'
               : cleared
                 ? '#86efac'
-                : next
-                  ? (boss || premium ? '#f6c445' : '#7fe7ff')
+                : selected
+                  ? (boss || paidAccess ? '#f6c445' : '#7fe7ff')
                   : 'rgba(255,255,255,0.3)',
           }}
         >
-          {locked ? <LockIcon size={13} strokeWidth={2.5} /> : cleared ? '✓ CLEARED' : next ? 'NEXT UP' : ''}
+          {locked ? <LockIcon size={13} strokeWidth={2.5} /> : cleared ? '✓ BEATEN' : ''}
         </span>
       )}
       {locked && lockHint ? (
@@ -166,34 +168,46 @@ export default function BotLadderPanel({
   onOpenAccount = () => {},
   selectedBotId = null,
   onSelectBot = () => {},
-  isPaid = false,
   onRequirePremium = null,
 }) {
   const user = auth && auth.user ? auth.user : null;
-  // Dev playtest override (?allbots): treat everything as unlocked.
   const unlockAll = devUnlockAllBots();
-  const showPremiumRoster = isPaid || unlockAll;
-  // Easiest rung first; the free final boss is the last free rung.
-  const ladder = useMemo(() => [...FREE_BOTS].sort((a, b) => a.rating - b.rating), []);
-  const premiumLadder = useMemo(() => [...PREMIUM_BOTS].sort((a, b) => a.rating - b.rating), []);
-  const trackedIds = useMemo(
-    () => [...ladder, ...(isPaid ? premiumLadder : [])].map((b) => b.id),
-    [ladder, premiumLadder, isPaid]
-  );
+  const accountAccess = botAccountAccess(auth && auth.profile);
+  const roster = useMemo(() => [...ACTIVE_BOTS].sort((a, b) => a.rating - b.rating), []);
+  const trackedIds = useMemo(() => roster.map((bot) => bot.id), [roster]);
+  const groups = useMemo(() => ([
+    { access: BOT_ACCESS.FREE, title: 'Free roster' },
+    { access: BOT_ACCESS.SUPPORTER, title: 'Supporter + Premium' },
+    { access: BOT_ACCESS.PREMIUM, title: 'Premium' },
+  ].map((group) => ({
+    ...group,
+    bots: roster.filter((bot) => botAccess(bot) === group.access),
+  }))), [roster]);
 
   const [open, setOpen] = useState(false);
   const [clearedIds, setClearedIds] = useState(() => new Set());
+  const [unlockedIds, setUnlockedIds] = useState(() => new Set([STARTER_BOT_ID]));
   const [progressLoaded, setProgressLoaded] = useState(false);
   const rootRef = useRef(null);
 
   const refresh = useCallback(async () => {
     if (!user) {
       setClearedIds(new Set());
+      setUnlockedIds(new Set([STARTER_BOT_ID]));
       setProgressLoaded(true);
       return;
     }
-    const rows = await fetchBotProgress(user, trackedIds);
-    setClearedIds(new Set(rows.map((r) => r.bot_id)));
+    const [clears, unlocks] = await Promise.all([
+      fetchBotProgress(user, trackedIds),
+      fetchBotUnlocks(user, trackedIds),
+    ]);
+    const cleared = new Set(clears.map((row) => row.bot_id));
+    setClearedIds(cleared);
+    setUnlockedIds(new Set([
+      STARTER_BOT_ID,
+      ...cleared,
+      ...unlocks.map((row) => row.bot_id),
+    ]));
     setProgressLoaded(true);
   }, [user, trackedIds]);
 
@@ -222,50 +236,48 @@ export default function BotLadderPanel({
     };
   }, [open]);
 
-  // The next rung is the easiest free bot not yet cleared; it and everything
-  // already cleared are playable, the rest are locked behind it.
-  const nextBotId = useMemo(() => {
-    const next = ladder.find((b) => !clearedIds.has(b.id));
-    return next ? next.id : null;
-  }, [ladder, clearedIds]);
-
   const isUnlocked = useCallback(
     (bot) => {
       if (unlockAll) return true;
-      if (bot.premium) return isPaid;
-      return clearedIds.has(bot.id) || bot.id === nextBotId;
+      if (!canAccessBot(bot, accountAccess)) return false;
+      return botAccess(bot) !== BOT_ACCESS.FREE || unlockedIds.has(bot.id);
     },
-    [clearedIds, nextBotId, isPaid, unlockAll]
+    [accountAccess, unlockedIds, unlockAll]
   );
 
-  // Keep the selection playable: if progress says the chosen bot is locked
-  // (fresh account, signed out, or a premium pick after a lapse), fall back
-  // to the next rung.
+  // Keep a stale saved choice from bypassing either progression or account
+  // access after a subscription/tip lapses.
   useEffect(() => {
     if (!progressLoaded) return;
-    const selected = getBotById(selectedBotId);
+    const selected = getActiveBotById(selectedBotId);
     if (selected && isUnlocked(selected)) return;
-    // With every free bot cleared there is no "next", so the boss is the home rung.
-    const fallbackId = nextBotId || ladder[ladder.length - 1].id;
+    const fallbackId = roster.find(isUnlocked)?.id || STARTER_BOT_ID;
     if (selectedBotId !== fallbackId) onSelectBot(fallbackId);
-  }, [progressLoaded, selectedBotId, isUnlocked, nextBotId, ladder, onSelectBot]);
+  }, [progressLoaded, selectedBotId, isUnlocked, roster, onSelectBot]);
 
-  const selectedBot = getBotById(selectedBotId) || ladder[0];
-  const clearedCount = ladder.filter((b) => clearedIds.has(b.id)).length;
+  const selectedBot = getActiveBotById(selectedBotId) || getActiveBotById(STARTER_BOT_ID);
+  const unlockedCount = roster.filter(isUnlocked).length;
 
   const pick = (bot) => {
     onSelectBot(bot.id);
     setOpen(false);
   };
 
+  const lockFor = (bot) => {
+    if (!canAccessBot(bot, accountAccess)) {
+      return botAccess(bot) === BOT_ACCESS.SUPPORTER
+        ? 'Unlock with a $5 tip or Premium'
+        : 'Unlock with Premium';
+    }
+    return user ? 'Win a bot game and choose this opponent' : 'Sign in to earn bot unlocks';
+  };
+
   return (
     <section ref={rootRef} style={{ display: 'grid', gap: 8, minWidth: 0 }}>
       <BotCard
         bot={selectedBot}
-        boss={selectedBot.id === ladder[ladder.length - 1].id || selectedBot.id === premiumLadder[premiumLadder.length - 1].id}
-        premium={Boolean(selectedBot.premium)}
+        boss={selectedBot.id === 'rudolf-einstein'}
         cleared={clearedIds.has(selectedBot.id)}
-        next={false}
         locked={false}
         selected
         trigger
@@ -276,8 +288,8 @@ export default function BotLadderPanel({
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.45 }}>
             {user
-              ? `Beat each bot in a fair game to unlock the next. ${clearedCount}/${ladder.length} cleared.`
-              : 'Beat each bot in a fair game to unlock the next.'}
+              ? `Every bot win lets you choose one of three new opponents. ${unlockedCount}/${roster.length} unlocked.`
+              : 'Isaac is ready now. Sign in to choose a new opponent after each bot win.'}
           </div>
           {!user ? (
             <button
@@ -295,78 +307,40 @@ export default function BotLadderPanel({
                 textAlign: 'left',
               }}
             >
-              Sign in free to save bot unlocks.
+              Sign in or make a free account to unlock more bots.
             </button>
           ) : null}
-          <div style={{ display: 'grid', gap: 6 }}>
-            {ladder.map((bot, i) => {
-              const locked = !isUnlocked(bot);
-              return (
-                <BotCard
-                  key={bot.id}
-                  bot={bot}
-                  boss={i === ladder.length - 1}
-                  premium={false}
-                  cleared={clearedIds.has(bot.id)}
-                  next={bot.id === nextBotId}
-                  locked={locked}
-                  lockHint={locked ? `Beat ${ladder[i - 1].name} to unlock` : null}
-                  selected={bot.id === selectedBotId}
-                  onClick={() => pick(bot)}
-                />
-              );
-            })}
-          </div>
-          {showPremiumRoster ? (
-            <>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 900,
-                  letterSpacing: '0.07em',
-                  color: '#f6c445',
-                  textTransform: 'uppercase',
-                  marginTop: 2,
-                }}
-              >
-                ★ Premium roster
+          {groups.map((group) => (
+            <div key={group.access} style={{ display: 'grid', gap: 6 }}>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: '0.07em',
+                color: group.access === BOT_ACCESS.FREE ? theme.textSecondary : '#f6c445',
+                textTransform: 'uppercase',
+                marginTop: 2,
+              }}>
+                {group.title} · {group.bots.length}
               </div>
-              <div style={{ display: 'grid', gap: 6 }}>
-                {premiumLadder.map((bot, i) => (
+              {group.bots.map((bot) => {
+                const locked = !isUnlocked(bot);
+                const accessLocked = !canAccessBot(bot, accountAccess);
+                return (
                   <BotCard
                     key={bot.id}
                     bot={bot}
-                    boss={i === premiumLadder.length - 1}
-                    premium
+                    boss={bot.id === 'rudolf-einstein'}
                     cleared={clearedIds.has(bot.id)}
-                    next={false}
-                    locked={false}
+                    locked={locked}
+                    lockHint={locked ? lockFor(bot) : null}
                     selected={bot.id === selectedBotId}
                     onClick={() => pick(bot)}
+                    onLockedClick={accessLocked ? (onRequirePremium || onOpenAccount) : null}
                   />
-                ))}
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={onRequirePremium || onOpenAccount}
-              title="Upgrade to play the premium roster"
-              style={{
-                padding: '9px 12px',
-                borderRadius: 10,
-                border: '1px solid rgba(246,196,69,0.5)',
-                background: 'rgba(246,196,69,0.08)',
-                color: '#f6c445',
-                fontSize: 12.5,
-                fontWeight: 800,
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              ★ {premiumLadder.length} more bots available to monthly subscribers
-            </button>
-          )}
+                );
+              })}
+            </div>
+          ))}
         </div>
       ) : null}
     </section>

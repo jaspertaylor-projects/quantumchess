@@ -6,9 +6,10 @@
 // Exported To: ../App.jsx (via AppModals)
 
 import React from 'react';
-import { RotateCcw, ChartSpline, X as XIcon, Sparkles } from 'lucide-react';
+import { RotateCcw, ChartSpline, X as XIcon, Sparkles, Lock as LockIcon, UserPlus } from 'lucide-react';
 import theme from '../theme.js';
 import ModalShell from './ModalShell.jsx';
+import { botAccess, botAccessLabel, canAccessBot, getBotAvatarUrl } from '../ai/bots.js';
 
 export default function WinnerModal({
   open = false,
@@ -16,6 +17,11 @@ export default function WinnerModal({
   title = 'Game Over',
   onClose = () => {},
   onPlayAgain = null,
+  playAgainLabel = 'Play Again',
+  botUnlockReward = null,
+  onChooseBot = () => {},
+  onRequireBotAccess = () => {},
+  onSignInForBots = () => {},
   onGameReview = null,
   // premium | tip | ad (rewarded) | limit
   reviewAccess = 'premium',
@@ -34,7 +40,7 @@ export default function WinnerModal({
       border: '1px solid rgba(255,255,255,0.11)',
       boxShadow: '0 24px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.35)',
       padding: '26px 24px 22px',
-      width: 'min(92vw, 380px)',
+      width: `min(94vw, ${botUnlockReward ? '620px' : '380px'})`,
       display: 'grid',
       gap: 14,
       textAlign: 'center',
@@ -82,6 +88,15 @@ export default function WinnerModal({
       cursor: disabled ? 'default' : 'pointer',
     }),
     reviewHint: { fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)' },
+    unlockBox: {
+      display: 'grid', gap: 10, padding: '12px', borderRadius: 14,
+      border: '1px solid rgba(127,231,255,0.24)',
+      background: 'linear-gradient(135deg, rgba(0,245,255,0.07), rgba(126,87,255,0.05))',
+      textAlign: 'left',
+    },
+    unlockGrid: {
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8,
+    },
   };
 
   const reviewHint = reviewAccess === 'ad'
@@ -107,6 +122,89 @@ export default function WinnerModal({
       <h2 id="qc-winner-title" className="qc-winner-title" style={styles.title}>{title}</h2>
       <p className="qc-winner-sub" style={styles.sub}>{winnerText || 'Game over.'}</p>
 
+      {botUnlockReward ? (
+        <section className="qc-bot-unlock-reward" style={styles.unlockBox}>
+          {botUnlockReward.status === 'signed-out' ? (
+            <>
+              <div style={{ fontWeight: 900, fontSize: 15 }}>Your next opponents are waiting</div>
+              <div style={{ color: theme.textSecondary, fontSize: 12.5, lineHeight: 1.45 }}>
+                Sign in or make a free account to choose and keep new bot unlocks after every win.
+              </div>
+              <button type="button" className="qc-bot-unlock-signin" style={styles.primaryBtn} onClick={onSignInForBots}>
+                <UserPlus size={17} /> Sign In or Create Account
+              </button>
+            </>
+          ) : botUnlockReward.status === 'loading' ? (
+            <div style={{ textAlign: 'center', color: theme.textSecondary, fontSize: 13 }}>Finding your next opponents…</div>
+          ) : botUnlockReward.status === 'complete' ? (
+            <div style={{ textAlign: 'center', fontWeight: 850 }}>You have unlocked the entire active bot roster.</div>
+          ) : (
+            <>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 15 }}>
+                  {botUnlockReward.selectedBot
+                    ? `${botUnlockReward.selectedBot.name} unlocked!`
+                    : 'Choose your next bot to unlock'}
+                </div>
+                <div style={{ color: theme.textSecondary, fontSize: 11.5, marginTop: 2 }}>
+                  Pick one. Higher-tier opponents stay visible so you can see what waits ahead.
+                </div>
+              </div>
+              <div style={styles.unlockGrid}>
+                {botUnlockReward.candidates.map((bot) => {
+                  const gated = !canAccessBot(bot, botUnlockReward.accountAccess);
+                  const paidRosterBot = botAccess(bot) !== 'free';
+                  const selected = botUnlockReward.selectedBot && botUnlockReward.selectedBot.id === bot.id;
+                  const busy = botUnlockReward.busyBotId === bot.id;
+                  return (
+                    <button
+                      type="button"
+                      key={bot.id}
+                      className={`qc-bot-unlock-card${gated ? ' is-gated' : ''}${selected ? ' is-selected' : ''}`}
+                      onClick={() => (gated ? onRequireBotAccess(bot) : onChooseBot(bot))}
+                      disabled={Boolean(botUnlockReward.selectedBot) || Boolean(botUnlockReward.busyBotId)}
+                      style={{
+                        position: 'relative', display: 'grid', justifyItems: 'center', alignContent: 'start', gap: 5,
+                        minHeight: 190, padding: '11px 9px', borderRadius: 12, textAlign: 'center',
+                        border: selected
+                          ? '1px solid rgba(74,222,128,0.85)'
+                          : `1px solid ${gated ? 'rgba(246,196,69,0.38)' : 'rgba(127,231,255,0.3)'}`,
+                        background: selected
+                          ? 'rgba(74,222,128,0.12)'
+                          : gated ? 'rgba(246,196,69,0.06)' : 'rgba(255,255,255,0.035)',
+                        color: '#f2f5fb', cursor: botUnlockReward.selectedBot ? 'default' : 'pointer',
+                        opacity: botUnlockReward.selectedBot && !selected ? 0.48 : 1,
+                      }}
+                    >
+                      <img
+                        src={getBotAvatarUrl(bot)} alt="" width="52" height="52"
+                        style={{ borderRadius: 999, objectFit: 'cover', border: `2px solid ${gated ? '#f6c445' : '#7fe7ff'}` }}
+                      />
+                      <span style={{ fontWeight: 900, fontSize: 13.5 }}>{bot.name}</span>
+                      <span style={{ color: gated ? '#f6c445' : '#7fe7ff', fontSize: 10.5, fontWeight: 850 }}>
+                        {botAccessLabel(bot)} · {bot.rating}
+                      </span>
+                      <span style={{ color: theme.textSecondary, fontSize: 10.5, lineHeight: 1.35 }}>{bot.tagline}</span>
+                      <span style={{ marginTop: 'auto', fontSize: 10.5, fontWeight: 900, color: selected ? '#86efac' : gated ? '#f6c445' : '#fff' }}>
+                        {selected
+                          ? '✓ SELECTED'
+                          : busy ? 'SAVING…'
+                            : gated
+                              ? <><LockIcon size={11} style={{ verticalAlign: -2 }} /> {botAccess(bot) === 'supporter' ? 'UNLOCK WITH TIP OR PREMIUM' : 'UNLOCK WITH PREMIUM'}</>
+                              : paidRosterBot ? 'CHOOSE TO PLAY' : 'UNLOCK'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {botUnlockReward.error ? (
+                <div style={{ color: '#fca5a5', textAlign: 'center', fontSize: 11.5 }}>{botUnlockReward.error}</div>
+              ) : null}
+            </>
+          )}
+        </section>
+      ) : null}
+
       {showTipPromo ? (
         <div
           className="qc-winner-tip-promo"
@@ -118,8 +216,8 @@ export default function WinnerModal({
         >
           <span style={styles.promoChip}>AD</span>
           <span style={styles.promoText}>
-            <span style={styles.promoStrong}>$5 once</span> — three months with no ads
-            + five engine reviews a day.
+            <span style={styles.promoStrong}>$5 once</span> — three ad-free months,
+            five daily reviews, and three Supporter bots.
           </span>
           <Sparkles size={16} color="#ffd166" style={{ flex: 'none' }} aria-hidden="true" />
         </div>
@@ -128,7 +226,7 @@ export default function WinnerModal({
       <div className="qc-winner-button-row" style={styles.buttons}>
         {onPlayAgain ? (
           <button type="button" className="qc-winner-play-again" style={styles.primaryBtn} onClick={onPlayAgain} autoFocus>
-            <RotateCcw size={17} /> Play Again
+            <RotateCcw size={17} /> {playAgainLabel}
           </button>
         ) : null}
         {onGameReview ? (

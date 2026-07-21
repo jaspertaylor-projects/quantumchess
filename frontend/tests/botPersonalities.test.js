@@ -1,11 +1,13 @@
-// Purpose: Pin the twelve free-bot identities, their deliberately different
+// Purpose: Pin the twelve active-bot identities, their deliberately different
 // strategic hooks, the wide-funnel beam schedule, promotion-over-rook
 // valuation, and mate priority shared by every personality.
 
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_WEIGHTS, evaluatePosition, searchBestMove } from '../src/ai/alphaBetaEngine.js';
-import { FREE_BOTS, getBotById } from '../src/ai/bots.js';
+import {
+  ACTIVE_BOTS, FREE_BOTS, SUPPORTER_BOTS, PREMIUM_BOTS, SHELVED_BOTS, getBotById,
+} from '../src/ai/bots.js';
 import { configuredBeamWidth } from '../src/ai/fast/fastSearch2.js';
 import { generateLegalReplies } from '../src/chessboard/quantumEngine.js';
 
@@ -23,10 +25,14 @@ function piece(id, side, square, possibleTypes, extra = {}) {
   };
 }
 
-describe('free bot personalities', () => {
-  it('gives all twelve free bots a unique, explicit strategic identity', () => {
-    expect(FREE_BOTS).toHaveLength(12);
-    expect(new Set(FREE_BOTS.map((bot) => bot.personality)).size).toBe(12);
+describe('active bot personalities', () => {
+  it('gives all twelve active bots a unique, explicit strategic identity', () => {
+    expect(ACTIVE_BOTS).toHaveLength(12);
+    expect(FREE_BOTS).toHaveLength(6);
+    expect(SUPPORTER_BOTS).toHaveLength(3);
+    expect(PREMIUM_BOTS).toHaveLength(3);
+    expect(SHELVED_BOTS).toHaveLength(12);
+    expect(new Set(ACTIVE_BOTS.map((bot) => bot.personality)).size).toBe(12);
 
     expect(getBotById('wolfgang-nimzowitsch').weights.knightIdentity).toBeGreaterThan(0);
     expect(getBotById('marie-lane').weights.enemyContact).toBeGreaterThan(0);
@@ -77,7 +83,7 @@ describe('shared tactical floor', () => {
       piece('BK', 'black', 'a1', ['k']),
     ];
 
-    for (const bot of FREE_BOTS) {
+    for (const bot of ACTIVE_BOTS) {
       const result = searchBestMove({
         pieces,
         sideToMove: 'white',

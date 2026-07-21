@@ -50,6 +50,36 @@ export async function fetchBotProgress(user, botIds = []) {
   return Array.from(progress.values());
 }
 
+export async function fetchBotUnlocks(user, botIds = []) {
+  if (!supabase || !user) return [];
+  try {
+    let query = supabase
+      .from('qc_bot_unlocks')
+      .select('bot_id, unlocked_at')
+      .eq('user_id', user.id);
+    if (botIds.length) query = query.in('bot_id', botIds);
+    const { data, error } = await query;
+    if (error) return [];
+    return data || [];
+  } catch (_) {
+    // The migration may not yet exist in a local/dev Supabase project.
+    return [];
+  }
+}
+
+export async function recordBotUnlock({ user, botId }) {
+  if (!supabase || !user || !botId) return { saved: false };
+  const { error } = await supabase.from('qc_bot_unlocks').upsert({
+    user_id: user.id,
+    bot_id: botId,
+  }, { onConflict: 'user_id,bot_id', ignoreDuplicates: true });
+
+  if (!error) {
+    try { window.dispatchEvent(new CustomEvent(BOT_PROGRESS_EVENT)); } catch (_) {}
+  }
+  return { saved: !error, error: error || null };
+}
+
 export async function recordBotClear({ user, botId }) {
   if (!supabase || !user || !botId) return { saved: false };
 

@@ -1,13 +1,14 @@
 // frontend/src/tray/NewGamePanel.jsx
 // Purpose: New game configuration panel with responsive layouts that wrap options and eliminate horizontal scrolling.
-// The vs-AI opponent is picked through the BotLadderPanel dropdown (unlock ladder + premium roster) — no separate bot list.
+// The vs-AI opponent is picked through the branching bot-unlock roster.
 // Imports From: ../theme.js, ../components/ChevronBadge.jsx, ../ai/bots.js, ../ladder/BotLadderPanel.jsx
 // Exported To: ./SideTray.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import theme from '../theme.js';
 import ChevronBadge from '../components/ChevronBadge.jsx';
-import { DEFAULT_BOT_ID, getBotById, devUnlockAllBots } from '../ai/bots.js';
+import { DEFAULT_BOT_ID, canAccessBot, getActiveBotById, devUnlockAllBots } from '../ai/bots.js';
+import { botAccountAccess } from '../account/billing.js';
 import BotLadderPanel from '../ladder/BotLadderPanel.jsx';
 
 function OptionButton({ label, selected, onClick }) {
@@ -191,22 +192,23 @@ export default function NewGamePanel({
   const [preferredSide, setPreferredSide] = useState(() => initialSettings.preferredSide || 'random'); // 'white', 'black', 'random'
   const [isRanked, setIsRanked] = useState(() => Boolean(initialSettings.isRanked)); // boolean
 
-  const selectedBot = getBotById(aiBotId);
-  // Dev playtest override (?allbots) skips the premium gate too.
+  const selectedBot = getActiveBotById(aiBotId) || getActiveBotById(DEFAULT_BOT_ID);
+  // Dev playtest override (?allbots) skips progression and account gates.
   const unlockAll = devUnlockAllBots();
-  const premiumLocked = Boolean(gameMode === 'ai' && selectedBot && selectedBot.premium && !isPaid && !unlockAll);
+  const accountAccess = botAccountAccess(auth && auth.profile);
+  const accessLocked = Boolean(gameMode === 'ai' && selectedBot && !canAccessBot(selectedBot, accountAccess) && !unlockAll);
 
   const handleStart = () => {
-    const bot = getBotById(aiBotId);
-    // Premium bots are browsable by everyone (that's the pitch) but only
-    // playable on the paid tier — the block lands here, not in the list.
-    if (gameMode === 'ai' && bot && bot.premium && !isPaid && !unlockAll) {
+    const bot = getActiveBotById(aiBotId) || getActiveBotById(DEFAULT_BOT_ID);
+    // Higher-tier bots remain visible, but cannot be launched until the
+    // account has Supporter/Premium access.
+    if (gameMode === 'ai' && bot && !canAccessBot(bot, accountAccess) && !unlockAll) {
       if (onRequirePremium) onRequirePremium();
       return;
     }
     onStartGame({
       gameMode,
-      aiBotId,
+      aiBotId: bot ? bot.id : DEFAULT_BOT_ID,
       aiDifficulty: bot ? bot.tier : 'medium',
       preferredSide,
       isRanked,
@@ -305,7 +307,7 @@ export default function NewGamePanel({
   const gameModeOptions = useMemo(
     () => [
       { value: 'local', label: 'Local 2 Player', hint: 'Pass & play on one device' },
-      { value: 'ai', label: 'vs. AI', hint: 'Climb the bot ladder' },
+      { value: 'ai', label: 'vs. AI', hint: 'Build your bot roster' },
       { value: 'online', label: 'Online', hint: 'Matchmaking & friend challenges' },
     ],
     []
@@ -401,7 +403,7 @@ export default function NewGamePanel({
         {/* No Cancel here — cancelling only exists while queued for an
             online match, next to the "Searching…" banner. */}
         <button type="button" className="qc-new-game-start" style={styles.footerButton(true)} onClick={handleStart}>
-          {premiumLocked ? 'Unlock Premium' : 'Start Game'}
+          {accessLocked ? 'Unlock This Bot' : 'Start Game'}
         </button>
       </div>
     </div>

@@ -40,7 +40,7 @@ watching ads. Money buys *both* fewer ads *and* a higher ceiling.
 | Interstitial ads (game end) | Yes | Off for the window | Never |
 | Interstitial / display ads (puzzles) | Yes | Off for the window | Never |
 | Saved games | last 10 | last 10 | up to 1,000 |
-| Premium bots | — | — | Yes |
+| Bot roster | 6 Free bots | +3 Supporter bots | All 12 active bots (+3 Premium-only) |
 | Custom pic / tagline / full roster | — | — | Yes |
 
 **Tip reviews/day = 5** (confirmed). Visible daylight above free (3), monotonic
@@ -212,7 +212,7 @@ puzzle surface.
 │  │   ✦ No ads                                   │  │
 │  │   ✦ Unlimited game reviews with engine moves │  │
 │  │   ✦ Up to 1,000 saved games                  │  │
-│  │   ✦ Premium bots to battle                   │  │
+│  │   ✦ All 12 active bots                       │  │
 │  │   ✦ Custom profile pic & tagline             │  │
 │  │   ✦ The full character roster                │  │
 │  │        [  Upgrade — $3/month  ]              │  │

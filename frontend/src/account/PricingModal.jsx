@@ -114,7 +114,7 @@ export default function PricingModal({
               <CheckIcon size={16} className="check" /> Up to 10 saved games
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> Basic bots
+              <CheckIcon size={16} className="check" /> 6 Free bots to discover
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> 3 rewarded-ad game reviews a day
@@ -154,7 +154,7 @@ export default function PricingModal({
 
         {/* Tip Tier */}
         <div className="qc-pm-card">
-          <div className="qc-pm-card-title"><CoffeeIcon size={20} color="#f6c445" /> Tip</div>
+          <div className="qc-pm-card-title"><CoffeeIcon size={20} color="#f6c445" /> Supporter Tip</div>
           <div className="qc-pm-card-price">One-time payment of {TIP_PRICE_LABEL}</div>
           
           <ul className="qc-pm-feature-list">
@@ -163,6 +163,9 @@ export default function PricingModal({
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> Five engine game reviews a day
+            </li>
+            <li className="qc-pm-feature-item">
+              <CheckIcon size={16} className="check" /> 3 Supporter bots to discover
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> (Tips stack in three-month windows)

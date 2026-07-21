@@ -144,8 +144,8 @@ export default function useMonetization({
 
   const isPaidUser = Boolean(auth.profile && auth.profile.tier === 'paid');
 
-  // Premium bots: picking one while free routes to the account panel, where
-  // the upgrade card lives.
+  // Higher-tier bots route to the account panel, where both the one-time
+  // Supporter tip and Premium subscription are visible.
   const handleRequirePremium = useCallback(() => {
     if (onRequirePremiumExtra) onRequirePremiumExtra();
     setAccountOpen(true, 'premium_bot');

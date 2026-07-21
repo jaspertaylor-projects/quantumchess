@@ -28,7 +28,8 @@ export default function AppModals({
   // game end
   showWinPopup, resolvedWinnerText, externalGameOver, winner, onCloseWinPopup,
   onPlayAgain, onGameReview, reviewAccess, reviewRemaining, reviewNotice,
-  reviewDisabled, showTipPromo, onTipPromo,
+  reviewDisabled, showTipPromo, onTipPromo, playAgainLabel,
+  botUnlockReward, onChooseBot, onRequireBotAccess, onSignInForBots,
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
   // settings
@@ -64,6 +65,11 @@ export default function AppModals({
         title={externalGameOver.over ? 'Game Over' : (winner ? 'Checkmate' : 'Draw')}
         onClose={onCloseWinPopup}
         onPlayAgain={onPlayAgain}
+        playAgainLabel={playAgainLabel}
+        botUnlockReward={botUnlockReward}
+        onChooseBot={onChooseBot}
+        onRequireBotAccess={onRequireBotAccess}
+        onSignInForBots={onSignInForBots}
         onGameReview={onGameReview}
         reviewAccess={reviewAccess}
         reviewRemaining={reviewRemaining}

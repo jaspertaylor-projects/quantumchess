@@ -13,7 +13,8 @@ promotion, census conservation — deterministic throughout, no dice anywhere.
   failed with anyone. Every existing account is a disposable test account
   that can be nuked; deploys and even destructive migrations don't need a
   customer-safety review until real users arrive. Update this line at launch.
-- **Play:** vs 24 AI bots (12 free, 12 premium-locked), local 2-player
+- **Play:** vs 12 active AI bots (6 Free, 3 Supporter-or-Premium, 3
+  Premium-only), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
 
@@ -316,6 +317,13 @@ benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
+- Active access split: 6 Free / 3 Supporter-or-Premium / 3 Premium-only.
+  The older twelve-bot paid roster is shelved and retained only so saved
+  replays can still resolve its names and avatars.
+- Signed-in wins, including a win over the intro bot, offer three randomized
+  unlock candidates. At least two match the account's current access tier
+  whenever possible; an occasional higher-tier card previews its requirement.
+  Choices persist in `qc_bot_unlocks`; clears remain in `qc_bot_progress`.
 - Search/eval engine: `frontend/src/ai/alphaBetaEngine.js`
 - Avatars: `frontend/public/bots/<id>.png` (drop-in; initials tile otherwise)
 - **Bots are fictional scientist × chess-legend parody mashups.** Both
@@ -403,12 +411,10 @@ Legend: [ ] not started · [~] in progress · [X] done
         13-game fixture suite replays it move-for-move). The pre-flag
         legacy-record translator was removed in the 2026-07-07 cleanup
         (no saved games predate lossless recording).
-  - [X] More bots — **built + browser-tested 2026-07-06**: 12 premium bots
-        in `ai/bots.js` (rated 1300–2250; Ernest Smyslov 2250 is the final
-        boss). Browsable by everyone in the roster (🔒 label); Start becomes
-        "Unlock Premium" → account modal for free users. Gating is
-        client-side (fine: content, not data). Avatar PNGs optional at
-        `public/bots/<id>.png`.
+  - [X] Tiered bot roster — **reworked 2026-07-21**: the twelve distinctive
+        bots are split 6 Free / 3 Supporter-or-Premium / 3 Premium-only.
+        The older twelve paid bots are shelved from the picker but retained
+        for replay compatibility. Avatar PNGs live at `public/bots/<id>.png`.
   - [X] Fully customizable profile pic + tagline — **built + browser-tested
         2026-07-06**: editor in `AccountModal.jsx` (paid only), canvas
         center-crop → 256px webp → `qc-avatars` bucket (`avatarUpload.js`);
@@ -663,24 +669,17 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Achievements (~15–20, client-side): tutorial finished, first en
       passant, first quantum promotion, castle-resolve, beat each bot tier…
       surfaced at game end next to the winner modal.
-- [~] **Bot ladder** (2026-07-08): visible 12-bot progression that turns
-      vs-AI into a multi-session arc. Shipped:
-      `frontend/src/ladder/BotLadderPanel.jsx` IS the Opponent dropdown in
-      the New Game vs-AI section (no separate bot `<select>` — one picker,
-      no duplicated roster). The trigger shows the selected bot's character
-      card; opening it reveals the 12 free bots easiest-first with avatars,
-      names, ratings, cleared checkmarks and a "next up" highlight. Locks
-      are enforced: only cleared bots and the next rung are playable;
-      locked rungs render faded with a 🔒 and a hover hint "Beat <previous
-      bot> to unlock", with Rudolf Einstein as the final boss at the
-      bottom. Below the ladder, subscribers get the premium roster
-      appended; free players get "★ 12 more bots available to monthly
-      subscribers" which routes into the premium/account flow. First win
-      against each bot records the clear in Supabase `qc_bot_progress`
-      (`frontend/src/account/botProgress.js`; old saved `qc_games` wins
-      count as progress so existing players aren't reset). Signed-out
-      players get only the first rung plus "Sign in free to save bot
-      unlocks."
+- [X] **Branching bot roster** (reworked 2026-07-21):
+      `frontend/src/ladder/BotLadderPanel.jsx` is the opponent picker. Isaac
+      Steinitz is always available; every signed-in bot win opens a choice of
+      three not-yet-unlocked opponents on the result screen. Candidate cards
+      include avatars, ratings, and playing styles. Two are playable at the
+      current account tier whenever the remaining roster permits, while an
+      occasional higher-tier card clearly links to Supporter/Premium. The
+      chosen bot becomes the next-game selection and persists in Supabase
+      `qc_bot_unlocks`. Clears persist separately in `qc_bot_progress`, and
+      old saved wins continue to count. Signed-out winners are prompted to
+      sign in or create a free account to begin collecting unlocks.
   - [ ] Remaining: surface the unlocked tagline/sayings/character flavor
         in the profile and bot picker (the clear + `unlocked_flavor_at`
         timestamp are already recorded per account).

@@ -53,6 +53,10 @@ export default function AccountModal({
 
   const { authEnabled, user, profile, refreshProfile, signIn, signUp, signOut, resetPassword, updatePassword, recoveryMode } = auth;
   const isPaid = Boolean(profile && profile.tier === 'paid');
+  const accountTierLabel = isPaid ? 'Premium' : isTipper(profile) ? 'Supporter' : 'Free';
+  const accountTierClass = isPaid
+    ? 'qc-am-tier-badge-paid'
+    : isTipper(profile) ? 'qc-am-tier-badge-supporter' : 'qc-am-tier-badge-free';
 
   useEffect(() => {
     if (open) {
@@ -67,7 +71,7 @@ export default function AccountModal({
       } else if (billingReturn === 'tip_thanks') {
         setNotice({
           kind: 'info',
-          text: 'Thank you for the tip! ♥ Ads are off on this account for the next three months.',
+          text: 'Thank you for the tip! ♥ Supporter bots and ad-free play are active for the next three months.',
         });
       } else if (billingReturn === 'cancelled') {
         setNotice({ kind: 'info', text: 'Checkout cancelled — nothing was charged.' });
@@ -290,7 +294,7 @@ export default function AccountModal({
     <ModalShell
       onClose={onClose}
       closeOnBackdrop
-      zIndex={1001}
+      zIndex={10001}
       ariaLabelledBy="qc-account-title"
       backdropClassName="qc-account-backdrop"
       panelClassName="qc-account-panel qc-am-panel"
@@ -468,7 +472,7 @@ export default function AccountModal({
               </div>
               <div className="qc-am-stat">
                 <div className="qc-am-stat-label">Tier</div>
-                <div style={{ marginTop: 8 }}><span className={profile && profile.tier === 'paid' ? 'qc-am-tier-badge-paid' : 'qc-am-tier-badge-free'}>{profile ? profile.tier : 'free'}</span></div>
+                <div style={{ marginTop: 8 }}><span className={accountTierClass}>{accountTierLabel}</span></div>
               </div>
             </div>
 
@@ -575,7 +579,7 @@ export default function AccountModal({
                 >
                   <span style={{ flex: '1 1 200px', fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                     {isAdFree(profile)
-                      ? `You're ad-free until ${new Date(profile.ad_free_until).toLocaleDateString()} with 5 engine reviews a day — thanks for the tip! ♥`
+                      ? `You're a Supporter until ${new Date(profile.ad_free_until).toLocaleDateString()}: no ads, 5 engine reviews a day, and 3 Supporter bots. Thank you! ♥`
                       : TIP_PITCH}
                   </span>
                   <button
