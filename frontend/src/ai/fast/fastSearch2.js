@@ -41,6 +41,23 @@ const sideName = (b) => (b === BLACK ? 'black' : 'white');
 const otherB = (b) => b ^ BLACK;
 const signOf = (b) => (b === BLACK ? -1 : 1);
 
+export function configuredBeamWidth(widths, ply, fallback) {
+  const schedule = Array.isArray(widths) && widths.length ? widths : [];
+  const configured = schedule.length ? schedule[Math.min(ply, schedule.length - 1)] : null;
+  return Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : fallback;
+}
+
+function madeMoveIsMate(bd, moverSide, desc) {
+  const defender = otherB(moverSide);
+  if (!lostInCheck(bd, defender)) return false;
+  const childEp = epWindowAfter(bd, desc);
+  let escaped = false;
+  forEachLegalReply(bd, defender, childEp, () => {
+    if (!lostInCheck(bd, defender)) escaped = true;
+  });
+  return !escaped;
+}
+
 // Collapse value of a victim (what a capture banks), by lowest non-king bit.
 const VICTIM_VAL = [1, 3, 3.1, 5, 9, 0];
 function victimValue(bd, idx) {
@@ -79,11 +96,13 @@ function nodeKey(bd, side, ep) {
 
 // --- Search context ---
 const MAX_PLY = 64;
-function makeCtx(deadline, W) {
+function makeCtx(deadline, W, cfg) {
   return {
     deadline,
     nodes: 0,
     W,
+    widths: Array.isArray(cfg.widths) && cfg.widths.length ? cfg.widths : [28, 24, 16, 12],
+    adaptiveBeam: cfg.adaptiveBeam !== false,
     pathLo: new Int32Array(MAX_PLY + 8),
     pathHi: new Int32Array(MAX_PLY + 8),
     pathLen: 0,
@@ -189,11 +208,14 @@ function negamax2(bd, side, depth, ply, alpha, beta, ctx, ep) {
   // expansion cost of EVERY interior node is ~branching makes), so search a
   // generous eval-ranked prefix — but never cut a child whose one-ply eval
   // sits within 0.8 of the best (the miss-the-best-move guard V1's hard
-  // beam lacked), capped at 48.
-  const width = ply <= 1 ? 24 : ply === 2 ? 16 : 12;
+  // beam lacked). The default extension cap is 48; an explicitly wider bot
+  // schedule remains wider.
+  const width = configuredBeamWidth(ctx.widths, ply, ply <= 1 ? 24 : ply === 2 ? 16 : 12);
   let limit = Math.min(children.length, width);
   const bestEv = children[0].ev;
-  while (limit < children.length && limit < 48 && children[limit].ev >= bestEv - 0.8) limit += 1;
+  const adaptiveCap = Math.max(48, width);
+  while (ctx.adaptiveBeam && limit < children.length && limit < adaptiveCap
+    && children[limit].ev >= bestEv - 0.8) limit += 1;
 
   const origAlpha = alpha;
   let best = -Infinity;
@@ -303,12 +325,17 @@ export function searchBestMoveV2({
       ...desc,
       kind: desc.kind === 'move' ? 0 : desc.kind === 'enpassant' ? 1 : 2,
     };
-    const entry = { desc: numeric, score: sign * evaluateFast(bd, W) };
+    const entry = {
+      desc: numeric,
+      score: madeMoveIsMate(bd, side, numeric) ? MATE - 1 : sign * evaluateFast(bd, W),
+    };
     if (repetitionSigs) entry.sig = positionSignature(bd, sideName(otherB(side)), null);
     rootMoves.push(entry);
   });
 
   if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
+    const mate = rootMoves.find((entry) => entry.score >= MATE - 100);
+    if (mate) return { move: materializeRootMove(bd, mate.desc), score: mate.score, depth: 1, nodes: 0 };
     const quiet = rootMoves.filter(({ desc }) => {
       if (desc.kind !== 0 || desc.victimIdx >= 0) return false;
       const toRank = desc.to >> 3;
@@ -337,7 +364,7 @@ export function searchBestMoveV2({
   for (const e of rootMoves) e.repPen = repPenOf(e);
 
   const deadline = performance.now() + cfg.timeMs;
-  const ctx = makeCtx(deadline, W);
+  const ctx = makeCtx(deadline, W, cfg);
 
   // Depth-1 baseline (same contract as V1).
   let bestEntry = rootMoves.reduce((a, b) => (b.score - b.repPen > a.score - a.repPen ? b : a));
@@ -410,9 +437,11 @@ export function searchBestMoveV2({
     ctx2.pathLen = 1;
     // Root beam, same adaptive rule as interior nodes: generous prefix plus
     // every near-best entry (ordering comes from the previous iteration).
-    let rootLimit = Math.min(entries.length, 28);
+    const rootWidth = configuredBeamWidth(ctx2.widths, 0, 28);
+    let rootLimit = Math.min(entries.length, rootWidth);
     const rootBestEv = entries[0].score;
-    while (rootLimit < entries.length && rootLimit < 48
+    const adaptiveCap = Math.max(48, rootWidth);
+    while (ctx2.adaptiveBeam && rootLimit < entries.length && rootLimit < adaptiveCap
       && (entries[rootLimit].iter ?? entries[rootLimit].score) >= rootBestEv - 0.8) rootLimit += 1;
     try {
       for (let i = 0; i < rootLimit; i++) {

@@ -11,7 +11,7 @@
 
 import {
   BLACK, CAPTURED, HAS_MOVED,
-  TP, TK,
+  TP, TN, TK,
   sqOf, sideBit, possibleOf, promoOf, popcount6,
 } from './fastBoard.js';
 import { emitAttacksForType } from './fastGeometry.js';
@@ -96,7 +96,7 @@ export function evaluateFast(bd, W) {
 
     if (w & CAPTURED) {
       // REF: VAL[possibleTypes[0]] — lowest set bit's value.
-      score -= sign * (poss ? VAL[31 - Math.clz32(poss & -poss)] : 0);
+      score -= sign * W.material * (poss ? VAL[31 - Math.clz32(poss & -poss)] : 0);
       continue;
     }
 
@@ -108,6 +108,13 @@ export function evaluateFast(bd, W) {
     const nTypes = popcount6(poss);
 
     if (nTypes > 1) score += sign * W.extraType * (nTypes - 1);
+    if (poss & TN) score += sign * W.knightIdentity;
+    if (enemyFlags[sq] && nTypes > 1) {
+      score -= sign * W.enemyContact * Math.min(3, nTypes - 1);
+    }
+    if (friendCheap[sq] !== Infinity && nTypes < 6) {
+      score += sign * W.friendlyContact * Math.min(3, 6 - nTypes);
+    }
 
     if (enemyFlags[sq] && riskValue > 0.01) {
       const defended = friendCheap[sq] !== Infinity;

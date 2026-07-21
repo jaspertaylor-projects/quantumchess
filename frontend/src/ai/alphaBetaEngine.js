@@ -11,6 +11,7 @@ import {
   buildOccupancy,
   clonePieces,
   computePositionSignature,
+  evaluateTerminalAfterMove,
   generateLegalReplies,
   attacksForType,
   getPromoTypes,
@@ -39,7 +40,11 @@ function collapseValue(piece) {
 // each opponent a personality; see ./bots.js.
 export const DEFAULT_WEIGHTS = {
   mobility: 0.012, // per attacked square
+  material: 1.0, // captured material multiplier (personality hook)
   extraType: 0.09, // option value per extra possibility on own pieces
+  knightIdentity: 0, // preference for preserving Knight-capable pieces
+  enemyContact: 0, // pressure on enemy pieces that can still be zapped
+  friendlyContact: 0, // contact with narrowed friends that can still heal
   kingSpread: 0.28, // per king-holder up to a cap: ambiguity shields the king
   soleKingAttacked: 4.0, // unique king holder standing in capture range
   soleKingCollapsedAttacked: 8.0, // and it is a known king
@@ -48,15 +53,15 @@ export const DEFAULT_WEIGHTS = {
   center: 0.035, // per step of centrality per piece
   pawnAdvance: 0.05, // per rank of progress for pawn-including pieces
   pawnRace: 0.03, // quadratic kicker so far-advanced pawns become urgent
-  promoImminent: 3.2, // definite pawn on the 7th — near-queen when unstoppable
-  promoNear: 1.2, // definite pawn on the 6th, same idea one step earlier
+  promoImminent: 6.5, // seventh-rank promotion threat; worth more than a rook
+  promoNear: 2.0, // one step earlier, urgent but not yet banked
   // The banked conversion: a piece with promo-origin identities IS the
-  // realized promotion. Without this, promoImminent (+ the pawn progress
-  // terms, ~4.6 total on an unstoppable 7th) evaporates the move the pawn
-  // converts and the eval nets NEGATIVE for promoting — engines hoarded
+  // realized promotion. Without this, the seventh-rank progress package
+  // evaporates when the pawn converts and the eval nets negative for
+  // promoting — engines hoarded
   // pawns on the 7th forever (Jasper caught it reviewing minedGame=0's
   // clueless endgame, 2026-07-13). Must clearly exceed that package.
-  promoBank: 5.0, // per living piece holding any promo-origin identity
+  promoBank: 8.0, // realized promotion: roughly the classical pawn-to-queen gain
   development: 0.06, // per piece that has moved at least once
   kingHunt: 0.15, // per attacked square around a unique enemy king holder
   // Mop-up: clinical conversion instincts, active only when clearly winning
@@ -176,7 +181,7 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
     // captured, at its collapse value. Collapsing on the board is free;
     // ambiguity is priced as option value below.
     if (p.captured) {
-      score -= sign * (VAL[(p.possibleTypes || [])[0]] || 0);
+      score -= sign * W.material * (VAL[(p.possibleTypes || [])[0]] || 0);
       continue;
     }
     if (!p.square) continue;
@@ -189,6 +194,19 @@ export function evaluatePosition(pieces, W = DEFAULT_WEIGHTS) {
 
     // Option value of remaining ambiguity.
     if (types.length > 1) score += sign * W.extraType * (types.length - 1);
+    if (types.includes('n')) score += sign * W.knightIdentity;
+
+    // Personality hooks for the two contact mechanics. Enemy contact only
+    // matters while the target has something left to shed; friendly contact
+    // matters while the target has missing identities left to heal. The
+    // ordinary evaluator leaves both at zero, so these are deliberate style
+    // preferences rather than universal material bonuses.
+    if (enemy.squares.has(p.square) && types.length > 1) {
+      score -= sign * W.enemyContact * Math.min(3, types.length - 1);
+    }
+    if (friendly.squares.has(p.square) && types.length < 6) {
+      score += sign * W.friendlyContact * Math.min(3, 6 - types.length);
+    }
 
 
     // Hanging / bad-trade exposure, in collapse-value terms.
@@ -322,12 +340,47 @@ function sideSign(side) {
   return side === 'white' ? 1 : -1;
 }
 
+// The game can end on a sole, still-superposed King holder when every reply
+// remains contacted. Static evaluation alone only sees strong pressure, so
+// explicitly recognize the terminal result before noise or personality
+// weights can talk even the easiest bot out of mate in one.
+function terminalLastMove(mv, moverSide) {
+  if (!mv || mv.type !== 'move') return null;
+  const from = fromAlgebraic(mv.from);
+  const to = fromAlgebraic(mv.to);
+  if (!from || !to || from.fileIndex !== to.fileIndex || Math.abs(from.rankIndex - to.rankIndex) !== 2) return null;
+  const moved = (mv.resultPieces || []).find((p) => !p.captured && p.side === moverSide && p.square === mv.to);
+  if (!moved || !(moved.possibleTypes || []).includes('p')) return null;
+  return {
+    pieceId: moved.id,
+    from: mv.from,
+    to: mv.to,
+    side: moverSide,
+    isDoubleStep: true,
+    crossedSquare: toAlgebraic(from.fileIndex, (from.rankIndex + to.rankIndex) / 2),
+  };
+}
+
+function isMateAfterMove(mv, moverSide) {
+  const opponent = otherSide(moverSide);
+  if (!isLostInCheck(mv.resultPieces, opponent)) return false;
+  return evaluateTerminalAfterMove(
+    mv.resultPieces,
+    moverSide,
+    0,
+    terminalLastMove(mv, moverSide),
+  ) === 'checkmate';
+}
+
 // Generate replies and order them best-first for `side` using the child
 // evaluations (the simulate results are already computed by the engine).
-function orderedChildren(pieces, side, ctx, lastMove = null) {
+function orderedChildren(pieces, side, ctx, lastMove = null, detectMate = false) {
   const replies = generateLegalReplies(pieces, side, 0, lastMove);
   const sign = sideSign(side);
-  const scored = replies.map((mv) => ({ mv, score: sign * evaluatePosition(mv.resultPieces, ctx.W) }));
+  const scored = replies.map((mv) => ({
+    mv,
+    score: detectMate && isMateAfterMove(mv, side) ? MATE - 1 : sign * evaluatePosition(mv.resultPieces, ctx.W),
+  }));
   scored.sort((a, b) => b.score - a.score);
   return scored;
 }
@@ -425,6 +478,8 @@ export function searchBestMove({
   const anyCaptures = root.some((p) => p.captured);
   if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
     const replies = generateLegalReplies(root, sideToMove, 0, lastMove);
+    const mate = replies.find((mv) => isMateAfterMove(mv, sideToMove));
+    if (mate) return { move: mate, score: MATE - 1, depth: 1, nodes: 0 };
     const occupied = new Set(root.filter((p) => !p.captured && p.square).map((p) => p.square));
     const hardOpening = ((bot && bot.tier) || difficulty) === 'hard';
     const quiet = replies.filter((mv) => {
@@ -457,7 +512,7 @@ export function searchBestMove({
     else if (extraTypes <= 24) maxDepth = cfg.maxDepth + 1;
   }
 
-  const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove);
+  const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove, true);
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
   // Review analysis may ask us to retain the move that was actually played.

@@ -17,7 +17,7 @@ import {
   snapshotWords, wordsEqual,
 } from './fastBoard.js';
 import {
-  forEachLegalReply, makeStandardMove, makeEnPassant, makeCastle, lostInCheck,
+  epWindowAfter, forEachLegalReply, makeStandardMove, makeEnPassant, makeCastle, lostInCheck,
 } from './fastRules.js';
 import { evaluateFast, MATE } from './fastEval.js';
 import { BOT_TIME_MODES, DEFAULT_WEIGHTS, DIFFICULTY_CONFIG } from '../alphaBetaEngine.js';
@@ -60,6 +60,25 @@ function hardRandomOpeningSafe(bd, desc, moverSide) {
   return true;
 }
 
+// Board is already in the made child when called. A terminal contact on the
+// opponent's sole King holder is mate only when no generated reply escapes
+// that contact. This mirrors evaluateTerminalAfterMove in the reference
+// engine and makes mate-in-one outrank every personality preference.
+function madeMoveIsMate(bd, moverSide, desc) {
+  const defender = otherB(moverSide);
+  if (!lostInCheck(bd, defender)) return false;
+  const numeric = {
+    ...desc,
+    kind: desc.kind === 'move' ? 0 : desc.kind === 'enpassant' ? 1 : 2,
+  };
+  const childEp = epWindowAfter(bd, numeric);
+  let escaped = false;
+  forEachLegalReply(bd, defender, childEp, () => {
+    if (!lostInCheck(bd, defender)) escaped = true;
+  });
+  return !escaped;
+}
+
 // Convert a reference lastMove record into the packed en passant window.
 export function epFromLastMove(bd, lastMove) {
   if (!lastMove || !lastMove.isDoubleStep) return null;
@@ -84,11 +103,14 @@ function remake(bd, desc) {
 // REF: orderedChildren — generate, score each child with the full eval from
 // the mover's perspective, stable-sort best-first. `withSigs` additionally
 // captures each child's position signature (root repetition penalty).
-function orderedChildrenFast(bd, side, ctx, ep, withSigs) {
+function orderedChildrenFast(bd, side, ctx, ep, withSigs, detectMate = false) {
   const sign = signOf(side);
   const out = [];
   forEachLegalReply(bd, side, ep, (desc) => {
-    const entry = { desc, score: sign * evaluateFast(bd, ctx.W) };
+    const entry = {
+      desc,
+      score: detectMate && madeMoveIsMate(bd, side, desc) ? MATE - 1 : sign * evaluateFast(bd, ctx.W),
+    };
     if (withSigs) entry.sig = positionSignature(bd, sideName(otherB(side)), null);
     out.push(entry);
   });
@@ -232,8 +254,10 @@ export function searchBestMoveFast({
   const anyCaptures = pieces.some((p) => p.captured);
   if (openingVariety && sideMoveCount < 2 && !anyCaptures) {
     const quiet = [];
+    let mate = null;
     const hardOpening = ((bot && bot.tier) || difficulty) === 'hard';
     forEachLegalReply(bd, side, ep, (desc) => {
+      if (!mate && madeMoveIsMate(bd, side, desc)) mate = desc;
       if (desc.kind !== 'move' || desc.victimIdx >= 0) return;
       // REF: unoccupied destination, own half of the board.
       const toRank = desc.to >> 3;
@@ -241,6 +265,7 @@ export function searchBestMoveFast({
       if (hardOpening && !hardRandomOpeningSafe(bd, desc, side)) return;
       quiet.push(desc);
     });
+    if (mate) return { move: materializeMove(bd, mate), score: MATE - 1, depth: 1, nodes: 0 };
     // A quiet non-capture destination was empty pre-move by construction
     // (victimIdx < 0 and friendly squares are never destinations).
     if (quiet.length > 0) {
@@ -265,7 +290,7 @@ export function searchBestMoveFast({
     else if (extraTypes <= 24) maxDepth = cfg.maxDepth + 1;
   }
 
-  const rootChildren = orderedChildrenFast(bd, side, ctx, ep, Boolean(repetitionSigs));
+  const rootChildren = orderedChildrenFast(bd, side, ctx, ep, Boolean(repetitionSigs), true);
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
   // REF: retain the review's played continuation just beyond the normal
