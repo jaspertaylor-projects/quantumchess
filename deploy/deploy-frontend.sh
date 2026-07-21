@@ -29,7 +29,7 @@ aws s3 sync dist "s3://$BUCKET" \
   --cache-control "public, max-age=31536000, immutable"
 # Root files that change but aren't content-hashed must always revalidate.
 for f in index.html rules.html strategy.html faq.html about.html privacy.html \
-         terms.html ads.txt humans.txt robots.txt sitemap.xml; do
+         terms.html 404.html ads.txt humans.txt robots.txt sitemap.xml; do
   [ -f "dist/$f" ] && aws s3 cp "dist/$f" "s3://$BUCKET/$f" --cache-control "no-cache"
 done
 

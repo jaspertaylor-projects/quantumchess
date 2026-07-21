@@ -167,11 +167,16 @@ scale).
    - Cache policy: **CachingDisabled**
    - Origin request policy: **AllViewer**
    - Create. (WebSockets pass through automatically.)
-8. **Error pages tab** -> Create custom error response, TWICE:
-   - HTTP error code 403 -> Customize error response: Yes ->
-     Response page path `/index.html`, HTTP response code 200.
-   - Same again for 404.
-   (This makes the single-page app load on any URL.)
+8. Configure canonical routing and real 404 responses from the repository:
+
+   ```bash
+   ./deploy/configure-cloudfront-routing.sh YOUR_DISTRIBUTION_ID
+   ```
+
+   This publishes the `qc-canonical-routing` CloudFront Function, redirects
+   `www` to the apex domain, keeps `/play` as the only single-page app route,
+   and maps missing S3 objects to `/404.html` with HTTP 404. Do not map 403 or
+   404 errors to `/index.html` with response code 200; that creates soft 404s.
 9. Copy the **Distribution ID** (looks like `E2ABCDEF123456`) and the
    distribution domain (`dxxxx.cloudfront.net`) from the General tab.
 
@@ -225,6 +230,10 @@ Route 53 -> Hosted zones -> quantumchess.ninja -> Create record, TWICE:
   `docker compose -f docker-compose.prod.yml logs caddy`.
 - Changed something and don't see it -> CloudFront caches; the deploy
   script invalidates `/index.html` automatically, but give it a minute.
+- Unknown URLs show the homepage -> rerun
+  `./deploy/configure-cloudfront-routing.sh YOUR_DISTRIBUTION_ID`; the custom
+  error responses should use `/404.html` and HTTP 404, never `/index.html` and
+  HTTP 200.
 
 ## Each frontend release
 
