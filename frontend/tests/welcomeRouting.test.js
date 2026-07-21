@@ -40,6 +40,8 @@ describe('welcome routing', () => {
     expect(resolveWelcomeEntry({ pathname: '/', search: '?join=ABC123' }).surface).toBe('play');
     expect(hasAppDeepLink('?reset=1')).toBe(true);
     expect(resolveWelcomeEntry({ pathname: '/', search: '?reset=1' }).surface).toBe('play');
+    expect(hasAppDeepLink('?game=00000000-0000-4000-8000-000000000000')).toBe(true);
+    expect(resolveWelcomeEntry({ pathname: '/', search: '?game=shared-token' }).surface).toBe('play');
   });
 
   it('cleans the one-time action while preserving other query parameters', () => {

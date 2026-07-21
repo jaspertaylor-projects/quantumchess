@@ -13,7 +13,7 @@ export const WELCOME_ACTION = Object.freeze({
 });
 
 const PLAY_ACTIONS = new Set([WELCOME_ACTION.PLAY, WELCOME_ACTION.INTRO, WELCOME_ACTION.PUZZLE]);
-const APP_DEEP_LINKS = ['join', 'premium', 'puzzle', 'mined', 'minedGame', 'allbots', 'reset'];
+const APP_DEEP_LINKS = ['join', 'premium', 'puzzle', 'mined', 'minedGame', 'allbots', 'reset', 'game'];
 
 export function welcomeActionFromSearch(search = '') {
   const value = new URLSearchParams(search).get('welcome');

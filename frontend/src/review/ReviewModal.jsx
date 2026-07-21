@@ -14,7 +14,8 @@ import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import {
-  ChevronLeft, ChevronRight, SkipBack, SkipForward, Microscope, Sparkles, Undo2,
+  ChevronLeft, ChevronRight, SkipBack, SkipForward, History, Microscope, Sparkles, Undo2,
+  Play, Pause, Video,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
 import PlayerBar from '../components/PlayerBar.jsx';
@@ -27,6 +28,13 @@ import useReviewVariation from './useReviewVariation.js';
 import EvalTraceGraph from './EvalTraceGraph.jsx';
 import styles from './reviewStyles.js';
 import { staysInSameDecisiveBand } from './reviewMoveMarks.js';
+import {
+  REPLAY_PLY_INTERVAL_MS,
+  canMakeReplayVideo,
+  downloadReplayVideo,
+  paintReplayVideoFrame,
+  startReplayVideoRecorder,
+} from './socialReplayVideo.js';
 
 const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
 const HIGHLIGHT_TO = 'rgba(246, 196, 69, 0.55)';
@@ -86,6 +94,9 @@ export default function ReviewModal({
   onClose = () => {},
   game = null, // { id, opponent, opponent_rating, user_side, result, created_at, headline? }
   moves = null, // stored qc_games.moves array
+  analysisEnabled = true, // false = free replay + variations, with no engine output/work
+  loading = false,
+  loadError = null,
   showEvalGraph = false, // dev/mined only: show the graph strip; move-list evals always compute
   pieceSvgStyles,
   indicators,
@@ -97,11 +108,124 @@ export default function ReviewModal({
   );
   const snapshots = timeline ? timeline.snapshots : [];
 
-  const graph = useGameEvalGraph({ open, showEvalGraph, timeline, snapshots });
+  const graph = useGameEvalGraph({
+    open: open && analysisEnabled,
+    showEvalGraph: analysisEnabled && showEvalGraph,
+    timeline,
+    snapshots,
+  });
   const { evalAt, nearestEval, resolvePoint } = graph;
 
   const v = useReviewVariation({ open, snapshots, onClose });
   const { bounded, snap, variation, varSel } = v;
+  const [replayPlaying, setReplayPlaying] = useState(false);
+  const [videoState, setVideoState] = useState({ status: 'idle', progress: 0, message: '' });
+  const videoCancelledRef = useRef(false);
+  const makingVideo = videoState.status === 'recording';
+
+  useEffect(() => {
+    if (!open || !replayPlaying || makingVideo || variation) return undefined;
+    if (bounded >= snapshots.length - 1) {
+      setReplayPlaying(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => v.goMainline(bounded + 1), REPLAY_PLY_INTERVAL_MS);
+    return () => window.clearTimeout(timer);
+  }, [open, replayPlaying, makingVideo, variation, bounded, snapshots.length]);
+
+  useEffect(() => {
+    if (!open) {
+      setReplayPlaying(false);
+      videoCancelledRef.current = true;
+    }
+  }, [open]);
+
+  const stopPlayback = () => setReplayPlaying(false);
+  const playFullReplay = () => {
+    if (makingVideo || snapshots.length <= 1) return;
+    if (replayPlaying) {
+      setReplayPlaying(false);
+      return;
+    }
+    v.goMainline(0);
+    setVideoState({ status: 'idle', progress: 0, message: '' });
+    setReplayPlaying(true);
+  };
+
+  const waitForBoardPaint = () => new Promise((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+  });
+
+  const makeReplayVideo = async () => {
+    if (makingVideo || snapshots.length <= 1) return;
+    if (!canMakeReplayVideo()) {
+      setVideoState({ status: 'error', progress: 0, message: 'This browser can play the replay, but cannot export video.' });
+      return;
+    }
+
+    setReplayPlaying(false);
+    videoCancelledRef.current = false;
+    setVideoState({ status: 'recording', progress: 0, message: 'Preparing video…' });
+    let recording = null;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1080;
+      const imageCache = new Map();
+      const finalPly = snapshots.length - 1;
+      v.goMainline(0);
+      await waitForBoardPaint();
+      await paintReplayVideoFrame({
+        canvas,
+        snapshot: snapshots[0],
+        ply: 0,
+        totalPlies: finalPly,
+        game,
+        orientation,
+        squareColors,
+        pieceSvgStyles,
+        indicators,
+        imageCache,
+      });
+      recording = startReplayVideoRecorder(canvas);
+
+      for (let ply = 0; ply <= finalPly; ply += 1) {
+        if (videoCancelledRef.current) throw new Error('Video export cancelled.');
+        const frameStarted = performance.now();
+        if (ply > 0) {
+          v.goMainline(ply);
+          await waitForBoardPaint();
+          await paintReplayVideoFrame({
+            canvas,
+            snapshot: snapshots[ply],
+            ply,
+            totalPlies: finalPly,
+            game,
+            orientation,
+            squareColors,
+            pieceSvgStyles,
+            indicators,
+            imageCache,
+          });
+        }
+        const progress = Math.round(((ply + 1) / (finalPly + 1)) * 100);
+        setVideoState({ status: 'recording', progress, message: `Recording replay… ${progress}%` });
+        const remaining = Math.max(0, REPLAY_PLY_INTERVAL_MS - (performance.now() - frameStarted));
+        await new Promise((resolve) => window.setTimeout(resolve, remaining));
+      }
+
+      recording.recorder.stop();
+      const blob = await recording.finished;
+      if (videoCancelledRef.current) return;
+      downloadReplayVideo(blob, game, recording.format.extension);
+      setVideoState({ status: 'done', progress: 100, message: 'Video downloaded — ready to post.' });
+    } catch (error) {
+      if (recording?.recorder?.state === 'recording') recording.recorder.stop();
+      if (!videoCancelledRef.current) {
+        setVideoState({ status: 'error', progress: 0, message: error?.message || 'The video could not be created.' });
+      }
+    }
+  };
 
   const actualNextMove = useMemo(() => {
     if (variation || !timeline || bounded >= timeline.entries.length) return null;
@@ -132,7 +256,7 @@ export default function ReviewModal({
   useEffect(() => {
     setHints(null);
     setHintDepth(0);
-    if (!open || !snap || snap.gameOver) return undefined;
+    if (!analysisEnabled || !open || !snap || snap.gameOver) return undefined;
     const sig = snap.positionSig || null;
     const cached = getCachedHints(sig);
     if (cached) {
@@ -219,7 +343,7 @@ export default function ReviewModal({
     if (cached) postDeepening();
     else postQuick();
     return () => { worker.terminate(); };
-  }, [open, snap, bounded, variation, actualNextMove, graph.recordEval]);
+  }, [analysisEnabled, open, snap, bounded, variation, actualNextMove, graph.recordEval]);
 
   if (!open) return null;
 
@@ -311,14 +435,17 @@ export default function ReviewModal({
   const topSide = bottomSide === 'white' ? 'black' : 'white';
   const botOf = (side) => {
     const id = side === 'white' ? game && game.whiteName : game && game.blackName;
-    return id ? getBotById(id) : null;
+    if (id) return getBotById(id);
+    return side !== bottomSide && game && game.opponent ? getBotById(game.opponent) : null;
   };
   const nameOf = (side) => {
     const bot = botOf(side);
     if (bot) return bot.name;
     if (game && game.whiteName && side === 'white') return game.whiteName;
     if (game && game.blackName && side === 'black') return game.blackName;
-    return side === bottomSide ? 'You' : (game && game.opponent) || 'Opponent';
+    return side === bottomSide
+      ? (game && (game.owner_username || game.viewerLabel)) || 'You'
+      : (game && game.opponent) || 'Opponent';
   };
   const avatarOf = (side) => botAvatarDescriptor(botOf(side));
   const ratingOf = (side) => {
@@ -357,13 +484,24 @@ export default function ReviewModal({
     >
         <div style={styles.header}>
           <h2 id="qc-review-title" style={styles.title}>
-            <Microscope size={18} color={theme.primary} /> Game Review
+            {analysisEnabled
+              ? <Microscope size={18} color={theme.primary} />
+              : <History size={18} color={theme.primary} />}
+            {analysisEnabled ? 'Game Review' : 'Game Replay'}
             <span style={styles.sub}>{headline}</span>
           </h2>
-          <ModalCloseButton ariaLabel="Close game review" className="qc-review-close" onClick={onClose} />
+          <ModalCloseButton ariaLabel={analysisEnabled ? 'Close game review' : 'Close game replay'} className="qc-review-close" onClick={onClose} />
         </div>
 
-        {!timeline || snapshots.length <= 1 ? (
+        {loading ? (
+          <div style={{ fontSize: 13, color: theme.textSecondary, padding: 12 }}>
+            Loading shared game…
+          </div>
+        ) : loadError ? (
+          <div style={{ fontSize: 13, color: '#ff8f8f', padding: 12 }}>
+            {loadError}
+          </div>
+        ) : !timeline || snapshots.length <= 1 ? (
           <div style={{ fontSize: 13, color: theme.textSecondary, padding: 12 }}>
             This game has no replayable moves.
           </div>
@@ -378,7 +516,7 @@ export default function ReviewModal({
             <div style={styles.content}>
               <div className="qc-review-board" style={styles.boardCol}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
-                <div style={styles.evalBarVertical} title={`Eval ${formatEval(currentEval)} (white)`}>
+                {analysisEnabled ? <div style={styles.evalBarVertical} title={`Eval ${formatEval(currentEval)} (white)`}>
                   <div style={{
                     position: 'absolute', left: 0, right: 0, bottom: 0, height: `${evalFillPct}%`,
                     background: '#e8e8e8', transition: 'height 200ms ease',
@@ -390,14 +528,15 @@ export default function ReviewModal({
                     background: 'rgba(120,120,120,0.8)',
                   }} />
                   <span style={styles.evalBarNumber(evalTextDark)}>{exactEval === null ? '…' : formatEval(currentEval)}</span>
-                </div>
+                </div> : null}
                 <div style={{ width: 'min(60vmin, 440px)', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {reviewBar(topSide)}
+                <div className="qc-review-board-capture">
                 <Board
                   orientation={orientation}
                   showCoordinates={false}
                   highlights={varSel ? [...highlights, { square: varSel, color: 'rgba(79,195,247,0.45)' }] : highlights}
-                  arrows={hintArrows}
+                  arrows={analysisEnabled && !makingVideo ? hintArrows : []}
                   pieces={snap.pieces}
                   zapMarks={reviewZapMarks}
                   healMarks={reviewHealMarks}
@@ -411,13 +550,15 @@ export default function ReviewModal({
                   shadow="rgba(0, 0, 0, 0.15)"
                   pieceSvgStyles={pieceSvgStyles}
                   squareColors={squareColors}
-                  ariaLabel="Review board"
-                  onSquareClick={v.handleBoardClick}
+                  ariaLabel={analysisEnabled ? 'Review board' : 'Replay board'}
+                  onSquareClick={makingVideo || replayPlaying ? undefined : v.handleBoardClick}
                   onPieceClick={({ id }) => {
+                    if (makingVideo || replayPlaying) return;
                     const pc = snap.pieces.find((p) => p.id === id);
                     if (pc && pc.square) v.handleBoardClick({ square: pc.square });
                   }}
                   onPieceDragStart={(piece) => {
+                    if (makingVideo || replayPlaying) return false;
                     const pc = piece && snap.pieces.find((p) => p.id === piece.id);
                     if (!pc || snap.gameOver || pc.side !== snap.sideToMove) return false;
                     v.setVarSel(pc.square);
@@ -427,18 +568,19 @@ export default function ReviewModal({
                     // A no-move drop is just a click's pointerdown/up pair —
                     // keep the selection so click-then-click works; the
                     // second click (or a drag) completes the move.
-                    if (from && to && from !== to) v.playVariationMove(from, to);
+                    if (!makingVideo && !replayPlaying && from && to && from !== to) v.playVariationMove(from, to);
                   }}
                   selectedId={v.varSelPiece ? v.varSelPiece.id : null}
                   legalMoves={v.varTargets}
                 />
+                </div>
                 {reviewBar(bottomSide)}
                 </div>
                 </div>
               </div>
 
               <div className="qc-review-side" style={styles.sideCol}>
-                <div>
+                {analysisEnabled ? <div>
                   <div style={styles.hintHead}>
                     <Sparkles size={13} strokeWidth={2.5} />
                     {snap.gameOver
@@ -467,7 +609,12 @@ export default function ReviewModal({
                       <span style={{ opacity: 0.6 }}>scanning the position…</span>
                     )}
                   </div>
-                </div>
+                </div> : (
+                  <div style={styles.replayHelp}>
+                    <strong>Explore the game</strong>
+                    <span>Choose any move, then move a piece on the board to branch into a variation.</span>
+                  </div>
+                )}
                 {variation ? (
                   <div style={styles.variationStrip}>
                     <span style={styles.variationLabel}>
@@ -501,15 +648,15 @@ export default function ReviewModal({
                           key={`cell-${r.snapIdx}`}
                           className="qc-review-move-row"
                           style={styles.moveCell(!variation && bounded === r.snapIdx)}
-                          onClick={(e) => { e.currentTarget.blur(); v.goMainline(r.snapIdx); }}
+                          onClick={(e) => { e.currentTarget.blur(); stopPlayback(); v.goMainline(r.snapIdx); }}
                           role="button" tabIndex={0}
                         >
                           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
-                          <span style={styles.mark(r.mark)} title={r.markTitle}>{r.mark}</span>
-                          <span
+                          {analysisEnabled ? <span style={styles.mark(r.mark)} title={r.markTitle}>{r.mark}</span> : null}
+                          {analysisEnabled ? <span
                             style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}
                             title="Engine eval after this move (positive is better for White)"
-                          >{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span>
+                          >{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span> : null}
                         </div>
                       ) : (
                         <span key={`cell-empty-${pair.moveNo}-${col}`} />
@@ -523,12 +670,42 @@ export default function ReviewModal({
                       ? `Variation ${variation.vIdx} / ${variation.snaps.length - 1}`
                       : `Move ${bounded} / ${snapshots.length - 1}`}
                   </span>
-                  <IconButton icon={SkipBack} size={16} title="Start" suppressTitle ariaLabel="Jump to start" onClick={v.seekStart} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronLeft} size={18} title="Previous move (←)" suppressTitle ariaLabel="Previous move" onClick={v.seekPrev} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={ChevronRight} size={18} title="Next move (→)" suppressTitle ariaLabel="Next move" onClick={v.seekNext} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
-                  <IconButton icon={SkipForward} size={16} title="End" suppressTitle ariaLabel="Jump to end" onClick={v.seekEnd} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={SkipBack} size={16} title="Start" suppressTitle ariaLabel="Jump to start" onClick={() => { stopPlayback(); v.seekStart(); }} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronLeft} size={18} title="Previous move (←)" suppressTitle ariaLabel="Previous move" onClick={() => { stopPlayback(); v.seekPrev(); }} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={ChevronRight} size={18} title="Next move (→)" suppressTitle ariaLabel="Next move" onClick={() => { stopPlayback(); v.seekNext(); }} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
+                  <IconButton icon={SkipForward} size={16} title="End" suppressTitle ariaLabel="Jump to end" onClick={() => { stopPlayback(); v.seekEnd(); }} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
                 </div>
-                {showEvalGraph ? (
+                <div style={styles.replayTools}>
+                  <button
+                    type="button"
+                    className="qc-review-play-replay"
+                    style={styles.replayToolButton(replayPlaying)}
+                    disabled={makingVideo}
+                    onClick={playFullReplay}
+                  >
+                    {replayPlaying ? <Pause size={15} /> : <Play size={15} />}
+                    {replayPlaying ? 'Pause replay' : 'Play replay · 2 plies/sec'}
+                  </button>
+                  <button
+                    type="button"
+                    className="qc-review-make-video"
+                    style={styles.replayToolButton(makingVideo)}
+                    disabled={makingVideo}
+                    onClick={makeReplayVideo}
+                  >
+                    <Video size={15} />
+                    {makingVideo ? 'Making video…' : 'Make social video'}
+                  </button>
+                  {makingVideo ? (
+                    <span style={styles.videoProgressTrack} aria-label={videoState.message}>
+                      <span style={styles.videoProgressFill(videoState.progress)} />
+                    </span>
+                  ) : null}
+                  {videoState.message ? (
+                    <span style={styles.videoStatus(videoState.status === 'error')}>{videoState.message}</span>
+                  ) : null}
+                </div>
+                {analysisEnabled && showEvalGraph ? (
                   <EvalTraceGraph
                     points={graph.graphTrace.map((p) => ({ ply: p.ply, side: p.side, eval: resolvePoint(p) }))}
                     count={snapshots.length}

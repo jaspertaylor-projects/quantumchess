@@ -3,7 +3,7 @@
 # Prereqs: `supabase login` completed; Stripe CLI authenticated (test mode);
 #          ~/.config/quantumchess-stripe-deploy.env with STRIPE_WEBHOOK_SECRET,
 #          STRIPE_PRICE_ID ($3/mo subscription, created 2026-07-05) and
-#          STRIPE_TIP_PRICE_ID ($5 one-time tip -> a year ad-free; create with
+#          STRIPE_TIP_PRICE_ID ($5 one-time tip -> three months ad-free; create with
 #          `stripe prices create --currency usd --unit-amount 500 -d product=<prod_id>`
 #          — NO recurring flags — and add it to the env file).
 set -euo pipefail

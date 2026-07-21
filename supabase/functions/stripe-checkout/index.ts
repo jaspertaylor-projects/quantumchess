@@ -2,7 +2,7 @@
 // and returns { url } for the browser to redirect to. Two kinds:
 //   (default)          subscription mode, STRIPE_PRICE_ID   ($3/mo premium)
 //   body {kind:'tip'}  payment mode,      STRIPE_TIP_PRICE_ID ($5 once —
-//                      the webhook grants a year of ad_free_until)
+//                      the webhook grants 90 days of ad_free_until)
 // Invoked from the frontend via supabase.functions.invoke('stripe-checkout').
 // Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_ID, STRIPE_TIP_PRICE_ID.
 

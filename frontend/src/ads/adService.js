@@ -5,20 +5,23 @@
 //
 // To activate after AdSense approval:
 //   1. frontend/.env.production  ->  VITE_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
-//   2. Replace the placeholder line in frontend/public/ads.txt with the line
+//   2. Add VITE_ADSENSE_PUZZLE_SLOT=<responsive-display-slot-id>.
+//   3. Replace the placeholder line in frontend/public/ads.txt with the line
 //      AdSense gives you (Sites -> ads.txt).
-//   3. Optional while testing: VITE_ADSENSE_TEST=1 forces Google test ads.
+//   4. Optional while testing: VITE_ADSENSE_TEST=1 forces Google test ads.
 //
 // Imports From: None
 // Exported To: ../App.jsx
 
 const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT || '';
+const PUZZLE_DISPLAY_SLOT = import.meta.env.VITE_ADSENSE_PUZZLE_SLOT || '';
 const TEST_MODE = String(import.meta.env.VITE_ADSENSE_TEST || '') === '1';
+const DEV_MODE = Boolean(import.meta.env.DEV);
 
-// Frequency caps: players tolerate occasional interstitials; every game end
-// would burn them out (and Google derates constant requests anyway).
-const MIN_SECONDS_BETWEEN_ADS = 180;
-const MIN_GAMES_BETWEEN_ADS = 3;
+// Every normally-paced game is eligible; the three-minute floor remains the
+// guardrail against rapid resign/disconnect/short-game ad loops.
+export const MIN_SECONDS_BETWEEN_ADS = 180;
+export const MIN_GAMES_BETWEEN_ADS = 1;
 
 let initialized = false;
 let adBreakFn = null;
@@ -27,7 +30,12 @@ let lastAdShownAt = 0;
 let adConsentGranted = null; // null = not yet decided
 
 export function adsEnabled() {
-  return Boolean(CLIENT);
+  return Boolean(CLIENT) && !DEV_MODE;
+}
+
+export function puzzleDisplayAdConfig() {
+  if (DEV_MODE || !CLIENT || !PUZZLE_DISPLAY_SLOT) return null;
+  return { client: CLIENT, slot: PUZZLE_DISPLAY_SLOT, testMode: TEST_MODE };
 }
 
 // Google Consent Mode v2 helper. Called by the consent banner with the
@@ -55,7 +63,7 @@ export function setAdConsent(granted) {
 // Call once at app start. Injects the AdSense script and configures the
 // Ad Placement API. Safe to call repeatedly; does nothing without a client id.
 export function initAds() {
-  if (!CLIENT || initialized || typeof document === 'undefined') return;
+  if (DEV_MODE || !CLIENT || initialized || typeof document === 'undefined') return;
   initialized = true;
 
   window.adsbygoogle = window.adsbygoogle || [];
@@ -96,22 +104,34 @@ export function initAds() {
   adConfig({ preloadAdBreaks: 'on', sound: 'off' });
 }
 
-// Rewarded gate for the free-tier post-game review: the user OPTED IN by
-// clicking, so show the rewarded ad immediately. onGranted fires when the ad
-// was watched — or straight away when ads are dormant (pre-approval builds)
-// or Google has nothing to show; an unfilled ad must never block the feature.
-// Closing the ad early simply doesn't grant (the button stays there).
-export function showRewardedReviewAd({ onGranted }) {
-  if (!CLIENT || !adBreakFn) { onGranted('ads-dormant'); return; }
-  let offered = false;
-  adBreakFn({
-    type: 'reward',
-    name: 'game_review',
-    beforeReward: (showAdFn) => { offered = true; showAdFn(); },
-    adViewed: () => { lastAdShownAt = Date.now(); onGranted('ad-viewed'); },
-    adDismissed: () => {},
-    adBreakDone: () => { if (!offered) onGranted('no-fill'); },
+// Resolve true ONLY when Google reports adViewed. Dismissal, no-fill,
+// unconfigured ads, and development builds do not spend quota or unlock the
+// review. The user has already opted in by clicking the review button.
+export function requestRewardedAd(runAdBreak, onViewed = () => {}) {
+  return new Promise((resolve) => {
+    if (typeof runAdBreak !== 'function') { resolve(false); return; }
+    let granted = false;
+    try {
+      runAdBreak({
+        type: 'reward',
+        name: 'game-review-unlock',
+        beforeReward: (showAdFn) => showAdFn(),
+        adViewed: () => {
+          granted = true;
+          onViewed();
+        },
+        adDismissed: () => {},
+        adBreakDone: () => resolve(granted),
+      });
+    } catch (_) {
+      resolve(false);
+    }
   });
+}
+
+export function showRewardedAd() {
+  if (DEV_MODE || !CLIENT || !adBreakFn) return Promise.resolve(false);
+  return requestRewardedAd(adBreakFn, () => { lastAdShownAt = Date.now(); });
 }
 
 // Call when a game genuinely ends (winner popup opens). Counts the game and,

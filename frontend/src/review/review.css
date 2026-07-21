@@ -14,3 +14,20 @@
   outline: 2px solid rgba(79, 195, 247, 0.8);
   outline-offset: 1px;
 }
+
+.qc-review-board-capture {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.qc-review-play-replay:disabled,
+.qc-review-make-video:disabled {
+  cursor: wait !important;
+  opacity: 0.68;
+}
+
+.qc-review-play-replay:focus-visible,
+.qc-review-make-video:focus-visible {
+  outline: 2px solid rgba(79, 195, 247, 0.85);
+  outline-offset: 2px;
+}

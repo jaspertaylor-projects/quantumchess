@@ -12,7 +12,13 @@ import { initAnalytics } from '../analytics/analytics.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import { sendBotGameFinished } from '../analytics/statsPing.js';
 import { consumeCheckoutReturn, isAdFree, isTipper } from '../account/billing.js';
-import { fetchGameMoves } from '../account/gameSync.js';
+import {
+  buildSharedGameLink,
+  fetchGameMoves,
+  fetchSharedGame,
+  readSharedGameToken,
+  shareSavedGame,
+} from '../account/gameSync.js';
 
 function winnerSideFrom({ winner, externalGameOver }) {
   if (winner === 'white' || winner === 'black') return winner;
@@ -145,15 +151,52 @@ export default function useMonetization({
     setAccountOpen(true, 'premium_bot');
   }, [onRequirePremiumExtra, setAccountOpen]);
 
-  // Premium game review: fetch the saved move list on demand, then open the
-  // review modal on top of the account panel. Returns whether it actually
-  // opened, so quota-limited access (the tipper's one-per-day review) is only
-  // charged on success.
-  const [reviewGame, setReviewGame] = useState(null); // { game, moves }
+  // Saved-game replay and Premium analysis share the same deterministic
+  // board/timeline. Replay mode never starts an engine worker; review mode
+  // adds the evaluation layer. A public ?game= token opens replay mode for
+  // anonymous visitors too.
+  const sharedGameTokenRef = useRef(readSharedGameToken());
+  const sharedGameLoadedRef = useRef(false);
+  const [reviewGame, setReviewGame] = useState(() => (sharedGameTokenRef.current
+    ? { game: null, moves: null, analysisEnabled: false, loading: true }
+    : null));
+
+  useEffect(() => {
+    const token = sharedGameTokenRef.current;
+    if (!token || sharedGameLoadedRef.current) return;
+    sharedGameLoadedRef.current = true;
+    fetchSharedGame(token).then(({ game, error }) => {
+      if (!game) {
+        setReviewGame({ game: null, moves: [], analysisEnabled: false, loadError: error || 'This shared game is unavailable.' });
+        return;
+      }
+      setReviewGame({
+        game: {
+          ...game,
+          viewerLabel: 'Player',
+          headline: `Shared Quantum Chess game · ${game.result || 'finished'}`,
+        },
+        moves: Array.isArray(game.moves) ? game.moves : [],
+        analysisEnabled: false,
+        shared: true,
+      });
+    });
+  }, []);
+
+  const handleReplayGame = useCallback(async (game) => {
+    if (!auth.user || !game) return false;
+    const savedMoves = await fetchGameMoves(auth.user, game.id);
+    setReviewGame({ game, moves: savedMoves || [], analysisEnabled: false });
+    return true;
+  }, [auth.user]);
+
+  // Premium game review adds engine analysis to the same replay surface.
+  // Returns whether it opened so the tipper's daily quota is only charged on
+  // success.
   const handleReviewGame = useCallback(async (game) => {
     if (!auth.user || !game) return false;
     const savedMoves = await fetchGameMoves(auth.user, game.id);
-    setReviewGame({ game, moves: savedMoves || [] });
+    setReviewGame({ game, moves: savedMoves || [], analysisEnabled: true });
     trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
       accessType: auth.profile?.tier === 'paid'
         ? 'premium'
@@ -165,6 +208,27 @@ export default function useMonetization({
     });
     return true;
   }, [auth.user, auth.profile]);
+
+  const handleShareGame = useCallback(async (game) => {
+    if (!auth.user || !game) return { error: 'Sign in to share a game.' };
+    const { token, error } = await shareSavedGame(auth.user, game.id);
+    if (!token) return { error: error || 'Could not create a share link.' };
+    const link = buildSharedGameLink(token);
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: 'Quantum Chess game replay', url: link });
+        return { link, shared: true };
+      }
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(link);
+        return { link, copied: true };
+      }
+    } catch (shareError) {
+      if (shareError && shareError.name === 'AbortError') return { cancelled: true, link };
+    }
+    window.prompt('Copy this game replay link:', link);
+    return { link, copied: true };
+  }, [auth.user]);
 
   return {
     accountOpen,
@@ -178,6 +242,8 @@ export default function useMonetization({
     handleRequirePremium,
     reviewGame,
     setReviewGame,
+    handleReplayGame,
     handleReviewGame,
+    handleShareGame,
   };
 }

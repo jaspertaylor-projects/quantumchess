@@ -42,6 +42,19 @@ const qUrlRStylish = qUrlR.startsWith('data:') ? qUrlR : `${qUrlR}${qUrlR.includ
 
 const SINGLE_ASSET_URLS = [imgP, imgN, imgB, imgR, imgQ, imgK].filter(Boolean);
 
+// Public lookup tables let non-DOM renderers (currently the saved-game social
+// video exporter) use the exact same artwork as QuantumPiece.
+const SINGLE_ASSET_BY_TYPE = { p: imgP, n: imgN, b: imgB, r: imgR, q: imgQ, k: imgK };
+const PAIR_ASSET_BY_KEY = {
+  'b|k': imgBK, 'b|q': imgBQ, 'b|r': imgBR, 'b|n': imgNB,
+  'k|n': imgNK, 'n|q': imgNQ, 'n|r': imgNR, 'b|p': imgPB,
+  'k|p': imgPK, 'n|p': imgPN, 'p|q': imgPQ, 'p|r': imgPR,
+  'k|q': imgQK, 'k|r': imgRK, 'q|r': imgRQ,
+};
+const QUANTUM_ASSET_BY_TYPE = {
+  p: qUrlP, n: qUrlN, b: qUrlB, r: qUrlRStylish, q: qUrlQ, k: qUrlK,
+};
+
 const RAW_URLS = [
   // Singles
   imgP, imgN, imgB, imgR, imgQ, imgK,
@@ -53,4 +66,10 @@ const RAW_URLS = [
 
 const ALL_ASSET_URLS = Array.from(new Set(RAW_URLS.filter(Boolean)));
 
-export { ALL_ASSET_URLS, SINGLE_ASSET_URLS };
+export {
+  ALL_ASSET_URLS,
+  SINGLE_ASSET_URLS,
+  SINGLE_ASSET_BY_TYPE,
+  PAIR_ASSET_BY_KEY,
+  QUANTUM_ASSET_BY_TYPE,
+};

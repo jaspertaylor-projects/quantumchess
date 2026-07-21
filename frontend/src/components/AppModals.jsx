@@ -22,11 +22,13 @@ import AdminStatsModal from '../admin/AdminStatsModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
 import ReviewModal from '../review/ReviewModal.jsx';
 import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
+import { isAdFree } from '../account/billing.js';
 
 export default function AppModals({
   // game end
   showWinPopup, resolvedWinnerText, externalGameOver, winner, onCloseWinPopup,
-  onPlayAgain, onGameReview, reviewAccess, reviewDisabled, showTipPromo, onTipPromo,
+  onPlayAgain, onGameReview, reviewAccess, reviewRemaining, reviewNotice,
+  reviewDisabled, showTipPromo, onTipPromo,
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
   // settings
@@ -37,7 +39,8 @@ export default function AppModals({
   // friend wait
   online,
   // account/pricing/review
-  auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn, handleReviewGame, onAccountCreated,
+  auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn,
+  handleReplayGame, handleReviewGame, handleShareGame, onAccountCreated,
   pricingOpen, onClosePricing,
   reviewGame, onCloseReview,
   // admin stats dashboard
@@ -63,6 +66,8 @@ export default function AppModals({
         onPlayAgain={onPlayAgain}
         onGameReview={onGameReview}
         reviewAccess={reviewAccess}
+        reviewRemaining={reviewRemaining}
+        reviewNotice={reviewNotice}
         reviewDisabled={reviewDisabled}
         showTipPromo={showTipPromo}
         onTipPromo={onTipPromo}
@@ -119,7 +124,9 @@ export default function AppModals({
         auth={auth}
         upsellSource={accountUpsellSource}
         billingReturn={billingReturn}
+        onReplayGame={handleReplayGame}
         onReviewGame={handleReviewGame}
+        onShareGame={handleShareGame}
         onAccountCreated={onAccountCreated}
         onOpenAdminStats={onOpenAdminStats}
       />
@@ -140,6 +147,9 @@ export default function AppModals({
         onClose={onCloseReview}
         game={reviewGame ? reviewGame.game : null}
         moves={reviewGame ? reviewGame.moves : null}
+        analysisEnabled={reviewGame ? reviewGame.analysisEnabled !== false : true}
+        loading={Boolean(reviewGame && reviewGame.loading)}
+        loadError={reviewGame ? reviewGame.loadError : null}
         showEvalGraph={Boolean(reviewGame && reviewGame.showEvalGraph)}
         pieceSvgStyles={svgStyles}
         indicators={indicators}
@@ -181,6 +191,7 @@ export default function AppModals({
         selfAvatar={bars ? bars.selfAvatar : null}
         selfRating={bars ? bars.selfRating : null}
         strangerAvatar={bars ? bars.strangerAvatar : null}
+        showDisplayAd={!isAdFree(auth.profile)}
       />
 
     </>

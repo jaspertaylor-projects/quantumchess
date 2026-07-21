@@ -17,9 +17,10 @@ export default function WinnerModal({
   onClose = () => {},
   onPlayAgain = null,
   onGameReview = null,
-  // 'free' (premium or ads dormant) | 'tip' (today's free tipper review) |
-  // 'ad' (voluntary rewarded ad unlocks it)
-  reviewAccess = 'free',
+  // premium | tip | ad (rewarded) | limit
+  reviewAccess = 'premium',
+  reviewRemaining = Infinity,
+  reviewNotice = '',
   reviewDisabled = false,
   showTipPromo = false,
   onTipPromo = () => {},
@@ -83,8 +84,11 @@ export default function WinnerModal({
     reviewHint: { fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)' },
   };
 
-  const reviewHint = reviewAccess === 'ad' ? 'watch a short ad'
-    : reviewAccess === 'tip' ? 'your free review today' : null;
+  const reviewHint = reviewAccess === 'ad'
+    ? `watch a short ad · ${reviewRemaining} left today`
+    : reviewAccess === 'tip'
+      ? `${reviewRemaining} left today`
+      : reviewAccess === 'limit' ? 'daily limit reached' : null;
 
   return (
     <ModalShell
@@ -114,8 +118,8 @@ export default function WinnerModal({
         >
           <span style={styles.promoChip}>AD</span>
           <span style={styles.promoText}>
-            <span style={styles.promoStrong}>$3 once</span> — a year with no ads
-            + a free game review every day.
+            <span style={styles.promoStrong}>$5 once</span> — three months with no ads
+            + five engine reviews a day.
           </span>
           <Sparkles size={16} color="#ffd166" style={{ flex: 'none' }} aria-hidden="true" />
         </div>
@@ -139,6 +143,7 @@ export default function WinnerModal({
             {reviewHint && !reviewDisabled ? <span style={styles.reviewHint}>· {reviewHint}</span> : null}
           </button>
         ) : null}
+        {reviewNotice ? <div style={styles.reviewHint}>{reviewNotice}</div> : null}
       </div>
     </ModalShell>
   );

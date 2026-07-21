@@ -247,6 +247,7 @@
 
 .qc-am-game-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -256,6 +257,13 @@
   background: rgba(0, 0, 0, 0.3);
   font-size: 13.5px;
   transition: all 0.25s ease;
+}
+
+.qc-am-game-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .qc-am-game-row:hover {
@@ -366,6 +374,11 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   transition: all 0.25s ease;
+}
+
+.qc-am-review-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .qc-am-review-btn.premium {

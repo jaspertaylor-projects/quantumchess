@@ -194,7 +194,11 @@ export default function QuantumPiece({
   const barW = Math.max(9, Math.round(size * 0.31));
   const barH = Math.max(2, Math.round(size * 0.05));
   const promoBar = promoted && indicators.promoted ? (
-    <div className="qc-promo-bar" style={baseStyles.pipRow} aria-hidden="true">
+    <div
+      className="qc-promo-bar"
+      style={{ ...baseStyles.pipRow, transform: 'translateY(2px)' }}
+      aria-hidden="true"
+    >
       <span
         style={{
           width: barW,

@@ -224,7 +224,14 @@ templates, custom SMTP) live in the Supabase Dashboard, not in code.
 
 - Logic: `frontend/src/ads/adService.js` (dormant until `VITE_ADSENSE_CLIENT`
   is set; frequency caps at the top of the file).
-- Fires an interstitial when the winner modal opens.
+- Free users can unlock up to three engine reviews per local day; each unlock
+  requires the rewarded placement's `adViewed` callback. Tippers receive five
+  ad-free reviews/day and Premium is unlimited.
+- Requests a game-end interstitial after each eligible finished game while
+  retaining a 180-second floor between viewed ads.
+- A responsive display unit appears in the solved-puzzle result card when
+  `VITE_ADSENSE_PUZZLE_SLOT` is configured. It has a labeled, whitespace-
+  separated region away from Share and is absent for ad-free accounts.
 - `frontend/public/ads.txt` holds the AdSense verification line.
 
 ### Analytics (Google Analytics 4)
@@ -363,29 +370,31 @@ Legend: [ ] not started · [~] in progress · [X] done
         Linked from all static-page footers + the app footer; renewal/terms/
         refund text sits under the upgrade button in `AccountModal.jsx`.
         Public contact email switched to contact@quantumchess.ninja.
-  - [ ] **One-time $3 tip → a year ad-free + one engine review/day** (code
-        done, 2026-07-06; live pricing is $3 — `TIP_PRICE_LABEL` in
-        `billing.js`). The AccountModal pitch leads
-        with the human ("built and run by one person…") and offers "Tip $3"
-        next to the subscription; the webhook stamps
-        `ad_free_until = now + 1 year` (stacks on repeat tips), ads gate on
-        tier OR `ad_free_until` (`isAdFree` in `billing.js`). Tippers also
-        get one engine game review per local day (client-enforced quota in
-        localStorage, `tipReviewAvailable`/`markTipReviewUsed` — same trust
-        level as the premium review gate itself). Migration
+  - [X] **One-time $5 tip → three months ad-free + five engine reviews/day**
+        (frontend + webhook deployed 2026-07-20).
+        The AccountModal pitch leads with the human ("built and run by one
+        person…") and offers "Tip $5" next to the subscription; the webhook
+        stamps `ad_free_until = now + 90 days` (stacks on repeat tips), and ads
+        gate on tier OR `ad_free_until` (`isAdFree` in `billing.js`). Daily
+        engine-review quotas are client-enforced in localStorage: three
+        rewarded-ad reviews for Free, five ad-free reviews for tippers, and
+        unlimited reviews for Premium (`reviewCapFor`, `reviewsRemaining`,
+        `markReviewUsed`). Migration
         `20260709000000_qc_tip_adfree.sql`. Remaining wiring:
-    - [X] Tip prices created (sandbox + live, part of the 2026-07-06
-          live-mode swap; `STRIPE_TIP_PRICE_ID` set in both env files).
-    - [ ] Test with the 4242 card (still not done as of 2026-07-16): tip →
+    - [X] Dedicated live Tip product and $5 one-time price created 2026-07-20;
+          production `STRIPE_TIP_PRICE_ID` switched without touching Premium.
+    - [ ] Test with the 4242 card after deployment: tip →
           `?premium=tip_thanks` → profile shows "ad-free until <date>"; ad
-          gating off; tip again → date extends by another year.
+          gating off; tip again → date extends by another 90 days.
+    - [X] Checkout catalog copy separated from Premium: live product is
+          "Quantum Chess Tip" and describes the three-month/five-review benefit.
   - [ ] Cleanup: two e2e test accounts exist (qc-e2e-test-1/2@example.com,
         E2ETester1/2) — delete via Dashboard or SQL when convenient.
 - [ ] **Premium tier — promised features** ($3/month). These have been promised
       to users and must ship (or be clearly marked "coming soon") once checkout
       is live:
-  - [X] Unlimited saved games (server-enforced by `qc_trim_games`: 10 free /
-        1000 paid — marketed as unlimited, the 1000 is an abuse cap)
+  - [X] Up to 1,000 saved games (server-enforced by `qc_trim_games`: 10 free /
+        1000 paid, and marketed at those exact limits)
   - [X] Game review with engine moves — **built + browser-tested 2026-07-05**
         (ships with next frontend deploy): `review/ReviewModal.jsx` (replay
         board, eval bar, mistake/blunder marks, engine best-move via worker),
@@ -548,10 +557,13 @@ Legend: [ ] not started · [~] in progress · [X] done
       toggle ad code or click own ads during review.
 - [ ] ON APPROVAL — turn ads on: set
       `VITE_ADSENSE_CLIENT=ca-pub-5481833391571778` in
-      `frontend/.env.production`, delete `<ConsentBanner/>` from App.jsx (now
-      redundant with Google's CMP — avoids double-prompting EEA), redeploy.
-      Verify first with `VITE_ADSENSE_TEST=1` (finish 3 games, see the test
-      ad), then remove the test flag.
+      `frontend/.env.production`, create a responsive display-ad unit and set
+      its id as `VITE_ADSENSE_PUZZLE_SLOT`, then redeploy. Verify first with
+      `VITE_ADSENSE_TEST=1`: Free reviews unlock only after a completed test
+      rewarded ad, normal games are eligible for one end interstitial subject
+      to the 180-second floor, and the solved-puzzle card shows a labeled ad
+      separated from Share. Then remove the test flag. Keep the existing
+      consent choice in place unless the CMP rollout is deliberately changed.
 
 ### Product / features (nice-to-have)
 #### Immediate — DONE (2026-07-05, verified locally in-browser)
@@ -685,7 +697,9 @@ Legend: [ ] not started · [~] in progress · [X] done
       checkout surface; the pitch starts from intent.
 - [ ] Daily-puzzle leaderboard (today's fastest solves — resets daily so it
       never looks dead; needs a small Supabase table + rate limiting).
-- [ ] **Shareable replay / collapse cards**: after wild moments (full-army
+- [~] **Shareable replay / collapse cards**: saved-game public replay links
+      are built (`qc_share_game`/`qc_get_shared_game` capability-token RPCs;
+      anonymous links expose one game only). Remaining: after wild moments (full-army
       collapse, quantum promotion, en passant phantom, checkmate, daily
       solve), offer a share card or replay link that shows the actual board
       story. Text-only is fine for v1; best version is a tiny animated replay
@@ -693,8 +707,9 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] **Shareable replay / Strategy**: donate to popular streamers and ask them to challenge me on my site in the donation.  If they do clip it and post on socials.
 - [ ]  Have a few bots deployed that will seem as if they are users to fillqueues for  awhile and possibly permanently during low periods of activity.
 #### Later
-- [ ] Replay saved games from stored move lists (moves are already saved;
-      the engine is deterministic, so this is a UI feature)
+- [X] Replay saved games from stored move lists: all signed-in tiers can step
+      through the mainline and play legal what-if variations without engine
+      output; Premium review adds evaluations, marks, and suggested lines.
 - [ ] Rewarded ad placement (opt-in, ~3-5x interstitial CPM) — e.g. "watch
       to see full post-game analysis"
 

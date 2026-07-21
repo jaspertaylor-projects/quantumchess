@@ -68,3 +68,38 @@ export async function fetchGameMoves(user, gameId) {
     .maybeSingle();
   return data && Array.isArray(data.moves) ? data.moves : null;
 }
+
+// Sharing is opt-in per game. The server verifies ownership and returns an
+// unguessable UUID capability; direct anonymous reads of qc_games stay
+// blocked by RLS.
+export async function shareSavedGame(user, gameId) {
+  if (!supabase || !user || !gameId) return { token: null, error: 'Sign in to share a game.' };
+  const { data, error } = await supabase.rpc('qc_share_game', { p_game_id: gameId });
+  return { token: typeof data === 'string' ? data : null, error: error ? error.message : null };
+}
+
+export function buildSharedGameLink(token) {
+  if (!token || typeof window === 'undefined') return '';
+  return `${window.location.origin}/play?game=${encodeURIComponent(token)}`;
+}
+
+export function readSharedGameToken() {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get('game');
+  return value ? value.trim() : null;
+}
+
+export function isSharedGameToken(token) {
+  return typeof token === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
+}
+
+export async function fetchSharedGame(token) {
+  if (!isSharedGameToken(token)) return { game: null, error: 'That shared game link is invalid.' };
+  if (!supabase) return { game: null, error: 'Saved games are not configured in this build.' };
+  const { data, error } = await supabase.rpc('qc_get_shared_game', { p_share_token: token });
+  if (error) return { game: null, error: error.message };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { game: null, error: 'This shared game is unavailable.' };
+  return { game: row, error: null };
+}

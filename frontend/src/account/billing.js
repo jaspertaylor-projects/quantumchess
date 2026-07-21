@@ -7,9 +7,9 @@
 import { supabase } from './supabaseClient.js';
 
 export const PREMIUM_PRICE_LABEL = '$3/month';
-export const TIP_PRICE_LABEL = '$3';
+export const TIP_PRICE_LABEL = '$5';
 export const PREMIUM_PRICE_VALUE = 3;
-export const TIP_PRICE_VALUE = 3;
+export const TIP_PRICE_VALUE = 5;
 
 // The pitch leads with the human: supporters pay because of the first
 // sentence, feature-shoppers pay because of the list under it — and the
@@ -19,12 +19,12 @@ export const PREMIUM_PITCH =
   '$3/month keeps the servers on and the ads off, and gets you:';
 
 export const TIP_PITCH =
-  'Not a subscription person? Tip $3 once — a year with no ads, plus one engine game review a day.';
+  'Not a subscription person? Tip $5 for three months with no ads, plus 5 engine game reviews a day.';
 
 export const PREMIUM_FEATURES = [
   'No ads',
-  'Game review with engine moves',
-  'Unlimited saved games',
+  'Unlimited game reviews with engine moves',
+  'Up to 1,000 saved games',
   'Premium bots to battle',
   'Custom profile pic & tagline',
   'The full character roster — 32 more taglines & sayings',
@@ -45,31 +45,48 @@ export function isTipper(profile) {
   return isAdFree(profile) && !(profile && profile.tier === 'paid');
 }
 
-// Tippers also get ONE engine game review per day. Like the premium review
-// gate itself this is enforced client-side; the quota lives in localStorage
-// per account, keyed by the local calendar day.
-function tipReviewKey(userId) {
-  return `qcTipReviewUsedOn:${userId || 'anon'}`;
-}
+export const FREE_REVIEW_CAP = 3;
+export const TIP_REVIEW_CAP = 5;
 
 function localDayStamp() {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
-export function tipReviewAvailable(userId) {
+function reviewCountKey(userId, day = localDayStamp()) {
+  return `qcReviewCount:${userId || 'anon'}:${day}`;
+}
+
+// The review ladder is intentionally monotonic: watching ads never gives a
+// free account a higher ceiling than a tipper, and Premium has no ceiling.
+export function reviewCapFor(profile) {
+  if (profile && profile.tier === 'paid') return Infinity;
+  return isTipper(profile) ? TIP_REVIEW_CAP : FREE_REVIEW_CAP;
+}
+
+export function reviewsUsedToday(userId) {
   try {
-    return localStorage.getItem(tipReviewKey(userId)) !== localDayStamp();
+    const value = Number.parseInt(localStorage.getItem(reviewCountKey(userId)) || '0', 10);
+    return Number.isFinite(value) && value > 0 ? value : 0;
   } catch (_) {
-    return true;
+    return 0;
   }
 }
 
-export function markTipReviewUsed(userId) {
+export function reviewsRemaining(profile, userId) {
+  const cap = reviewCapFor(profile);
+  return Number.isFinite(cap) ? Math.max(0, cap - reviewsUsedToday(userId)) : Infinity;
+}
+
+export function markReviewUsed(userId) {
   try {
-    localStorage.setItem(tipReviewKey(userId), localDayStamp());
+    const next = reviewsUsedToday(userId) + 1;
+    localStorage.setItem(reviewCountKey(userId), String(next));
+    return next;
   } catch (_) {
-    // storage unavailable — the perk just stays available
+    // Storage unavailable: keep the review usable rather than failing after
+    // a completed rewarded ad or paid entitlement.
+    return 0;
   }
 }
 
@@ -91,7 +108,7 @@ export function startCheckout() {
   return invokeForUrl('stripe-checkout');
 }
 
-// One-time $3 tip -> a year of no ads (stacks if tipped again).
+// One-time $5 tip -> three months of no ads (stacks if tipped again).
 export function startTipCheckout() {
   return invokeForUrl('stripe-checkout', { kind: 'tip' });
 }

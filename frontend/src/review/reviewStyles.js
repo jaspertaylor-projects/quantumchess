@@ -42,6 +42,11 @@ const reviewStyles = {
     border: '1px solid rgba(126,231,135,0.5)', borderRadius: 8, padding: '8px 10px',
     background: 'rgba(126,231,135,0.08)', fontSize: 12.5, lineHeight: 1.5,
   },
+  replayHelp: {
+    display: 'grid', gap: 3, border: '1px solid rgba(79,195,247,0.35)', borderRadius: 8,
+    padding: '9px 11px', background: 'rgba(79,195,247,0.07)', fontSize: 12.5,
+    color: theme.textSecondary, lineHeight: 1.45,
+  },
   // Move navigation: a pill group sitting directly under the move list.
   nav: {
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -54,6 +59,27 @@ const reviewStyles = {
     color: theme.textSecondary, letterSpacing: '0.04em',
     padding: '0 10px', marginRight: 'auto', whiteSpace: 'nowrap',
   },
+  replayTools: {
+    display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
+  },
+  replayToolButton: (active) => ({
+    minHeight: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 11.5, fontWeight: 850,
+    color: active ? '#07131c' : theme.textPrimary,
+    background: active ? theme.primary : 'rgba(255,255,255,0.06)',
+    border: `1px solid ${active ? theme.primary : theme.border}`,
+  }),
+  videoProgressTrack: {
+    height: 5, minWidth: 90, flex: '1 1 90px', overflow: 'hidden', borderRadius: 999,
+    background: 'rgba(255,255,255,0.09)', border: `1px solid ${theme.border}`,
+  },
+  videoProgressFill: (progress) => ({
+    display: 'block', width: `${Math.max(0, Math.min(100, progress || 0))}%`, height: '100%',
+    borderRadius: 'inherit', background: theme.primary, transition: 'width 120ms linear',
+  }),
+  videoStatus: (error) => ({
+    flexBasis: '100%', color: error ? '#ff8f8f' : theme.textSecondary, fontSize: 11.5,
+  }),
   // Two move columns: number | white's move | black's move.
   moveList: {
     display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) minmax(0, 1fr)', alignItems: 'center',

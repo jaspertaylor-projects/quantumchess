@@ -116,6 +116,9 @@ export default function PricingModal({
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> Basic bots
             </li>
+            <li className="qc-pm-feature-item">
+              <CheckIcon size={16} className="check" /> 3 rewarded-ad game reviews a day
+            </li>
           </ul>
           
           <button 
@@ -156,13 +159,13 @@ export default function PricingModal({
           
           <ul className="qc-pm-feature-list">
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> A year with no ads
+              <CheckIcon size={16} className="check" /> Three months with no ads
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> One engine game review a day
+              <CheckIcon size={16} className="check" /> Five engine game reviews a day
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> (Tips stack for multiple years)
+              <CheckIcon size={16} className="check" /> (Tips stack in three-month windows)
             </li>
           </ul>
           

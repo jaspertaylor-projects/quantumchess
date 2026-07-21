@@ -35,6 +35,7 @@ import { devDebug } from '../devlog.js';
 import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleScoring.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import { CONTACT_PARTICLE_MAX_ARRIVAL_MS } from '../chessboard/contactParticles.js';
+import PuzzleDisplayAd from '../ads/PuzzleDisplayAd.jsx';
 
 const STANDARD_EFFECT_BEAT_MS = 1400;
 const FAILED_HEAL_ANIMATION_MS = 1100;
@@ -159,6 +160,7 @@ export default function MinedPuzzleModal({
   selfAvatar = null,
   selfRating = '????',
   strangerAvatar = null,
+  showDisplayAd = false,
 }) {
   const totalMoves = puzzle ? puzzle.recipe.moves : 3;
   const [cur, setCur] = useState(null); // { pieces, lastMove, cc } — the live position
@@ -1089,6 +1091,7 @@ export default function MinedPuzzleModal({
                     {copied ? <span style={{ marginLeft: 8, fontSize: 12, color: '#7ee787' }}>copied ✓</span> : null}
                   </div>
                 </div>
+                <PuzzleDisplayAd enabled={showDisplayAd} />
               </div>
             </div>
           ) : null}

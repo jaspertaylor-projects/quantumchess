@@ -1,0 +1,2289 @@
+{
+  "generatedAt": "2026-07-20T06:11:23.950Z",
+  "seed": "0x51a7c0de",
+  "white": {
+    "id": "ernest-smyslov",
+    "name": "Ernest Smyslov",
+    "rating": 2250
+  },
+  "black": {
+    "id": "cecilia-chigorin",
+    "name": "Cecilia Chigorin",
+    "rating": 2150
+  },
+  "result": "1-0",
+  "winner": "white",
+  "reason": "checkmate",
+  "plies": 103,
+  "durationMs": 1317920,
+  "moves": [
+    {
+      "from": "c1",
+      "to": "d3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e7",
+      "to": "e5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e2",
+      "to": "c3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h8",
+      "to": "g6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c2",
+      "to": "c1",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d7",
+      "to": "d3",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "f1",
+      "to": "d3",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "g6",
+      "to": "f4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g2",
+      "to": "e4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f7",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f2",
+      "to": "f3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f5",
+      "to": "e4",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "d2",
+      "to": "f4",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "e4",
+      "to": "f3",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "f4",
+      "to": "d2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g7",
+      "to": "g5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e1",
+      "to": "e2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g5",
+      "to": "g4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e2",
+      "to": "e3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c8",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h2",
+      "to": "g3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h7",
+      "to": "h5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h1",
+      "to": "h2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f5",
+      "to": "c8",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e3",
+      "to": "e4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f8",
+      "to": "f6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g1",
+      "to": "g2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f3",
+      "to": "g2",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "d2",
+      "to": "g2",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "h5",
+      "to": "h4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h2",
+      "to": "h4",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "g4",
+      "to": "h4",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "g3",
+      "to": "h4",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "g8",
+      "to": "g2",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "b2",
+      "to": "g2",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "c8",
+      "to": "h3",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g2",
+      "to": "e2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e8",
+      "to": "d7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d3",
+      "to": "d4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e5",
+      "to": "g4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a2",
+      "to": "f7",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b7",
+      "to": "e4",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "e2",
+      "to": "e4",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "h3",
+      "to": "h2",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e4",
+      "to": "g4",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "d7",
+      "to": "g4",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "f7",
+      "to": "d5",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g4",
+      "to": "c8",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h4",
+      "to": "g3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d8",
+      "to": "d7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g3",
+      "to": "h2",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "c7",
+      "to": "c6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d5",
+      "to": "e4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d7",
+      "to": "d5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e4",
+      "to": "c2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b8",
+      "to": "b7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b1",
+      "to": "b2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c8",
+      "to": "d7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c2",
+      "to": "g6",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a7",
+      "to": "a5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h2",
+      "to": "g3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f6",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c1",
+      "to": "e2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d7",
+      "to": "e6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d1",
+      "to": "d3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f5",
+      "to": "g6",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "e2",
+      "to": "f4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g6",
+      "to": "f7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f4",
+      "to": "e6",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "f7",
+      "to": "e6",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "b2",
+      "to": "b3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b7",
+      "to": "b6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d4",
+      "to": "b6",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "a8",
+      "to": "a7",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b6",
+      "to": "a7",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "e6",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d3",
+      "to": "d4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f5",
+      "to": "e6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b3",
+      "to": "a4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e6",
+      "to": "d6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a4",
+      "to": "a5",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "d6",
+      "to": "e6",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a7",
+      "to": "b6",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e6",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a5",
+      "to": "a6",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f5",
+      "to": "g4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a6",
+      "to": "a7",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g4",
+      "to": "g3",
+      "side": "black",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "a7",
+      "to": "a8",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c6",
+      "to": "c5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "b6",
+      "to": "c5",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "g3",
+      "to": "f4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "c5",
+      "to": "e7",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f4",
+      "to": "f3",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a8",
+      "to": "d5",
+      "side": "white",
+      "enPassant": false,
+      "capture": true
+    },
+    {
+      "from": "f3",
+      "to": "g3",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "d5",
+      "to": "a2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g3",
+      "to": "h3",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "a2",
+      "to": "f2",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "h3",
+      "to": "g4",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "f2",
+      "to": "e3",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "g4",
+      "to": "f5",
+      "side": "black",
+      "enPassant": false,
+      "capture": false
+    },
+    {
+      "from": "e3",
+      "to": "e4",
+      "side": "white",
+      "enPassant": false,
+      "capture": false
+    }
+  ],
+  "searchLog": [
+    {
+      "ply": 1,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "c1",
+        "to": "d3",
+        "enPassant": false
+      },
+      "depth": 0,
+      "score": 0,
+      "nodes": 0,
+      "elapsedMs": 108
+    },
+    {
+      "ply": 2,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e7",
+        "to": "e5",
+        "enPassant": false
+      },
+      "depth": 0,
+      "score": 0,
+      "nodes": 0,
+      "elapsedMs": 85
+    },
+    {
+      "ply": 3,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e2",
+        "to": "c3",
+        "enPassant": false
+      },
+      "depth": 0,
+      "score": 0,
+      "nodes": 0,
+      "elapsedMs": 57
+    },
+    {
+      "ply": 4,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "h8",
+        "to": "g6",
+        "enPassant": false
+      },
+      "depth": 0,
+      "score": 0,
+      "nodes": 0,
+      "elapsedMs": 56
+    },
+    {
+      "ply": 5,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "c2",
+        "to": "c1",
+        "enPassant": false
+      },
+      "depth": 2,
+      "score": -1.7370000000000003,
+      "nodes": 300992,
+      "elapsedMs": 15075
+    },
+    {
+      "ply": 6,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d7",
+        "to": "d3",
+        "enPassant": false
+      },
+      "depth": 1,
+      "score": 3.7460000000000004,
+      "nodes": 278144,
+      "elapsedMs": 13549
+    },
+    {
+      "ply": 7,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f1",
+        "to": "d3",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.14800000000000013,
+      "nodes": 183552,
+      "elapsedMs": 15088
+    },
+    {
+      "ply": 8,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g6",
+        "to": "f4",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.44500000000000145,
+      "nodes": 199936,
+      "elapsedMs": 13534
+    },
+    {
+      "ply": 9,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "g2",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 0.07699999999999824,
+      "nodes": 253824,
+      "elapsedMs": 15095
+    },
+    {
+      "ply": 10,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f7",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.69,
+      "nodes": 235456,
+      "elapsedMs": 13534
+    },
+    {
+      "ply": 11,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f2",
+        "to": "f3",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 0.613000000000001,
+      "nodes": 281344,
+      "elapsedMs": 15063
+    },
+    {
+      "ply": 12,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f5",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.8209999999999996,
+      "nodes": 262976,
+      "elapsedMs": 13538
+    },
+    {
+      "ply": 13,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d2",
+        "to": "f4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": 0.9489999999999982,
+      "nodes": 201728,
+      "elapsedMs": 15077
+    },
+    {
+      "ply": 14,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e4",
+        "to": "f3",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.8409999999999986,
+      "nodes": 240320,
+      "elapsedMs": 13560
+    },
+    {
+      "ply": 15,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f4",
+        "to": "d2",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": 1.023,
+      "nodes": 310720,
+      "elapsedMs": 15061
+    },
+    {
+      "ply": 16,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g7",
+        "to": "g5",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -1.0239999999999982,
+      "nodes": 213120,
+      "elapsedMs": 13542
+    },
+    {
+      "ply": 17,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e1",
+        "to": "e2",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 1.040999999999998,
+      "nodes": 254400,
+      "elapsedMs": 15068
+    },
+    {
+      "ply": 18,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g5",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": -1.217999999999998,
+      "nodes": 228736,
+      "elapsedMs": 13540
+    },
+    {
+      "ply": 19,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e2",
+        "to": "e3",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": 1.195000000000001,
+      "nodes": 330432,
+      "elapsedMs": 15060
+    },
+    {
+      "ply": 20,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "c8",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 2,
+      "score": -1.245000000000001,
+      "nodes": 309184,
+      "elapsedMs": 13539
+    },
+    {
+      "ply": 21,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "h2",
+        "to": "g3",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": 1.1360000000000006,
+      "nodes": 305024,
+      "elapsedMs": 15060
+    },
+    {
+      "ply": 22,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "h7",
+        "to": "h5",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": -0.6210000000000017,
+      "nodes": 276672,
+      "elapsedMs": 13539
+    },
+    {
+      "ply": 23,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "h1",
+        "to": "h2",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 1.089,
+      "nodes": 288960,
+      "elapsedMs": 15059
+    },
+    {
+      "ply": 24,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f5",
+        "to": "c8",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": -0.9289999999999994,
+      "nodes": 292416,
+      "elapsedMs": 13544
+    },
+    {
+      "ply": 25,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e3",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": 1.1530000000000002,
+      "nodes": 299264,
+      "elapsedMs": 15058
+    },
+    {
+      "ply": 26,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f8",
+        "to": "f6",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": -1.2149999999999999,
+      "nodes": 276928,
+      "elapsedMs": 13550
+    },
+    {
+      "ply": 27,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "g1",
+        "to": "g2",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 0.9609999999999992,
+      "nodes": 260672,
+      "elapsedMs": 15060
+    },
+    {
+      "ply": 28,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f3",
+        "to": "g2",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": -0.5010000000000032,
+      "nodes": 185408,
+      "elapsedMs": 13573
+    },
+    {
+      "ply": 29,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d2",
+        "to": "g2",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 0.4410000000000034,
+      "nodes": 169216,
+      "elapsedMs": 15062
+    },
+    {
+      "ply": 30,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "h5",
+        "to": "h4",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": -0.48300000000000193,
+      "nodes": 235840,
+      "elapsedMs": 13551
+    },
+    {
+      "ply": 31,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "h2",
+        "to": "h4",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 0.42599999999999855,
+      "nodes": 284480,
+      "elapsedMs": 15048
+    },
+    {
+      "ply": 32,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g4",
+        "to": "h4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": 0.16299999999999665,
+      "nodes": 168320,
+      "elapsedMs": 13549
+    },
+    {
+      "ply": 33,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "g3",
+        "to": "h4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": 3.2679999999999985,
+      "nodes": 97472,
+      "elapsedMs": 15051
+    },
+    {
+      "ply": 34,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g8",
+        "to": "g2",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": -2.8250000000000046,
+      "nodes": 126528,
+      "elapsedMs": 13539
+    },
+    {
+      "ply": 35,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b2",
+        "to": "g2",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 2.219999999999999,
+      "nodes": 66176,
+      "elapsedMs": 15025
+    },
+    {
+      "ply": 36,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "c8",
+        "to": "h3",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -2.8050000000000024,
+      "nodes": 99264,
+      "elapsedMs": 13529
+    },
+    {
+      "ply": 37,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "g2",
+        "to": "e2",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 2.3780000000000014,
+      "nodes": 112576,
+      "elapsedMs": 15033
+    },
+    {
+      "ply": 38,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e8",
+        "to": "d7",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -2.529000000000005,
+      "nodes": 104192,
+      "elapsedMs": 13527
+    },
+    {
+      "ply": 39,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d3",
+        "to": "d4",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 2.0310000000000015,
+      "nodes": 115072,
+      "elapsedMs": 15025
+    },
+    {
+      "ply": 40,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e5",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -2.934000000000006,
+      "nodes": 102976,
+      "elapsedMs": 13529
+    },
+    {
+      "ply": 41,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a2",
+        "to": "f7",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": 4.202000000000009,
+      "nodes": 111680,
+      "elapsedMs": 15021
+    },
+    {
+      "ply": 42,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "b7",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": -3.2490000000000054,
+      "nodes": 64768,
+      "elapsedMs": 13540
+    },
+    {
+      "ply": 43,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e2",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 4.093000000000002,
+      "nodes": 86336,
+      "elapsedMs": 15069
+    },
+    {
+      "ply": 44,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "h3",
+        "to": "h2",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -5.46,
+      "nodes": 66560,
+      "elapsedMs": 13523
+    },
+    {
+      "ply": 45,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e4",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 4.526999999999996,
+      "nodes": 59008,
+      "elapsedMs": 15023
+    },
+    {
+      "ply": 46,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d7",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -5.114000000000004,
+      "nodes": 66368,
+      "elapsedMs": 13525
+    },
+    {
+      "ply": 47,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f7",
+        "to": "d5",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 4.693999999999992,
+      "nodes": 125120,
+      "elapsedMs": 15011
+    },
+    {
+      "ply": 48,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g4",
+        "to": "c8",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": -5.265000000000007,
+      "nodes": 141184,
+      "elapsedMs": 13528
+    },
+    {
+      "ply": 49,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "h4",
+        "to": "g3",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 5.604000000000004,
+      "nodes": 174464,
+      "elapsedMs": 15008
+    },
+    {
+      "ply": 50,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d8",
+        "to": "d7",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -5.425000000000002,
+      "nodes": 151488,
+      "elapsedMs": 13512
+    },
+    {
+      "ply": 51,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "g3",
+        "to": "h2",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 6.347000000000002,
+      "nodes": 163200,
+      "elapsedMs": 15006
+    },
+    {
+      "ply": 52,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "c7",
+        "to": "c6",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -5.990000000000003,
+      "nodes": 176832,
+      "elapsedMs": 13518
+    },
+    {
+      "ply": 53,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d5",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 6.703000000000007,
+      "nodes": 215360,
+      "elapsedMs": 15017
+    },
+    {
+      "ply": 54,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d7",
+        "to": "d5",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -6.173000000000005,
+      "nodes": 176768,
+      "elapsedMs": 13526
+    },
+    {
+      "ply": 55,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e4",
+        "to": "c2",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 7.104999999999999,
+      "nodes": 218496,
+      "elapsedMs": 15010
+    },
+    {
+      "ply": 56,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "b8",
+        "to": "b7",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -7.020000000000004,
+      "nodes": 145408,
+      "elapsedMs": 13514
+    },
+    {
+      "ply": 57,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b1",
+        "to": "b2",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 7.083999999999996,
+      "nodes": 197888,
+      "elapsedMs": 15006
+    },
+    {
+      "ply": 58,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "c8",
+        "to": "d7",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -6.519000000000006,
+      "nodes": 161792,
+      "elapsedMs": 13521
+    },
+    {
+      "ply": 59,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "c2",
+        "to": "g6",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 7.225999999999999,
+      "nodes": 190912,
+      "elapsedMs": 15007
+    },
+    {
+      "ply": 60,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "a7",
+        "to": "a5",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -6.643000000000001,
+      "nodes": 164864,
+      "elapsedMs": 13516
+    },
+    {
+      "ply": 61,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "h2",
+        "to": "g3",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 7.218999999999999,
+      "nodes": 207232,
+      "elapsedMs": 15022
+    },
+    {
+      "ply": 62,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f6",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -7.182000000000001,
+      "nodes": 147200,
+      "elapsedMs": 13517
+    },
+    {
+      "ply": 63,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "c1",
+        "to": "e2",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 7.413000000000004,
+      "nodes": 212352,
+      "elapsedMs": 15013
+    },
+    {
+      "ply": 64,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d7",
+        "to": "e6",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -8.252666666666666,
+      "nodes": 110400,
+      "elapsedMs": 13513
+    },
+    {
+      "ply": 65,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d1",
+        "to": "d3",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 8.392666666666663,
+      "nodes": 221568,
+      "elapsedMs": 15013
+    },
+    {
+      "ply": 66,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f5",
+        "to": "g6",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -8.835333333333331,
+      "nodes": 149312,
+      "elapsedMs": 13508
+    },
+    {
+      "ply": 67,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e2",
+        "to": "f4",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 7.601333333333329,
+      "nodes": 285440,
+      "elapsedMs": 15006
+    },
+    {
+      "ply": 68,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g6",
+        "to": "f7",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": -7.872999999999998,
+      "nodes": 266368,
+      "elapsedMs": 13507
+    },
+    {
+      "ply": 69,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f4",
+        "to": "e6",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 7.710999999999996,
+      "nodes": 323584,
+      "elapsedMs": 15005
+    },
+    {
+      "ply": 70,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f7",
+        "to": "e6",
+        "enPassant": false
+      },
+      "depth": 9,
+      "score": -7.570333333333335,
+      "nodes": 270848,
+      "elapsedMs": 13511
+    },
+    {
+      "ply": 71,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b2",
+        "to": "b3",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 5.503000000000001,
+      "nodes": 416576,
+      "elapsedMs": 15006
+    },
+    {
+      "ply": 72,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "b7",
+        "to": "b6",
+        "enPassant": false
+      },
+      "depth": 9,
+      "score": -5.405000000000001,
+      "nodes": 250112,
+      "elapsedMs": 13510
+    },
+    {
+      "ply": 73,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d4",
+        "to": "b6",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 5.550000000000001,
+      "nodes": 521536,
+      "elapsedMs": 15005
+    },
+    {
+      "ply": 74,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "a8",
+        "to": "a7",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -7.608,
+      "nodes": 488320,
+      "elapsedMs": 13505
+    },
+    {
+      "ply": 75,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b6",
+        "to": "a7",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": 8.244666666666665,
+      "nodes": 688192,
+      "elapsedMs": 15003
+    },
+    {
+      "ply": 76,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e6",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": -9.061,
+      "nodes": 511936,
+      "elapsedMs": 13504
+    },
+    {
+      "ply": 77,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d3",
+        "to": "d4",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": 8.352,
+      "nodes": 811776,
+      "elapsedMs": 15002
+    },
+    {
+      "ply": 78,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f5",
+        "to": "e6",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": -9.866666666666667,
+      "nodes": 518016,
+      "elapsedMs": 13506
+    },
+    {
+      "ply": 79,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b3",
+        "to": "a4",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": 10.093999999999998,
+      "nodes": 793280,
+      "elapsedMs": 15002
+    },
+    {
+      "ply": 80,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e6",
+        "to": "d6",
+        "enPassant": false
+      },
+      "depth": 11,
+      "score": -11.606666666666662,
+      "nodes": 759872,
+      "elapsedMs": 13503
+    },
+    {
+      "ply": 81,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a4",
+        "to": "a5",
+        "enPassant": false
+      },
+      "depth": 11,
+      "score": 14.807999999999998,
+      "nodes": 938176,
+      "elapsedMs": 15002
+    },
+    {
+      "ply": 82,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "d6",
+        "to": "e6",
+        "enPassant": false
+      },
+      "depth": 12,
+      "score": -19.151000000000003,
+      "nodes": 724452,
+      "elapsedMs": 12907
+    },
+    {
+      "ply": 83,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a7",
+        "to": "b6",
+        "enPassant": false
+      },
+      "depth": 11,
+      "score": 19.241000000000003,
+      "nodes": 878848,
+      "elapsedMs": 15002
+    },
+    {
+      "ply": 84,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "e6",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 11,
+      "score": -14.76933333333333,
+      "nodes": 616384,
+      "elapsedMs": 13519
+    },
+    {
+      "ply": 85,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a5",
+        "to": "a6",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": 14.863999999999995,
+      "nodes": 655680,
+      "elapsedMs": 15003
+    },
+    {
+      "ply": 86,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f5",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 10,
+      "score": -20.641,
+      "nodes": 406464,
+      "elapsedMs": 13512
+    },
+    {
+      "ply": 87,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a6",
+        "to": "a7",
+        "enPassant": false
+      },
+      "depth": 9,
+      "score": 20.7025,
+      "nodes": 561152,
+      "elapsedMs": 15002
+    },
+    {
+      "ply": 88,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g4",
+        "to": "g3",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -20.725,
+      "nodes": 267392,
+      "elapsedMs": 13505
+    },
+    {
+      "ply": 89,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a7",
+        "to": "a8",
+        "enPassant": false
+      },
+      "depth": 9,
+      "score": 23.134999999999994,
+      "nodes": 422976,
+      "elapsedMs": 15003
+    },
+    {
+      "ply": 90,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "c6",
+        "to": "c5",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -23.488,
+      "nodes": 192832,
+      "elapsedMs": 13505
+    },
+    {
+      "ply": 91,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "b6",
+        "to": "c5",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 19.381,
+      "nodes": 283456,
+      "elapsedMs": 15005
+    },
+    {
+      "ply": 92,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g3",
+        "to": "f4",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -27.008999999999997,
+      "nodes": 180544,
+      "elapsedMs": 13506
+    },
+    {
+      "ply": 93,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "c5",
+        "to": "e7",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 27.144,
+      "nodes": 237312,
+      "elapsedMs": 15004
+    },
+    {
+      "ply": 94,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f4",
+        "to": "f3",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": -27.89,
+      "nodes": 171520,
+      "elapsedMs": 13507
+    },
+    {
+      "ply": 95,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a8",
+        "to": "d5",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": 28.064999999999998,
+      "nodes": 217984,
+      "elapsedMs": 15008
+    },
+    {
+      "ply": 96,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "f3",
+        "to": "g3",
+        "enPassant": false
+      },
+      "depth": 9,
+      "score": -984,
+      "nodes": 114061,
+      "elapsedMs": 9293
+    },
+    {
+      "ply": 97,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "d5",
+        "to": "a2",
+        "enPassant": false
+      },
+      "depth": 8,
+      "score": 991,
+      "nodes": 77649,
+      "elapsedMs": 5565
+    },
+    {
+      "ply": 98,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g3",
+        "to": "h3",
+        "enPassant": false
+      },
+      "depth": 7,
+      "score": -994,
+      "nodes": 16471,
+      "elapsedMs": 1311
+    },
+    {
+      "ply": 99,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "a2",
+        "to": "f2",
+        "enPassant": false
+      },
+      "depth": 6,
+      "score": 993,
+      "nodes": 28931,
+      "elapsedMs": 1880
+    },
+    {
+      "ply": 100,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "h3",
+        "to": "g4",
+        "enPassant": false
+      },
+      "depth": 5,
+      "score": -996,
+      "nodes": 1013,
+      "elapsedMs": 64
+    },
+    {
+      "ply": 101,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "f2",
+        "to": "e3",
+        "enPassant": false
+      },
+      "depth": 4,
+      "score": 997,
+      "nodes": 1301,
+      "elapsedMs": 71
+    },
+    {
+      "ply": 102,
+      "side": "black",
+      "botId": "cecilia-chigorin",
+      "move": {
+        "type": "move",
+        "from": "g4",
+        "to": "f5",
+        "enPassant": false
+      },
+      "depth": 3,
+      "score": -998,
+      "nodes": 179,
+      "elapsedMs": 26
+    },
+    {
+      "ply": 103,
+      "side": "white",
+      "botId": "ernest-smyslov",
+      "move": {
+        "type": "move",
+        "from": "e3",
+        "to": "e4",
+        "enPassant": false
+      },
+      "depth": 2,
+      "score": 999,
+      "nodes": 12,
+      "elapsedMs": 7
+    }
+  ]
+}

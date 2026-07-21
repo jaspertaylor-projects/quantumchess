@@ -49,8 +49,10 @@ import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
-import { adsEnabled, showRewardedReviewAd } from './ads/adService.js';
-import { isAdFree, isTipper, tipReviewAvailable, markTipReviewUsed } from './account/billing.js';
+import { showRewardedAd } from './ads/adService.js';
+import {
+  isAdFree, isTipper, markReviewUsed, reviewCapFor, reviewsRemaining,
+} from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
 
@@ -224,7 +226,7 @@ export default function App({ entryAction = null }) {
   const {
     accountOpen, setAccountOpen, accountUpsellSource, pricingOpen, setPricingOpen,
     billingReturn, setBillingReturn, isPaidUser,
-    handleRequirePremium, reviewGame, setReviewGame, handleReviewGame,
+    handleRequirePremium, reviewGame, setReviewGame, handleReplayGame, handleReviewGame, handleShareGame,
   } = useMonetization({
     auth,
     showWinPopup,
@@ -716,16 +718,38 @@ export default function App({ entryAction = null }) {
     handleStartGame(gameSettings);
   }, [gameSettings, handleStartGame]);
 
-  // Review access: premium reviews free; a tipper spends today's free one;
-  // free users voluntarily watch a rewarded ad (only once ads are actually
-  // serving — dormant builds just open it).
-  const postGameReviewAccess = isPaidUser ? 'free'
-    : (isTipper(auth.profile) && tipReviewAvailable(auth.user && auth.user.id)) ? 'tip'
-      : adsEnabled() ? 'ad' : 'free';
+  // Review ladder: Premium unlimited; tippers get five without ads; free
+  // accounts get three, each granted only after a rewarded ad is viewed.
+  const [, setPostGameReviewQuotaVersion] = useState(0);
+  const [postGameReviewNotice, setPostGameReviewNotice] = useState('');
+  const [postGameReviewBusy, setPostGameReviewBusy] = useState(false);
+  const reviewUserId = auth.user && auth.user.id;
+  const postGameReviewsRemaining = reviewsRemaining(auth.profile, reviewUserId);
+  const postGameReviewAccess = isPaidUser ? 'premium'
+    : postGameReviewsRemaining === 0 ? 'limit'
+      : isTipper(auth.profile) ? 'tip' : 'ad';
+  useEffect(() => {
+    setPostGameReviewNotice('');
+    setPostGameReviewBusy(false);
+  }, [gameInstanceId]);
 
-  const handlePostGameReview = useCallback(() => {
-    const openReview = () => {
-      if (postGameReviewAccess === 'tip') markTipReviewUsed(auth.user && auth.user.id);
+  const handlePostGameReview = useCallback(async () => {
+    if (postGameReviewBusy) return;
+    const cap = reviewCapFor(auth.profile);
+    if (reviewsRemaining(auth.profile, reviewUserId) === 0) {
+      setPostGameReviewNotice(`You've used today's ${cap} reviews — more tomorrow, or go Premium for unlimited.`);
+      return;
+    }
+    setPostGameReviewBusy(true);
+    try {
+      if (!isPaidUser && !isTipper(auth.profile)) {
+        const rewarded = await showRewardedAd();
+        if (!rewarded) return;
+      }
+      if (!isPaidUser) {
+        markReviewUsed(reviewUserId);
+        setPostGameReviewQuotaVersion((version) => version + 1);
+      }
       setShowWinPopup(false);
       setReviewGame({
         game: {
@@ -736,14 +760,14 @@ export default function App({ entryAction = null }) {
         moves,
       });
       trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
-        accessType: isPaidUser ? 'premium' : postGameReviewAccess === 'free' ? 'standard' : postGameReviewAccess,
+        accessType: isPaidUser ? 'premium' : isTipper(auth.profile) ? 'tip' : 'rewarded_ad',
         gameResult: resolvedWinnerText,
         moveCount: moves.length,
       });
-    };
-    if (postGameReviewAccess === 'ad') showRewardedReviewAd({ onGranted: openReview });
-    else openReview();
-  }, [postGameReviewAccess, auth.user, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setReviewGame]);
+    } finally {
+      setPostGameReviewBusy(false);
+    }
+  }, [postGameReviewBusy, auth.profile, reviewUserId, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setReviewGame]);
 
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
   const onlineDrawOfferRole = isOnlineGameRef.current && online.drawOffer
@@ -1011,7 +1035,9 @@ export default function App({ entryAction = null }) {
         onPlayAgain={handlePlayAgain}
         onGameReview={handlePostGameReview}
         reviewAccess={postGameReviewAccess}
-        reviewDisabled={moves.length === 0}
+        reviewRemaining={postGameReviewsRemaining}
+        reviewNotice={postGameReviewNotice}
+        reviewDisabled={moves.length === 0 || postGameReviewBusy}
         showTipPromo={!isAdFree(auth.profile)}
         onTipPromo={() => { setShowWinPopup(false); setAccountOpen(true, 'game_end_promo'); }}
         pendingEpChoice={input.pendingEpChoice}
@@ -1050,7 +1076,9 @@ export default function App({ entryAction = null }) {
         accountUpsellSource={accountUpsellSource}
         onCloseAccount={() => { setAccountOpen(false); setBillingReturn(null); }}
         billingReturn={billingReturn}
+        handleReplayGame={handleReplayGame}
         handleReviewGame={handleReviewGame}
+        handleShareGame={handleShareGame}
         onAccountCreated={(needsConfirmation) => {
           // No pricing pitch at signup (it was burying the check-your-email
           // page). Premium stays desire-timed: locked bots, review-after-loss,

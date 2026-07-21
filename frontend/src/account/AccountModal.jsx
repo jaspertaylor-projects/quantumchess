@@ -16,8 +16,9 @@ import {
   PREMIUM_FEATURES, PREMIUM_PRICE_LABEL, PREMIUM_PRICE_VALUE, PREMIUM_PITCH,
   TIP_PITCH, TIP_PRICE_LABEL, TIP_PRICE_VALUE,
   startCheckout, startTipCheckout, openBillingPortal, isAdFree, isTipper,
-  tipReviewAvailable, markTipReviewUsed,
+  reviewCapFor, reviewsRemaining, markReviewUsed,
 } from './billing.js';
+import { showRewardedAd } from '../ads/adService.js';
 import { uploadAvatar } from './avatarUpload.js';
 import { taglineOptions } from '../sayings/sayingsCatalog.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
@@ -29,7 +30,9 @@ export default function AccountModal({
   auth, // the useAuth() bundle from App
   upsellSource = 'account',
   billingReturn = null, // 'success' | 'cancelled' | null (from ?premium= redirect)
+  onReplayGame = () => {}, // free: replay moves + explore variations, no engine
   onReviewGame = () => {}, // premium: open the game review modal for a saved game
+  onShareGame = () => {}, // create/copy a public replay link
   onAccountCreated = () => {}, // triggered after successful sign up
   onOpenAdminStats = () => {}, // admin: open the site stats dashboard
 }) {
@@ -40,6 +43,9 @@ export default function AccountModal({
   const [notice, setNotice] = useState(null); // { kind: 'info'|'error', text }
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [games, setGames] = useState([]);
+  const [sharingGameId, setSharingGameId] = useState(null);
+  const [reviewingGameId, setReviewingGameId] = useState(null);
+  const [, setReviewQuotaVersion] = useState(0);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [taglineDraft, setTaglineDraft] = useState('');
   const avatarInputRef = useRef(null);
@@ -61,7 +67,7 @@ export default function AccountModal({
       } else if (billingReturn === 'tip_thanks') {
         setNotice({
           kind: 'info',
-          text: 'Thank you for the tip! ♥ Ads are off on this account for the next year.',
+          text: 'Thank you for the tip! ♥ Ads are off on this account for the next three months.',
         });
       } else if (billingReturn === 'cancelled') {
         setNotice({ kind: 'info', text: 'Checkout cancelled — nothing was charged.' });
@@ -569,14 +575,14 @@ export default function AccountModal({
                 >
                   <span style={{ flex: '1 1 200px', fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                     {isAdFree(profile)
-                      ? `You're ad-free until ${new Date(profile.ad_free_until).toLocaleDateString()} with one engine review a day — thanks for the tip! ♥`
+                      ? `You're ad-free until ${new Date(profile.ad_free_until).toLocaleDateString()} with 5 engine reviews a day — thanks for the tip! ♥`
                       : TIP_PITCH}
                   </span>
                   <button
                     type="button" className="qc-account-tip qc-am-ghost-btn"
                     style={{ borderColor: 'rgba(246,196,69,0.3)', color: '#f6c445' }}
                     disabled={busy} onClick={handleTip}
-                    title="One-time payment — no ads for a year (tips stack)"
+                    title="One-time payment — no ads for three months (tips stack)"
                   >
                     {busy ? 'Working…' : `Tip ${TIP_PRICE_LABEL}`}
                   </button>
@@ -593,7 +599,7 @@ export default function AccountModal({
 
             <div>
               <div className="qc-am-label">
-                Saved Games ({isPaid ? games.length : `${games.length} of last 10`})
+                Saved Games ({isPaid ? `${games.length} of 1,000` : `${games.length} of last 10`})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto', paddingRight: 4 }}>
                 {games.length === 0 ? (
@@ -609,34 +615,68 @@ export default function AccountModal({
                         {g.rating_after ? `${g.rating_before}→${g.rating_after}` : 'unrated'}
                       </span>
                       <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11.5 }}>{new Date(g.created_at).toLocaleDateString()}</span>
-                      <button
-                        type="button"
-                        className={`qc-account-review-game qc-am-review-btn ${isPaid || (isTipper(profile) && tipReviewAvailable(user.id)) ? 'premium' : 'standard'}`}
-                        title={
-                          isPaid
-                            ? 'Review this game with the engine'
-                            : isTipper(profile)
-                              ? (tipReviewAvailable(user.id)
-                                ? "Review this game with the engine (today's tip review)"
-                                : "Today's tip review is used — another unlocks tomorrow")
-                              : 'Game review is a Premium feature'
-                        }
-                        onClick={async () => {
-                          if (isPaid) { onReviewGame(g); return; }
-                          if (isTipper(profile)) {
-                            if (!tipReviewAvailable(user.id)) {
-                              setNotice({ kind: 'info', text: "You've used today's tip review — another unlocks tomorrow, or go Premium for unlimited reviews." });
+                      <span className="qc-am-game-actions">
+                        <button
+                          type="button"
+                          className="qc-account-replay-game qc-am-review-btn standard"
+                          title="Replay this game and explore variations"
+                          onClick={() => onReplayGame(g)}
+                        >
+                          Replay
+                        </button>
+                        <button
+                          type="button"
+                          className="qc-account-share-game qc-am-review-btn standard"
+                          title="Share a public replay link"
+                          disabled={sharingGameId === g.id}
+                          onClick={async () => {
+                            setSharingGameId(g.id);
+                            const result = await onShareGame(g);
+                            setSharingGameId(null);
+                            if (result?.error) setNotice({ kind: 'error', text: result.error });
+                            else if (result?.copied) setNotice({ kind: 'info', text: 'Replay link copied!' });
+                            else if (result?.shared) setNotice({ kind: 'info', text: 'Replay link shared!' });
+                          }}
+                        >
+                          {sharingGameId === g.id ? '…' : 'Share'}
+                        </button>
+                        <button
+                          type="button"
+                          className={`qc-account-review-game qc-am-review-btn ${isPaid || isTipper(profile) ? 'premium' : 'standard'}`}
+                          title={isPaid
+                            ? 'Unlimited engine game reviews'
+                            : `${reviewsRemaining(profile, user.id)} engine reviews left today${isTipper(profile) ? '' : ' · rewarded ad required'}`}
+                          disabled={reviewingGameId !== null}
+                          onClick={async () => {
+                            const cap = reviewCapFor(profile);
+                            const remaining = reviewsRemaining(profile, user.id);
+                            if (remaining === 0) {
+                              setNotice({ kind: 'info', text: `You've used today's ${cap} reviews — more tomorrow, or go Premium for unlimited.` });
                               return;
                             }
-                            const opened = await onReviewGame(g);
-                            if (opened !== false) markTipReviewUsed(user.id);
-                            return;
-                          }
-                          setNotice({ kind: 'info', text: 'Game review with engine moves is a Premium feature — upgrade above for unlimited, or tip $3 for one review a day.' });
-                        }}
-                      >
-                        Review
-                      </button>
+                            setReviewingGameId(g.id);
+                            try {
+                              if (!isPaid && !isTipper(profile)) {
+                                const rewarded = await showRewardedAd();
+                                if (!rewarded) return;
+                              }
+                              const opened = await onReviewGame(g);
+                              if (opened !== false && !isPaid) {
+                                markReviewUsed(user.id);
+                                setReviewQuotaVersion((version) => version + 1);
+                              }
+                            } finally {
+                              setReviewingGameId(null);
+                            }
+                          }}
+                        >
+                          {reviewingGameId === g.id
+                            ? '…'
+                            : isPaid || isTipper(profile) || reviewsRemaining(profile, user.id) === 0
+                              ? 'Review'
+                              : '▷ Review (watch ad)'}
+                        </button>
+                      </span>
                     </div>
                   ))
                 )}

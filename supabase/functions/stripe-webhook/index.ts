@@ -1,6 +1,6 @@
 // stripe-webhook: receives Stripe events and flips qc_profiles.tier.
 //   checkout.session.completed (subscription) -> tier = 'paid' (+ stripe ids)
-//   checkout.session.completed (payment/tip)  -> ad_free_until += 1 year
+//   checkout.session.completed (payment/tip)  -> ad_free_until += 90 days
 //   customer.subscription.updated             -> follow subscription status
 //   customer.subscription.deleted             -> tier = 'free'
 // Deployed with verify_jwt = false (Stripe authenticates via signature).
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
         const userId = session.client_reference_id;
         const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
 
-        // One-time tip: a year of no ads, stacking on any time already
+        // One-time tip: 90 ad-free days, stacking on any time already
         // banked (repeat tips extend rather than overwrite).
         if (session.mode === 'payment') {
           if (userId) {
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
             const now = Date.now();
             const current = profile?.ad_free_until ? new Date(profile.ad_free_until).getTime() : 0;
             const base = Math.max(now, current);
-            const until = new Date(base + 365 * 24 * 60 * 60 * 1000).toISOString();
+            const until = new Date(base + 90 * 24 * 60 * 60 * 1000).toISOString();
             const patch: Record<string, string> = { ad_free_until: until };
             if (customerId) patch.stripe_customer_id = customerId;
             const { error } = await admin
