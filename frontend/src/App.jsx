@@ -13,6 +13,8 @@ import useIndicatorSettings from './settings/useIndicatorSettings.js';
 import usePieceColors from './settings/usePieceColors.js';
 import useBoardColors from './settings/useBoardColors.js';
 import usePlayerBarColors from './settings/usePlayerBarColors.js';
+import usePersistentSetting from './settings/usePersistentSetting.js';
+import { playCommittedMoveSound, primeMoveAudio } from './audio/moveSounds.js';
 import SideTray from './tray/SideTray.jsx';
 import ConsentBanner from './components/ConsentBanner.jsx';
 import HoverTip from './components/HoverTip.jsx';
@@ -56,6 +58,8 @@ import {
 } from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
+
+const DEFAULT_SOUND_SETTINGS = Object.freeze({ moveSounds: true });
 
 export default function App({ entryAction = null }) {
   // Increment this to reset the engine timeline (fresh game state)
@@ -138,6 +142,22 @@ export default function App({ entryAction = null }) {
   const { boardColors, setBoardColors } = useBoardColors();
   const { playerBarColors, setPlayerBarColors } = usePlayerBarColors();
   const { indicators, setIndicators } = useIndicatorSettings();
+  const [soundSettings, setSoundSettings] = usePersistentSetting(
+    'qcSoundSettings', DEFAULT_SOUND_SETTINGS,
+  );
+
+  // Unlock Web Audio during the first genuine interaction so delayed bot,
+  // tutorial, and online replies can still make sound under autoplay rules.
+  useEffect(() => {
+    if (!soundSettings.moveSounds) return undefined;
+    const prime = () => primeMoveAudio();
+    window.addEventListener('pointerdown', prime, { once: true, capture: true });
+    window.addEventListener('keydown', prime, { once: true, capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', prime, { capture: true });
+      window.removeEventListener('keydown', prime, { capture: true });
+    };
+  }, [soundSettings.moveSounds]);
   const realAuth = useAuth();
   const devAccountPreview = useDevAccountPreview(realAuth);
   const auth = devAccountPreview.auth;
@@ -165,14 +185,16 @@ export default function App({ entryAction = null }) {
       return false;
     }
     for (const r of result.records) dispatch(addMove(r));
+    playCommittedMoveSound(result, soundSettings.moveSounds);
     setInfoMessage(message);
     setGameStarted(true);
     return true;
-  }, [dispatch]);
+  }, [dispatch, soundSettings.moveSounds]);
 
   const bumpGameInstance = useCallback(() => setGameInstanceId((n) => n + 1), []);
 
   const online = useOnlineGame({
+    auth,
     dispatch,
     moves,
     replayMoves,
@@ -280,6 +302,7 @@ export default function App({ entryAction = null }) {
     aiBot,
     userTeam,
     isOnlineBars,
+    onlineOpponent: online.onlineOpponent,
     pieces,
     onSignUpClick: handleOpenAccountFromRating,
   });
@@ -317,6 +340,7 @@ export default function App({ entryAction = null }) {
     userTeam,
     aiBot,
     isOnlineGameRef,
+    isRankedOnlineRef: online.isRankedOnlineRef,
     moves,
   });
 
@@ -411,6 +435,7 @@ export default function App({ entryAction = null }) {
 
   const input = useBoardInput({
     pieces,
+    lastMove,
     sideToMove,
     gameOver,
     winner,
@@ -553,6 +578,7 @@ export default function App({ entryAction = null }) {
     if (settings.indicators) setIndicators(settings.indicators);
     setShowCoordinates(settings.coordinates);
     setShowCheckOverlay(settings.checkOverlay);
+    setSoundSettings({ moveSounds: settings.moveSounds !== false });
 
     if (!anyPieceColorChanged) {
       return;
@@ -583,7 +609,7 @@ export default function App({ entryAction = null }) {
       renderHint: currentPieceSize <= 56 ? 'crisp' : 'precision',
     });
     await prewarmCapturedPieceSvgs({ cssVarsBySide: newSvgStyles, sizes: [26], renderHint: 'crisp' });
-  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setIndicators, currentPieceSize]);
+  }, [whiteColors, blackColors, setWhiteColors, setBlackColors, setBoardColors, setPlayerBarColors, setIndicators, setSoundSettings, currentPieceSize]);
 
   const winnerText = useMemo(() => {
     if (!gameOver) return '';
@@ -1092,6 +1118,7 @@ export default function App({ entryAction = null }) {
         indicators={indicators}
         showCoordinates={showCoordinates}
         showCheckOverlay={showCheckOverlay}
+        moveSoundsEnabled={soundSettings.moveSounds}
         onAcceptSettings={handleAcceptSettings}
         rulesOpen={rulesOpen}
         rulesInitialPage={rulesInitialPage}

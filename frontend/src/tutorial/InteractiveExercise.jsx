@@ -10,6 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import theme from '../theme.js';
 import MiniBoard from './MiniBoard.jsx';
+import { miniBoardLastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
 import {
   simulateStandardMove,
   simulateEnPassant,
@@ -50,6 +51,7 @@ const marksFromSim = (sim) => ({
 export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
   const [pieces, setPieces] = useState(() => buildPieces(spec.pieces));
   const [lastMove, setLastMove] = useState(() => spec.lastMove || null);
+  const [lastTrail, setLastTrail] = useState(() => spec.lastMove || null);
   const [selectedId, setSelectedId] = useState(null);
   const [marks, setMarks] = useState(EMPTY_MARKS);
   const [status, setStatus] = useState('ready'); // ready | wrong | done
@@ -73,6 +75,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
   const reset = () => {
     setPieces(buildPieces(spec.pieces));
     setLastMove(spec.lastMove || null);
+    setLastTrail(spec.lastMove || null);
     setSelectedId(null);
     setMarks(EMPTY_MARKS);
     setStatus('ready');
@@ -100,6 +103,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
         setPieces(sim.pieces);
         setMarks(marksFromSim(sim));
         setLastMove(null);
+        setLastTrail({ from: res.plan.piece1_from, to: res.plan.piece1_to });
         setSelectedId(null);
         setStatus('done');
         setMsg(spec.success);
@@ -142,6 +146,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
 
     let finalPieces = sim.pieces;
     let finalMarks = marksFromSim(sim);
+    let finalTrail = { from: fromSq, to: sq };
 
     // Scripted Black reply: lessons use it to land deferred measurement
     // damage or a Zeno reset right before the player's eyes.
@@ -152,6 +157,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
         if (sim2.ok) {
           finalPieces = sim2.pieces;
           finalMarks = marksFromSim(sim2);
+          finalTrail = { from: spec.autoReply.from, to: spec.autoReply.to };
         }
       }
     }
@@ -159,6 +165,7 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
     setPieces(finalPieces);
     setMarks(finalMarks);
     setLastMove(null);
+    setLastTrail(finalTrail);
     setSelectedId(null);
     if (isGoal) {
       setStatus('done');
@@ -199,7 +206,11 @@ export default function InteractiveExercise({ spec, svgStyleBySide = null }) {
         )}
         pieces={mbPieces}
         arrows={arrows}
-        highlights={(selected ? [selected.square] : []).concat(spec.highlights || [])}
+        highlights={[
+          ...miniBoardLastMoveHighlights(lastTrail),
+          ...(selected ? [selected.square] : []),
+          ...(spec.highlights || []),
+        ]}
         targets={targets}
         onSquareClick={handleSquareClick}
         svgStyleBySide={svgStyleBySide}

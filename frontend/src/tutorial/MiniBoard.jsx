@@ -174,13 +174,13 @@ export default function MiniBoard({
         background: `repeating-conic-gradient(${(ranks - 1) % 2 === 0 ? `${lightSq} 0% 25%, ${darkSq} 25% 50%` : `${darkSq} 0% 25%, ${lightSq} 25% 50%`}) top left / ${cell * 2}px ${cell * 2}px`,
       }}
     >
-      {highlights.map((h) => {
+      {highlights.map((h, highlightIndex) => {
         const sq = typeof h === 'string' ? h : h.sq;
         const color = typeof h === 'string' ? 'rgba(255, 213, 79, 0.45)' : h.color;
         const { col, row } = sqToRC(sq, ranks);
         return (
           <div
-            key={`hl-${sq}`}
+            key={`hl-${sq}-${highlightIndex}`}
             style={{ position: 'absolute', left: col * cell, top: row * cell, width: cell, height: cell, background: color }}
           />
         );

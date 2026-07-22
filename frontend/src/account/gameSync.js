@@ -1,7 +1,7 @@
 // frontend/src/account/gameSync.js
-// Purpose: Persist finished games for signed-in players and apply Elo
-// rating updates for games against rated bots. Retention (last 10 free /
-// 1000 paid) is enforced server-side by a Postgres trigger.
+// Purpose: Persist client-owned finished games, apply Elo against rated bots,
+// and read ordinary/canonical-ranked histories through a common replay API.
+// Retention (last 10 free / 1000 paid) is enforced by a Postgres trigger.
 // Imports From: ./supabaseClient.js
 // Exported To: ../App.jsx
 
@@ -14,8 +14,9 @@ export function eloUpdate(playerRating, opponentRating, score) {
   return Math.round(playerRating + K_FACTOR * (score - expected));
 }
 
-// Records a finished game. Rating only moves for games against rated bots;
-// local hotseat and (for now) online games save unrated.
+// Records a client-owned finished game. Rating only moves against rated bots;
+// local hotseat and unranked online games save unrated. Ranked online games
+// bypass this path and are finalized by the backend.
 export async function recordFinishedGame({ user, profile, opponent, opponentRating, userSide, result, moves }) {
   if (!supabase || !user) return { saved: false };
 
@@ -60,13 +61,8 @@ export async function fetchMyGames(user, limit = 1000) {
 // view above deliberately skips the moves column to keep it light).
 export async function fetchGameMoves(user, gameId) {
   if (!supabase || !user) return null;
-  const { data } = await supabase
-    .from('qc_games')
-    .select('moves')
-    .eq('user_id', user.id)
-    .eq('id', gameId)
-    .maybeSingle();
-  return data && Array.isArray(data.moves) ? data.moves : null;
+  const { data } = await supabase.rpc('qc_get_game_moves', { p_game_id: gameId });
+  return Array.isArray(data) ? data : null;
 }
 
 // Sharing is opt-in per game. The server verifies ownership and returns an

@@ -2,8 +2,8 @@
 // Purpose: Player identity for the two bars — names, ratings, avatars,
 // taglines, captured-piece bins — and the prop bundles PlayerBar consumes.
 // The human is "Anonymous" (or their account identity); a bot shows its
-// name/rating/avatar; the second local player is "Stranger"; online games
-// keep the classic White/Black labels. Extracted from App.jsx.
+// name/rating/avatar; the second local player is "Stranger"; authenticated
+// ranked opponents use their server-returned username/rating. Extracted from App.jsx.
 // Imports From: ../ai/bots.js, ../chessboard/boardUtils.js
 // Exported To: ../App.jsx
 
@@ -20,7 +20,7 @@ const ANONYMOUS_AVATAR = {
 };
 const STRANGER_AVATAR = { initials: 'S', hue: 320, imageUrl: '/bots/stranger.png', name: 'Stranger', tagline: 'Wandered in from a parallel branch.' };
 
-export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pieces, onSignUpClick }) {
+export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, onlineOpponent, pieces, onSignUpClick }) {
   const botSide = aiBot ? (userTeam === 'white' ? 'black' : 'white') : null;
   const botAvatar = botAvatarDescriptor(aiBot);
 
@@ -43,22 +43,27 @@ export default function usePlayerBars({ auth, aiBot, userTeam, isOnlineBars, pie
 
   const nameFor = (side) => {
     if (botSide === side) return aiBot.name;
-    if (isOnlineBars) return side === 'white' ? 'White' : 'Black';
+    if (isOnlineBars) return side === userTeam
+      ? selfName
+      : (onlineOpponent?.name || (side === 'white' ? 'White' : 'Black'));
     return side === userTeam ? selfName : 'Stranger';
   };
   const avatarFor = (side) => {
     if (botSide === side) return botAvatar;
-    if (isOnlineBars) return null;
+    if (isOnlineBars) return side === userTeam ? selfAvatar : null;
     return side === userTeam ? selfAvatar : STRANGER_AVATAR;
   };
   const ratingFor = (side) => {
     if (botSide === side) return aiBot.rating;
-    if (!isOnlineBars && side === userTeam) return selfRating;
+    if (isOnlineBars) return side === userTeam
+      ? selfRating
+      : (Number.isFinite(onlineOpponent?.rating) ? onlineOpponent.rating : '????');
+    if (side === userTeam) return selfRating;
     return '????';
   };
   const taglineFor = (side) => {
     if (botSide === side) return aiBot.tagline || null;
-    if (isOnlineBars) return null;
+    if (isOnlineBars) return side === userTeam ? (selfTagline || null) : null;
     return side === userTeam ? (selfTagline || null) : STRANGER_AVATAR.tagline;
   };
 

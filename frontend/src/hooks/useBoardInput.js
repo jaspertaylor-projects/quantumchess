@@ -8,9 +8,11 @@
 // Exported To: ../App.jsx
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
 
 export default function useBoardInput({
   pieces,
+  lastMove,
   sideToMove,
   gameOver,
   winner,
@@ -389,14 +391,16 @@ export default function useBoardInput({
   }, [checkingSquaresBySide, sideToMove, showCheckOverlay]);
 
   const combinedHighlights = useMemo(() => {
-    const combined = [];
+    // The previous move is the durable bottom layer. Selection, checks,
+    // tray previews, and the intro guide may temporarily paint over it.
+    const combined = lastMoveHighlights(lastMove);
     if (checkHighlights && checkHighlights.length) combined.push(...checkHighlights);
     if (baseHighlights && baseHighlights.length) combined.push(...baseHighlights);
     if (trayHighlights && trayHighlights.length) combined.push(...trayHighlights);
     // Choreographed move: light the destination in the same gold as the glow.
     if (introGuide) combined.push({ square: introGuide.to, color: 'rgba(255, 200, 80, 0.4)' });
     return combined;
-  }, [baseHighlights, checkHighlights, trayHighlights, introGuide]);
+  }, [lastMove, baseHighlights, checkHighlights, trayHighlights, introGuide]);
 
   return {
     selectedId,

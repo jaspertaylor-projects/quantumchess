@@ -1,7 +1,7 @@
 // frontend/src/hooks/useGameRecording.js
-// Purpose: Save finished games for signed-in players (with Elo against rated
-// bots) exactly once per game end, and record first-time bot clears for the
-// ladder. Extracted from App.jsx.
+// Purpose: Save client-owned finished games for signed-in players (with Elo
+// against rated bots) exactly once, skip server-owned ranked games, and record
+// first-time bot clears for the ladder. Extracted from App.jsx.
 // Imports From: ../account/gameSync.js, ../account/botProgress.js
 // Exported To: ../App.jsx
 
@@ -18,6 +18,7 @@ export default function useGameRecording({
   userTeam,
   aiBot,
   isOnlineGameRef,
+  isRankedOnlineRef,
   moves,
 }) {
   const gameRecordedRef = useRef(false);
@@ -27,6 +28,9 @@ export default function useGameRecording({
       return;
     }
     if (gameRecordedRef.current || !auth.user || auth.isDevPreview) return;
+    // Ranked online games are finalized once by the backend and projected
+    // into both histories. Saving here would create duplicate client rows.
+    if (isRankedOnlineRef && isRankedOnlineRef.current) return;
     gameRecordedRef.current = true;
 
     const text = externalGameOver.over ? externalGameOver.text || '' : '';

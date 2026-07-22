@@ -33,7 +33,8 @@ export default function AppModals({
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
   // settings
-  settingsOpen, onCloseSettings, colors, indicators, showCoordinates, showCheckOverlay, onAcceptSettings,
+  settingsOpen, onCloseSettings, colors, indicators, showCoordinates, showCheckOverlay,
+  moveSoundsEnabled, onAcceptSettings,
   // rules + tutorial
   rulesOpen, rulesInitialPage, onCloseRules, onPlayLesson,
   tutorialOpen, closeTutorial, tutorialLessonId, onOpenRulesPage,
@@ -100,6 +101,7 @@ export default function AppModals({
         indicators={indicators}
         showCoordinates={showCoordinates}
         showCheckOverlay={showCheckOverlay}
+        moveSoundsEnabled={moveSoundsEnabled}
         defaultWhiteColors={DEFAULT_WHITE}
         defaultBlackColors={DEFAULT_BLACK}
         defaultBoardColors={DEFAULT_BOARD}
@@ -197,6 +199,7 @@ export default function AppModals({
         selfAvatar={bars ? bars.selfAvatar : null}
         selfRating={bars ? bars.selfRating : null}
         strangerAvatar={bars ? bars.strangerAvatar : null}
+        moveSoundsEnabled={moveSoundsEnabled}
         showDisplayAd={!isAdFree(auth.profile)}
       />
 

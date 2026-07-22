@@ -18,6 +18,7 @@ import {
   Play, Pause, Video,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
+import { lastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
 import PlayerBar from '../components/PlayerBar.jsx';
 import { capturedPieces } from '../chessboard/boardUtils.js';
 import { getBotById, botAvatarDescriptor } from '../ai/bots.js';
@@ -35,9 +36,6 @@ import {
   paintReplayVideoFrame,
   startReplayVideoRecorder,
 } from './socialReplayVideo.js';
-
-const HIGHLIGHT_FROM = 'rgba(79, 195, 247, 0.55)';
-const HIGHLIGHT_TO = 'rgba(246, 196, 69, 0.55)';
 
 // Mover-perspective eval drop (in pawns) that earns a mark in the move list.
 const MISTAKE_DROP = 1.5;
@@ -381,11 +379,7 @@ export default function ReviewModal({
     return { snapIdx: i + 1, mover, label, mark, markTitle, evalAfter: after };
   });
 
-  const highlights = [];
-  if (snap && snap.lastMove) {
-    highlights.push({ square: snap.lastMove.from, color: HIGHLIGHT_FROM });
-    highlights.push({ square: snap.lastMove.to, color: HIGHLIGHT_TO });
-  }
+  const highlights = lastMoveHighlights(snap?.lastMove);
   const reviewZapMarks = snap?.lastMove?.zappedSquares || [];
   const reviewHealMarks = snap?.lastMove?.healedSquares || [];
   const reviewFailedHealMarks = snap?.lastMove?.failedHealSquares || [];

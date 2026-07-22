@@ -17,10 +17,12 @@ class JoinPayload(BaseModel):
 
 class LeavePayload(BaseModel):
     clientId: str = Field(..., min_length=6, max_length=128)
+    ticket: Optional[str] = Field(default=None, min_length=16, max_length=256)
 
 
 class HeartbeatPayload(BaseModel):
     clientId: str = Field(..., min_length=6, max_length=128)
+    ticket: Optional[str] = Field(default=None, min_length=16, max_length=256)
 
 
 class CreatePrivatePayload(BaseModel):
@@ -40,3 +42,7 @@ class MatchResponse(BaseModel):
     position: Optional[int] = None
     code: Optional[str] = None  # private-room invite code (challenge a friend)
     ranked: Optional[bool] = None
+    ticket: Optional[str] = None
+    rating: Optional[int] = None
+    opponentRating: Optional[int] = None
+    opponentName: Optional[str] = None

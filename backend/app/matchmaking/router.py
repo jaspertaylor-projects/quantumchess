@@ -6,12 +6,15 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import json
+import logging
 import time
 from typing import Any, Callable, Dict, Optional
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 
+from app.account import supabase_gateway
 from app.stats import sampler as stats_sampler
 from app.stats import supabase_writer
 
@@ -26,16 +29,38 @@ from .models import (
 )
 
 router = APIRouter(prefix="/api/matchmaking", tags=["matchmaking"])  # noqa: E231
+_logger = logging.getLogger("uvicorn.error")
+
+
+def _bearer_token(authorization: Optional[str]) -> str:
+    value = (authorization or "").strip()
+    if len(value) > 7 and value[:7].lower() == "bearer ":
+        return value[7:].strip()
+    return ""
 
 
 @router.post("/join", response_model=MatchResponse)
-def matchmaking_join(payload: JoinPayload) -> MatchResponse:
-    return service.join(payload.clientId, ranked=payload.ranked)
+async def matchmaking_join(
+    payload: JoinPayload, authorization: Optional[str] = Header(default=None)
+) -> MatchResponse:
+    identity = None
+    if payload.ranked:
+        try:
+            identity = await asyncio.to_thread(
+                supabase_gateway.authenticate_player, _bearer_token(authorization)
+            )
+        except supabase_gateway.InvalidAccessToken as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        except supabase_gateway.AccountServiceUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return service.join(payload.clientId, ranked=payload.ranked, identity=identity)
 
 
 @router.get("/status/{client_id}", response_model=MatchResponse)
-def matchmaking_status(client_id: str) -> MatchResponse:
-    return service.get_status(client_id)
+def matchmaking_status(
+    client_id: str, ticket: Optional[str] = Query(default=None)
+) -> MatchResponse:
+    return service.get_status(client_id, ticket)
 
 
 # Challenge a friend: open a private room + invite code, then the friend
@@ -52,12 +77,12 @@ def matchmaking_join_private(payload: JoinPrivatePayload) -> MatchResponse:
 
 @router.post("/leave")
 def matchmaking_leave(payload: LeavePayload) -> Dict[str, Any]:
-    return service.leave(payload.clientId)
+    return service.leave(payload.clientId, payload.ticket)
 
 
 @router.post("/heartbeat")
 def matchmaking_heartbeat(payload: HeartbeatPayload) -> Dict[str, Any]:
-    return service.heartbeat(payload.clientId)
+    return service.heartbeat(payload.clientId, payload.ticket)
 
 
 @router.get("/metrics")
@@ -180,6 +205,29 @@ def _transition_draw_offer_locked(state: Dict[str, Any], side: str, action: str)
     return {"error": "invalid_draw_offer_action"}
 
 
+def _transition_terminal_claim_locked(
+    state: Dict[str, Any], side: str, winner: Optional[str], reason: str
+) -> Dict[str, Any]:
+    """Resolve a resignation or collect two matching engine-end claims."""
+    if state.get("ended"):
+        return {"error": "game_over"}
+    if side not in ("white", "black"):
+        return {"error": "unknown_side"}
+    if reason == "agreement":
+        return {"error": "use_draw_offer_protocol"}
+    if reason == "resignation":
+        _end_game_locked(state, _other_side(side), "resignation")
+        return {"gameOver": True}
+
+    claim = {"winner": winner, "reason": reason}
+    claims = state.setdefault("terminal_claims", {})
+    claims[side] = claim
+    if claims.get(_other_side(side)) != claim:
+        return {"pending": True}
+    _end_game_locked(state, winner, reason)
+    return {"gameOver": True}
+
+
 def _record_finished_online_game(state: Dict[str, Any]) -> None:
     """Persist an online game's outcome for the admin stats dashboard.
     Fire-and-forget (threaded insert); safe to call under the room lock."""
@@ -218,6 +266,89 @@ def _game_over_payload_locked(room_id: str, state: Dict[str, Any]) -> Optional[D
         "turn": state.get("turn", "white"),
         "clock": _clock_view(state),
     }
+
+
+async def _publish_game_over(
+    room_id: str, state: Dict[str, Any], payload: Dict[str, Any]
+) -> None:
+    """Finalize a ranked result atomically before announcing it to clients."""
+    # The cached full-room snapshot survives either client detaching while
+    # finalization is in flight; live room membership may already be smaller.
+    snapshot = state.get("room_snapshot") or service.get_room_snapshot(room_id) or {}
+    if snapshot.get("ranked"):
+        sides = snapshot.get("sides") or {}
+        identities = snapshot.get("identities") or {}
+        white_client = next((cid for cid, side in sides.items() if side == "white"), None)
+        black_client = next((cid for cid, side in sides.items() if side == "black"), None)
+        white = identities.get(white_client, {}) if white_client else {}
+        black = identities.get(black_client, {}) if black_client else {}
+        winner = state.get("winner")
+        reason = state.get("end_reason") or "rules"
+        result = (
+            winner
+            if winner in ("white", "black")
+            else "void"
+            if state.get("seq", 0) == 0 and reason in ("first-move timeout", "abandonment")
+            else "draw"
+        )
+        if white.get("user_id") and black.get("user_id"):
+            started_epoch = float(snapshot.get("created_at") or time.time())
+            rpc_payload = {
+                "p_room_id": room_id,
+                "p_white_user_id": white["user_id"],
+                "p_black_user_id": black["user_id"],
+                "p_result": result,
+                "p_end_reason": str(reason)[:64],
+                "p_moves": list(state.get("history", [])),
+                "p_started_at": datetime.datetime.fromtimestamp(
+                    started_epoch, tz=datetime.timezone.utc
+                ).isoformat(),
+            }
+            try:
+                rating = await asyncio.to_thread(
+                    supabase_gateway.finalize_ranked_match, rpc_payload
+                )
+                if not rating.get("match_id"):
+                    raise RuntimeError("ranked finalization returned no match id")
+                payload["rated"] = bool(rating.get("rated"))
+                payload["ratingChanges"] = {
+                    "white": {
+                        "before": rating.get("white_rating_before"),
+                        "after": rating.get("white_rating_after"),
+                    },
+                    "black": {
+                        "before": rating.get("black_rating_before"),
+                        "after": rating.get("black_rating_after"),
+                    },
+                }
+            except Exception as exc:
+                # Gameplay still concludes if persistence is temporarily down;
+                # the room remains idempotently finalizable by its unique id.
+                _logger.error("Ranked finalization failed for room %s: %s", room_id, exc)
+                payload["rated"] = False
+                payload["ratingError"] = True
+                if not state.get("ranked_finalize_task"):
+                    async def _retry() -> None:
+                        for delay in (2, 5, 15, 30, 60):
+                            await asyncio.sleep(delay)
+                            try:
+                                saved = await asyncio.to_thread(
+                                    supabase_gateway.finalize_ranked_match, rpc_payload
+                                )
+                                if saved.get("match_id"):
+                                    state["ranked_finalized"] = True
+                                    _logger.info("Ranked finalization retry succeeded for %s", room_id)
+                                    return
+                            except Exception as retry_exc:
+                                _logger.error(
+                                    "Ranked finalization retry failed for %s: %s",
+                                    room_id,
+                                    retry_exc,
+                                )
+                        state["ranked_finalize_failed"] = True
+
+                    state["ranked_finalize_task"] = asyncio.create_task(_retry())
+    await _broadcast(room_id, payload)
 
 
 async def _send(ws: WebSocket, payload: Dict[str, Any]) -> None:
@@ -354,7 +485,7 @@ async def _ensure_clock_task(room_id: str) -> None:
 
                 # Broadcast game over exactly once if triggered, else normal clock update
                 if game_over_payload is not None:
-                    await _broadcast(room_id, game_over_payload)
+                    await _publish_game_over(room_id, s, game_over_payload)
                 else:
                     await _broadcast(room_id, clock_payload)
         except Exception as ex:
@@ -475,7 +606,7 @@ async def _apply_turn(
             )
 
     if time_over_payload is not None:
-        await _broadcast(room_id, time_over_payload)
+        await _publish_game_over(room_id, state, time_over_payload)
         return
 
     if payload is not None:
@@ -484,14 +615,17 @@ async def _apply_turn(
 
 @router.websocket("/ws/{room_id}")
 async def matchmaking_ws(
-    websocket: WebSocket, room_id: str, clientId: Optional[str] = Query(default=None)
+    websocket: WebSocket,
+    room_id: str,
+    clientId: Optional[str] = Query(default=None),
+    ticket: Optional[str] = Query(default=None),
 ):
     # Reject if no clientId or invalid room
     cid = (clientId or "").strip()
-    if not cid or not service.room_exists(room_id) or not service.validate_client_in_room(cid, room_id):
+    if not cid or not service.room_exists(room_id) or not service.validate_room_ticket(cid, room_id, ticket):
         try:
             print(
-                f"[WS][reject] room={room_id} cid={cid or '<none>'} exists={service.room_exists(room_id)} valid={service.validate_client_in_room(cid, room_id)}"
+                f"[WS][reject] room={room_id} cid={cid or '<none>'} exists={service.room_exists(room_id)} valid={service.validate_room_ticket(cid, room_id, ticket)}"
             )
         except Exception:
             pass
@@ -502,6 +636,7 @@ async def matchmaking_ws(
 
     # Register connection
     state = _get_room_state(room_id)
+    state["room_snapshot"] = service.get_room_snapshot(room_id) or state.get("room_snapshot")
 
     # Close existing connection for this client if any
     old = state["conns"].get(cid)
@@ -577,7 +712,7 @@ async def matchmaking_ws(
                 # Keep the matchmaking-layer liveness fresh during play so the
                 # room survives long games and validates rejoins.
                 try:
-                    service.heartbeat(cid)
+                    service.heartbeat(cid, ticket)
                 except Exception:
                     pass
                 # Also return a clock snapshot with pong to help clients sync
@@ -668,15 +803,15 @@ async def matchmaking_ws(
                 if error:
                     await _send(websocket, {"type": "error", "detail": error})
                 elif over_payload is not None:
-                    await _broadcast(room_id, over_payload)
+                    await _publish_game_over(room_id, state, over_payload)
                 elif draw_payload is not None:
                     await _broadcast(room_id, draw_payload)
                 continue
 
             if mtype == "game_over":
-                # Client-reported rules-based end (checkmate/stalemate/draw).
-                # Both clients evaluate the rules deterministically, so the
-                # first report wins; the server stops the clocks and rebroadcasts.
+                # Resignation is inferred from the authenticated seat. Engine
+                # endings require matching reports from both deterministic
+                # clients; one browser can no longer award itself a win.
                 m_room = str(msg.get("roomId") or "")
                 m_cid = str(msg.get("clientId") or "")
                 if m_room != room_id or m_cid != cid:
@@ -691,16 +826,27 @@ async def matchmaking_ws(
                     continue
 
                 over_payload: Optional[Dict[str, Any]] = None
+                pending_confirmation = False
                 async with state["lock"]:
                     if not state.get("ended"):
-                        _end_game_locked(state, report_winner, report_reason)
-                        over_payload = _game_over_payload_locked(room_id, state)
+                        true_side = service.get_side_for_client(room_id, cid)
+                        transition = _transition_terminal_claim_locked(
+                            state, str(true_side or ""), report_winner, report_reason
+                        )
+                        if transition.get("error"):
+                            await _send(websocket, {"type": "error", "detail": transition["error"]})
+                        elif transition.get("gameOver"):
+                            over_payload = _game_over_payload_locked(room_id, state)
+                        else:
+                            pending_confirmation = bool(transition.get("pending"))
                         print(
-                            f"[WS][game_over] room={room_id} by={cid} winner={report_winner} reason={report_reason}"
+                            f"[WS][game_over] room={room_id} by={cid} winner={report_winner} reason={report_reason} pending={pending_confirmation}"
                         )
 
                 if over_payload is not None:
-                    await _broadcast(room_id, over_payload)
+                    await _publish_game_over(room_id, state, over_payload)
+                elif pending_confirmation:
+                    await _send(websocket, {"type": "game_over_pending", "roomId": room_id})
                 continue
 
             # Unknown message type

@@ -11,6 +11,7 @@ import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import { DEFAULT_INDICATORS, INDICATOR_LABELS, INDICATOR_PRESETS, PRESET_LABELS, matchIndicatorPreset } from './useIndicatorSettings.js';
 import SayingsEditor from '../sayings/SayingsEditor.jsx';
+import { playMoveSound } from '../audio/moveSounds.js';
 
 export default function SettingsModal({
   open = false,
@@ -25,6 +26,7 @@ export default function SettingsModal({
   indicators,
   showCoordinates,
   showCheckOverlay,
+  moveSoundsEnabled = true,
   defaultWhiteColors,
   defaultBlackColors,
   defaultBoardColors,
@@ -38,6 +40,7 @@ export default function SettingsModal({
   const [localIndicators, setLocalIndicators] = useState(indicators || DEFAULT_INDICATORS);
   const [localShowCoordinates, setLocalShowCoordinates] = useState(showCoordinates);
   const [localShowCheckOverlay, setLocalShowCheckOverlay] = useState(showCheckOverlay);
+  const [localMoveSounds, setLocalMoveSounds] = useState(moveSoundsEnabled !== false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [openSection, setOpenSection] = useState(null);
 
@@ -51,8 +54,9 @@ export default function SettingsModal({
       setLocalIndicators(indicators || DEFAULT_INDICATORS);
       setLocalShowCoordinates(showCoordinates);
       setLocalShowCheckOverlay(showCheckOverlay);
+      setLocalMoveSounds(moveSoundsEnabled !== false);
     }
-  }, [open, whiteColors, blackColors, boardColors, playerBarColors, indicators, showCoordinates, showCheckOverlay]);
+  }, [open, whiteColors, blackColors, boardColors, playerBarColors, indicators, showCoordinates, showCheckOverlay, moveSoundsEnabled]);
 
   if (!open) return null;
 
@@ -67,6 +71,7 @@ export default function SettingsModal({
         indicators: localIndicators,
         coordinates: localShowCoordinates,
         checkOverlay: localShowCheckOverlay,
+        moveSounds: localMoveSounds,
       });
       onClose(); // Close only on success
     } catch (error) {
@@ -82,6 +87,7 @@ export default function SettingsModal({
     if (defaultBoardColors) setLocalBoard(defaultBoardColors);
     if (defaultPlayerBarColors) setLocalPlayerBar(defaultPlayerBarColors);
     setLocalIndicators({ ...DEFAULT_INDICATORS });
+    setLocalMoveSounds(true);
   };
 
   const activePreset = matchIndicatorPreset(localIndicators);
@@ -467,6 +473,47 @@ export default function SettingsModal({
             <SayingsEditor auth={auth} localSayings={localSayings} onSaveLocalSayings={onSaveLocalSayings} />
           ))}
 
+          {renderSection('sound', 'Sound', <>
+            <div className="qc-settings-row qc-settings-row--move-sounds" style={styles.row}>
+              <label htmlFor="qc-move-sounds-toggle" style={styles.label}>Move Sounds</label>
+              <input
+                id="qc-move-sounds-toggle"
+                type="checkbox"
+                className="qc-checkbox-input qc-checkbox-input--move-sounds"
+                style={styles.checkboxInput}
+                checked={localMoveSounds}
+                onChange={(e) => setLocalMoveSounds(e.target.checked)}
+                aria-label="Toggle move and capture sounds"
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              {[
+                { label: 'Preview Move', capture: false },
+                { label: 'Preview Capture', capture: true },
+              ].map(({ label, capture }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => playMoveSound({ capture, enabled: localMoveSounds })}
+                  disabled={!localMoveSounds}
+                  style={{
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${theme.border}`,
+                    background: 'transparent',
+                    color: theme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: localMoveSounds ? 'pointer' : 'default',
+                    opacity: localMoveSounds ? 1 : 0.45,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>)}
+
           {renderSection('board', 'Board Squares', <>
             <div className="qc-settings-row" style={styles.row}>
               <label htmlFor="qc-board-light" style={styles.label}>Light Squares</label>
@@ -600,8 +647,8 @@ export default function SettingsModal({
           <IconButton
             icon={RotateCcw}
             size={18}
-            title="Restore default colors"
-            ariaLabel="Restore default colors"
+            title="Restore defaults"
+            ariaLabel="Restore defaults"
             className="qc-settings-reset"
             onClick={handleReset}
             width={36}

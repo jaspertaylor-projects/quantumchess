@@ -33,37 +33,44 @@ export function getOrCreateClientId() {
   return newId;
 }
 
-export async function joinQueue({ clientId, ranked = false }) {
+export async function joinQueue({ clientId, ranked = false, accessToken = null }) {
+  const headers = { ...JSON_HEADERS };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   const res = await fetch('/api/matchmaking/join', {
     method: 'POST',
-    headers: JSON_HEADERS,
+    headers,
     body: JSON.stringify({ clientId, ranked: Boolean(ranked) }),
   });
-  if (!res.ok) throw new Error(`joinQueue failed: ${res.status}`);
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch (_) { /* ignore */ }
+    throw new Error(detail || `joinQueue failed: ${res.status}`);
+  }
   return await res.json();
 }
 
-export async function leaveQueue(clientId) {
+export async function leaveQueue(clientId, ticket = null) {
   const res = await fetch('/api/matchmaking/leave', {
     method: 'POST',
     headers: JSON_HEADERS,
-    body: JSON.stringify({ clientId }),
+    body: JSON.stringify({ clientId, ...(ticket ? { ticket } : {}) }),
   });
   if (!res.ok) throw new Error(`leaveQueue failed: ${res.status}`);
   return await res.json();
 }
 
-export async function getStatus(clientId) {
-  const res = await fetch(`/api/matchmaking/status/${encodeURIComponent(clientId)}`);
+export async function getStatus(clientId, ticket = null) {
+  const query = ticket ? `?ticket=${encodeURIComponent(ticket)}` : '';
+  const res = await fetch(`/api/matchmaking/status/${encodeURIComponent(clientId)}${query}`);
   if (!res.ok) throw new Error(`getStatus failed: ${res.status}`);
   return await res.json();
 }
 
-export async function sendHeartbeat(clientId) {
+export async function sendHeartbeat(clientId, ticket = null) {
   const res = await fetch('/api/matchmaking/heartbeat', {
     method: 'POST',
     headers: JSON_HEADERS,
-    body: JSON.stringify({ clientId }),
+    body: JSON.stringify({ clientId, ...(ticket ? { ticket } : {}) }),
   });
   try {
     return await res.json();
@@ -128,12 +135,12 @@ export function stripJoinCode() {
 
 export async function waitForMatch(
   clientId,
-  { intervalMs = 1200, timeoutMs = 60000, shouldStop = null } = {}
+  { intervalMs = 1200, timeoutMs = 60000, shouldStop = null, ticket = null } = {}
 ) {
   const start = Date.now();
 
   try {
-    const first = await getStatus(clientId);
+    const first = await getStatus(clientId, ticket);
     if (first && first.status === 'matched') return first;
   } catch (_) {
     // ignore transient errors
@@ -143,10 +150,10 @@ export async function waitForMatch(
     if (typeof shouldStop === 'function' && shouldStop()) return null;
 
     try {
-      const hb = await sendHeartbeat(clientId);
+      const hb = await sendHeartbeat(clientId, ticket);
       if (hb && hb.roomId) {
         try {
-          const now = await getStatus(clientId);
+          const now = await getStatus(clientId, ticket);
           if (now && now.status === 'matched') return now;
         } catch (_) {
           if (hb.side === 'white' || hb.side === 'black') {
@@ -155,6 +162,10 @@ export async function waitForMatch(
               roomId: hb.roomId,
               side: hb.side,
               opponentPresent: Boolean(hb.opponentPresent),
+              ranked: Boolean(hb.ranked),
+              ticket: hb.ticket || ticket,
+              opponentRating: hb.opponentRating,
+              opponentName: hb.opponentName,
             };
           }
         }
@@ -166,7 +177,7 @@ export async function waitForMatch(
     if (typeof shouldStop === 'function' && shouldStop()) return null;
 
     try {
-      const s = await getStatus(clientId);
+      const s = await getStatus(clientId, ticket);
       if (s && s.status === 'matched') return s;
     } catch (_) {
       // ignore and continue polling
@@ -188,13 +199,16 @@ function buildWsUrl(pathWithLeadingSlash) {
 export function connectToRoomWs({
   roomId,
   clientId,
+  ticket = null,
   onMessage = () => {},
   onOpen = () => {},
   onClose = () => {},
   onError = () => {},
   keepAliveMs = 25000,
 }) {
-  const url = buildWsUrl(`/api/matchmaking/ws/${encodeURIComponent(roomId)}?clientId=${encodeURIComponent(clientId)}`);
+  const params = new URLSearchParams({ clientId });
+  if (ticket) params.set('ticket', ticket);
+  const url = buildWsUrl(`/api/matchmaking/ws/${encodeURIComponent(roomId)}?${params.toString()}`);
   const ws = new WebSocket(url);
 
   let pingTimer = null;

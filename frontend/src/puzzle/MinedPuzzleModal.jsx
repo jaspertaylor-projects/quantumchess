@@ -18,6 +18,7 @@ import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import { Pickaxe, Copy as CopyIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
+import { miniBoardLastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
 import PlayerBar from '../components/PlayerBar.jsx';
 import EvalGauge from './EvalGauge.jsx';
 import usePuzzleBoard from './usePuzzleBoard.js';
@@ -36,6 +37,7 @@ import { gradeOfStanding, puzzleFinalScore, puzzleLetterGrade } from './puzzleSc
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import { CONTACT_PARTICLE_MAX_ARRIVAL_MS } from '../chessboard/contactParticles.js';
 import PuzzleDisplayAd from '../ads/PuzzleDisplayAd.jsx';
+import { playMoveSound, positionAddedCapture } from '../audio/moveSounds.js';
 
 const STANDARD_EFFECT_BEAT_MS = 1400;
 const FAILED_HEAL_ANIMATION_MS = 1100;
@@ -160,6 +162,7 @@ export default function MinedPuzzleModal({
   selfAvatar = null,
   selfRating = '????',
   strangerAvatar = null,
+  moveSoundsEnabled = true,
   showDisplayAd = false,
 }) {
   const totalMoves = puzzle ? puzzle.recipe.moves : 3;
@@ -281,6 +284,10 @@ export default function MinedPuzzleModal({
         timer = setTimeout(() => {
           if (aliveRef.current !== token) return;
           const last = puzzle.start.lastMove || {};
+          playMoveSound({
+            capture: positionAddedCapture(puzzle.intro?.pieces, puzzle.start.pieces),
+            enabled: moveSoundsEnabled,
+          });
           setDisplay(puzzle.start.pieces);
           setEffects({
             zaps: last.zappedSquares || [],
@@ -298,7 +305,7 @@ export default function MinedPuzzleModal({
       cancelAnimationFrame(secondFrame);
       clearTimeout(timer);
     };
-  }, [open, puzzle, phase]);
+  }, [open, puzzle, phase, moveSoundsEnabled]);
 
   // The move/effects beat also starts from its own committed render. White
   // stays locked until the longest contact animation has had time to read.
@@ -773,6 +780,10 @@ export default function MinedPuzzleModal({
       enPassant: Boolean(arrowMove.enPassant),
     } : null);
     moveMadeRef.current = { move, roundIdx };
+    playMoveSound({
+      capture: positionAddedCapture(cur?.pieces, move.after),
+      enabled: moveSoundsEnabled,
+    });
     // The move plays IMMEDIATELY — board shows the resolved result with its
     // zap/heal/shield effects, exactly like live play. No rewinding.
     setDisplay(move.after);
@@ -847,6 +858,10 @@ export default function MinedPuzzleModal({
         clearEffects();
         later(() => {
           if (aliveRef.current !== token) return;
+          playMoveSound({
+            capture: positionAddedCapture(move.after, afterPieces),
+            enabled: moveSoundsEnabled,
+          });
           setDisplay(afterPieces);
           pushSnapshot(afterPieces, { from: reply.from, to: reply.to });
           setEffects(replyEffects);
@@ -891,10 +906,7 @@ export default function MinedPuzzleModal({
       mark: false, zap: false, heal: false, shield: false,
       healFail: false,
     })) : null;
-  const scrubHighlights = viewSnap && viewSnap.trail ? [
-    { sq: viewSnap.trail.from, color: 'rgba(79, 195, 247, 0.42)' },
-    { sq: viewSnap.trail.to, color: 'rgba(246, 196, 69, 0.5)' },
-  ] : [];
+  const scrubHighlights = miniBoardLastMoveHighlights(viewSnap?.trail);
   const scrubVisible = history.length > 1 && phase !== 'intro-before' && phase !== 'intro-move';
 
   const squaresText = Array.from({ length: totalMoves }, (_, i) => GRADE_EMOJI[grades[i] || 'x']).join('');
@@ -1011,15 +1023,15 @@ export default function MinedPuzzleModal({
   const arrows = revealArrow ? [{ ...revealArrow, side: 'white' }]
     : landingBestMove ? [{ ...landingBestMove, kind: 'hint', opacity: 0.8 }]
       : [];
-  const trail = replyArrow
-    || ((phase === 'intro-move' || phase === 'playing')
-      && round === 0 && puzzle.mistake ? puzzle.mistake : null);
+  // History is the authoritative position timeline. Its newest snapshot is
+  // updated after every White move and every Black reply, so this stays
+  // correct at every depth instead of special-casing the opening mistake.
+  // During intro-before the newest snapshot is intentionally one beat ahead
+  // of the still-visible pre-mistake board, so no trail belongs there yet.
+  const liveTrail = phase === 'intro-before' ? null : history[history.length - 1]?.trail;
   const boardHighlights = [
+    ...miniBoardLastMoveHighlights(liveTrail),
     ...(selectedSq ? [selectedSq] : []),
-    ...(trail && !revealArrow ? [
-      { sq: trail.from, color: 'rgba(79, 195, 247, 0.42)' },
-      { sq: trail.to, color: 'rgba(246, 196, 69, 0.5)' },
-    ] : []),
   ];
 
   const bannerKind = totalCollapse ? 'bad'

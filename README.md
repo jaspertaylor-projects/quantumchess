@@ -214,7 +214,10 @@ update qc_profiles set tier = 'paid' where id = '<user uuid>';
 
 - Auth logic: `frontend/src/account/useAuth.js`
 - Sign-in/profile UI: `frontend/src/account/AccountModal.jsx`
-- Game saving + Elo: `frontend/src/account/gameSync.js`
+- Saved-game client + bot Elo: `frontend/src/account/gameSync.js`
+- Ranked online auth, matching, results, and Elo:
+  `backend/app/matchmaking/` +
+  `supabase/migrations/20260721150000_qc_authoritative_ranked_matches.sql`
 - Supabase connection: `frontend/src/account/supabaseClient.js`
   (URL + publishable key in `frontend/.env` — public by design)
 
@@ -452,8 +455,9 @@ Legend: [ ] not started · [~] in progress · [X] done
       expires 2026-10-03 — re-run `stripe login` after). Useful for wiring:
       `stripe products/prices create`, `stripe listen --forward-to localhost:<port>/webhook`
       (prints the `whsec_` signing secret), `stripe trigger checkout.session.completed`.
-- [ ] Later: move rating updates server-side (Edge Function) before any
-      public leaderboard — bot-game ratings are currently client-reported.
+- [X] Ranked online Elo is calculated atomically in Postgres from a
+      backend-finalized result. Bot-game ratings remain client-reported and
+      must be hardened before they feed a public competitive leaderboard.
 
 ### Challenge a friend (private online rooms)
 - [X] Built + two-tab tested locally 2026-07-06. Online mode has a
@@ -598,6 +602,14 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [X] Public matchmaking has exactly two isolated pools, Ranked and Unranked.
       Both use the server-authoritative 5+5 clock; local and AI games are
       untimed.
+- [X] Ranked queue entries require a valid Supabase session. Pairing begins
+      within 100 Elo and widens by 100 every ten seconds while waiting.
+      Queue polling and WebSocket reconnects use a per-entry opaque ticket.
+- [X] Ranked results and K=32 Elo updates are server-side and atomic. Clock,
+      resignation, abandonment, and agreed-draw results are inferred by the
+      relay; deterministic rules endings require matching claims from both
+      seats. One `qc_ranked_matches` row owns the result/moves, with reference
+      rows exposing it in both players' normal saved-game histories.
 - [X] Sealed pieces — nearly-defined pieces that conservation leaves nothing
       to regain — show a solid line instead of a forever-cycling clock
       (`canPieceRecohere` in the engine). Taught in the tutorial: "Growing
@@ -736,13 +748,12 @@ Legend: [ ] not started · [~] in progress · [X] done
       volume, move room/clock/session state to Redis or Supabase-backed
       storage so deploys/restarts do not erase live games and multiple API
       instances can run.
-- [ ] **Harden trust boundaries for competitive/user-visible systems**:
-      ratings and some perk quotas are still client-reported/client-enforced
-      by design (`frontend/src/account/gameSync.js`,
-      `frontend/src/account/billing.js`). Before public leaderboards,
-      tournaments, or any abuse-sensitive rewards, move rating updates,
-      review quotas, achievements, and leaderboard writes behind Edge
-      Functions or the backend with server-side validation.
+- [ ] **Finish hardening non-ranked user-visible systems**: ranked online Elo
+      is server-owned, but bot-game rating reports and some perk quotas remain
+      client-reported/client-enforced (`frontend/src/account/gameSync.js`,
+      `frontend/src/account/billing.js`). Before a combined public leaderboard
+      or abuse-sensitive rewards, isolate bot ratings or validate those writes,
+      plus review quotas, achievements, and leaderboard writes, server-side.
 - [X] **Split the largest domain files** — done 2026-07-10 along real seams:
       quantumEngine.js is a facade over engineTypes/engineGeometry/
       engineConservation (importers unchanged); puzzleGenerator.js is entry

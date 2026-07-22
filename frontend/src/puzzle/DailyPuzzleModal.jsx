@@ -13,6 +13,7 @@ import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import { Share2 as ShareIcon, Puzzle as PuzzleIcon } from 'lucide-react';
 import MiniBoard from '../tutorial/MiniBoard.jsx';
+import { miniBoardLastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
 import usePuzzleBoard from './usePuzzleBoard.js';
 import { checkPuzzleMove } from './puzzleGenerator.js';
 import {
@@ -41,6 +42,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
   const [banner, setBanner] = useState(null); // { kind: 'bad'|'good'|'info', text }
   const [result, setResult] = useState(null); // { solved, tries }
   const [revealArrow, setRevealArrow] = useState(null);
+  const [lastTrail, setLastTrail] = useState(null);
   const [copied, setCopied] = useState(false);
   const countdown = useCountdown();
 
@@ -68,6 +70,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
     setPuzzle(null);
     setBanner(null);
     setRevealArrow(null);
+    setLastTrail(null);
     setSelectedSq(null);
     setMarks([]);
     setCopied(false);
@@ -82,12 +85,14 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
         setPlyIdx(p.plies.length - 1);
         setDisplay(p.plies[p.plies.length - 1].solutionAfter);
         setMarks(p.plies[p.plies.length - 1].solutionMeasured || []);
+        setLastTrail(p.plies[p.plies.length - 1].solution || null);
         setPhase('done');
       } else {
         setResult(null);
         setPlyIdx(0);
         setAttempts(0);
         setDisplay(p.plies[0].pieces);
+        setLastTrail(p.plies[0].lastMove || null);
         setPhase('playing');
       }
     }, 30);
@@ -128,6 +133,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
     if (correct) {
       setDisplay(move.after);
       setMarks(move.measuredSquares || []);
+      setLastTrail({ from: fromSq, to: toSq });
       const isLast = plyIdx === puzzle.plies.length - 1;
       if (isLast) {
         setBanner({ kind: 'good', text: '✓ ' + successLine(puzzle) });
@@ -135,8 +141,10 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
       } else {
         setBanner({ kind: 'info', text: 'Yes. Black replies…' });
         later(() => {
-          setDisplay(puzzle.plies[plyIdx + 1].pieces);
+          const nextPly = puzzle.plies[plyIdx + 1];
+          setDisplay(nextPly.pieces);
           setMarks([]);
+          setLastTrail(nextPly.lastMove || null);
           setPlyIdx(plyIdx + 1);
           setBanner(null);
         }, 1100);
@@ -150,11 +158,13 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
     setAttempts(nextAttempts);
     setDisplay(move.after);
     setMarks(move.measuredSquares || []);
+    setLastTrail({ from: fromSq, to: toSq });
     if (nextAttempts >= MAX_ATTEMPTS) {
       setBanner({ kind: 'bad', text: `Out of attempts. The move was ${ply.solution.from} → ${ply.solution.to}${ply.solution.enPassant ? ' (en passant)' : ''}.` });
       later(() => {
         setDisplay(ply.solutionAfter);
         setMarks(ply.solutionMeasured || []);
+        setLastTrail(ply.solution);
         setRevealArrow({ from: ply.solution.from, to: ply.solution.to });
         finish(false, nextAttempts);
       }, 900);
@@ -163,6 +173,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
       later(() => {
         setDisplay(ply.pieces);
         setMarks([]);
+        setLastTrail(ply.lastMove || null);
         setBanner(null);
       }, 1200);
     }
@@ -306,6 +317,7 @@ export default function DailyPuzzleModal({ open = false, onClose = () => {}, svg
                 ...(revealArrow ? [{ from: revealArrow.from, to: revealArrow.to, side: 'white' }] : []),
               ]}
               highlights={[
+                ...miniBoardLastMoveHighlights(lastTrail),
                 ...(selected ? [selected.square] : []),
                 ...(ply && ply.ctx && ply.ctx.targetSquare && phase === 'playing' ? [ply.ctx.targetSquare] : []),
               ]}

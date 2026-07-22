@@ -22,8 +22,8 @@ import { setGameSettings } from '../store/settingsSlice.js';
 // The active online game is remembered per-browser so a reload or dropped
 // connection can rejoin it (the server replays the move history on welcome).
 const ACTIVE_GAME_KEY = 'qcActiveOnlineGame';
-function saveActiveOnlineGame(roomId, side) {
-  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ roomId, side })); } catch (_) {}
+function saveActiveOnlineGame(roomId, side, ticket = null, ranked = false) {
+  try { localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({ roomId, side, ticket, ranked })); } catch (_) {}
 }
 function readActiveOnlineGame() {
   try { return JSON.parse(localStorage.getItem(ACTIVE_GAME_KEY) || 'null'); } catch (_) { return null; }
@@ -35,6 +35,7 @@ function clearActiveOnlineGame() {
 const IDLE_CLOCK = { active: 'none', whiteMs: 5 * 60 * 1000, blackMs: 5 * 60 * 1000 };
 
 export default function useOnlineGame({
+  auth,
   dispatch,
   moves,
   replayMoves,
@@ -55,11 +56,14 @@ export default function useOnlineGame({
   const mmAbortRef = useRef(false);
   const mmClientIdRef = useRef(null);
   const mmRoomIdRef = useRef(null);
+  const mmTicketRef = useRef(null);
   const wsApiRef = useRef(null);
   const isOnlineGameRef = useRef(false);
+  const isRankedOnlineRef = useRef(false);
   const wsMessageHandlerRef = useRef(null);
 
   const [serverClock, setServerClock] = useState(IDLE_CLOCK);
+  const [onlineOpponent, setOnlineOpponent] = useState(null);
   const [drawOffer, setDrawOffer] = useState(null); // { offeredBy: 'white'|'black' } | null
 
   // Challenge a friend: while waiting in a private room, show the invite
@@ -81,7 +85,8 @@ export default function useOnlineGame({
   // Detach from the current room server-side and forget the rejoin record.
   const detachFromRoom = useCallback(() => {
     clearActiveOnlineGame();
-    if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current).catch(() => {});
+    if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current, mmTicketRef.current).catch(() => {});
+    mmTicketRef.current = null;
   }, []);
 
   const relaysReady = () => Boolean(wsApiRef.current && mmRoomIdRef.current && mmClientIdRef.current);
@@ -110,8 +115,8 @@ export default function useOnlineGame({
   const acceptDrawOffer = useCallback(() => sendDrawAction('accept'), [sendDrawAction]);
   const declineDrawOffer = useCallback(() => sendDrawAction('decline'), [sendDrawAction]);
 
-  // Manual terminal reports (currently resignation): tell the server so the
-  // opponent hears too, then detach. Agreed draws use the offer protocol.
+  // Manual terminal reports (currently resignation) wait for the server's
+  // authoritative result before detaching. Agreed draws use the offer flow.
   const reportManualGameOver = useCallback(({ winner: winSide, reason }) => {
     if (!isOnlineGameRef.current) return;
     if (relaysReady()) {
@@ -122,12 +127,10 @@ export default function useOnlineGame({
         reason,
       });
     }
-    detachFromRoom();
-  }, [detachFromRoom]);
+  }, []);
 
   // Engine-detected game over: both clients derive the same result
-  // deterministically; first report wins. Then detach so the next Online
-  // search can't re-match into the dead room.
+  // deterministically. The server requires matching reports from both seats.
   const reportedGameOverRef = useRef(false);
   useEffect(() => {
     if (!gameOver) {
@@ -143,8 +146,7 @@ export default function useOnlineGame({
         reason: gameOverReason || 'rules',
       });
     }
-    if (isOnlineGameRef.current) detachFromRoom();
-  }, [gameOver, winner, gameOverReason, detachFromRoom]);
+  }, [gameOver, winner, gameOverReason]);
 
   useEffect(() => {
     wsMessageHandlerRef.current = (msg) => {
@@ -228,6 +230,9 @@ export default function useOnlineGame({
           text = `${winSide[0].toUpperCase()}${winSide.slice(1)} wins by ${reason}.`;
         }
         detachFromRoom();
+        if (msg.rated && auth && typeof auth.refreshProfile === 'function') {
+          auth.refreshProfile().catch(() => {});
+        }
         setDrawOffer(null);
         // Voided games (no winner, never really played) skip the winner
         // popup — and with it the game-record path — on purpose.
@@ -299,9 +304,9 @@ export default function useOnlineGame({
 
       devDebug('[WS][client] unhandled message', msg);
     };
-  }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch, moves.length, replayMoves, commitEngineResult, detachFromRoom, setExternalGameOver, setGameStarted, setInfoMessage]);
+  }, [getPieceAtSquare, movePiece, canCastleBetween, castlePieces, dispatch, moves.length, replayMoves, commitEngineResult, detachFromRoom, setExternalGameOver, setGameStarted, setInfoMessage, auth]);
 
-  const startWsConnection = useCallback(({ roomId, clientId, side }) => {
+  const startWsConnection = useCallback(({ roomId, clientId, side, ticket = null }) => {
     try {
       if (wsApiRef.current) wsApiRef.current.close();
     } catch (_) {}
@@ -309,6 +314,7 @@ export default function useOnlineGame({
     wsApiRef.current = connectToRoomWs({
       roomId,
       clientId,
+      ticket,
       onOpen: () => {
         setInfoMessage(`Connected to room ${String(roomId).slice(0, 6)}`);
         devDebug('[WS][client] open', { roomId, clientId, side });
@@ -348,13 +354,15 @@ export default function useOnlineGame({
           bumpGameInstance();
           mmClientIdRef.current = clientId;
           mmRoomIdRef.current = res.roomId;
+          mmTicketRef.current = res.ticket || null;
           isOnlineGameRef.current = true;
+          isRankedOnlineRef.current = false;
           dispatch(setUserTeam(side));
-          saveActiveOnlineGame(res.roomId, side);
+          saveActiveOnlineGame(res.roomId, side, null, false);
           setGameStarted(true);
           setExternalGameOver({ over: false, text: '' });
           setInfoMessage(`Challenge accepted — you are ${side[0].toUpperCase()}${side.slice(1)}!`);
-          startWsConnection({ roomId: res.roomId, clientId, side });
+          startWsConnection({ roomId: res.roomId, clientId, side, ticket: null });
         } else if (res.status === 'room_full') {
           setInfoMessage('That challenge room is already full.');
         } else {
@@ -380,17 +388,22 @@ export default function useOnlineGame({
     (async () => {
       const clientId = getOrCreateClientId();
       try {
-        const s = await getStatus(clientId);
+        const s = await getStatus(clientId, saved.ticket || null);
         if (cancelled || isOnlineGameRef.current) return;
         if (s && s.status === 'matched' && s.roomId === saved.roomId) {
           const side = s.side === 'black' ? 'black' : 'white';
           mmClientIdRef.current = clientId;
           mmRoomIdRef.current = s.roomId;
+          mmTicketRef.current = saved.ticket || s.ticket || null;
           isOnlineGameRef.current = true;
+          isRankedOnlineRef.current = Boolean(saved.ranked || s.ranked);
+          setOnlineOpponent(s.opponentName || Number.isFinite(s.opponentRating)
+            ? { name: s.opponentName || 'Opponent', rating: s.opponentRating }
+            : null);
           dispatch(setUserTeam(side));
           setGameStarted(true);
           setInfoMessage('Reconnecting to your game...');
-          startWsConnection({ roomId: s.roomId, clientId, side });
+          startWsConnection({ roomId: s.roomId, clientId, side, ticket: mmTicketRef.current });
         } else {
           clearActiveOnlineGame();
         }
@@ -411,7 +424,8 @@ export default function useOnlineGame({
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
     mmRoomIdRef.current = null;
-    if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current).catch(() => {});
+    if (mmClientIdRef.current) leaveQueue(mmClientIdRef.current, mmTicketRef.current).catch(() => {});
+    mmTicketRef.current = null;
     setInfoMessage('Challenge cancelled.');
   }, [setGameStarted, setInfoMessage]);
 
@@ -421,7 +435,8 @@ export default function useOnlineGame({
     setMmActive(false);
     setGameStarted(false);
     const id = mmClientIdRef.current;
-    if (id) leaveQueue(id).catch(() => {});
+    if (id) leaveQueue(id, mmTicketRef.current).catch(() => {});
+    mmTicketRef.current = null;
     setInfoMessage('Search cancelled.');
   }, [setGameStarted, setInfoMessage]);
 
@@ -431,9 +446,11 @@ export default function useOnlineGame({
     mmAbortRef.current = true;
     clearActiveOnlineGame();
     isOnlineGameRef.current = false;
+    isRankedOnlineRef.current = false;
     try { if (wsApiRef.current) wsApiRef.current.close(); } catch (_) {}
     wsApiRef.current = null;
     setServerClock(IDLE_CLOCK);
+    setOnlineOpponent(null);
     setDrawOffer(null);
   }, []);
 
@@ -442,6 +459,12 @@ export default function useOnlineGame({
   const startOnlineGame = useCallback((settings) => {
     if (!settings || settings.gameMode !== 'online') return false;
 
+    if (settings.isRanked && (!auth || !auth.user || !auth.session?.access_token || auth.isDevPreview)) {
+      setGameStarted(false);
+      setInfoMessage('Sign in with a real account to join the ranked queue.');
+      return true;
+    }
+
     const clientId = getOrCreateClientId();
     mmClientIdRef.current = clientId;
     mmAbortRef.current = false;
@@ -449,7 +472,7 @@ export default function useOnlineGame({
     if (settings.privateFriend) {
       (async () => {
         try {
-          try { await leaveQueue(clientId); } catch (_) {}
+          try { await leaveQueue(clientId, mmTicketRef.current); } catch (_) {}
           const created = await createPrivateRoom({ clientId });
           if (created.status !== 'waiting' || !created.roomId || !created.code) {
             setGameStarted(false);
@@ -459,8 +482,9 @@ export default function useOnlineGame({
           const link = buildInviteLink(created.code);
           mmRoomIdRef.current = created.roomId;
           isOnlineGameRef.current = true;
+          isRankedOnlineRef.current = false;
           dispatch(setUserTeam('white'));
-          saveActiveOnlineGame(created.roomId, 'white');
+          saveActiveOnlineGame(created.roomId, 'white', null, false);
           setFriendWait({ code: created.code, link });
           setInfoMessage('Waiting for your friend to join…');
           try { await navigator.clipboard.writeText(link); } catch (_) { /* copy button remains */ }
@@ -473,24 +497,35 @@ export default function useOnlineGame({
       return true;
     }
 
-    const seatIntoRoom = (side, roomId) => {
+    const seatIntoRoom = (side, roomId, match = {}) => {
       mmRoomIdRef.current = roomId;
+      mmTicketRef.current = match.ticket || mmTicketRef.current || null;
       isOnlineGameRef.current = true;
+      isRankedOnlineRef.current = Boolean(match.ranked ?? settings.isRanked);
+      setOnlineOpponent(match.opponentName || Number.isFinite(match.opponentRating)
+        ? { name: match.opponentName || 'Opponent', rating: match.opponentRating }
+        : null);
       dispatch(setUserTeam(side));
-      saveActiveOnlineGame(roomId, side);
+      saveActiveOnlineGame(roomId, side, mmTicketRef.current, isRankedOnlineRef.current);
       setInfoMessage(`Matched! You are ${side.toUpperCase()}. Room ${String(roomId || '').slice(0, 6)}`);
       setMmActive(false);
-      startWsConnection({ roomId, clientId, side });
+      startWsConnection({ roomId, clientId, side, ticket: mmTicketRef.current });
     };
 
     (async () => {
       try {
         // Detach from any previous room first: a finished game would
         // otherwise "re-match" us straight back into its dead room.
-        try { await leaveQueue(clientId); } catch (_) {}
-        const join = await joinQueue({ clientId, ranked: Boolean(settings.isRanked) });
+        try { await leaveQueue(clientId, mmTicketRef.current); } catch (_) {}
+        mmTicketRef.current = null;
+        const join = await joinQueue({
+          clientId,
+          ranked: Boolean(settings.isRanked),
+          accessToken: settings.isRanked ? auth.session.access_token : null,
+        });
+        mmTicketRef.current = join.ticket || null;
         if (join.status === 'matched') {
-          seatIntoRoom((join.side === 'white' || join.side === 'black') ? join.side : 'white', join.roomId);
+          seatIntoRoom((join.side === 'white' || join.side === 'black') ? join.side : 'white', join.roomId, join);
           return;
         }
         if (join.status === 'queued') {
@@ -498,27 +533,28 @@ export default function useOnlineGame({
           setMmActive(true);
           const found = await waitForMatch(clientId, {
             intervalMs: 1200,
-            timeoutMs: 60000,
+            timeoutMs: 120000,
             shouldStop: () => mmAbortRef.current,
+            ticket: mmTicketRef.current,
           });
           if (found && found.status === 'matched') {
-            seatIntoRoom((found.side === 'white' || found.side === 'black') ? found.side : 'white', found.roomId);
+            seatIntoRoom((found.side === 'white' || found.side === 'black') ? found.side : 'white', found.roomId, found);
           } else if (!mmAbortRef.current) {
             // Timed out without a match: leave the queue cleanly.
             setMmActive(false);
             setGameStarted(false);
-            leaveQueue(clientId).catch(() => {});
+            leaveQueue(clientId, mmTicketRef.current).catch(() => {});
             setInfoMessage('No opponent found. Try again in a bit.');
           }
           return;
         }
         setInfoMessage('Matchmaking error. Please try again.');
       } catch (e) {
-        setInfoMessage('Failed to contact matchmaking service.');
+        setInfoMessage(e && e.message ? e.message : 'Failed to contact matchmaking service.');
       }
     })();
     return true;
-  }, [dispatch, startWsConnection, setGameStarted, setInfoMessage]);
+  }, [dispatch, startWsConnection, setGameStarted, setInfoMessage, auth]);
 
   // Unmount: abort searches, close the socket, leave the queue.
   useEffect(() => {
@@ -529,15 +565,17 @@ export default function useOnlineGame({
         if (wsApiRef.current) wsApiRef.current.close();
       } catch (_) {}
       if (id) {
-        leaveQueue(id).catch(() => {});
+        leaveQueue(id, mmTicketRef.current).catch(() => {});
       }
     };
   }, []);
 
   return {
     isOnlineGameRef,
+    isRankedOnlineRef,
     mmActive,
     serverClock,
+    onlineOpponent,
     drawOffer,
     friendWait,
     inviteCopied,
