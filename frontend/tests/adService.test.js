@@ -3,6 +3,7 @@ import {
   MIN_GAMES_BETWEEN_ADS,
   MIN_SECONDS_BETWEEN_ADS,
   requestRewardedAd,
+  rewardedAdsEnabled,
   showRewardedAd,
 } from '../src/ads/adService.js';
 
@@ -31,6 +32,7 @@ describe('monetization ad guardrails', () => {
   });
 
   it('does not unlock when ads are unconfigured', async () => {
+    expect(rewardedAdsEnabled()).toBe(false);
     await expect(showRewardedAd()).resolves.toBe(false);
   });
 

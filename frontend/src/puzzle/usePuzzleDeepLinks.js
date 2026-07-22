@@ -1,6 +1,6 @@
 // frontend/src/puzzle/usePuzzleDeepLinks.js
 // Purpose: Mined-daily open state (with the "unplayed" dot), completion
-// tracking, and the /?puzzle, ?mined, and ?minedGame deep links.
+// tracking, and the /puzzle, legacy /?puzzle, ?mined, and ?minedGame links.
 // Imports From: ./minedPuzzleProgress.js (+ lazy ./minedPreview.js, ./minedGameLoader.js)
 // Exported To: ../App.jsx
 

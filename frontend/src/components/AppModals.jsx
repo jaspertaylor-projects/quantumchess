@@ -11,6 +11,7 @@ import WinnerModal from './WinnerModal.jsx';
 import EnPassantChoiceModal from './EnPassantChoiceModal.jsx';
 import ConfirmModal from './ConfirmModal.jsx';
 import FriendWaitCard from './FriendWaitCard.jsx';
+import FriendInviteErrorCard from './FriendInviteErrorCard.jsx';
 import SettingsModal from '../settings/SettingsModal.jsx';
 import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import { DEFAULT_BOARD } from '../settings/useBoardColors.js';
@@ -39,7 +40,7 @@ export default function AppModals({
   rulesOpen, rulesInitialPage, onCloseRules, onPlayLesson,
   tutorialOpen, closeTutorial, tutorialLessonId, onOpenRulesPage,
   // friend wait
-  online,
+  online, onChooseGameAfterInviteError,
   // account/pricing/review
   auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn,
   handleReplayGame, handleReviewGame, handleShareGame, onAccountCreated,
@@ -124,6 +125,13 @@ export default function AppModals({
         inviteCopied={online.inviteCopied}
         onCopyInvite={online.handleCopyInvite}
         onCancel={online.handleCancelFriendWait}
+      />
+
+      <FriendInviteErrorCard
+        error={online.inviteError}
+        onRetry={online.retryInvite}
+        onChooseGame={onChooseGameAfterInviteError}
+        onClose={online.dismissInviteError}
       />
 
       <AccountModal

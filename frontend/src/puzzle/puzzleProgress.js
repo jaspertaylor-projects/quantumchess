@@ -124,7 +124,7 @@ export function loadOrGeneratePuzzle(dateStr = todayStr()) {
 
 // e.g.  Quantum Chess #12 — The Ledger 📒 (2 moves)
 //       🟥🟩 solved on try 2 · 🔥 5 day streak
-//       https://quantumchess.ninja/?puzzle
+//       https://quantumchess.ninja/puzzle
 export function buildShareText(puzzle, { solved, tries }, streak) {
   const attempts = solved
     ? '🟥'.repeat(Math.max(0, tries - 1)) + '🟩'
@@ -139,7 +139,7 @@ export function buildShareText(puzzle, { solved, tries }, streak) {
     // MUST keep the https:// scheme — bare domains (especially .ninja with
     // a query string) often fail iOS/Android link detection in Messages,
     // arriving as dead text instead of a tappable link.
-    'https://quantumchess.ninja/?puzzle',
+    'https://quantumchess.ninja/puzzle',
   ];
   return lines.join('\n');
 }

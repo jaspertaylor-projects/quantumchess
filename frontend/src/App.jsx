@@ -52,7 +52,7 @@ import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
-import { showRewardedAd } from './ads/adService.js';
+import { rewardedAdsEnabled, showRewardedAd } from './ads/adService.js';
 import {
   botAccountAccess, isAdFree, isTipper, markReviewUsed, reviewCapFor, reviewsRemaining,
 } from './account/billing.js';
@@ -95,6 +95,7 @@ export default function App({ entryAction = null }) {
   const [rulesInitialPage, setRulesInitialPage] = useState(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialLessonId, setTutorialLessonId] = useState(null);
+  const [consentPromptOpen, setConsentPromptOpen] = useState(false);
   // Narrow layout: the New Game setup panel lives in a bottom sheet.
   const [mobileNewGameOpen, setMobileNewGameOpen] = useState(false);
   const closeMobileNewGame = useCallback(() => setMobileNewGameOpen(false), []);
@@ -750,6 +751,13 @@ export default function App({ entryAction = null }) {
   }, [online, aiBot, pieces, aiSide, sideToMove, moves.length, positionSigCounts, lastMove, isOnlineGameRef]);
 
   const [newGameSignal, setNewGameSignal] = useState(0);
+  const handleChooseGameAfterInviteError = useCallback(() => {
+    online.dismissInviteError();
+    setGameStarted(false);
+    setInfoMessage('Choose how you would like to play.');
+    setNewGameSignal((signal) => signal + 1);
+    setMobileNewGameOpen(true);
+  }, [online.dismissInviteError]);
   const handleRequestNewGame = useCallback(() => {
     setConfirmState({
       title: 'End this game?',
@@ -778,15 +786,17 @@ export default function App({ entryAction = null }) {
   }, [gameSettings, handleStartGame]);
 
   // Review ladder: Premium unlimited; tippers get five without ads; free
-  // accounts get three, each granted only after a rewarded ad is viewed.
+  // accounts get three. Configured builds require a completed rewarded ad;
+  // pre-ad builds skip that unavailable step while keeping the daily cap.
   const [, setPostGameReviewQuotaVersion] = useState(0);
   const [postGameReviewNotice, setPostGameReviewNotice] = useState('');
   const [postGameReviewBusy, setPostGameReviewBusy] = useState(false);
   const reviewUserId = auth.user && auth.user.id;
   const postGameReviewsRemaining = reviewsRemaining(auth.profile, reviewUserId);
+  const rewardedReviewsActive = rewardedAdsEnabled();
   const postGameReviewAccess = isPaidUser ? 'premium'
     : postGameReviewsRemaining === 0 ? 'limit'
-      : isTipper(auth.profile) ? 'tip' : 'ad';
+      : isTipper(auth.profile) ? 'tip' : rewardedReviewsActive ? 'ad' : 'free';
   useEffect(() => {
     setPostGameReviewNotice('');
     setPostGameReviewBusy(false);
@@ -801,9 +811,12 @@ export default function App({ entryAction = null }) {
     }
     setPostGameReviewBusy(true);
     try {
-      if (!isPaidUser && !isTipper(auth.profile)) {
+      if (!isPaidUser && !isTipper(auth.profile) && rewardedReviewsActive) {
         const rewarded = await showRewardedAd();
-        if (!rewarded) return;
+        if (!rewarded) {
+          setPostGameReviewNotice('No review ad is available right now. Please try again in a moment.');
+          return;
+        }
       }
       if (!isPaidUser) {
         markReviewUsed(reviewUserId);
@@ -819,14 +832,14 @@ export default function App({ entryAction = null }) {
         moves,
       });
       trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
-        accessType: isPaidUser ? 'premium' : isTipper(auth.profile) ? 'tip' : 'rewarded_ad',
+        accessType: isPaidUser ? 'premium' : isTipper(auth.profile) ? 'tip' : rewardedReviewsActive ? 'rewarded_ad' : 'free_fallback',
         gameResult: resolvedWinnerText,
         moveCount: moves.length,
       });
     } finally {
       setPostGameReviewBusy(false);
     }
-  }, [postGameReviewBusy, auth.profile, reviewUserId, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setReviewGame]);
+  }, [postGameReviewBusy, auth.profile, reviewUserId, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, rewardedReviewsActive, setReviewGame]);
 
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
   const onlineDrawOfferRole = isOnlineGameRef.current && online.drawOffer
@@ -1027,11 +1040,24 @@ export default function App({ entryAction = null }) {
         <a href="/privacy.html" style={styles.footerLink}>Privacy</a>
         <span style={{ opacity: 0.4 }}>·</span>
         <a href="/terms.html" style={styles.footerLink}>Terms</a>
+        <span style={{ opacity: 0.4 }}>·</span>
+        <button
+          type="button"
+          style={{ ...styles.footerLink, padding: 0, border: 0, background: 'none', font: 'inherit', cursor: 'pointer' }}
+          onClick={() => setConsentPromptOpen(true)}
+        >
+          Privacy choices
+        </button>
       </footer>
 
-      {/* Restore a saved choice for Consent Mode, but never interrupt play.
-          The actual Accept/Necessary prompt belongs to the welcome page. */}
-      <ConsentBanner promptIfUnset={false} />
+      {/* Deep links must remain immediately playable. This compact consent
+          card floats over the shell without blocking the board or invite. */}
+      <ConsentBanner
+        promptIfUnset
+        forceOpen={consentPromptOpen}
+        compact
+        onDecision={() => setConsentPromptOpen(false)}
+      />
       <HoverTip />
 
       {isNarrow ? (
@@ -1138,6 +1164,7 @@ export default function App({ entryAction = null }) {
           setRulesOpen(true);
         }}
         online={online}
+        onChooseGameAfterInviteError={handleChooseGameAfterInviteError}
         auth={auth}
         accountOpen={accountOpen}
         accountUpsellSource={accountUpsellSource}

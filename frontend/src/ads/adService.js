@@ -33,6 +33,13 @@ export function adsEnabled() {
   return Boolean(CLIENT) && !DEV_MODE;
 }
 
+// The product uses this to avoid advertising a rewarded-ad requirement in
+// builds where that placement cannot possibly run. Free review quotas still
+// apply; only the unavailable ad step is skipped.
+export function rewardedAdsEnabled() {
+  return adsEnabled();
+}
+
 export function puzzleDisplayAdConfig() {
   if (DEV_MODE || !CLIENT || !PUZZLE_DISPLAY_SLOT) return null;
   return { client: CLIENT, slot: PUZZLE_DISPLAY_SLOT, testMode: TEST_MODE };

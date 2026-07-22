@@ -1,0 +1,56 @@
+<!-- frontend/puzzle.html -->
+<!-- Purpose: Crawlable and shareable HTML entry for the interactive daily puzzle at /puzzle. -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Daily Quantum Chess Puzzle — Play Today’s Position</title>
+    <meta name="description" content="Play today’s free Quantum Chess puzzle, mined from a real game and graded against the engine. Find the best move, build your streak, and share your result." />
+    <link rel="canonical" href="https://quantumchess.ninja/puzzle" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Quantum Chess" />
+    <meta property="og:title" content="Daily Quantum Chess Puzzle" />
+    <meta property="og:description" content="One position. One precise quantum move. Play today’s free puzzle and share your result." />
+    <meta property="og:url" content="https://quantumchess.ninja/puzzle" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Daily Quantum Chess Puzzle" />
+    <meta name="twitter:description" content="Find today’s best quantum move, build your streak, and share your result." />
+    <style>
+      html, body { margin: 0; height: 100%; background: #0a0e1a; overscroll-behavior-y: none; }
+      #root { height: 100vh; height: 100dvh; overflow: hidden; }
+      .qc-puzzle-static {
+        box-sizing: border-box; height: 100%; overflow: auto; display: grid; place-items: center;
+        padding: 32px 20px; color: #edf5ff; text-align: center;
+        background: radial-gradient(circle at 50% 22%, rgba(79,195,247,.2), transparent 34%), #080c18;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+      .qc-puzzle-static > div { max-width: 650px; }
+      .qc-puzzle-static h1 { margin: 0 0 12px; font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.05; }
+      .qc-puzzle-static p { color: #aebbd0; line-height: 1.65; }
+      .qc-puzzle-static a { color: #7fe7ff; }
+    </style>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('consent', 'default', {
+        ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', wait_for_update: 500
+      });
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5481833391571778" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root">
+      <main class="qc-puzzle-static">
+        <div>
+          <h1>Daily Quantum Chess Puzzle</h1>
+          <p>Every day, one critical position is mined from a real Quantum Chess game. Find the strongest move, see how it changes the position, and earn an engine-graded result without downloading anything or creating an account.</p>
+          <p>The daily challenge uses the same deterministic rules as the full game: movement measures a piece, contact can zap an enemy or heal an ally, and every possibility must preserve one legal chess set.</p>
+          <p><a href="/rules.html">Learn the rules</a> · <a href="/strategy.html">Read the strategy guide</a> · <a href="/play">Play a full game</a></p>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

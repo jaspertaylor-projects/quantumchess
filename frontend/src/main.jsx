@@ -37,6 +37,7 @@ import {
   WELCOME_ACTION,
   WELCOME_STORAGE_KEY,
   playUrlFrom,
+  puzzleUrlFrom,
   resolveWelcomeEntry,
 } from './welcome/welcomeRouting.js';
 
@@ -96,14 +97,17 @@ const resolveInitialEntry = () => {
     pathname: window.location.pathname,
     search: window.location.search,
     welcomeSeen: storageHas(WELCOME_STORAGE_KEY),
-    legacyOnboardSeen: storageHas(LEGACY_ONBOARD_STORAGE_KEY),
   });
 
   if (entry.surface === 'play') {
-    rememberWelcomeChoice();
-    const cleanPlayUrl = `${playUrlFrom(window.location.search)}${window.location.hash}`;
-    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== cleanPlayUrl) {
-      window.history.replaceState({}, '', cleanPlayUrl);
+    if (entry.markSeen) rememberWelcomeChoice();
+    const onPuzzleEntry = entry.action === WELCOME_ACTION.PUZZLE
+      || window.location.pathname === '/puzzle' || window.location.pathname === '/puzzle/';
+    const cleanEntryUrl = `${onPuzzleEntry
+      ? puzzleUrlFrom(window.location.search)
+      : playUrlFrom(window.location.search)}${window.location.hash}`;
+    if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== cleanEntryUrl) {
+      window.history.replaceState({}, '', cleanEntryUrl);
     }
   }
   setBelowFoldVisible(entry.surface === 'welcome');
@@ -121,8 +125,10 @@ function RootExperience() {
     setWelcomeScrollLock(false);
     if (action === WELCOME_ACTION.RULES) return;
     setBelowFoldVisible(false);
-    const cleanPlayUrl = `${playUrlFrom(window.location.search)}${window.location.hash}`;
-    window.history.replaceState({}, '', cleanPlayUrl);
+    const cleanEntryUrl = `${action === WELCOME_ACTION.PUZZLE
+      ? puzzleUrlFrom(window.location.search)
+      : playUrlFrom(window.location.search)}${window.location.hash}`;
+    window.history.replaceState({}, '', cleanEntryUrl);
     setEntry({ surface: 'play', action });
   };
 

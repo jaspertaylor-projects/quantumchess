@@ -174,8 +174,9 @@ scale).
    ```
 
    This publishes the `qc-canonical-routing` CloudFront Function, redirects
-   `www` to the apex domain, keeps `/play` as the only single-page app route,
-   and maps missing S3 objects to `/404.html` with HTTP 404. Do not map 403 or
+   `www` to the apex domain, keeps `/play` and `/puzzle` as explicit application
+   routes, and maps missing
+   S3 objects to `/404.html` with HTTP 404. Do not map 403 or
    404 errors to `/index.html` with response code 200; that creates soft 404s.
 9. Copy the **Distribution ID** (looks like `E2ABCDEF123456`) and the
    distribution domain (`dxxxx.cloudfront.net`) from the General tab.

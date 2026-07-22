@@ -33,6 +33,7 @@ export default function ConsentBanner({
   promptIfUnset = true,
   forceOpen = false,
   emphasizeChoices = false,
+  compact = false,
   onDecision = null,
 }) {
   const [visible, setVisible] = useState(false);
@@ -81,7 +82,7 @@ export default function ConsentBanner({
     },
     panel: {
       pointerEvents: 'auto',
-      width: 'min(96vw, 720px)',
+      width: compact ? 'min(94vw, 590px)' : 'min(96vw, 720px)',
       display: 'flex',
       flexWrap: 'wrap',
       alignItems: 'center',
@@ -110,9 +111,9 @@ export default function ConsentBanner({
     <div className={`qc-consent-banner${emphasizeChoices ? ' qc-consent-banner--unlock' : ''}`} style={styles.wrap} role="dialog" aria-label="Cookie consent">
       <div className="qc-consent-panel" style={styles.panel}>
         <div style={styles.text}>
-          We use optional cookies and similar technologies for analytics and personalized advertising.
-          Accept all to allow them, or choose Necessary only to keep optional storage denied. Either
-          choice unlocks play, and you can change it later under Privacy choices. See our{' '}
+          {compact
+            ? 'Your game is ready. Choose whether to allow optional analytics and personalized advertising. '
+            : 'We use optional cookies and similar technologies for analytics and personalized advertising. Accept all to allow them, or choose Necessary only to keep optional storage denied. Either choice unlocks play, and you can change it later under Privacy choices. '}
           <a href="/privacy.html" style={styles.link}>Privacy Policy</a>.
         </div>
         <div className={`qc-consent-actions${emphasizeChoices ? ' qc-consent-actions--unlock' : ''}`}>

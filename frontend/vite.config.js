@@ -105,4 +105,15 @@ export default defineConfig({
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     },
   },
+  build: {
+    // Two intentional HTML entry points: the publisher homepage and a real,
+    // independently indexable daily-puzzle document. CloudFront serves the
+    // latter at the clean /puzzle URL.
+    rollupOptions: {
+      input: {
+        main: path.resolve(process.cwd(), 'index.html'),
+        puzzle: path.resolve(process.cwd(), 'puzzle.html'),
+      },
+    },
+  },
 });

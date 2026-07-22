@@ -69,6 +69,7 @@ export default function useOnlineGame({
   // Challenge a friend: while waiting in a private room, show the invite
   // card. Cleared by the room_state broadcast when the friend connects.
   const [friendWait, setFriendWait] = useState(null); // { code, link }
+  const [inviteError, setInviteError] = useState(null); // recoverable failed deep-link join
   const friendWaitRef = useRef(null);
   useEffect(() => { friendWaitRef.current = friendWait; }, [friendWait]);
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -334,46 +335,65 @@ export default function useOnlineGame({
     });
   }, [setInfoMessage]);
 
+  const attemptPrivateJoin = useCallback(async (code) => {
+    const clientId = getOrCreateClientId();
+    setInviteError(null);
+    setInfoMessage('Opening your friend challenge…');
+    try {
+      const res = await joinPrivateRoom({ clientId, code });
+      if (res.status === 'matched' && res.roomId) {
+        const side = res.side === 'black' || res.side === 'white' ? res.side : 'black';
+        dispatch(setGameSettings({ gameMode: 'online' }));
+        dispatch(resetGame());
+        bumpGameInstance();
+        mmClientIdRef.current = clientId;
+        mmRoomIdRef.current = res.roomId;
+        mmTicketRef.current = res.ticket || null;
+        isOnlineGameRef.current = true;
+        isRankedOnlineRef.current = false;
+        dispatch(setUserTeam(side));
+        saveActiveOnlineGame(res.roomId, side, null, false);
+        setGameStarted(true);
+        setExternalGameOver({ over: false, text: '' });
+        setInfoMessage(`Challenge accepted — you are ${side[0].toUpperCase()}${side.slice(1)}!`);
+        startWsConnection({ roomId: res.roomId, clientId, side, ticket: null });
+        return;
+      }
+
+      if (res.status === 'room_full') {
+        const message = 'Both seats in this challenge are already taken. Ask your friend to create a new link.';
+        setInfoMessage(message);
+        setInviteError({ kind: 'room_full', title: 'Challenge already joined', message, code });
+        return;
+      }
+
+      const message = 'This challenge link has expired. Ask your friend to create a fresh one.';
+      setInfoMessage(message);
+      setInviteError({ kind: 'expired', title: 'Challenge expired', message, code });
+    } catch (_) {
+      const message = 'The game server could not be reached. Check your connection and try this link again.';
+      setInfoMessage(message);
+      setInviteError({ kind: 'network', title: 'Could not open challenge', message, code });
+    }
+  }, [bumpGameInstance, dispatch, setExternalGameOver, setGameStarted, setInfoMessage, startWsConnection]);
+
   // Challenge link: /?join=CODE seats this browser into a friend's private
-  // room as black. The read is pure (StrictMode double-invokes initializers);
-  // the URL param is stripped in the effect.
+  // room. The URL is cleaned immediately, while the code remains in state so
+  // a transient failure can be retried from the recovery card.
   const [pendingJoinCode] = useState(readJoinCode);
   const joinAttemptedRef = useRef(false);
   useEffect(() => {
     if (!pendingJoinCode || joinAttemptedRef.current) return;
     joinAttemptedRef.current = true; // once per page load (StrictMode re-runs effects)
     stripJoinCode();
-    const clientId = getOrCreateClientId();
-    (async () => {
-      try {
-        const res = await joinPrivateRoom({ clientId, code: pendingJoinCode });
-        if (res.status === 'matched' && res.roomId) {
-          const side = res.side === 'black' || res.side === 'white' ? res.side : 'black';
-          dispatch(setGameSettings({ gameMode: 'online' }));
-          dispatch(resetGame());
-          bumpGameInstance();
-          mmClientIdRef.current = clientId;
-          mmRoomIdRef.current = res.roomId;
-          mmTicketRef.current = res.ticket || null;
-          isOnlineGameRef.current = true;
-          isRankedOnlineRef.current = false;
-          dispatch(setUserTeam(side));
-          saveActiveOnlineGame(res.roomId, side, null, false);
-          setGameStarted(true);
-          setExternalGameOver({ over: false, text: '' });
-          setInfoMessage(`Challenge accepted — you are ${side[0].toUpperCase()}${side.slice(1)}!`);
-          startWsConnection({ roomId: res.roomId, clientId, side, ticket: null });
-        } else if (res.status === 'room_full') {
-          setInfoMessage('That challenge room is already full.');
-        } else {
-          setInfoMessage('That challenge link has expired — ask your friend for a new one.');
-        }
-      } catch (_) {
-        setInfoMessage('Could not reach the game server to join the challenge.');
-      }
-    })();
+    attemptPrivateJoin(pendingJoinCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingJoinCode, startWsConnection]);
+  }, [pendingJoinCode, attemptPrivateJoin]);
+
+  const retryInvite = useCallback(() => {
+    if (inviteError && inviteError.code) attemptPrivateJoin(inviteError.code);
+  }, [attemptPrivateJoin, inviteError]);
+  const dismissInviteError = useCallback(() => setInviteError(null), []);
 
   // Rejoin: if this browser has an active online game (reload, dropped
   // connection), reattach to the room. The server keeps the seat warm for a
@@ -578,8 +598,11 @@ export default function useOnlineGame({
     onlineOpponent,
     drawOffer,
     friendWait,
+    inviteError,
     inviteCopied,
     handleCopyInvite,
+    retryInvite,
+    dismissInviteError,
     handleCancelFriendWait,
     handleCancelSearch,
     startOnlineGame,

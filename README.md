@@ -660,7 +660,8 @@ Legend: [ ] not started · [~] in progress · [X] done
     fixture ships future chains, so any date-addressable UI leaks them, and
     the once-a-day scarcity is the retention mechanic. Both preview params
     (`?puzzleDate`, `?mined`) are hard-gated to dev builds in `App.jsx`
-    (`import.meta.env.DEV`); the only production deep link is `/?puzzle`,
+    (`import.meta.env.DEV`); the canonical production entry is `/puzzle`
+    (legacy `/?puzzle` links still work),
     which opens today's. Keep it that way.
 - [X] **First-60-seconds onboarding / "first move theater"** — shipped as
       the first-visit intro (2026-07-14..16): the board is live immediately

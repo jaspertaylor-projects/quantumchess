@@ -35,7 +35,9 @@ function handler(event) {
   var suffix = querySuffix(request.querystring || {});
 
   if (host === 'www.quantumchess.ninja') {
-    var canonicalPath = request.uri === '/index.html' ? '/' : request.uri;
+    var canonicalPath = request.uri === '/index.html'
+      ? '/'
+      : request.uri === '/puzzle.html' || request.uri === '/puzzle/' ? '/puzzle' : request.uri;
     return redirect('https://quantumchess.ninja' + canonicalPath + suffix);
   }
 
@@ -43,8 +45,16 @@ function handler(event) {
     return redirect('https://quantumchess.ninja/' + suffix);
   }
 
+  if (request.uri === '/puzzle.html' || request.uri === '/puzzle/') {
+    return redirect('https://quantumchess.ninja/puzzle' + suffix);
+  }
+
   if (request.uri === '/play' || request.uri === '/play/') {
     request.uri = '/index.html';
+  }
+
+  if (request.uri === '/puzzle') {
+    request.uri = '/puzzle.html';
   }
 
   return request;

@@ -388,7 +388,6 @@ export default function NewGamePanel({
               onClick={() => onStartGame({
                 gameMode: 'online',
                 privateFriend: true,
-                preferredSide,
                 isRanked: false,
                 timeControl: '5+5',
               })}

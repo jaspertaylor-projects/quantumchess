@@ -4,6 +4,7 @@ import {
   WELCOME_ACTION,
   hasAppDeepLink,
   playUrlFrom,
+  puzzleUrlFrom,
   resolveWelcomeEntry,
   welcomeActionFromSearch,
 } from '../src/welcome/welcomeRouting.js';
@@ -17,9 +18,12 @@ describe('welcome routing', () => {
     });
   });
 
-  it('sends both new and legacy returning visitors to the game', () => {
+  it('sends visitors who actually saw Welcome back to the game', () => {
     expect(resolveWelcomeEntry({ pathname: '/', welcomeSeen: true }).surface).toBe('play');
-    expect(resolveWelcomeEntry({ pathname: '/', legacyOnboardSeen: true }).surface).toBe('play');
+  });
+
+  it('does not confuse the in-game coach flag with a completed welcome visit', () => {
+    expect(resolveWelcomeEntry({ pathname: '/', legacyOnboardSeen: true }).surface).toBe('welcome');
   });
 
   it('honors the three playable welcome choices', () => {
@@ -38,10 +42,22 @@ describe('welcome routing', () => {
     expect(hasAppDeepLink('?join=ABC123')).toBe(true);
     expect(hasAppDeepLink('?puzzle=daily')).toBe(true);
     expect(resolveWelcomeEntry({ pathname: '/', search: '?join=ABC123' }).surface).toBe('play');
+    expect(resolveWelcomeEntry({ pathname: '/', search: '?puzzle' })).toEqual({
+      surface: 'play', action: WELCOME_ACTION.PUZZLE, markSeen: false,
+    });
     expect(hasAppDeepLink('?reset=1')).toBe(true);
     expect(resolveWelcomeEntry({ pathname: '/', search: '?reset=1' }).surface).toBe('play');
     expect(hasAppDeepLink('?game=00000000-0000-4000-8000-000000000000')).toBe(true);
     expect(resolveWelcomeEntry({ pathname: '/', search: '?game=shared-token' }).surface).toBe('play');
+  });
+
+  it('opens the canonical puzzle route without marking Welcome as seen', () => {
+    expect(resolveWelcomeEntry({ pathname: '/puzzle' })).toEqual({
+      surface: 'play',
+      action: WELCOME_ACTION.PUZZLE,
+      markSeen: false,
+    });
+    expect(puzzleUrlFrom('?welcome=puzzle&puzzle=1&ref=share')).toBe('/puzzle?ref=share');
   });
 
   it('cleans the one-time action while preserving other query parameters', () => {

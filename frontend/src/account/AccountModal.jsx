@@ -18,7 +18,7 @@ import {
   startCheckout, startTipCheckout, openBillingPortal, isAdFree, isTipper,
   reviewCapFor, reviewsRemaining, markReviewUsed,
 } from './billing.js';
-import { showRewardedAd } from '../ads/adService.js';
+import { rewardedAdsEnabled, showRewardedAd } from '../ads/adService.js';
 import { uploadAvatar } from './avatarUpload.js';
 import { taglineOptions } from '../sayings/sayingsCatalog.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
@@ -57,6 +57,7 @@ export default function AccountModal({
   const accountTierClass = isPaid
     ? 'qc-am-tier-badge-paid'
     : isTipper(profile) ? 'qc-am-tier-badge-supporter' : 'qc-am-tier-badge-free';
+  const rewardedReviewsActive = rewardedAdsEnabled();
 
   useEffect(() => {
     if (open) {
@@ -649,7 +650,7 @@ export default function AccountModal({
                           className={`qc-account-review-game qc-am-review-btn ${isPaid || isTipper(profile) ? 'premium' : 'standard'}`}
                           title={isPaid
                             ? 'Unlimited engine game reviews'
-                            : `${reviewsRemaining(profile, user.id)} engine reviews left today${isTipper(profile) ? '' : ' · rewarded ad required'}`}
+                            : `${reviewsRemaining(profile, user.id)} engine reviews left today${isTipper(profile) || !rewardedReviewsActive ? '' : ' · rewarded ad required'}`}
                           disabled={reviewingGameId !== null}
                           onClick={async () => {
                             const cap = reviewCapFor(profile);
@@ -660,9 +661,12 @@ export default function AccountModal({
                             }
                             setReviewingGameId(g.id);
                             try {
-                              if (!isPaid && !isTipper(profile)) {
+                              if (!isPaid && !isTipper(profile) && rewardedReviewsActive) {
                                 const rewarded = await showRewardedAd();
-                                if (!rewarded) return;
+                                if (!rewarded) {
+                                  setNotice({ kind: 'info', text: 'No review ad is available right now. Please try again in a moment.' });
+                                  return;
+                                }
                               }
                               const opened = await onReviewGame(g);
                               if (opened !== false && !isPaid) {
@@ -678,7 +682,7 @@ export default function AccountModal({
                             ? '…'
                             : isPaid || isTipper(profile) || reviewsRemaining(profile, user.id) === 0
                               ? 'Review'
-                              : '▷ Review (watch ad)'}
+                              : rewardedReviewsActive ? '▷ Review (watch ad)' : 'Review'}
                         </button>
                       </span>
                     </div>

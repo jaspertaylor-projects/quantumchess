@@ -88,7 +88,8 @@ export async function getMetrics() {
 // --- Challenge a friend (private rooms) -----------------------------------
 
 // Opens a private room; the response carries the invite `code` to share.
-// The creator waits in the room as white.
+// Friend challenges intentionally use a fixed creator-White contract, so the
+// general AI-side preference is not submitted by this setup path.
 export async function createPrivateRoom({ clientId }) {
   const res = await fetch('/api/matchmaking/create-private', {
     method: 'POST',

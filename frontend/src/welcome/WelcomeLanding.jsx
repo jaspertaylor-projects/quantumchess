@@ -169,7 +169,9 @@ export default function WelcomeLanding({ onChoose }) {
             return (
               <a
                 key={choice.action}
-                href={choice.href || (consentResolved ? `/play?welcome=${choice.action}` : '#privacy-choices')}
+                href={choice.href || (consentResolved
+                  ? choice.action === WELCOME_ACTION.PUZZLE ? '/puzzle?welcome=puzzle' : `/play?welcome=${choice.action}`
+                  : '#privacy-choices')}
                 className={`qc-welcome-card qc-welcome-card--${choice.tone}${choice.featured ? ' qc-welcome-card--featured' : ''}${locked ? ' qc-welcome-card--locked' : ''}`}
                 onClick={(event) => choose(event, choice)}
                 aria-disabled={locked || undefined}
