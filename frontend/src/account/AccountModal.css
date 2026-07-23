@@ -67,6 +67,44 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
+.qc-am-password-wrap {
+  position: relative;
+}
+
+.qc-am-password-input {
+  padding-right: 48px;
+}
+
+.qc-am-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.qc-am-password-toggle:hover,
+.qc-am-password-toggle:focus-visible,
+.qc-am-password-toggle[aria-pressed='true'] {
+  color: #7fe7ff;
+  background: rgba(127, 231, 255, 0.1);
+}
+
+.qc-am-password-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(127, 231, 255, 0.48);
+}
+
 .qc-am-primary-btn {
   padding: 14px 20px;
   border-radius: 10px;

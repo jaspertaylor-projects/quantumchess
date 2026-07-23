@@ -9,7 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
 import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
 import {
@@ -38,6 +38,7 @@ export default function AccountModal({
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [signupUsername, setSignupUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null); // { kind: 'info'|'error', text }
@@ -58,6 +59,16 @@ export default function AccountModal({
     ? 'qc-am-tier-badge-paid'
     : isTipper(profile) ? 'qc-am-tier-badge-supporter' : 'qc-am-tier-badge-free';
   const rewardedReviewsActive = rewardedAdsEnabled();
+
+  useEffect(() => {
+    setPasswordVisible(false);
+  }, [recoveryMode, open]);
+
+  const selectAuthMode = (mode) => {
+    setPasswordVisible(false);
+    setAuthMode(mode);
+    setNotice(null);
+  };
 
   useEffect(() => {
     if (open) {
@@ -144,7 +155,7 @@ export default function AccountModal({
         // Its own page, not a one-line notice: people missed that signup
         // isn't finished until the emailed link is clicked.
         setNotice(null);
-        setAuthMode('confirm-sent');
+        selectAuthMode('confirm-sent');
       }
       trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
       // The parent must NOT tear this modal down while the confirm-sent
@@ -344,10 +355,24 @@ export default function AccountModal({
                 </div>
                 <div>
                   <div className="qc-am-label">Password</div>
-                  <input
-                    className="qc-account-password qc-am-input" type="password" value={password}
-                    onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
-                  />
+                  <div className="qc-am-password-wrap">
+                    <input
+                      className="qc-account-password qc-am-input qc-am-password-input"
+                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="qc-am-password-toggle"
+                      onClick={() => setPasswordVisible((visible) => !visible)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                      aria-pressed={passwordVisible}
+                      title={passwordVisible ? 'Hide password' : 'Show password'}
+                    >
+                      {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
@@ -355,10 +380,10 @@ export default function AccountModal({
                     {busy ? 'Working…' : 'Sign In'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('forgot'); setNotice(null); }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('forgot')}>
                       Forgot Password?
                     </button>
-                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signup'); setNotice(null); }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signup')}>
                       Create an Account
                     </button>
                   </div>
@@ -393,10 +418,24 @@ export default function AccountModal({
                 </div>
                 <div>
                   <div className="qc-am-label">Password</div>
-                  <input
-                    className="qc-account-password qc-am-input" type="password" value={password}
-                    onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
-                  />
+                  <div className="qc-am-password-wrap">
+                    <input
+                      className="qc-account-password qc-am-input qc-am-password-input"
+                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      className="qc-am-password-toggle"
+                      onClick={() => setPasswordVisible((visible) => !visible)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                      aria-pressed={passwordVisible}
+                      title={passwordVisible ? 'Hide password' : 'Show password'}
+                    >
+                      {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
                 {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
@@ -404,7 +443,7 @@ export default function AccountModal({
                     {busy ? 'Working…' : 'Create Account'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signin')}>
                       Already have an account? Sign In
                     </button>
                   </div>
@@ -427,7 +466,7 @@ export default function AccountModal({
                   within a minute. The link brings you straight back here, signed in.
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                  <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signin')}>
                     Back to Sign In
                   </button>
                 </div>
@@ -452,7 +491,7 @@ export default function AccountModal({
                     {busy ? 'Working…' : 'Send Reset Link'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
-                    <button type="button" className="qc-am-link-ghost" onClick={() => { setAuthMode('signin'); setNotice(null); }}>
+                    <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signin')}>
                       Back to Sign In
                     </button>
                   </div>
