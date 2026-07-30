@@ -19,6 +19,43 @@ import {
   readSharedGameToken,
   shareSavedGame,
 } from '../account/gameSync.js';
+import { devMovesForGame } from '../dev/devSavedGames.js';
+import { isReviewRoute, reviewUrlFrom } from '../welcome/welcomeRouting.js';
+
+function enterReviewPage() {
+  if (typeof window === 'undefined' || isReviewRoute(window.location.pathname)) return;
+  window.history.pushState(
+    { ...(window.history.state || {}), qcReviewPage: true },
+    '',
+    reviewUrlFrom(window.location.search),
+  );
+}
+
+// Give React one frame to commit the loading page and the browser a second
+// frame to paint it before a local replay reconstruction or network request
+// can occupy the main thread.
+function waitForReviewLoadingPaint() {
+  if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    let settled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(fallback);
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+      resolve();
+    };
+    const fallback = window.setTimeout(finish, 120);
+    firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(finish);
+    });
+  });
+}
 
 function winnerSideFrom({ winner, externalGameOver }) {
   if (winner === 'white' || winner === 'black') return winner;
@@ -160,6 +197,7 @@ export default function useMonetization({
   const [reviewGame, setReviewGame] = useState(() => (sharedGameTokenRef.current
     ? { game: null, moves: null, analysisEnabled: false, loading: true }
     : null));
+  const reviewLoadIdRef = useRef(0);
 
   useEffect(() => {
     const token = sharedGameTokenRef.current;
@@ -183,20 +221,69 @@ export default function useMonetization({
     });
   }, []);
 
-  const handleReplayGame = useCallback(async (game) => {
+  const handleReplayGame = useCallback(async (game, options = {}) => {
     if (!auth.user || !game) return false;
-    const savedMoves = await fetchGameMoves(auth.user, game.id);
-    setReviewGame({ game, moves: savedMoves || [], analysisEnabled: false });
+    const loadId = ++reviewLoadIdRef.current;
+    const initialReplayAction = options.initialReplayAction || null;
+    // Navigate/render first, then fetch the large move payload. Waiting for
+    // the RPC before mounting Review made the account button appear frozen.
+    setAccountOpen(false);
+    setReviewGame({
+      game,
+      moves: null,
+      analysisEnabled: false,
+      loading: true,
+      initialReplayAction,
+    });
+    enterReviewPage();
+    await waitForReviewLoadingPaint();
+    const savedMoves = auth.isDevPreview
+      ? devMovesForGame(game)
+      : await fetchGameMoves(auth.user, game.id);
+    if (loadId !== reviewLoadIdRef.current) return false;
+    setReviewGame((current) => (current && current.game?.id === game.id
+      ? {
+        game,
+        moves: savedMoves || [],
+        analysisEnabled: false,
+        loading: false,
+        loadError: savedMoves ? null : 'This saved game could not be loaded.',
+        initialReplayAction,
+      }
+      : current));
+    if (!savedMoves) return false;
     return true;
-  }, [auth.user]);
+  }, [auth.user, auth.isDevPreview, setAccountOpen]);
 
   // Premium game review adds engine analysis to the same replay surface.
   // Returns whether it opened so the tipper's daily quota is only charged on
   // success.
   const handleReviewGame = useCallback(async (game) => {
     if (!auth.user || !game) return false;
-    const savedMoves = await fetchGameMoves(auth.user, game.id);
-    setReviewGame({ game, moves: savedMoves || [], analysisEnabled: true });
+    const loadId = ++reviewLoadIdRef.current;
+    setAccountOpen(false);
+    setReviewGame({
+      game,
+      moves: null,
+      analysisEnabled: true,
+      loading: true,
+    });
+    enterReviewPage();
+    await waitForReviewLoadingPaint();
+    const savedMoves = auth.isDevPreview
+      ? devMovesForGame(game)
+      : await fetchGameMoves(auth.user, game.id);
+    if (loadId !== reviewLoadIdRef.current) return false;
+    setReviewGame((current) => (current && current.game?.id === game.id
+      ? {
+        game,
+        moves: savedMoves || [],
+        analysisEnabled: true,
+        loading: false,
+        loadError: savedMoves ? null : 'This saved game could not be loaded.',
+      }
+      : current));
+    if (!savedMoves) return false;
     trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
       accessType: auth.profile?.tier === 'paid'
         ? 'premium'
@@ -207,14 +294,22 @@ export default function useMonetization({
       moveCount: Array.isArray(savedMoves) ? savedMoves.length : 0,
     });
     return true;
-  }, [auth.user, auth.profile]);
+  }, [auth.user, auth.profile, auth.isDevPreview, setAccountOpen]);
 
-  const handleShareGame = useCallback(async (game) => {
+  const handleShareGame = useCallback(async (game, options = {}) => {
     if (!auth.user || !game) return { error: 'Sign in to share a game.' };
     const { token, error } = await shareSavedGame(auth.user, game.id);
     if (!token) return { error: error || 'Could not create a share link.' };
     const link = buildSharedGameLink(token);
     try {
+      if (options.delivery === 'copy') {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(link);
+          return { link, copied: true };
+        }
+        window.prompt('Copy this game replay link:', link);
+        return { link, copied: true };
+      }
       if (typeof navigator.share === 'function') {
         await navigator.share({ title: 'Quantum Chess game replay', url: link });
         return { link, shared: true };

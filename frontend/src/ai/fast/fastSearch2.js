@@ -33,6 +33,7 @@ import {
 import { evaluateFast, MATE } from './fastEval.js';
 import { epFromLastMove } from './fastSearch.js';
 import { DEFAULT_WEIGHTS, DIFFICULTY_CONFIG } from '../alphaBetaEngine.js';
+import { applyRootMovePolicy, rootPersonalityBias } from '../botPersonality.js';
 
 class SearchTimeout extends Error {}
 
@@ -347,8 +348,28 @@ export function searchBestMoveV2({
     }
   }
 
+  const hasCastled = pieces.some((p) => !p.captured && p.side === sideToMove && p.castled);
+  const rootFacts = (entry) => ({
+    isCastle: entry.desc.kind === 2,
+    isCapture: entry.desc.kind === 1 || entry.desc.victimIdx >= 0,
+    isMate: entry.score >= MATE - 100,
+    to: entry.desc.kind === 2 ? ALGEBRAIC[entry.desc.plan.to1] : ALGEBRAIC[entry.desc.to],
+    lastMove,
+  });
+  // Copy before replacing: no-policy bots receive the original array back.
+  const policyMoves = [...applyRootMovePolicy(rootMoves, bot, rootFacts)];
+  rootMoves.length = 0;
+  rootMoves.push(...policyMoves);
+  for (const entry of rootMoves) {
+    entry.rootBias = rootPersonalityBias(bot, {
+      ...rootFacts(entry),
+      sideMoveCount,
+      hasCastled,
+    });
+  }
+
   if (rootMoves.length === 0) return { move: null, score: 0, depth: 0, nodes: 0 };
-  rootMoves.sort((a, b) => b.score - a.score);
+  rootMoves.sort((a, b) => (b.score + b.rootBias) - (a.score + a.rootBias));
 
   const repCount = (sig) => {
     if (!repetitionSigs) return 0;
@@ -367,7 +388,9 @@ export function searchBestMoveV2({
   const ctx = makeCtx(deadline, W, cfg);
 
   // Depth-1 baseline (same contract as V1).
-  let bestEntry = rootMoves.reduce((a, b) => (b.score - b.repPen > a.score - a.repPen ? b : a));
+  let bestEntry = rootMoves.reduce((a, b) => (
+    b.score + b.rootBias - b.repPen > a.score + a.rootBias - a.repPen ? b : a
+  ));
   let best = { desc: bestEntry.desc, score: bestEntry.score, depth: 1, nodes: 0 };
   const report = (b) => {
     if (typeof onDepthComplete === 'function') {
@@ -393,7 +416,9 @@ export function searchBestMoveV2({
         if (r.score <= alpha0 && windowLo < 100) { windowLo *= 4; continue; }
         if (r.score >= beta0 && windowHi < 100) { windowHi *= 4; continue; }
         // Re-sort for the next iteration: searched scores first, stable.
-        rootMoves.sort((a, b) => (b.iter ?? -Infinity) - (a.iter ?? -Infinity));
+        rootMoves.sort((a, b) => (
+          (b.iter ?? -Infinity) + b.rootBias - ((a.iter ?? -Infinity) + a.rootBias)
+        ));
         best = { desc: r.desc, score: r.score, depth, nodes: ctx.nodes };
         prevScore = r.score;
         completed = true;
@@ -417,7 +442,10 @@ export function searchBestMoveV2({
     const byScore = [...rootMoves].sort((a, b) => (b.iter ?? b.score) - (a.iter ?? a.score));
     const jittered = byScore
       .slice(0, Math.min(6, byScore.length))
-      .map((e) => ({ desc: e.desc, s: (e.iter ?? e.score) - e.repPen + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((e) => ({
+        desc: e.desc,
+        s: (e.iter ?? e.score) + e.rootBias - e.repPen + (Math.random() - 0.5) * 2 * cfg.noise,
+      }))
       .sort((a, b) => b.s - a.s);
     chosenDesc = jittered[0].desc;
   }
@@ -463,7 +491,7 @@ export function searchBestMoveV2({
           rollback(bd2, mark);
         }
         e.iter = s;
-        const adjusted = s - e.repPen;
+        const adjusted = s + e.rootBias - e.repPen;
         if (adjusted > bestS) {
           bestS = adjusted;
           bestE = e;

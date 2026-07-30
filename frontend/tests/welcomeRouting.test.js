@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   WELCOME_ACTION,
   hasAppDeepLink,
+  isProfileRoute,
+  isReviewRoute,
   playUrlFrom,
+  profileUrlFrom,
   puzzleUrlFrom,
+  reviewUrlFrom,
   resolveWelcomeEntry,
   welcomeActionFromSearch,
 } from '../src/welcome/welcomeRouting.js';
@@ -58,6 +62,28 @@ describe('welcome routing', () => {
       markSeen: false,
     });
     expect(puzzleUrlFrom('?welcome=puzzle&puzzle=1&ref=share')).toBe('/puzzle?ref=share');
+  });
+
+  it('opens and preserves the dedicated review route', () => {
+    expect(isReviewRoute('/review')).toBe(true);
+    expect(isReviewRoute('/review/')).toBe(true);
+    expect(resolveWelcomeEntry({ pathname: '/review' })).toEqual({
+      surface: 'play',
+      action: null,
+      markSeen: false,
+    });
+    expect(reviewUrlFrom('?welcome=play&game=shared-token')).toBe('/review?game=shared-token');
+  });
+
+  it('opens the private profile route without marking Welcome as seen', () => {
+    expect(isProfileRoute('/profile')).toBe(true);
+    expect(isProfileRoute('/profile/')).toBe(true);
+    expect(resolveWelcomeEntry({ pathname: '/profile' })).toEqual({
+      surface: 'play',
+      action: WELCOME_ACTION.PROFILE,
+      markSeen: false,
+    });
+    expect(profileUrlFrom('?welcome=play&game=shared-token&ref=account')).toBe('/profile?ref=account');
   });
 
   it('cleans the one-time action while preserving other query parameters', () => {

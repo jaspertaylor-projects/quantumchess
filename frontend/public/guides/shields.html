@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shields, and How to Break Them — Quantum Chess Guides</title>
+<meta name="description" content="A gold shield in Quantum Chess means your zap stripped nothing. Here is what causes a shield — known pieces, closed groups, failed volleys, King Guard — and the ways to break one open." />
+<link rel="canonical" href="https://quantumchess.ninja/guides/shields.html" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/guides/guides.css" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5481833391571778" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0a0e1a; color: #dfe6f2; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height: 1.68; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { font-size: 2rem; letter-spacing: 0.02em; margin: 0 0 4px; }
+  .tag { color: #9db4ff; font-style: italic; margin: 0 0 20px; }
+  h2 { font-size: 1.25rem; margin: 34px 0 8px; color: #8fd6ff; }
+  h3 { font-size: 1.05rem; margin: 20px 0 4px; color: #c792ea; }
+  a { color: #4fc3f7; }
+  .home { display: inline-block; margin-bottom: 8px; color: #4fc3f7; text-decoration: none; font-weight: 700; }
+  .crumb { font-size: 0.85rem; color: #93a1b5; margin: 0 0 18px; }
+  .crumb a { color: #4fc3f7; text-decoration: none; }
+  .cta { display: inline-block; margin: 8px 0 6px; padding: 11px 22px; border-radius: 10px; background: #4fc3f7; color: #06121b; font-weight: 800; text-decoration: none; }
+  ul { padding-left: 20px; }
+  li { margin: 5px 0; }
+  .muted { color: #93a1b5; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0; }
+  .related a { display: inline-block; margin-right: 14px; }
+  footer a { margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="/guides.html">&larr; All guides</a>
+  <p class="crumb"><a href="/">Play</a> &rsaquo; <a href="/guides.html">Guides</a> &rsaquo; Shields</p>
+  <h1>Shields, and How to Break Them</h1>
+  <p class="tag">The gold flash that means &ldquo;nice try &mdash; nothing came off.&rdquo;</p>
+  <p class="guide-byline">Written and maintained by Jasper Taylor for Pura Viba LLC &middot; <span class="guide-updated">Updated July 30, 2026</span></p>
+
+  <p>You line up a move so its landing square touches an enemy piece, you expect to peel a possibility off the top, and instead the target flashes a gold <strong>shield</strong>. A shield means the zap found nothing it could cleanly remove. It is not a special defensive ability the piece bought &mdash; it is the game telling you that, right now, this piece has nothing loseable. Learning to read <em>why</em> a shield appeared tells you exactly what to do next.</p>
+
+  <p><a class="cta" href="/">Go force a shield and break it &rarr;</a></p>
+
+  <h2>What a shield actually reports</h2>
+  <p>A zap removes a target&rsquo;s most valuable possibility only if it can do so <em>cleanly</em> &mdash; without triggering a <a href="/guides/the-census.html">census</a> cascade that would rewrite other pieces. When no identity can be shed cleanly, the zap fizzles and you see the shield. So a shield is really a message about the census, not about armor. There are four common causes.</p>
+
+  <h3>1. The piece is already fully known</h3>
+  <p>A piece collapsed to a single identity has nothing left to strip but its life. Zap a confirmed Knight and it shields every time. This is why a fully collapsed piece makes such good artillery &mdash; it fires with real reach and can never be zapped down itself.</p>
+
+  <h3>2. It belongs to a closed group</h3>
+  <p>This is the big one. A <strong>closed group</strong> is a set of N pieces that together share exactly N identities &mdash; say, three pieces that between them must be exactly the two Rooks and the Queen. Every identity in the group is load-bearing: removing any one would break conservation across the group, which isn&rsquo;t a clean shed. So all of them shield, even though no individual piece is fully known. Closed groups are the main reason zaps stop working in the midgame.</p>
+
+  <h3>3. The volley failed</h3>
+  <p>When one move touches several enemies, the zaps resolve as a single <a href="/guides/zap-or-capture.html">volley</a> &mdash; all together or not at all. If the combined volley would ripple beyond the struck pieces, the whole thing fizzles and every target in it shields. Sometimes a zap that would work alone fails because it was bundled with others; touching fewer targets can, paradoxically, strip more.</p>
+
+  <h3>4. King Guard redirected the shed</h3>
+  <p>If a volley would remove King from every remaining holder, the royal safeguard keeps King on each affected piece and retries the ladder from Queen down. A piece with only King left to lose &mdash; and King protected &mdash; has nothing lower available, so it shields. The last King simply cannot be zapped off the board.</p>
+
+  <h2>Breaking a shield</h2>
+  <p>Closed-group and King-Guard shields aren&rsquo;t permanent; they hold only while the census stays locked. You break them from the <em>outside</em>:</p>
+  <ul>
+    <li><strong>Capture a member of the group.</strong> Removing one piece from a closed group of N drops the count and reopens the identities of the survivors &mdash; their shields fall and your next zap bites.</li>
+    <li><strong>Force a collapse elsewhere.</strong> Confirming an identity on some other part of the board can change the census math around the group, reopening the ledger without touching the group directly.</li>
+    <li><strong>Change what you touch.</strong> If a volley keeps failing, split it &mdash; arrange a move that touches just the target you care about, so its shed doesn&rsquo;t get bundled into a failing volley.</li>
+    <li><strong>Wait for them to move.</strong> Opponents break their own groups constantly &mdash; every collapse they make can reopen a group you couldn&rsquo;t crack. Keep the pressure aimed and take the opening when it appears.</li>
+  </ul>
+
+  <h2>Shields as information</h2>
+  <p>Even a failed zap tells you something. A shield says &ldquo;this piece is either fully known or locked into a load-bearing group,&rdquo; which narrows your model of the enemy army for free. Good players fire probing zaps partly to <em>read</em> the board by which pieces shield and which shed. A wasted volley is rarely fully wasted &mdash; you paid for a little information either way.</p>
+
+  <hr />
+  <p><a class="cta" href="/">Play Quantum Chess free &rarr;</a></p>
+  <p class="related muted">Related: <a href="/guides/the-census.html">The census</a> &middot; <a href="/guides/zap-or-capture.html">Zap or capture?</a> &middot; <a href="/guides/glossary.html">Glossary</a></p>
+
+  <hr />
+  <footer class="muted">
+    <a href="/">Play</a><a href="/rules.html">Rules</a><a href="/strategy.html">Strategy</a><a href="/guides.html">Guides</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
+  </footer>
+</div>
+</body>
+</html>

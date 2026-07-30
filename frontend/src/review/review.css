@@ -1,9 +1,132 @@
 /* frontend/src/review/review.css
-   Purpose: The review modal's stylesheet bits that inline styles can't do —
+   Purpose: The review page/modal stylesheet bits that inline styles can't do —
    focus-ring handling for the clickable move cells (mouse clicks leave no
    residual outline; keyboard focus keeps its visible ring). Scrollbars come
    from the global Styles/scrollbar.css.
    Exported To: ./ReviewModal.jsx */
+
+.qc-review-page {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: clamp(10px, 2vw, 24px);
+  color: var(--color-globalText);
+  background:
+    radial-gradient(circle at 15% 5%, rgba(79, 195, 247, 0.11), transparent 34%),
+    radial-gradient(circle at 88% 92%, rgba(199, 146, 234, 0.1), transparent 32%),
+    var(--color-globalBackground);
+}
+
+.qc-review-app-shell {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-globalBackground);
+}
+
+.qc-review-app-shell .qc-review-page {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.qc-review-page__panel {
+  width: min(100%, 1320px);
+  min-height: calc(100dvh - clamp(20px, 4vw, 48px));
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(12px, 1.7vw, 20px);
+  border: 1px solid var(--color-buttonGenericBorder);
+  border-radius: 14px;
+  background: rgba(13, 16, 26, 0.96);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+}
+
+.qc-review-page .qc-review-board-shell {
+  width: min(70vmin, 680px) !important;
+}
+
+.qc-review-app-shell .qc-review-page__panel {
+  min-height: 100%;
+}
+
+.qc-review-loading {
+  min-height: min(72vh, 620px);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.qc-review-loading .qc-review-loading__orbit {
+  width: min(38vh, 330px, 72vw);
+  margin: 0 auto 5px;
+  filter: drop-shadow(0 20px 38px rgba(0, 0, 0, 0.38));
+}
+
+.qc-review-loading__title {
+  color: #f4fbff;
+  font-size: clamp(16px, 2.2vw, 20px);
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.qc-review-loading__message {
+  color: #a8b2d1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (min-width: 1180px) {
+  .qc-review-app-shell--desktop .qc-review-page .qc-review-board-shell {
+    width: min(680px, calc(100dvh - 235px), calc(100vw - 500px)) !important;
+  }
+}
+
+@media (max-width: 1179px) {
+  .qc-review-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .qc-review-page .qc-review-board-shell {
+    width: min(calc(100vw - 40px), calc(100dvh - 180px), 650px) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .qc-review-page {
+    padding: 0 0 calc(72px + env(safe-area-inset-bottom)) 0;
+  }
+
+  .qc-review-page__panel {
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    padding: 10px;
+  }
+
+  .qc-review-page .qc-review-board-shell {
+    width: min(calc(100vw - 58px), 520px) !important;
+  }
+
+  .qc-review-page--replay .qc-review-board-shell {
+    width: min(calc(100vw - 20px), 520px) !important;
+  }
+}
 
 /* Clicking a move must not leave a residual focus box; keyboard users keep
    the ring via :focus-visible. */
@@ -13,6 +136,99 @@
 .qc-review-move-row:focus-visible {
   outline: 2px solid rgba(79, 195, 247, 0.8);
   outline-offset: 1px;
+}
+
+.qc-review-page--analysis .qc-review-move-label,
+.qc-review-panel--analysis .qc-review-move-label {
+  color: #f7fbff;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.qc-review-page--analysis .qc-review-move-row[aria-current="step"] .qc-review-move-label,
+.qc-review-panel--analysis .qc-review-move-row[aria-current="step"] .qc-review-move-label {
+  color: #a7ecff;
+}
+
+.qc-review-move-eval {
+  min-width: 42px;
+  text-align: right;
+  color: #b9eaff;
+  font-size: 12.5px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+
+.qc-review-hint-list {
+  display: grid;
+  gap: 6px;
+}
+
+.qc-review-hint-line {
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(126, 231, 135, 0.16);
+  border-radius: 8px;
+  color: rgba(240, 255, 244, 0.9);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.qc-review-hint-line.is-best {
+  border-color: rgba(126, 231, 135, 0.56);
+  color: #f4fff6;
+  background: linear-gradient(90deg, rgba(126, 231, 135, 0.17), rgba(126, 231, 135, 0.055));
+  box-shadow: inset 3px 0 0 #7ee787;
+}
+
+.qc-review-hint-rank {
+  color: #a6f3b3;
+  font-size: 10.5px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.qc-review-hint-move {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 13.5px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-review-hint-eval {
+  color: #c7f9d0;
+  font-size: 12.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.qc-review-hint-thinking,
+.qc-review-hint-final {
+  display: block;
+  color: #effff2;
+  font-weight: 750;
+}
+
+/* Replay has no engine marks/evals competing for attention, so the actual
+   move record is the visual anchor. Keep it high-contrast against the dark
+   list instead of inheriting the app's subdued secondary text. */
+.qc-review-page--replay .qc-review-move-label,
+.qc-review-panel--replay .qc-review-move-label {
+  color: #f4fbff;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+}
+
+.qc-review-page--replay .qc-review-move-row[aria-current="step"] .qc-review-move-label,
+.qc-review-panel--replay .qc-review-move-row[aria-current="step"] .qc-review-move-label {
+  color: #8ee7ff;
 }
 
 .qc-review-board-capture {
@@ -26,8 +242,61 @@
   opacity: 0.68;
 }
 
+.qc-review-share-link:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.52;
+}
+
 .qc-review-play-replay:focus-visible,
-.qc-review-make-video:focus-visible {
+.qc-review-make-video:focus-visible,
+.qc-review-share-link:focus-visible,
+.qc-review-actions-trigger:focus-visible,
+.qc-review-speed-select:focus-visible {
   outline: 2px solid rgba(79, 195, 247, 0.85);
   outline-offset: 2px;
+}
+
+.qc-review-play-replay:hover:not(:disabled),
+.qc-review-make-video:hover:not(:disabled),
+.qc-review-share-link:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13) !important;
+}
+
+.qc-review-speed-select {
+  color-scheme: dark;
+}
+
+.qc-review-speed-select:hover {
+  border-color: rgba(79, 195, 247, 0.62) !important;
+}
+
+.qc-review-actions-chevron {
+  transition: transform 150ms ease;
+}
+
+.qc-review-actions-trigger:hover {
+  border-color: rgba(79, 195, 247, 0.64) !important;
+  background: rgba(79, 195, 247, 0.1) !important;
+}
+
+.qc-review-replay-toolbar .qc-review-play-replay {
+  grid-column: 1 / -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-review-play-replay,
+  .qc-review-make-video,
+  .qc-review-share-link,
+  .qc-review-actions-chevron {
+    transition: none !important;
+  }
+
+  .qc-review-play-replay:hover:not(:disabled),
+  .qc-review-make-video:hover:not(:disabled),
+  .qc-review-share-link:hover:not(:disabled) {
+    transform: none;
+  }
 }

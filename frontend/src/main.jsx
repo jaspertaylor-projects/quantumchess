@@ -36,8 +36,12 @@ import {
   LEGACY_ONBOARD_STORAGE_KEY,
   WELCOME_ACTION,
   WELCOME_STORAGE_KEY,
+  isProfileRoute,
+  isReviewRoute,
   playUrlFrom,
+  profileUrlFrom,
   puzzleUrlFrom,
+  reviewUrlFrom,
   resolveWelcomeEntry,
 } from './welcome/welcomeRouting.js';
 
@@ -45,7 +49,7 @@ import {
 try {
   console.log(
     '%c♞ Quantum Chess — every piece is every piece.',
-    'color:#4fc3f7; font-weight:bold; font-size:14px; text-shadow:0 0 6px rgba(79,195,247,0.5);'
+    'color:#4fc3f7; font-weight:bold; font-size:14px;'
   );
   console.log(
     "%cHey chess.com: superposition is just a pre-move you haven't committed to.",
@@ -103,9 +107,15 @@ const resolveInitialEntry = () => {
     if (entry.markSeen) rememberWelcomeChoice();
     const onPuzzleEntry = entry.action === WELCOME_ACTION.PUZZLE
       || window.location.pathname === '/puzzle' || window.location.pathname === '/puzzle/';
-    const cleanEntryUrl = `${onPuzzleEntry
-      ? puzzleUrlFrom(window.location.search)
-      : playUrlFrom(window.location.search)}${window.location.hash}`;
+    const onReviewEntry = isReviewRoute(window.location.pathname);
+    const onProfileEntry = isProfileRoute(window.location.pathname);
+    const cleanEntryUrl = `${onReviewEntry
+      ? reviewUrlFrom(window.location.search)
+      : onProfileEntry
+        ? profileUrlFrom(window.location.search)
+      : onPuzzleEntry
+        ? puzzleUrlFrom(window.location.search)
+        : playUrlFrom(window.location.search)}${window.location.hash}`;
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== cleanEntryUrl) {
       window.history.replaceState({}, '', cleanEntryUrl);
     }

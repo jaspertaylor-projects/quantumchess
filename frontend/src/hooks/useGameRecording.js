@@ -9,6 +9,10 @@ import { useEffect, useRef } from 'react';
 import { recordFinishedGame } from '../account/gameSync.js';
 import { recordBotClear } from '../account/botProgress.js';
 
+export function gameInstanceNeedsRecording(recordedGameInstance, currentGameInstance) {
+  return recordedGameInstance !== currentGameInstance;
+}
+
 export default function useGameRecording({
   auth,
   showWinPopup,
@@ -20,18 +24,20 @@ export default function useGameRecording({
   isOnlineGameRef,
   isRankedOnlineRef,
   moves,
+  gameInstanceId,
 }) {
-  const gameRecordedRef = useRef(false);
+  // Key the write guard to the actual game, not to whether React happened to
+  // render one frame with the winner popup closed. "Play Again" closes the
+  // popup and resets the board in one batched update, so a boolean guard could
+  // remain stuck after game one and silently skip every later AI/online game.
+  const recordedGameInstanceRef = useRef(null);
   useEffect(() => {
-    if (!showWinPopup) {
-      gameRecordedRef.current = false;
-      return;
-    }
-    if (gameRecordedRef.current || !auth.user || auth.isDevPreview) return;
+    if (!showWinPopup || !gameInstanceNeedsRecording(recordedGameInstanceRef.current, gameInstanceId)
+      || !auth.user || auth.isDevPreview) return;
     // Ranked online games are finalized once by the backend and projected
     // into both histories. Saving here would create duplicate client rows.
     if (isRankedOnlineRef && isRankedOnlineRef.current) return;
-    gameRecordedRef.current = true;
+    recordedGameInstanceRef.current = gameInstanceId;
 
     const text = externalGameOver.over ? externalGameOver.text || '' : '';
     const winnerSide = gameOver
@@ -60,5 +66,5 @@ export default function useGameRecording({
         await auth.refreshProfile();
       })
       .catch(() => {});
-  }, [showWinPopup, gameOver, winner, externalGameOver, userTeam, aiBot, moves]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showWinPopup, gameOver, winner, externalGameOver, userTeam, aiBot, moves, gameInstanceId]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -2,6 +2,7 @@
 // supporter, and Premium UI without mutating a real Supabase profile.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DEV_PREMIUM_GAME_COUNT, DEV_PREMIUM_RATING } from './devSavedGames.js';
 
 const STORAGE_KEY = 'qcDevAccountPreview';
 
@@ -62,6 +63,8 @@ export function previewProfileFor(level) {
   if (level === DEV_ACCOUNT_LEVEL.PREMIUM) {
     return {
       ...common,
+      rating: DEV_PREMIUM_RATING,
+      games_played: DEV_PREMIUM_GAME_COUNT,
       username: 'Premium Preview',
       tier: 'paid',
       avatar_url: '/avatars/premium/quantum-fox.png',

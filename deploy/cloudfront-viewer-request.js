@@ -49,7 +49,9 @@ function handler(event) {
     return redirect('https://quantumchess.ninja/puzzle' + suffix);
   }
 
-  if (request.uri === '/play' || request.uri === '/play/') {
+  if (request.uri === '/play' || request.uri === '/play/'
+      || request.uri === '/review' || request.uri === '/review/'
+      || request.uri === '/profile' || request.uri === '/profile/') {
     request.uri = '/index.html';
   }
 

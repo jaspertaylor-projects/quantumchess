@@ -37,6 +37,14 @@ function minifyMove(mv) {
   return null;
 }
 
+function minifyScoredMoves(moves) {
+  if (!Array.isArray(moves)) return null;
+  return moves.map((line) => {
+    const move = minifyMove(line && line.move);
+    return move ? { ...move, score: line.score } : null;
+  }).filter(Boolean);
+}
+
 self.addEventListener('message', (e) => {
   const data = e.data || {};
 
@@ -125,6 +133,7 @@ self.addEventListener('message', (e) => {
         openingVariety: false,
         adaptiveDepth: false,
         preferredMove: (payload && payload.preferredMove) || null,
+        multiPv: (payload && payload.multiPv) || 1,
         onDepthComplete: (partial) => {
           self.postMessage({
             type: 'bestMoveProgress',
@@ -132,6 +141,7 @@ self.addEventListener('message', (e) => {
             move: minifyMove(partial.move),
             score: partial.score,
             depth: partial.depth,
+            moves: minifyScoredMoves(partial.moves),
           });
         },
         bot: {
@@ -151,6 +161,7 @@ self.addEventListener('message', (e) => {
         score: res ? res.score : null,
         depth: res ? res.depth : 0,
         nodes: res ? res.nodes : 0,
+        moves: res ? minifyScoredMoves(res.moves) : null,
       });
     } catch (err) {
       self.postMessage({ type: 'error', id, message: (err && err.message) || 'Worker error' });

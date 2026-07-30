@@ -54,12 +54,13 @@ export function countPossibilities(pieces) {
 // opponent's en passant window opens. A double-step is a two-rank straight
 // advance by a piece that can still be a pawn (geometry restricts it to the
 // side's own first two ranks — back-rank maybe-pawns included).
-export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, usedEnPassant = false, wasFirstMove = false, zappedSquares = [], healedSquares = [], failedHealSquares = [], fizzledSquares = [] }) {
+export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, didCapture = false, usedEnPassant = false, wasFirstMove = false, zappedSquares = [], healedSquares = [], failedHealSquares = [], fizzledSquares = [] }) {
   const lastMove = {
     side,
     pieceId: moverId,
     from,
     to,
+    didCapture: Boolean(didCapture),
     isDoubleStep: false,
     crossedSquare: null,
     zappedSquares: zappedSquares || [],
@@ -116,6 +117,7 @@ export function moveOutcome(prev, sim, info) {
     from,
     to,
     side,
+    didCapture,
     usedEnPassant,
     wasFirstMove, // legacy field; double-step detection is positional now
 

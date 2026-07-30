@@ -21,7 +21,6 @@ import TutorialModal from '../tutorial/TutorialModal.jsx';
 import AccountModal from '../account/AccountModal.jsx';
 import AdminStatsModal from '../admin/AdminStatsModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
-import ReviewModal from '../review/ReviewModal.jsx';
 import MinedPuzzleModal from '../puzzle/MinedPuzzleModal.jsx';
 import { isAdFree } from '../account/billing.js';
 
@@ -42,10 +41,9 @@ export default function AppModals({
   // friend wait
   online, onChooseGameAfterInviteError,
   // account/pricing/review
-  auth, accountOpen, accountUpsellSource, onCloseAccount, billingReturn,
+  auth, accountOpen, accountPage, accountUpsellSource, onCloseAccount, billingReturn,
   handleReplayGame, handleReviewGame, handleShareGame, onAccountCreated,
   pricingOpen, onClosePricing,
-  reviewGame, onCloseReview,
   // admin stats dashboard
   adminStatsOpen, onOpenAdminStats, onCloseAdminStats,
   // mined-puzzle dev preview (?mined=N)
@@ -136,6 +134,7 @@ export default function AppModals({
 
       <AccountModal
         open={accountOpen}
+        page={accountPage}
         onClose={onCloseAccount}
         auth={auth}
         upsellSource={accountUpsellSource}
@@ -156,20 +155,6 @@ export default function AppModals({
       <PricingModal
         open={pricingOpen}
         onClose={onClosePricing}
-      />
-
-      <ReviewModal
-        open={Boolean(reviewGame)}
-        onClose={onCloseReview}
-        game={reviewGame ? reviewGame.game : null}
-        moves={reviewGame ? reviewGame.moves : null}
-        analysisEnabled={reviewGame ? reviewGame.analysisEnabled !== false : true}
-        loading={Boolean(reviewGame && reviewGame.loading)}
-        loadError={reviewGame ? reviewGame.loadError : null}
-        showEvalGraph={Boolean(reviewGame && reviewGame.showEvalGraph)}
-        pieceSvgStyles={svgStyles}
-        indicators={indicators}
-        squareColors={boardColors}
       />
 
       <ConfirmModal

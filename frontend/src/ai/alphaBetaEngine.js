@@ -20,6 +20,7 @@ import {
 } from '../chessboard/quantumEngine.js';
 import { fromAlgebraic, toAlgebraic } from '../chessboard/boardUtils.js';
 import { CAPTURE_COLLAPSE_ORDER } from '../chessboard/gameConstants.js';
+import { applyRootMovePolicy, rootPersonalityBias } from './botPersonality.js';
 
 const MATE = 1000;
 
@@ -448,9 +449,10 @@ export function analyzeRootMoves({ pieces, sideToMove, lastMove = null, depth = 
   return { moves: scored, nodes: ctx.nodes, depth };
 }
 
-// Iterative-deepening search. Returns { move, score, depth, nodes } where
-// score is from the mover's perspective. onDepthComplete (optional) receives
-// the best move after each completed depth for progressive reporting.
+// Iterative-deepening search. Returns { move, score, depth, nodes, moves }
+// where score is from the mover's perspective and moves contains up to
+// multiPv same-depth lines. onDepthComplete (optional) receives the same
+// shape after each completed depth for progressive reporting.
 export function searchBestMove({
   pieces,
   sideToMove,
@@ -462,6 +464,7 @@ export function searchBestMove({
   openingVariety = true,
   adaptiveDepth = true,
   preferredMove = null,
+  multiPv = 1,
 }) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
@@ -512,7 +515,26 @@ export function searchBestMove({
     else if (extraTypes <= 24) maxDepth = cfg.maxDepth + 1;
   }
 
-  const rootChildren = orderedChildren(root, sideToMove, ctx, lastMove, true);
+  let rootChildren = orderedChildren(root, sideToMove, ctx, lastMove, true);
+  const occupiedAtRoot = buildOccupancy(root);
+  const hasCastled = root.some((p) => !p.captured && p.side === sideToMove && p.castled);
+  const rootFacts = (child) => ({
+    isCastle: child.mv.type === 'castle',
+    isCapture: child.mv.type === 'enpassant'
+      || occupiedAtRoot.get(child.mv.to)?.side === otherSide(sideToMove),
+    isMate: child.score >= MATE - 100,
+    to: child.mv.type === 'castle' ? child.mv.plan?.piece1_to : child.mv.to,
+    lastMove,
+  });
+  rootChildren = applyRootMovePolicy(rootChildren, bot, rootFacts);
+  for (const child of rootChildren) {
+    child.rootBias = rootPersonalityBias(bot, {
+      ...rootFacts(child),
+      sideMoveCount,
+      hasCastled,
+    });
+  }
+  rootChildren.sort((a, b) => (b.score + b.rootBias) - (a.score + a.rootBias));
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
   // Review analysis may ask us to retain the move that was actually played.
@@ -550,9 +572,28 @@ export function searchBestMove({
   // Depth-1 result is always available instantly.
   let initIdx = 0;
   for (let i = 1; i < rootChildren.length; i++) {
-    if (rootChildren[i].score - repPen[i] > rootChildren[initIdx].score - repPen[initIdx]) initIdx = i;
+    if (
+      rootChildren[i].score + rootChildren[i].rootBias - repPen[i]
+      > rootChildren[initIdx].score + rootChildren[initIdx].rootBias - repPen[initIdx]
+    ) initIdx = i;
   }
-  let best = { move: rootChildren[initIdx].mv, score: rootChildren[initIdx].score, depth: 1, nodes: ctx.nodes };
+  const lineCount = Math.max(1, Math.floor(Number(multiPv) || 1));
+  const initialLines = rootChildren
+    .map((child, i) => ({
+      move: child.mv,
+      score: child.score,
+      adjusted: child.score + child.rootBias - repPen[i],
+    }))
+    .sort((a, b) => b.adjusted - a.adjusted)
+    .slice(0, lineCount)
+    .map(({ move, score }) => ({ move, score }));
+  let best = {
+    move: rootChildren[initIdx].mv,
+    score: rootChildren[initIdx].score,
+    depth: 1,
+    nodes: ctx.nodes,
+    moves: initialLines,
+  };
   if (typeof onDepthComplete === 'function') onDepthComplete(best);
 
   const fillTime = cfg.timeMode === BOT_TIME_MODES.UNTIL_TIMEOUT && Number.isFinite(cfg.timeMs);
@@ -560,21 +601,39 @@ export function searchBestMove({
     try {
       let alpha = -Infinity;
       let depthBest = null;
+      const depthLines = [];
       for (let i = 0; i < rootWidth; i++) {
         const child = rootChildren[i];
         let s;
         if (Math.abs(child.score) >= MATE - 100) {
           s = child.score;
         } else {
-          s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, -alpha, ctx);
+          // Multi-PV scores must be directly comparable. A normal best-move
+          // search can use the current alpha as a narrow root window, but
+          // that leaves non-best moves as bounds and cannot rank them
+          // honestly. Review analysis asks for a small Multi-PV list, so
+          // give every root candidate a full window.
+          const beta = lineCount > 1 ? Infinity : -alpha;
+          s = -negamax(child.mv.resultPieces, otherSide(sideToMove), depth - 1, 1, -Infinity, beta, ctx);
         }
         child.deepScore = s; // deepest completed-iteration score (noise jitter)
-        const adjusted = s - repPen[i];
+        const adjusted = s + child.rootBias - repPen[i];
+        depthLines.push({ move: child.mv, score: s, adjusted });
         if (!depthBest || adjusted > depthBest.adjusted) depthBest = { move: child.mv, score: s, adjusted };
         if (s > alpha) alpha = s;
       }
       if (depthBest) {
-        best = { move: depthBest.move, score: depthBest.score, depth, nodes: ctx.nodes };
+        const movesAtDepth = depthLines
+          .sort((a, b) => b.adjusted - a.adjusted)
+          .slice(0, lineCount)
+          .map(({ move, score }) => ({ move, score }));
+        best = {
+          move: depthBest.move,
+          score: depthBest.score,
+          depth,
+          nodes: ctx.nodes,
+          moves: movesAtDepth,
+        };
         if (typeof onDepthComplete === 'function') onDepthComplete(best);
       }
     } catch (err) {
@@ -593,7 +652,10 @@ export function searchBestMove({
   if (cfg.noise > 0 && rootChildren.length > 1) {
     const jittered = rootChildren
       .slice(0, Math.min(6, rootChildren.length))
-      .map((c, i) => ({ mv: c.mv, s: (c.deepScore ?? c.score) - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((c, i) => ({
+        mv: c.mv,
+        s: (c.deepScore ?? c.score) + c.rootBias - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise,
+      }))
       .sort((a, b) => b.s - a.s);
     return { ...best, move: jittered[0].mv };
   }

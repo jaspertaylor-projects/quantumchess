@@ -698,7 +698,7 @@ button:hover {
   position: relative;
   overflow: hidden;
   z-index: 0;
-  transition: color 0.25s ease, text-shadow 0.25s ease, border-color 0.25s ease,
+  transition: color 0.25s ease, border-color 0.25s ease,
     box-shadow 0.25s ease, transform 0.25s ease, filter 0.15s ease;
 }
 .qc-header-account--signin::before {
@@ -713,7 +713,6 @@ button:hover {
 }
 .qc-header-account--signin:hover {
   color: #0b0e16 !important;
-  text-shadow: none !important;
   border-color: rgba(255, 255, 255, 0.85) !important;
   box-shadow: 0 0 16px rgba(180, 0, 255, 0.55), 0 0 30px rgba(0, 245, 255, 0.35) !important;
   transform: translateY(-1px);

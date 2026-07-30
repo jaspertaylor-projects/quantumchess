@@ -49,7 +49,6 @@ function BotAvatar({ avatar, size = BAR_CONTENT_H }) {
       fontSize: Math.round(size * 0.38),
       letterSpacing: '0.02em',
       color: ring,
-      textShadow: `0 0 8px ${ring}88`,
       userSelect: 'none',
     },
   };

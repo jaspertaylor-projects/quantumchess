@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reading the Daily Puzzle — Quantum Chess Guides</title>
+<meta name="description" content="How the Quantum Chess daily puzzle works: positions mined from real games at the moment one move mattered, grading from star to skull against the engine's ranked move list, streaks, and how to use puzzles to improve." />
+<link rel="canonical" href="https://quantumchess.ninja/guides/the-daily-puzzle.html" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/guides/guides.css" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5481833391571778" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0a0e1a; color: #dfe6f2; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height: 1.68; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { font-size: 2rem; letter-spacing: 0.02em; margin: 0 0 4px; }
+  .tag { color: #9db4ff; font-style: italic; margin: 0 0 20px; }
+  h2 { font-size: 1.25rem; margin: 34px 0 8px; color: #8fd6ff; }
+  h3 { font-size: 1.05rem; margin: 20px 0 4px; color: #c792ea; }
+  a { color: #4fc3f7; }
+  .home { display: inline-block; margin-bottom: 8px; color: #4fc3f7; text-decoration: none; font-weight: 700; }
+  .crumb { font-size: 0.85rem; color: #93a1b5; margin: 0 0 18px; }
+  .crumb a { color: #4fc3f7; text-decoration: none; }
+  .cta { display: inline-block; margin: 8px 0 6px; padding: 11px 22px; border-radius: 10px; background: #4fc3f7; color: #06121b; font-weight: 800; text-decoration: none; }
+  ul { padding-left: 20px; }
+  li { margin: 5px 0; }
+  .muted { color: #93a1b5; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0; }
+  .related a { display: inline-block; margin-right: 14px; }
+  footer a { margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="/guides.html">&larr; All guides</a>
+  <p class="crumb"><a href="/">Play</a> &rsaquo; <a href="/guides.html">Guides</a> &rsaquo; Reading the Daily Puzzle</p>
+  <h1>Reading the Daily Puzzle</h1>
+  <p class="tag">One position a day, taken from the exact moment a game turned.</p>
+  <p class="guide-byline">Written and maintained by Jasper Taylor for Pura Viba LLC &middot; <span class="guide-updated">Updated July 30, 2026</span></p>
+
+  <p>The daily puzzle is the same for everyone, refreshes once per calendar day, and is quietly the best training tool the game has. Each one is a real decision point &mdash; not a constructed &ldquo;mate in two,&rdquo; but a position from an actual game frozen at the instant one precise move mattered most. Learning to read the puzzle, and its grades, teaches you to read your own games.</p>
+
+  <p><a class="cta" href="/puzzle">Play today&rsquo;s puzzle &rarr;</a></p>
+
+  <h2>Where the positions come from</h2>
+  <p>Puzzles are <strong>mined</strong> from real games. A tool scans finished games looking for the moment the evaluation swung on a single move &mdash; the point where one side had a clearly best option and it was easy to miss. That position becomes the puzzle: you&rsquo;re shown the board and asked to find the best move. Because they&rsquo;re drawn from genuine play, the puzzles reward the same skills that win games &mdash; counting the <a href="/guides/the-census.html">royal spread</a>, spotting a <a href="/guides/zap-or-capture.html">zap-then-capture</a>, noticing a heal overflow &mdash; rather than contrived tricks.</p>
+
+  <h2>How grading works</h2>
+  <p>Your move is graded against the engine&rsquo;s own ranked list of <em>every</em> legal move in the position. Two things feed the grade: how your move ranked among all the legal options, and how much evaluation it gave away versus the best move. Crucially, it isn&rsquo;t all-or-nothing &mdash; a move that keeps a winning position winning still scores well even if it wasn&rsquo;t the single best choice, while a move that throws the position away earns the bottom grade no matter how natural it looked.</p>
+  <p>The grades, best to worst:</p>
+  <ul>
+    <li><strong>Star</strong> &mdash; you found the engine&rsquo;s top move.</li>
+    <li><strong>Green</strong> &mdash; excellent; barely any evaluation lost.</li>
+    <li><strong>Yellow</strong> &mdash; solid; a reasonable move that concedes a little.</li>
+    <li><strong>Orange</strong> &mdash; inaccurate; you gave away real ground.</li>
+    <li><strong>Red</strong> &mdash; a mistake that hurt the position.</li>
+    <li><strong>Skull</strong> &mdash; you threw the position away.</li>
+  </ul>
+
+  <h2>Streaks and sharing</h2>
+  <p>Playing the daily records your result for that calendar day and feeds your <strong>streak</strong> &mdash; the number of consecutive days you&rsquo;ve played. When you finish, you get a spoiler-free share card with your grade shown as emoji (in the spirit of Wordle results) that you can paste anywhere without giving the answer away. Two things to know: skipping a day breaks the streak, and <em>watching</em> the solution without playing records nothing &mdash; so if you want to keep a streak alive, take your attempt before you peek. A free account syncs your streak across devices.</p>
+
+  <h2>Using puzzles to improve</h2>
+  <p>The puzzle is a strategy course disguised as a daily habit. To get the most from it:</p>
+  <ul>
+    <li><strong>Count before you move.</strong> Note the royal spread and which pieces are load-bearing (watch for <a href="/guides/shields.html">closed groups</a>) before you commit.</li>
+    <li><strong>Ask what the position is punishing.</strong> Most mined positions turn on a single idea &mdash; a missed zap order, an overlooked reveal, a heal that should have overflowed. Name the idea, not just the move.</li>
+    <li><strong>Review after.</strong> When you miss, look at why the engine&rsquo;s move scored higher &mdash; it&rsquo;s almost always a cleaner path through one of the ideas in these guides.</li>
+    <li><strong>Don&rsquo;t chase the star at any cost.</strong> A green every day builds better habits than a star-or-skull gamble.</li>
+  </ul>
+
+  <hr />
+  <p><a class="cta" href="/puzzle">Play today&rsquo;s puzzle &rarr;</a> &nbsp; <a href="/faq.html">Puzzle FAQ &rarr;</a></p>
+  <p class="related muted">Related: <a href="/guides/hunting-the-king.html">Hunting the King</a> &middot; <a href="/guides/zap-or-capture.html">Zap or capture?</a> &middot; <a href="/strategy.html">Full strategy guide</a></p>
+
+  <hr />
+  <footer class="muted">
+    <a href="/">Play</a><a href="/rules.html">Rules</a><a href="/strategy.html">Strategy</a><a href="/guides.html">Guides</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
+  </footer>
+</div>
+</body>
+</html>

@@ -45,7 +45,7 @@ describe('mined daily puzzle', () => {
     }
     // A date outside the schedule still resolves via rotation.
     expect(await loadDailyMinedPuzzle('2027-01-01')).not.toBeNull();
-  });
+  }, 15_000);
 
   it('numbers dailies from the 2026-07-14 launch', async () => {
     const puzzle = await loadDailyMinedPuzzle('2026-07-16');

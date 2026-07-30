@@ -36,7 +36,6 @@ function BotCard({ bot, boss, cleared, next = false, locked, lockHint, selected,
       aria-expanded={trigger ? open : undefined}
       aria-disabled={(locked && !onLockedClick) || undefined}
       aria-label={locked ? `${bot.name} — ${lockHint}` : undefined}
-      title={locked ? lockHint : trigger ? 'Choose your opponent' : `Play ${bot.name}`}
       style={{
         position: 'relative',
         display: 'grid',

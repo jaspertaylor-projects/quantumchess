@@ -21,6 +21,7 @@ export default function ModalShell({
   escapeToClose = null, // defaults to closeOnBackdrop; pass false when the modal runs its own key handler (ReviewModal)
   zIndex = 1000,
   role = 'dialog', // ConfirmModal passes 'alertdialog'
+  ariaModal = true,
   ariaLabel = null,
   ariaLabelledBy = null,
   backdropClassName = null,
@@ -85,7 +86,7 @@ export default function ModalShell({
         style={panelStyle || undefined}
         onClick={(e) => e.stopPropagation()}
         role={role}
-        aria-modal="true"
+        aria-modal={ariaModal ? 'true' : undefined}
         aria-label={ariaLabel || undefined}
         aria-labelledby={ariaLabelledBy || undefined}
       >

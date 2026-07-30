@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Census: Conservation of the Chess Set — Quantum Chess Guides</title>
+<meta name="description" content="Every side in Quantum Chess always owns exactly one chess set. The census is the conservation law that propagates facts across your whole army and quietly decides heals, zaps, collapses, and reveals." />
+<link rel="canonical" href="https://quantumchess.ninja/guides/the-census.html" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="stylesheet" href="/guides/guides.css" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5481833391571778" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0a0e1a; color: #dfe6f2; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; line-height: 1.68; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 40px 22px 80px; }
+  h1 { font-size: 2rem; letter-spacing: 0.02em; margin: 0 0 4px; }
+  .tag { color: #9db4ff; font-style: italic; margin: 0 0 20px; }
+  h2 { font-size: 1.25rem; margin: 34px 0 8px; color: #8fd6ff; }
+  h3 { font-size: 1.05rem; margin: 20px 0 4px; color: #c792ea; }
+  a { color: #4fc3f7; }
+  .home { display: inline-block; margin-bottom: 8px; color: #4fc3f7; text-decoration: none; font-weight: 700; }
+  .crumb { font-size: 0.85rem; color: #93a1b5; margin: 0 0 18px; }
+  .crumb a { color: #4fc3f7; text-decoration: none; }
+  .cta { display: inline-block; margin: 8px 0 6px; padding: 11px 22px; border-radius: 10px; background: #4fc3f7; color: #06121b; font-weight: 800; text-decoration: none; }
+  ul { padding-left: 20px; }
+  li { margin: 5px 0; }
+  .muted { color: #93a1b5; }
+  hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 30px 0; }
+  .related a { display: inline-block; margin-right: 14px; }
+  footer a { margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="/guides.html">&larr; All guides</a>
+  <p class="crumb"><a href="/">Play</a> &rsaquo; <a href="/guides.html">Guides</a> &rsaquo; The Census</p>
+  <h1>The Census: Conservation of the Chess Set</h1>
+  <p class="tag">The quiet accountant behind every heal that overflows and every zap that fizzles.</p>
+  <p class="guide-byline">Written and maintained by Jasper Taylor for Pura Viba LLC &middot; <span class="guide-updated">Updated July 30, 2026</span></p>
+
+  <p>Most of the surprising moments in Quantum Chess &mdash; a heal that hands you a Queen, a zap that does nothing, a piece that suddenly reveals itself without ever being touched &mdash; trace back to one rule that never appears on screen. Your side always owns <strong>exactly one chess set</strong>: 8 Pawns, 2 Knights, 2 Bishops, 2 Rooks, 1 Queen, and 1 King. Not &ldquo;started with.&rdquo; <em>Owns, right now, always.</em> Every piece, living or captured, fills exactly one slot in that set in every world consistent with what is known. This bookkeeping is the census, and once you can feel it working, the game stops surprising you and starts obeying you.</p>
+
+  <p><a class="cta" href="/">Watch it work on a live board &rarr;</a></p>
+
+  <h2>Facts propagate instantly</h2>
+  <p>Because the totals are fixed, any new fact immediately constrains everything else. Confirm two of your pieces as Knights and there are no Knights left to go around &mdash; so Knight vanishes from every other piece you own, in the same instant, across the whole board. Establish enough facts and pieces you never moved can collapse entirely, because the census has eliminated every alternative. A background solver recomputes all of this after every move; you don&rsquo;t manage it by hand, but you can and should <em>anticipate</em> it. This instant, non-local propagation is the <a href="/guides/the-physics-behind-quantum-chess.html">entanglement</a> in the design.</p>
+
+  <h2>Captured pieces pin the ledger</h2>
+  <p>A piece in the capture tray isn&rsquo;t out of the game as far as the census is concerned. It sits there as a <em>definite</em> type and counts against its side&rsquo;s totals forever. Capture an opponent&rsquo;s piece and it collapses to its cheapest identity &mdash; usually a Pawn &mdash; which permanently spends one of their Pawn slots. That has a knock-on effect: with fewer cheap slots left on their side, their remaining pieces can no longer <em>be</em> those cheap types, so the expensive identities concentrate on the survivors. Every capture makes the rest of the enemy army easier to read.</p>
+
+  <h2>Why heals overflow</h2>
+  <p>A <a href="/guides/heal-networks.html">heal</a> restores a friend&rsquo;s cheapest missing identity &mdash; but only if the census has a slot free. If Pawn is fully claimed elsewhere, the heal can&rsquo;t hand back a Pawn, so it <strong>overflows upward</strong> to the next available identity. Heal a bare piece when both your Knights are already accounted for and it might come back as Pawn-or-Bishop instead. Late in a game, with most cheap slots spent, a well-aimed heal can restore Queen &mdash; or, when your side has lost every King possibility, King itself. The overflow isn&rsquo;t a special case; it&rsquo;s just the census refusing to double-book a slot.</p>
+
+  <h2>Why zaps fizzle</h2>
+  <p>A <a href="/guides/zap-or-capture.html">zap</a> tries to strip a target&rsquo;s most valuable possibility, but it may only remove an identity <em>cleanly</em> &mdash; without forcing a census cascade that would rewrite other pieces. If shedding King from this piece would, through the ledger, illegally alter something elsewhere, the zap skips that identity and tries the next. If nothing can be cleanly removed, the zap fizzles entirely and the target shows a gold <a href="/guides/shields.html">shield</a>. Closed groups &mdash; N pieces sharing exactly N identities &mdash; are the classic example: their identities are load-bearing, so the census protects them until the group is broken from the outside.</p>
+
+  <h2>The royal safeguard is a census rule too</h2>
+  <p>The protection on your last King is the census refusing to let the set lose its only King. A zap can remove King while a second maybe-King still exists to absorb the slot, but when a volley would strip King from every remaining holder at once, each affected piece keeps King and the zap falls through to Queen. The set must always contain its King somewhere; the ledger simply won&rsquo;t balance otherwise.</p>
+
+  <h2>Playing with the census in mind</h2>
+  <ul>
+    <li><strong>Count slots, not just pieces.</strong> Before a capture, ask which identity you&rsquo;re about to spend from the enemy&rsquo;s totals &mdash; and whether spending it will reveal their other pieces.</li>
+    <li><strong>Force the reveal by elimination.</strong> You rarely point at the enemy King. You delete King everywhere else until the census has only one place left to put it.</li>
+    <li><strong>Respect closed groups.</strong> If your zaps keep fizzling, you&rsquo;re hitting a load-bearing group; break it by capturing a member or collapsing something nearby, then try again.</li>
+    <li><strong>Save your heals for when overflow helps.</strong> Early, heals just hand back pawns; late, the same heal can hand back royalty.</li>
+  </ul>
+
+  <hr />
+  <p><a class="cta" href="/">Play Quantum Chess free &rarr;</a></p>
+  <p class="related muted">Related: <a href="/guides/shields.html">Shields</a> &middot; <a href="/guides/heal-networks.html">Heal networks</a> &middot; <a href="/guides/hunting-the-king.html">Hunting the King</a></p>
+
+  <hr />
+  <footer class="muted">
+    <a href="/">Play</a><a href="/rules.html">Rules</a><a href="/strategy.html">Strategy</a><a href="/guides.html">Guides</a><a href="/faq.html">FAQ</a><a href="/about.html">About</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a>
+  </footer>
+</div>
+</body>
+</html>

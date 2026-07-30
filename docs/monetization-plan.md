@@ -15,6 +15,10 @@ Tip catalog entry are deployed; the AdSense launch actions below still remain.
 
 - After AdSense approval, create a responsive display unit and configure
   `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_PUZZLE_SLOT` in production.
+- In AdSense, exclude `/play`, `/review`, and `/profile` from **Auto ads**.
+  Gameplay monetization uses the explicit H5 `adBreak()` calls below instead:
+  a game-end `next` placement and an opt-in rewarded review placement. This
+  prevents Google from inserting display units beside board controls.
 - Run the live-device checklist in the README before enabling ads for players.
 
 The stack you're building on: **AdSense H5 Games Ads (the Ad Placement API,
@@ -40,8 +44,8 @@ watching ads. Money buys *both* fewer ads *and* a higher ceiling.
 | Interstitial ads (game end) | Yes | Off for the window | Never |
 | Interstitial / display ads (puzzles) | Yes | Off for the window | Never |
 | Saved games | last 10 | last 10 | up to 1,000 |
-| Bot roster | 6 Free bots | +3 Supporter bots | All 12 active bots (+3 Premium-only) |
-| Custom pic / tagline / full roster | — | — | Yes |
+| Bot roster | 6 Free bots | +6 Supporter bots | All 18 active bots (+6 Premium-only) |
+| Full character-avatar, tagline, and saying roster | — | — | Yes |
 
 **Tip reviews/day = 5** (confirmed). Visible daylight above free (3), monotonic
 below Premium (unlimited).
@@ -212,9 +216,9 @@ puzzle surface.
 │  │   ✦ No ads                                   │  │
 │  │   ✦ Unlimited game reviews with engine moves │  │
 │  │   ✦ Up to 1,000 saved games                  │  │
-│  │   ✦ All 12 active bots                       │  │
-│  │   ✦ Custom profile pic & tagline             │  │
-│  │   ✦ The full character roster                │  │
+│  │   ✦ All 18 active bots                       │  │
+│  │   ✦ The full character-avatar roster         │  │
+│  │   ✦ 32 more taglines and sayings             │  │
 │  │        [  Upgrade — $3/month  ]              │  │
 │  │  ───────────────────────────────────────────│  │
 │  │  Not a subscription person? Tip $5 for 3     │  │
