@@ -12,7 +12,6 @@
 import { fromAlgebraic, toAlgebraic } from './boardUtils.js';
 import {
   CAPTURE_COLLAPSE_ORDER,
-  CONTACT_ZAP_ORDER,
   HEAL_GAIN_ORDER,
   LEAST_VALUABLE_ORDER,
 } from './gameConstants.js';
@@ -31,6 +30,7 @@ import {
   subsetTypesThatCanMakeMove,
 } from './engineGeometry.js';
 import { applyQuantumConstraints } from './engineConservation.js';
+import { applyCensusSafeZapVolley } from './engineZap.js';
 
 // Re-export the split modules' public API so the engine stays one import.
 export { clonePieces, getBaseTypes, getPromoTypes } from './engineTypes.js';
@@ -41,7 +41,7 @@ export {
   movesForType,
   subsetTypesThatCanMakeMove,
 } from './engineGeometry.js';
-export { applyQuantumConstraints } from './engineConservation.js';
+export { applyQuantumConstraints, isCensusConsistent } from './engineConservation.js';
 
 export function otherSide(side) {
   return side === 'white' ? 'black' : 'white';
@@ -240,27 +240,6 @@ export function simulateStandardMove(prevPieces, pieceId, toSquare, captureCount
   };
 }
 
-// A shed is LOCAL when the constrained board differs from the pre-shed board
-// in exactly one way: the target lost the shed type and nothing else — no
-// other piece's possibility set changed, and the target was not narrowed
-// beyond the shed itself. This is the zap guard's cleanliness test.
-function shedIsLocal(before, after, targetId, shedType) {
-  const afterById = new Map(after.map((p) => [p.id, p]));
-  for (const b of before) {
-    const a = afterById.get(b.id);
-    if (!a) return false;
-    const bTypes = (b.possibleTypes || []).join('');
-    const aTypes = (a.possibleTypes || []).join('');
-    if (b.id === targetId) {
-      const expected = (b.possibleTypes || []).filter((t) => t !== shedType).join('');
-      if (aTypes !== expected) return false;
-    } else if (aTypes !== bTypes) {
-      return false;
-    }
-  }
-  return true;
-}
-
 // --- Zap + heal on contact ---
 //
 // The moved piece(s) touch everything within capture reach of their LEAST
@@ -268,16 +247,14 @@ function shedIsLocal(before, after, targetId, shedType) {
 // superposition pokes like a pawn, a confirmed queen sweeps like one, so
 // collapsing a piece is what arms its contact. Attack squares, so
 // friendly-occupied squares count — that is protection. Every enemy piece in
-// contact is ZAPPED: it sheds the most valuable possibility it can lose
-// CLEANLY, trying k -> q -> r -> b -> n -> p. A shed is clean
-// when, after conservation settles, the board's only change is that single
-// type leaving that single piece — a shed whose census cascade would strip
-// possibilities from ANY other piece (or narrow the target further) is
-// skipped and the zap walks down to the next type; if nothing sheds cleanly
-// the zap dissipates against a shield. A volley may never erase a side's
-// final King possibility: every King shed that would collectively do so
-// falls through to Queen, then Rook, Bishop, Knight, and Pawn. A fully
-// measured piece (one possibility) has nothing left to shed, so it shields.
+// contact is ZAPPED: it sheds its most valuable removable possibility,
+// trying k -> q -> r -> b -> n -> p. Conservation then propagates that new
+// fact across the whole side, so a zap may deliberately trigger collapse
+// chains on pieces it never touched. A volley may never erase a side's final
+// King possibility: every King shed that would collectively do so falls
+// through to the next-highest identity that target can lose. A fully measured
+// piece (one possibility), or a final King with no lower identity, has nothing
+// safe to shed and therefore shields.
 // Every friendly piece in contact is
 // HEALED: it regains its least valuable feasible possibility, including King
 // as the final option (Pawn never returns to promoted pieces or on the
@@ -311,109 +288,20 @@ export function applyContactZapHeal(pieces, moverSide, moverIds) {
     .map((sq) => occ.get(sq))
     .filter((p) => p && !p.captured && !moverSet.has(p.id));
 
-  // Zaps strike TOGETHER (rules change 2026-07-13, Jasper's ruling — "the
-  // volley"). Sequential zaps chose between indistinguishable victims by
-  // square order: with two identical {p,k} holders both in reach, the
-  // alphabetically-first shed cleanly and its shed census-locked the twin
-  // into a shield. No dice anywhere means no alphabet either. Now every
-  // target's shed is judged against the board AS THE MOVER LANDED (no zap
-  // sees another's result), and all sheds land as ONE volley: if the
-  // combined cascade would ripple beyond the struck pieces, the whole
-  // volley fizzles — they shed together or shield together. If all remaining
-  // King holders would shed King in that volley, those targets instead retry
-  // from Queen downward so Zap can never erase the final King possibility.
-  const zappedSquares = [];
+  // Zaps strike TOGETHER. Every target chooses from the board as the mover
+  // landed, then the full volley is committed before conservation propagates
+  // its collapse chain. If all remaining King holders would shed King in the
+  // volley, each of those targets retries from Queen downward so the census
+  // always retains a royal branch.
   const fizzledSquares = [];
-  const preZap = current;
-  const candidates = []; // { id, square, shed }
-  for (const target of contacts) {
-    if (target.side === moverSide) continue;
-    const live = preZap.find((p) => p.id === target.id && !p.captured && p.square);
-    if (!live) continue;
-    const types = live.possibleTypes || [];
-    if (types.length <= 1) continue;
-    let found = null;
-    for (const shed of CONTACT_ZAP_ORDER) {
-      if (!types.includes(shed)) continue;
-      const trial = clonePieces(preZap);
-      const trialTarget = trial.find((x) => x.id === live.id);
-      restrictTypes(trialTarget, types.filter((t) => t !== shed));
-      const constrained = applyQuantumConstraints(trial);
-      if (shedIsLocal(preZap, constrained, live.id, shed)) {
-        found = { id: live.id, square: live.square, shed };
-        break;
-      }
-    }
-    if (found) candidates.push(found);
-  }
-
-  const targetSide = otherSide(moverSide);
-  const kingHolderIds = preZap
-    .filter((p) => !p.captured && p.square && p.side === targetSide && (p.possibleTypes || []).includes('k'))
-    .map((p) => p.id);
-  const kingShedIds = new Set(candidates.filter((c) => c.shed === 'k').map((c) => c.id));
-  const wouldEraseFinalKing =
-    kingHolderIds.length > 0 && kingHolderIds.every((id) => kingShedIds.has(id));
-
-  if (wouldEraseFinalKing) {
-    for (let i = candidates.length - 1; i >= 0; i -= 1) {
-      const candidate = candidates[i];
-      if (candidate.shed !== 'k') continue;
-      const live = preZap.find((p) => p.id === candidate.id);
-      const types = live?.possibleTypes || [];
-      let fallback = null;
-      for (const shed of CONTACT_ZAP_ORDER.slice(1)) {
-        if (!types.includes(shed)) continue;
-        const trial = clonePieces(preZap);
-        const trialTarget = trial.find((x) => x.id === candidate.id);
-        restrictTypes(trialTarget, types.filter((t) => t !== shed));
-        const constrained = applyQuantumConstraints(trial);
-        if (shedIsLocal(preZap, constrained, candidate.id, shed)) {
-          fallback = { ...candidate, shed };
-          break;
-        }
-      }
-      if (fallback) candidates[i] = fallback;
-      else {
-        candidates.splice(i, 1);
-      }
-    }
-  }
-
-  if (candidates.length > 0) {
-    const volley = clonePieces(preZap);
-    for (const c of candidates) {
-      const t = volley.find((x) => x.id === c.id);
-      restrictTypes(t, (t.possibleTypes || []).filter((y) => y !== c.shed));
-    }
-    const constrained = applyQuantumConstraints(volley);
-    const shedById = new Map(candidates.map((c) => [c.id, c.shed]));
-    const afterById = new Map(constrained.map((p) => [p.id, p]));
-    let jointClean = true;
-    for (const b of preZap) {
-      const a = afterById.get(b.id);
-      if (!a) { jointClean = false; break; }
-      const bTypes = (b.possibleTypes || []).join('');
-      const aTypes = (a.possibleTypes || []).join('');
-      const shed = shedById.get(b.id);
-      if (shed) {
-        const expected = (b.possibleTypes || []).filter((t) => t !== shed).join('');
-        if (aTypes !== expected) { jointClean = false; break; }
-      } else if (aTypes !== bTypes) {
-        jointClean = false;
-        break;
-      }
-    }
-    if (jointClean) {
-      current = constrained;
-      for (const c of candidates) zappedSquares.push(c.square);
-    }
-  }
+  const zapResult = applyCensusSafeZapVolley(current, moverSide, contacts);
+  current = zapResult.pieces;
+  const { zappedSquares } = zapResult;
 
   // Feedback invariant: contact must never read as a missing animation. If
   // an enemy was in Zap's reach but did not actually shed a possibility — a
-  // fully measured piece, a census-locked target, a failed volley, or the
-  // final-King safeguard with no lower identity available — show its shield.
+  // fully measured piece or the final-King safeguard with no lower identity
+  // available — show its shield.
   // Deriving this as the complement of successful zaps makes future guards
   // inherit the behavior automatically.
   const zappedSet = new Set(zappedSquares);

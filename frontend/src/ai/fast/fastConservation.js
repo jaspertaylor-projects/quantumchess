@@ -153,6 +153,19 @@ function canSeatAll(options, forcedPiece, forcedSlot) {
   return true;
 }
 
+// REF: isCensusConsistent. Used by the zap-volley search to reject only
+// combinations that leave no complete seating; ordinary propagation and
+// bystander collapses remain legal.
+export function censusIsConsistentFast(bd, side) {
+  const options = [];
+  for (let i = 0; i < bd.n; i++) {
+    if (sideBit(bd.words[i]) === side) options.push(poolsOf(bd.words[i]));
+  }
+  if (options.length === 0) return true;
+  if (options.length > SLOT_TYPE.length) return false;
+  return canSeatAll(options, -1, -1);
+}
+
 // REF: matchingPruneSide — promotion-aware exact pruning for one side.
 function matchingPruneSide(bd, side) {
   const idxs = [];

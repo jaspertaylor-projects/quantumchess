@@ -87,9 +87,10 @@ export function createStartingPieces() {
 // Capture collapse priority: lowest valuable non-king first (P < N < B < R < Q)
 export const CAPTURE_COLLAPSE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 
-// A zap sheds the MOST valuable possibility it can lose cleanly. King is
-// normally first, but the contact resolver protects a side's final King
-// possibility and falls through to Queen (then the rest of this ladder).
+// A zap sheds the MOST valuable removable possibility. King is normally
+// first, but the contact resolver protects a side's final King possibility
+// and falls through to Queen (then the rest of this ladder). Conservation
+// propagation after the volley is allowed to collapse other pieces.
 export const CONTACT_ZAP_ORDER = ['k', 'q', 'r', 'b', 'n', 'p'];
 
 // Least valuable first — the mover's contact reach projects from the first
