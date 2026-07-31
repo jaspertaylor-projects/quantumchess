@@ -15,10 +15,11 @@ Tip catalog entry are deployed; the AdSense launch actions below still remain.
 
 - After AdSense approval, create a responsive display unit and configure
   `VITE_ADSENSE_CLIENT` and `VITE_ADSENSE_PUZZLE_SLOT` in production.
-- In AdSense, exclude `/play`, `/review`, and `/profile` from **Auto ads**.
-  Gameplay monetization uses the explicit H5 `adBreak()` calls below instead:
-  a game-end `next` placement and an opt-in rewarded review placement. This
-  prevents Google from inserting display units beside board controls.
+- In AdSense, leave **Auto ads OFF site-wide**. Gameplay monetization uses the
+  explicit H5 `adBreak()` calls below instead: a game-end `next` placement and
+  an opt-in rewarded review placement. The solved-puzzle display unit remains
+  an explicit, labeled placement. Guides and informational pages intentionally
+  contain no AdSense loader and stay ad-free.
 - Run the live-device checklist in the README before enabling ads for players.
 
 The stack you're building on: **AdSense H5 Games Ads (the Ad Placement API,

@@ -574,12 +574,14 @@ Legend: [ ] not started · [~] in progress · [X] done
       to the 180-second floor, and the solved-puzzle card shows a labeled ad
       separated from Share. Then remove the test flag. Keep the existing
       consent choice in place unless the CMP rollout is deliberately changed.
-- [ ] ON APPROVAL — in AdSense **Ads → By site → Edit → Page exclusions**,
-      exclude `/play`, `/review`, and `/profile` from Auto ads. The game page
-      is monetized through the explicit H5 game-end and opt-in rewarded-review
-      placements; do not let Auto ads place display units beside the board or
-      move controls. The completed-puzzle display slot remains a separately
-      labeled, manually positioned unit.
+- [ ] ON APPROVAL — in AdSense **Ads → By site → Edit**, leave **Auto ads
+      OFF for the entire site**. Do not substitute page exclusions: the game
+      is monetized only through the explicit H5 game-end and opt-in
+      rewarded-review placements, while the completed-puzzle display slot is
+      a separately labeled, manually positioned unit. Guides, Rules, Strategy,
+      FAQ, and About intentionally contain no AdSense loader and stay ad-free.
+      This keeps automated display units away from the board, move controls,
+      Welcome, and the learning library.
 
 ### Product / features (nice-to-have)
 #### Immediate — DONE (2026-07-05, verified locally in-browser)
