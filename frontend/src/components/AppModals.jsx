@@ -17,7 +17,6 @@ import { DEFAULT_WHITE, DEFAULT_BLACK } from '../settings/usePieceColors.js';
 import { DEFAULT_BOARD } from '../settings/useBoardColors.js';
 import { DEFAULT_PLAYER_BAR_COLORS } from '../settings/usePlayerBarColors.js';
 import RulesModal from '../tray/RulesModal.jsx';
-import TutorialModal from '../tutorial/TutorialModal.jsx';
 import AccountModal from '../account/AccountModal.jsx';
 import AdminStatsModal from '../admin/AdminStatsModal.jsx';
 import PricingModal from '../account/PricingModal.jsx';
@@ -36,8 +35,7 @@ export default function AppModals({
   settingsOpen, onCloseSettings, colors, indicators, showCoordinates, showCheckOverlay,
   moveSoundsEnabled, onAcceptSettings,
   // rules + tutorial
-  rulesOpen, rulesInitialPage, onCloseRules, onPlayLesson,
-  tutorialOpen, closeTutorial, tutorialLessonId, onOpenRulesPage,
+  rulesOpen, rulesInitialPage, onCloseRules, onOpenTutorial,
   // friend wait
   online, onChooseGameAfterInviteError,
   // account/pricing/review
@@ -115,7 +113,7 @@ export default function AppModals({
         open={rulesOpen}
         onClose={onCloseRules}
         initialPageTitle={rulesInitialPage}
-        onPlayLesson={onPlayLesson}
+        onOpenTutorial={onOpenTutorial}
       />
 
       <FriendWaitCard
@@ -171,14 +169,6 @@ export default function AppModals({
           setConfirmState(null);
           if (run) run();
         }}
-      />
-
-      <TutorialModal
-        open={tutorialOpen}
-        onClose={closeTutorial}
-        pieceSvgStyles={svgStyles}
-        initialLessonId={tutorialLessonId}
-        onOpenRules={onOpenRulesPage}
       />
 
       <MinedPuzzleModal

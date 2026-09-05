@@ -28,7 +28,7 @@ The tutorial, guided game, quick rules and in-game help now teach cascade zaps.
 Move-history explanations identify direct contact and distant census changes.
 The redundant web article library redirects to the quick rules.
 
-Validation: run the frontend test suite, the tutorial exercise verifier and a
+Validation: run the frontend test suite, the guided intro regression tests and a
 production build. Replay fixtures must be regenerated for intentional rule changes.
 Historical games and mined puzzle data remain rules-dependent; daily loading
 checks replayability and uses its existing fallback when a chain no longer plays.

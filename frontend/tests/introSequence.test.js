@@ -46,6 +46,19 @@ describe('first-visit intro game', () => {
       );
       snapshot = whiteResult.snap;
       history.push(snapshot);
+      const whiteAt = (square) => snapshot.pieces.find((p) => !p.captured && p.square === square);
+      if (i === 3) expect(whiteAt('c4').possibleTypes).toContain('p');
+      if (i === 4) expect(snapshot.lastMove.fizzledSquares).toContain('f6');
+      if (i === 7) expect(whiteAt('d7').possibleTypes).toEqual(['p']);
+      if (i === 8) {
+        expect(whiteAt('c8').wasPromoted).toBe(true);
+        expect(whiteAt('c8').possibleTypes).toEqual(['n', 'b', 'r', 'q']);
+      }
+      if (i === 9) {
+        expect(snapshot.lastMove.zappedSquares).toContain('f8');
+        expect(whiteAt('f8').possibleTypes).toEqual(['r']);
+      }
+
 
       if (!turn.black) continue;
       const blackEntry = turn.black.castle
@@ -61,6 +74,21 @@ describe('first-visit intro game', () => {
       }
       snapshot = blackResult.snap;
       history.push(snapshot);
+      const blackAt = (square) => snapshot.pieces.find((p) => !p.captured && p.square === square);
+      if (i === 0) expect(blackAt('e4').possibleTypes).toEqual(['p', 'r']);
+      if (i === 1) {
+        expect(blackAt('c6').possibleTypes).toEqual(['n']);
+        expect(snapshot.pieces.filter((p) => p.side === 'black' && !['c6', 'f6'].includes(p.square))
+          .every((p) => !p.possibleTypes.includes('n'))).toBe(true);
+      }
+      if (i === 2) expect(snapshot.lastMove.zappedSquares).toEqual(expect.arrayContaining(['c4', 'e4']));
+      if (i === 4) expect(blackAt('d5').possibleTypes).toContain('b');
+      if (i === 8) {
+        for (const square of ['a8', 'f7', 'g7', 'h7']) {
+          expect(blackAt(square).possibleTypes.some((t) => ['r', 'q', 'k'].includes(t))).toBe(false);
+        }
+      }
+
     }
 
     expect(snapshot.sideToMove).toBe('black');

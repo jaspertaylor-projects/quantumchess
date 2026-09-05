@@ -6,7 +6,7 @@
 // squares, and (when canDrag/onDrop are provided) drag pieces to move them.
 // Imports From: ../chessboard/QuantumPiece.jsx, ../settings/usePieceColors.js,
 //   ../theme.js
-// Exported To: ./TutorialModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
+// Exported To: ../puzzle/DailyPuzzleModal.jsx,
 //   ../puzzle/MinedPuzzleModal.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';

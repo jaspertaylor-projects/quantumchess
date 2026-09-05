@@ -28,9 +28,9 @@ census-safe identity; friends regain feasible missing identities. Zaps may force
 census collapses anywhere on the target team. The final King possibility is
 protected; revealed Kings obey check and checkmate.
 
-See [quick rules](frontend/public/rules.html), the in-game lessons, and
+See [quick rules](frontend/public/rules.html), the guided tutorial, and
 [the rule change](docs/census-cascade-zap-experiment.md). Run
-`node frontend/tests/tutorial-exercises-verify.mjs` after changing teaching content.
+`cd frontend && npx vitest run tests/introSequence.test.js` after changing teaching content.
 
 Where things stand after the adoption commit:
 
@@ -40,9 +40,8 @@ Where things stand after the adoption commit:
   cheapest-self reach → least-valuable capture → quantum castle →
   pawn-bishop overflow (`hooks/useIntroSequence.js`, line verified
   move-by-move by `frontend/tmp`-era script, now baked into the constants).
-- **Tutorial**: 10 lessons / 21 live-engine exercises rebuilt for the new
-  rules; `tests/tutorial-exercises-verify.mjs` re-verifies every exercise's
-  success-text claims against the engine.
+- **Tutorial**: every Tutorial entry opens the guided intro game. Its complete
+  move sequence and narrated outcomes are checked in `tests/introSequence.test.js`.
 - **Rulebook**: `tray/RulesModal.jsx` pages rewritten (Zap/Heal/Shields/
   Census/Winning pages; lesson → rules-page links intact).
 - **Fixtures**: `tests/fixtures/engine-games.json` regenerated under the new

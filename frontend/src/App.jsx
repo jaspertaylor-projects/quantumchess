@@ -97,8 +97,6 @@ export default function App({ entryAction = null }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesInitialPage, setRulesInitialPage] = useState(null);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [tutorialLessonId, setTutorialLessonId] = useState(null);
   const [consentPromptOpen, setConsentPromptOpen] = useState(false);
   // Narrow layout: the New Game setup panel lives in a bottom sheet.
   const [mobileNewGameOpen, setMobileNewGameOpen] = useState(false);
@@ -123,15 +121,6 @@ export default function App({ entryAction = null }) {
     }
   }, []);
 
-  const closeTutorial = useCallback(() => {
-    setTutorialOpen(false);
-    setTutorialLessonId(null);
-    try {
-      localStorage.setItem('qcTutorialSeen', '1');
-    } catch (_) {
-      // ignore
-    }
-  }, []);
 
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [showCheckOverlay, setShowCheckOverlay] = useState(false);
@@ -595,7 +584,21 @@ export default function App({ entryAction = null }) {
     openProfilePage();
     dismissOnboarding();
   }, [openProfilePage, dismissOnboarding]);
-  const handleOpenTutorial = useCallback(() => { setTutorialOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
+  const handleOpenTutorial = useCallback(() => {
+    const start = () => {
+      dismissOnboarding();
+      window.location.assign('/play?welcome=intro');
+    };
+    if (gameStarted && !gameOver && !externalGameOver.over) {
+      setRulesOpen(false);
+      setConfirmState({
+        title: 'Start the tutorial?',
+        message: 'This leaves your current game and starts a fresh guided game.',
+        confirmLabel: 'Start Tutorial',
+        run: start,
+      });
+    } else start();
+  }, [dismissOnboarding, gameStarted, gameOver, externalGameOver.over]);
 
   const handleStartGame = useCallback((settings) => {
     const requestedBot = settings && settings.gameMode === 'ai'
@@ -1297,20 +1300,7 @@ export default function App({ entryAction = null }) {
         rulesOpen={rulesOpen}
         rulesInitialPage={rulesInitialPage}
         onCloseRules={() => { setRulesOpen(false); setRulesInitialPage(null); }}
-        onPlayLesson={(lessonId) => {
-          setRulesOpen(false);
-          setRulesInitialPage(null);
-          setTutorialLessonId(lessonId);
-          setTutorialOpen(true);
-        }}
-        tutorialOpen={tutorialOpen}
-        closeTutorial={closeTutorial}
-        tutorialLessonId={tutorialLessonId}
-        onOpenRulesPage={(pageTitle) => {
-          closeTutorial();
-          setRulesInitialPage(pageTitle);
-          setRulesOpen(true);
-        }}
+        onOpenTutorial={handleOpenTutorial}
         online={online}
         onChooseGameAfterInviteError={handleChooseGameAfterInviteError}
         auth={auth}

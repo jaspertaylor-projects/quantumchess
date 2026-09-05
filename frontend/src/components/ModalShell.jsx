@@ -7,7 +7,7 @@
 // Imports From: ../theme.js
 // Exported To: ./ConfirmModal.jsx, ./WinnerModal.jsx, ./EnPassantChoiceModal.jsx,
 //   ../settings/SettingsModal.jsx, ../tray/RulesModal.jsx,
-//   ../tutorial/TutorialModal.jsx, ../review/ReviewModal.jsx,
+//   ../review/ReviewModal.jsx,
 //   ../account/AccountModal.jsx, ../puzzle/DailyPuzzleModal.jsx,
 //   ../puzzle/MinedPuzzleModal.jsx
 

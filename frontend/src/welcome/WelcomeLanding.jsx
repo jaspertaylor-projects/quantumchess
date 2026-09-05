@@ -23,7 +23,7 @@ const choices = [
   },
   {
     action: WELCOME_ACTION.INTRO,
-    title: 'Guided Intro Game',
+    title: 'Tutorial',
     text: 'Learn the rules by playing',
     icon: GraduationCap,
     tone: 'gold',

@@ -9,9 +9,8 @@ import IconButton from '../components/IconButton.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon, BookOpen as BookOpenIcon, Play as PlayIcon, GraduationCap as GraduationCapIcon } from 'lucide-react';
-import { LESSONS } from '../tutorial/lessons.js';
 
-export default function RulesModal({ open = false, onClose = () => {}, onPlayLesson = null, initialPageTitle = null }) {
+export default function RulesModal({ open = false, onClose = () => {}, onOpenTutorial = null, initialPageTitle = null }) {
   const pages = useMemo(
     () => [
       {
@@ -355,45 +354,14 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           {page === 0 ? (
             <>
               <h3 className="qc-rules-page-title" style={styles.pageTitle}>Contents</h3>
-              <p style={styles.tocIntro}>
-                Interactive lessons walk each rule through with diagrams. Play a lesson, or jump straight to the fine print.
-              </p>
-              <div className="qc-rules-toc" style={styles.tocList}>
-                {LESSONS.map((ls, i) => (
-                  <div key={`toc-${ls.id}`} className="qc-rules-toc-row" style={styles.tocRow}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={styles.tocTitle}>{i + 1}. {ls.title}</div>
-                      <div style={styles.tocBlurb}>{ls.blurb}</div>
-                    </div>
-                    <div style={styles.tocActions}>
-                      {onPlayLesson ? (
-                        <button
-                          type="button"
-                          className="qc-rules-toc-play"
-                          style={styles.tocBtn}
-                          onClick={() => onPlayLesson(ls.id)}
-                          title={`Play the "${ls.title}" lesson`}
-                        >
-                          <PlayIcon size={13} /> Lesson
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="qc-rules-toc-read"
-                        style={styles.tocBtnGhost}
-                        onClick={() => jumpToTitle(ls.rulesPage)}
-                        title={`Read the "${ls.rulesPage}" section`}
-                      >
-                        <BookOpenIcon size={13} /> Rules
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={styles.tocMoreTitle}>More sections</div>
+              <p style={styles.tocIntro}>Learn by playing a guided game, or look up a rule below.</p>
+              {onOpenTutorial ? (
+                <button type="button" style={styles.tocBtn} onClick={onOpenTutorial}>
+                  <PlayIcon size={13} /> Tutorial
+                </button>
+              ) : null}
               <div className="qc-rules-toc-more" style={styles.tocList}>
                 {pages
-                  .filter((p) => !LESSONS.some((l) => l.rulesPage === p.title))
                   .map((p) => (
                     <div key={`toc-extra-${p.title}`} className="qc-rules-toc-row" style={styles.tocRow}>
                       <div style={styles.tocTitle}>{p.title}</div>
@@ -409,9 +377,9 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
                   ))}
               </div>
               <p className="qc-rules-weblink" style={{ margin: '14px 0 0', fontSize: 12, color: theme.textSecondary }}>
-                Prefer one long page? Read the{' '}
+                Read the{' '}
                 <a href="/rules.html" target="_blank" rel="noopener" style={{ color: theme.primary, fontWeight: 700 }}>
-                  web rulebook
+                  quick rules
                 </a>.
               </p>
             </>

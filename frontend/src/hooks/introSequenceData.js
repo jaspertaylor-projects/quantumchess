@@ -9,7 +9,7 @@ export const INTRO_TURNS = [
     afterWhite: 'Your e-file piece claimed the center. Pawn, rook, and queen could all make that move, so its quantum superposition collapsed to those three possibilities.',
     black: { from: 'g8', to: 'f6' },
     afterBlack: [
-      'My g8 piece made a knight leap to f6, resolving as a knight. In quantum terms, contact with an enemy partially observes that piece and removes its strongest possible identity. We call that a Zap.',
+      'My g8 piece made a knight leap to f6, resolving as a knight. In quantum terms, contact with an enemy partially observes that piece and tries to remove its strongest identity while preserving the census and final King possibility. We call that a Zap.',
       'In chess terms, my knight attacked the piece on e4. In Quantum Chess, that means it contacted and zapped it. Notice that the queen is now missing from that piece’s possibilities. Now play f1 to c4.',
     ],
     delay: 1100,
@@ -46,7 +46,7 @@ export const INTRO_TURNS = [
   },
   {
     white: { from: 'f2', to: 'd4' },
-    afterWhite: 'AAARGH—you recaptured my knight on d4. I should have seen that coming.',
+    afterWhite: 'You recaptured my knight on d4. Your landing also touched f6, but that revealed knight has no identity to lose: it shows a gold shield.',
     black: { from: 'c7', to: 'c6' },
     afterBlack: [
       'My c7 piece moved to c6 and healed d5. Normally a Heal restores the least valuable feasible missing identity.',
@@ -58,7 +58,7 @@ export const INTRO_TURNS = [
     white: { from: 'e4', to: 'd5' },
     afterWhite: 'A capture and a Zap in the same move: you took my d5 piece, then your contact zapped c6. Quantum cause and effect can make one move do a lot—you are getting the hang of this!',
     black: { castle: ['f8', 'h8'] },
-    afterBlack: 'I quantum-castled. Once per game, you may castle any two back-rank pieces that can both still be rook or king — use it wisely. Now capture from d5 to c6.',
+    afterBlack: 'I quantum-castled. Once per game, you may castle two back-rank superpositions that each include both Rook and King, with a clear gap between them. Now capture from d5 to c6.',
     delay: 1500,
   },
   {
@@ -80,17 +80,17 @@ export const INTRO_TURNS = [
   },
   {
     white: { from: 'd7', to: 'c8' },
-    afterWhite: 'Quantum promotion! The promoted identity does not consume one of your original chess-set capacities, and the piece keeps its promotion bar for the rest of the game.',
+    afterWhite: 'Quantum promotion! The promoted branch still uses a Pawn census slot, rather than claiming an original Knight, Bishop, Rook or Queen slot, and the piece keeps its promotion bar for the rest of the game.',
     black: { from: 'e8', to: 'e2' },
     afterBlack: [
-      'Oops—that move collapsed several possibilities. The conservation solver automatically updates the whole quantum army as possibilities change.',
-      'It makes sure the surviving identities still fit one complete chess set. Finish the lesson with d4 to c5.',
+      'My move claimed more Rook–Queen possibilities. The census stripped Rook, Queen and King from a8, f7, g7 and h7: those identities no longer fit there.',
+      'The census keeps every identity compatible with one complete chess set, even on distant pieces. Zaps can trigger these cascades too. Finish the tutorial with d4 to c5.',
     ],
     delay: 1500,
   },
   {
     white: { from: 'd4', to: 'c5' },
-    afterWhite: 'Your move makes contact again. Zaps can now trigger a census cascade: even distant pieces lose identities when the remaining chess-set slots force them to. Hover a move in the history to see what changed and why. Keep playing, or start a new game.',
+    afterWhite: 'Your Zap removed King from f8, revealing a Rook. Distant census changes do not automatically block a Zap; a gold shield means no safe removal was possible. Hover or select a move in history to see why pieces changed. Win by checkmating a revealed King. Keep playing, or start a new game.',
     completeAfterWhite: true,
   },
 ];
