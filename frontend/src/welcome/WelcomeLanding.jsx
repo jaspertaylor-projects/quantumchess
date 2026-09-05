@@ -136,10 +136,6 @@ export default function WelcomeLanding({ onChoose }) {
 
         <nav className="qc-welcome-footer-links" aria-label="More about Quantum Chess">
           <a href="/rules.html">Rules</a>
-          <a href="/strategy.html">Strategy</a>
-          <a href="/guides.html">Guides</a>
-          <a href="/faq.html">FAQ</a>
-          <a href="/about.html">About</a>
           <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
           <button type="button" onClick={() => setConsentPromptOpen(true)}>Privacy choices</button>

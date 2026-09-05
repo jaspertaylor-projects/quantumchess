@@ -653,10 +653,12 @@ export function forEachLegalReply(bd, side, ep, visit) {
     const mark = watermark(bd);
     const from = sqOf(bd.words[cand.pieceIdx]);
     const legal = makeEnPassant(bd, cand.pieceIdx, cand.to, cand.victimIdx);
+    let keepGoing = true;
     if (legal) {
-      visit({ kind: 'enpassant', pieceIdx: cand.pieceIdx, from, to: cand.to, victimIdx: cand.victimIdx, plan: null });
+      keepGoing = visit({ kind: 'enpassant', pieceIdx: cand.pieceIdx, from, to: cand.to, victimIdx: cand.victimIdx, plan: null }) !== false;
     }
     rollback(bd, mark);
+    if (!keepGoing) return false;
   }
 
   // Standard moves.
@@ -692,10 +694,12 @@ export function forEachLegalReply(bd, side, ep, visit) {
       const victimIdx = victim >= 0 && sideBit(bd.words[victim]) !== side ? victim : -1;
       const mark = watermark(bd);
       const legal = makeStandardMove(bd, i, to);
+      let keepGoing = true;
       if (legal) {
-        visit({ kind: 'move', pieceIdx: i, from, to, victimIdx, plan: null });
+        keepGoing = visit({ kind: 'move', pieceIdx: i, from, to, victimIdx, plan: null }) !== false;
       }
       rollback(bd, mark);
+      if (!keepGoing) return false;
     }
   }
 
@@ -711,10 +715,14 @@ export function forEachLegalReply(bd, side, ep, visit) {
       if (!plan) continue;
       const mark = watermark(bd);
       const legal = makeCastle(bd, plan);
+      let keepGoing = true;
       if (legal) {
-        visit({ kind: 'castle', pieceIdx: plan.i1, from: plan.from1, to: plan.to1, victimIdx: -1, plan });
+        keepGoing = visit({ kind: 'castle', pieceIdx: plan.i1, from: plan.from1, to: plan.to1, victimIdx: -1, plan }) !== false;
       }
       rollback(bd, mark);
+      if (!keepGoing) return false;
     }
   }
+
+  return true;
 }

@@ -75,7 +75,11 @@ function madeMoveIsMate(bd, moverSide, desc) {
   const childEp = epWindowAfter(bd, numeric);
   let escaped = false;
   forEachLegalReply(bd, defender, childEp, () => {
-    if (!lostInCheck(bd, defender)) escaped = true;
+    if (!lostInCheck(bd, defender)) {
+      escaped = true;
+      return false;
+    }
+    return true;
   });
   return !escaped;
 }

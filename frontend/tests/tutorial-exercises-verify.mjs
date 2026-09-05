@@ -73,10 +73,10 @@ const CLAIMS = {
     assert(types(sim.pieces, 'e4') === 'pr', `census stripped e4 (${types(sim.pieces, 'e4')})`);
     assert(!types(sim.pieces, 'a1').includes('n'), `census stripped a1 (${types(sim.pieces, 'a1')})`);
   },
-  'the-shield/Census-locked': (sim) => {
-    assert(sim.zappedSquares.length === 0, `no zap lands (got ${sim.zappedSquares})`);
-    assert(sim.fizzledSquares.join(',') === 'd5', `shield on d5 (got ${sim.fizzledSquares})`);
-    assert(types(sim.pieces, 'd5') === 'rk', `d5 untouched (${types(sim.pieces, 'd5')})`);
+  'the-shield/Census cascades': (sim) => {
+    assert(sim.zappedSquares.join(',') === 'd5', 'zap lands on d5');
+    assert(types(sim.pieces, 'e8') === 'k' && types(sim.pieces, 'a8') === 'q', 'census reveals distant King and Queen');
+    assert(types(sim.pieces, 'd5') === 'r', `d5 untouched (${types(sim.pieces, 'd5')})`);
   },
   'winning/The last King is protected': (sim) => {
     assert(sim.zappedSquares.join(',') === 'e5', `zap e5 (got ${sim.zappedSquares})`);

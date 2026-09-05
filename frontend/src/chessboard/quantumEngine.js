@@ -652,9 +652,13 @@ export function simulateCastle(prevPieces, plan) {
   };
 }
 
-export function generateLegalReplies(pieces, side, captureCounter, lastMove = null) {
+// Walk legal replies in the same deterministic order exposed by
+// generateLegalReplies. Returning false from `visit` stops the walk. Most
+// callers need the complete list, but terminal detection normally needs only
+// the first reply that escapes check; avoiding the rest keeps move commits on
+// the main thread for far less time.
+function visitLegalReplies(pieces, side, captureCounter, lastMove, visit) {
   const occ = buildOccupancy(pieces);
-  const legal = [];
   // Check exists only for a DEFINITE king (possibleTypes === ['k']), and the
   // census makes that exactly the last-holder endgame state: superposed
   // kings roam checkless through the quantum midgame, but once a side's king
@@ -667,7 +671,7 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
     if (!sim.ok) continue;
     if (leavesKingCapturable(sim.pieces)) continue;
     const mover = pieces.find((p) => p.id === ep.pieceId);
-    legal.push({ type: 'enpassant', from: mover ? mover.square : null, to: ep.to, victimId: ep.victimId, resultPieces: sim.pieces });
+    if (visit({ type: 'enpassant', from: mover ? mover.square : null, to: ep.to, victimId: ep.victimId, resultPieces: sim.pieces }) === false) return false;
   }
 
   for (const p of pieces) {
@@ -678,7 +682,7 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
       const sim = simulateStandardMove(pieces, p.id, toSq, captureCounter);
       if (!sim.ok) continue;
       if (leavesKingCapturable(sim.pieces)) continue;
-      legal.push({ type: 'move', from: p.square, to: toSq, resultPieces: sim.pieces });
+      if (visit({ type: 'move', from: p.square, to: toSq, resultPieces: sim.pieces }) === false) return false;
     }
   }
 
@@ -690,10 +694,18 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
       const sim = simulateCastle(pieces, plan);
       if (!sim.ok) continue;
       if (leavesKingCapturable(sim.pieces)) continue;
-      legal.push({ type: 'castle', plan, resultPieces: sim.pieces });
+      if (visit({ type: 'castle', plan, resultPieces: sim.pieces }) === false) return false;
     }
   }
 
+  return true;
+}
+
+export function generateLegalReplies(pieces, side, captureCounter, lastMove = null) {
+  const legal = [];
+  visitLegalReplies(pieces, side, captureCounter, lastMove, (reply) => {
+    legal.push(reply);
+  });
   return legal;
 }
 
@@ -701,20 +713,27 @@ export function generateLegalReplies(pieces, side, captureCounter, lastMove = nu
 // Returns 'checkmate', 'stalemate', or null (game continues).
 export function evaluateTerminalAfterMove(finalPieces, moverSide, captureCounter, lastMove = null) {
   const opponent = otherSide(moverSide);
+  let replyCount = 0;
+  let foundEscape = false;
 
-  const replies = generateLegalReplies(finalPieces, opponent, captureCounter, lastMove);
+  visitLegalReplies(finalPieces, opponent, captureCounter, lastMove, (reply) => {
+    replyCount += 1;
+    if (!isLostInCheck(reply.resultPieces, opponent)) {
+      foundEscape = true;
+      return false;
+    }
+    return true;
+  });
 
-  if (replies.length === 0) {
+  if (foundEscape) return null;
+
+  if (replyCount === 0) {
     // No legal replies at all: checkmate only if the opponent is already
     // lost-in-check; otherwise it is stalemate — a draw.
     return isLostInCheck(finalPieces, opponent) ? 'checkmate' : 'stalemate';
   }
 
-  // With replies available it is mate only if EVERY reply still leaves the
-  // opponent lost-in-check.
-  for (const reply of replies) {
-    if (!isLostInCheck(reply.resultPieces, opponent)) return null;
-  }
+  // The walk reached its end, so every legal reply still loses in check.
   return 'checkmate';
 }
 

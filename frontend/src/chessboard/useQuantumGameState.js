@@ -180,6 +180,7 @@ export default function useQuantumGameState(resetKey = 0) {
         side: sideToMove,
         enPassant: Boolean(enPassant),
         capture: outcome.didCapture,
+        explanation: outcome.explanation,
       }],
     };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, enPassantMovesForSide, halfmoveClock, leavesKingCapturable]);
@@ -254,8 +255,8 @@ export default function useQuantumGameState(resetKey = 0) {
     return {
       success: true,
       records: [
-        { from: plan.piece1_from, to: plan.piece1_to, side: sideToMove, castle: true },
-        { from: plan.piece2_from, to: plan.piece2_to, side: sideToMove, castle: true },
+        { from: plan.piece1_from, to: plan.piece1_to, side: sideToMove, castle: true, explanation: outcome.explanation },
+        { from: plan.piece2_from, to: plan.piece2_to, side: sideToMove, castle: true, explanation: outcome.explanation },
       ],
     };
   }, [pieces, sideToMove, captureCounter, canMakeMove, pushOutcome, gameOver, halfmoveClock, leavesKingCapturable]);

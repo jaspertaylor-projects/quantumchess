@@ -20,48 +20,17 @@ promotion, census conservation — deterministic throughout, no dice anywhere.
 
 ---
 
-## ⚡ THE RULES — Contact Zap/Heal (adopted 2026-07-11)
+## Current rules — census-cascade zaps
 
-The 2026-07-10 "Contact Zap/Heal" experiment won: it is now THE game, and the
-old classic ruleset (measurement pulses, coherence points, recoherence
-clocks, Zeno, sealed pieces, superposed-king check) is **deleted**, not
-dormant. One engine, one ruleset.
+Move as any remaining identity, then keep only identities compatible with the move.
+Contact uses the mover’s cheapest identity. Enemies lose the strongest jointly
+census-safe identity; friends regain feasible missing identities. Zaps may force
+census collapses anywhere on the target team. The final King possibility is
+protected; revealed Kings obey check and checkmate.
 
-- **On every move, the moved piece touches every square it could capture
-  on** — reach projects from its LEAST valuable remaining type (p<n<b<r<q<k):
-  a fresh blur pokes like a pawn, a confirmed queen sweeps like one.
-  - Enemy contacts are **zapped**: each sheds the most valuable possibility
-    it can lose CLEANLY (King first), walking down k→q→r→b→n→p. A shed whose
-    census cascade would rewrite any other piece is skipped; if nothing sheds
-    cleanly the target is **shielded** (gold ring, fizzle).
-  - **Zaps strike as one volley** (2026-07-13): every shed is judged against
-    the board as the mover landed, then all land together — if the combined
-    cascade would ripple beyond the struck pieces, the WHOLE volley fizzles.
-    A zap never chooses between victims (no square-order tie-breaks); they
-    shed together or shield together. Heals bloom as a volley the same way:
-    the census searches joint regain combinations, so two identities can
-    support each other even when neither would survive alone. It heals the
-    most contacts possible, then chooses the least-value valid combination.
-  - Friendly contacts are **healed**: each regains its cheapest missing
-    feasible identity, including King as the last rung; when the team is
-    kingless, Heal tries King first so it can return (never Pawn on promoted
-    pieces/promotion rank; census-claimed types are skipped).
-- **Royal safeguard**: if a Zap volley would remove King from every remaining
-  holder, all affected King sheds retry from Queen downward. There is no
-  victory by wave-function collapse. A temporarily kingless side keeps
-  playing and can Heal King back. **Check exists only for a revealed King**
-  (`possibleTypes === ['k']`): victory comes by real checkmate.
-- **Zap feedback invariant**: every contacted enemy either loses a possibility
-  and shows the red zap, or loses nothing and shows the gold shield. This also
-  covers fully known pieces and King Guard with no lower identity to shed.
-- Resolution order is mover lands → captured victim resolves → conservation
-  collapses both sides → contact particles launch → Zap/Heal volley resolves.
-- Captures collapse the victim to its least valuable identity. Castling,
-  en passant, and promotion carry over
-  (castle-through-threat is gone with the check rule).
-- UI: red spin-out circle = zap, green bloom = heal, gold ring = shield;
-  promoted pieces wear a solid bar. The coherence pips/recoherence dots and
-  measurement rings are gone.
+See [quick rules](frontend/public/rules.html), the in-game lessons, and
+[the rule change](docs/census-cascade-zap-experiment.md). Run
+`node frontend/tests/tutorial-exercises-verify.mjs` after changing teaching content.
 
 Where things stand after the adoption commit:
 

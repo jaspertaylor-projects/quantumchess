@@ -90,7 +90,7 @@ export const INTRO_TURNS = [
   },
   {
     white: { from: 'd4', to: 'c5' },
-    afterWhite: 'The piece on f8 blocked your Zap with a shield. Removing its rook or king possibility would have forced spillover changes elsewhere, and a Zap may not cause that cascade—a capture can. You are a fast learner! Think you can beat me? The full Tutorial and Rules explore every quantum system in more depth. Play from here or start over.',
+    afterWhite: 'Your move makes contact again. Zaps can now trigger a census cascade: even distant pieces lose identities when the remaining chess-set slots force them to. Hover a move in the history to see what changed and why. Keep playing, or start a new game.',
     completeAfterWhite: true,
   },
 ];

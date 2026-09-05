@@ -1164,3 +1164,6 @@
     grid-template-columns: 1fr;
   }
 }
+
+.qc-am-auth-form { display: flex; flex-direction: column; gap: 14px; }
+.qc-am-auth-form p { margin-bottom: 0 !important; }

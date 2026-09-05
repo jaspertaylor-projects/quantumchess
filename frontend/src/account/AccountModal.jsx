@@ -59,6 +59,7 @@ export default function AccountModal({
   const [signupUsername, setSignupUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null); // { kind: 'info'|'error', text }
+  const [resendAt, setResendAt] = useState(0);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [games, setGames] = useState([]);
   const [sharingGameId, setSharingGameId] = useState(null);
@@ -123,6 +124,10 @@ export default function AccountModal({
       document.removeEventListener('keydown', closeOnEscape, true);
     };
   }, [open, shareMenuGameId]);
+
+  useEffect(() => {
+    if (open && upsellSource === 'signup') setAuthMode((mode) => mode === 'confirm-sent' ? mode : 'signup');
+  }, [open, upsellSource]);
 
   const selectAuthMode = (mode) => {
     setPasswordVisible(false);
@@ -203,14 +208,16 @@ export default function AccountModal({
   if (!open) return null;
 
   const handleSignIn = async () => {
+    if (busy) return;
     setBusy(true);
     setNotice(null);
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signIn(email.trim(), password).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
   };
 
   const handleSignUp = async () => {
+    if (busy) return;
     const name = signupUsername.trim();
     if (!/^[A-Za-z0-9_-]{3,20}$/.test(name)) {
       setNotice({ kind: 'error', text: 'Pick a username first: 3–20 characters, letters/numbers/dashes/underscores.' });
@@ -230,7 +237,7 @@ export default function AccountModal({
       // rpc missing (schema not installed yet): the signup trigger's
       // collision fallback still guarantees a unique name.
     }
-    const { error, needsConfirmation } = await signUp(email.trim(), password, name);
+    const { error, needsConfirmation } = await signUp(email.trim(), password, name).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) {
       setNotice({ kind: 'error', text: error.message });
@@ -239,6 +246,8 @@ export default function AccountModal({
         // Its own page, not a one-line notice: people missed that signup
         // isn't finished until the emailed link is clicked.
         setNotice(null);
+        setPassword('');
+        setResendAt(Date.now() + 60_000);
         selectAuthMode('confirm-sent');
       }
       trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
@@ -255,7 +264,7 @@ export default function AccountModal({
     }
     setBusy(true);
     setNotice(null);
-    const { error } = await resetPassword(email.trim());
+    const { error } = await resetPassword(email.trim()).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
     else setNotice({ kind: 'info', text: 'Password reset link sent! Check your email.' });
@@ -268,7 +277,7 @@ export default function AccountModal({
     }
     setBusy(true);
     setNotice(null);
-    const { error } = await updatePassword(password);
+    const { error } = await updatePassword(password).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
     else setNotice({ kind: 'info', text: 'Password successfully updated.' });
@@ -444,7 +453,7 @@ export default function AccountModal({
                 autoComplete="new-password" autoFocus
               />
             </div>
-            {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+            {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
               <button type="button" className="qc-account-signin qc-am-primary-btn" style={{flex: 1}} disabled={busy} onClick={handleUpdatePassword}>
                 {busy ? 'Working…' : 'Set New Password'}
@@ -454,14 +463,14 @@ export default function AccountModal({
         ) : !user ? (
           <>
             {authMode === 'signin' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleSignIn(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                   Sign in to continue. Accounts are optional but keep your rating and history safe.
                 </p>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
@@ -470,7 +479,7 @@ export default function AccountModal({
                   <div className="qc-am-password-wrap">
                     <input
                       className="qc-account-password qc-am-input qc-am-password-input"
-                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      aria-label="Password" required minLength={1} name="password" type={passwordVisible ? 'text' : 'password'} value={password}
                       onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
                     />
                     <button
@@ -486,9 +495,9 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleSignIn}>
+                  <button type="submit" className="qc-account-signin qc-am-primary-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Sign In'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -500,13 +509,13 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
 
             {authMode === 'signup' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleSignUp(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                  Join the ladder! Sign up to get a rating and keep your recent games.
+                  Save your games, track your rating, and unlock opponents. Free to join.
                 </p>
                 <div>
                   <div className="qc-am-label">Username (shown when you play)</div>
@@ -517,23 +526,23 @@ export default function AccountModal({
                   <input
                     className="qc-account-signup-username qc-am-input" value={signupUsername}
                     onChange={(e) => setSignupUsername(e.target.value)} maxLength={20}
-                    placeholder="e.g. WaveFunctionWrecker"
-                    name="qc-display-name" autoComplete="nickname"
+                    placeholder="3–20 letters, numbers, _ or -"
+                    required minLength={3} pattern="[A-Za-z0-9_-]{3,20}" aria-label="Username" name="qc-display-name" autoComplete="nickname"
                   />
                 </div>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
                 <div>
-                  <div className="qc-am-label">Password</div>
+                  <div className="qc-am-label">Password · at least 6 characters</div>
                   <div className="qc-am-password-wrap">
                     <input
                       className="qc-account-password qc-am-input qc-am-password-input"
-                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      aria-label="Password" required minLength={6} name="password" type={passwordVisible ? 'text' : 'password'} value={password}
                       onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
                     />
                     <button
@@ -549,9 +558,9 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signup qc-am-create-btn" disabled={busy} onClick={handleSignUp}>
+                  <button type="submit" className="qc-account-signup qc-am-create-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Create Account'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
@@ -560,7 +569,7 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
 
             {authMode === 'confirm-sent' && (
@@ -577,6 +586,19 @@ export default function AccountModal({
                   from noreply@quantumchess.ninja — check spam if it&rsquo;s not there
                   within a minute. The link brings you straight back here, signed in.
                 </p>
+                {notice ? <div role="status" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                <button type="button" className="qc-am-link-ghost" disabled={busy} onClick={async () => {
+                  if (Date.now() < resendAt) { setNotice({ kind: 'info', text: 'Please wait one minute before requesting another email.' }); return; }
+                  setBusy(true);
+                  try {
+                    const { error } = await auth.resendConfirmation(email);
+                    setNotice({ kind: error ? 'error' : 'info', text: error ? error.message : 'Confirmation email sent. Check your inbox and spam folder.' });
+                    setResendAt(Date.now() + 60_000);
+                  } catch (_) { setNotice({ kind: 'error', text: 'Could not send the email. Please try again.' }); }
+                  finally { setBusy(false); }
+                }}>{busy ? 'Sending…' : 'Resend confirmation email'}</button>
+                <button type="button" className="qc-am-link-ghost" disabled={busy} onClick={() => selectAuthMode('signup')}>Change email</button>
+                <button type="button" className="qc-am-primary-btn" onClick={onClose}>Keep playing while you wait</button>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signin')}>
                     Back to Sign In
@@ -586,20 +608,20 @@ export default function AccountModal({
             )}
 
             {authMode === 'forgot' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleResetPassword(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                   Enter your email address and we'll send you a link to reset your password.
                 </p>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleResetPassword}>
+                  <button type="submit" className="qc-account-signin qc-am-primary-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Send Reset Link'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
@@ -608,7 +630,7 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
           </>
         ) : (

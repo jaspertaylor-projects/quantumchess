@@ -109,7 +109,13 @@ export default function useAuth() {
     return { error };
   }, []);
 
+  const resendConfirmation = useCallback(async (email) => {
+    if (!supabase) return { error: { message: 'Accounts are not configured.' } };
+    return supabase.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/play` } });
+  }, []);
+
   return {
+    resendConfirmation,
     authEnabled: accountsEnabled(),
     session,
     user: session ? session.user : null,

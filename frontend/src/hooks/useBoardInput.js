@@ -1,3 +1,4 @@
+import { explainIllegalMove } from '../chessboard/moveExplanation.js';
 // frontend/src/hooks/useBoardInput.js
 // Purpose: All board interaction — selection, click/drag move input, the
 // quantum-castle two-piece gesture, en passant disambiguation, tray
@@ -47,6 +48,15 @@ export default function useBoardInput({
 
   const clearSelection = useCallback(() => setSelectedId(null), []);
 
+  // Selection already computes this list to paint destination highlights.
+  // Keep it as the commit-time legality source too; regenerating every
+  // simulation after the player clicks a highlighted square added avoidable
+  // main-thread work immediately before the piece could render.
+  const selectedMoves = useMemo(() => {
+    if (!selectedId) return [];
+    return getLegalMoves(selectedId);
+  }, [selectedId, getLegalMoves]);
+
   // Pending en passant choices are per-turn.
   useEffect(() => {
     setPendingEpChoice(null);
@@ -79,13 +89,14 @@ export default function useBoardInput({
     const fromSquare = movingPiece.square || null;
     const result = movePiece(pieceId, toSquare, { enPassant });
     const committed = commitEngineResult(result);
+    if (!committed && result?.reason) setInfoMessage(result.reason);
     if (committed && fromSquare) {
       online.relayMove({ from: fromSquare, to: toSquare, side: movingPiece.side, enPassant });
     }
     setSelectedId(null);
     setPendingEpChoice(null);
     return committed;
-  }, [pieces, movePiece, commitEngineResult, online]);
+  }, [pieces, movePiece, commitEngineResult, online, setInfoMessage]);
 
   // Attempt the quantum castle between two pieces: commits + relays on
   // success, reports the refusal reason otherwise. Returns whether it landed.
@@ -116,7 +127,8 @@ export default function useBoardInput({
         return true;
       }
     }
-    const legal = new Set(getLegalMoves(pieceId));
+    const legalMoves = pieceId === selectedId ? selectedMoves : getLegalMoves(pieceId);
+    const legal = new Set(legalMoves);
     const isEp = getEnPassantMoves(pieceId).some((ep) => ep.to === toSquare);
     const isLegal = legal.has(toSquare);
     if (isEp && isLegal) {
@@ -135,7 +147,7 @@ export default function useBoardInput({
       return true;
     }
     return false;
-  }, [getLegalMoves, getEnPassantMoves, performMove, introGuide, intro, pieces]);
+  }, [selectedId, selectedMoves, getLegalMoves, getEnPassantMoves, performMove, introGuide, intro, pieces]);
 
   // Shared entry guard for board interaction: pre-game it either nudges to
   // setup (returns false) or seats the intro game; then the external-over and
@@ -211,8 +223,8 @@ export default function useBoardInput({
       return;
     }
     if (!commitMoveOrChoose(selectedId, toSquare)) {
-      setInfoMessage('Illegal move.');
-      setSelectedId(null);
+      setInfoMessage(explainIllegalMove(pieces, movingPiece, toSquare));
+      setSelectedId(movingPiece.id);
     }
   }, [pieces, selectedId, sideToMove, ownsPiece, commitMoveOrChoose, setInfoMessage]);
 
@@ -340,8 +352,8 @@ export default function useBoardInput({
     }
 
     if (!commitMoveOrChoose(id, to)) {
-      setInfoMessage('Illegal move.');
-      setSelectedId(null);
+      setInfoMessage(explainIllegalMove(pieces, movingPiece, to));
+      setSelectedId(movingPiece.id);
     }
   }, [pieces, getPieceAtSquare, tryCastle, canMakeMove, gameOver, winner, sideToMove, userTeam, guardExternalOver, commitMoveOrChoose, gameStarted, promptStartGame, intro, introGuide, guideAllowsCastle, isOnlineGameRef, aiEnabledRef, setInfoMessage]);
 
@@ -355,11 +367,6 @@ export default function useBoardInput({
   const handleClearHighlights = useCallback(() => {
     setTrayHighlights([]);
   }, []);
-
-  const selectedMoves = useMemo(() => {
-    if (!selectedId) return [];
-    return getLegalMoves(selectedId);
-  }, [selectedId, getLegalMoves]);
 
   const baseHighlights = useMemo(() => {
     const list = [];

@@ -395,7 +395,10 @@ export const BOTS = [
       collapse: 'Your army\'s information has fully radiated away.',
     },
     hue: 190,
-    search: { timeMs: 14000, widths: [34, 20, 14, 12] },
+    // Wide beams preserve the event-horizon style; the standard hard-tier
+    // clock keeps the premium opponent responsive instead of making every
+    // non-mating turn consume the former 14-second bespoke budget.
+    search: { timeMs: 12000, widths: [34, 20, 14, 12] },
     weights: {
       kingHunt: 0.38, soleKingAttacked: 5.8,
       soleKingCollapsedAttacked: 9.2,

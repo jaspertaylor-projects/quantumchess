@@ -20,7 +20,7 @@ const gameSlice = createSlice({
   initialState,
   reducers: {
     addMove(state, action) {
-      const { from, to, side, castle, enPassant, capture } = action.payload || {};
+      const { from, to, side, castle, enPassant, capture, explanation } = action.payload || {};
       const validSquares = typeof from === 'string' && typeof to === 'string';
       const validSide = side === 'white' || side === 'black';
       if (validSquares && validSide) {
@@ -37,6 +37,7 @@ const gameSlice = createSlice({
           enPassant: Boolean(enPassant),
           capture: Boolean(capture),
         };
+        if (typeof explanation === 'string') move.explanation = explanation;
         if (castle) move.castle = true;
         state.moves.push(move);
         state.turn = nextTurn(side);

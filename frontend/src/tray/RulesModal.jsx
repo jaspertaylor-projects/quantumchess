@@ -45,11 +45,10 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
         content: [
           'Moving is touching. When your piece completes a move, it touches every square it could capture on from its landing square — and every enemy piece it touches is ZAPPED.',
           'You touch as your CHEAPEST self: the reach comes from the least valuable type the mover still holds (P < N < B < R < Q < K). A fresh six-type blur pokes like a pawn; a confirmed queen sweeps like one. Collapsing your own pieces is what arms them.',
-          'A zap removes the MOST valuable possibility the target can cleanly lose, trying King, then Queen, Rook, Bishop, Knight, Pawn. "Cleanly" means the loss changes nothing else on the board: a shed whose census cascade would rewrite any other piece is skipped, and the zap walks down to the next type.',
-          'Zaps strike TOGETHER. Every struck piece is judged against the board exactly as your piece landed — no zap sees another zap\'s result — and all the sheds land as one volley. If the combined volley\'s census cascade would ripple beyond the struck pieces themselves, the WHOLE volley fizzles: a zap never chooses between victims. They shed together or shield together.',
+          'A zap tries to remove the strongest identity: King, Queen, Rook, Bishop, Knight, then Pawn. It can trigger census collapses anywhere on the target’s team.',
+          'Zaps resolve together. The engine keeps the largest jointly census-safe set of removals, preferring stronger identities and then earlier squares in algebraic order. Every remaining piece must still fit the chess-set census.',
           'Royal safeguard: a zap can remove King while that side has another maybe-King. If the volley would remove King from EVERY remaining holder, each affected target instead retries the ladder from Queen downward. Zap can never erase a team\'s final King possibility.',
           'A fully known piece (one possibility) has nothing left to lose, so it blocks the zap with a SHIELD. In every case, a contacted enemy that loses no possibility shows a shield instead of going silent (see Shields).',
-          'Feedback: a red circle spins out over every piece your move zapped.',
         ],
       },
       {
@@ -59,19 +58,13 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
           'Heals bloom TOGETHER, like zaps: the census tests the touched friends as one shared volley. Two regains may support each other — for example, returning Knight to one piece and Pawn to another can be legal together even when neither works alone. Heal restores as many contacts as the census permits, then chooses the least-valuable valid combination in board order.',
           'If your team has no King possibility, Heal tries King FIRST so the royal identity can return; conservation may immediately reveal that healed piece as the King. While a King still exists elsewhere, King remains the last rung after Queen. Pawn never returns to a promoted piece, or to a piece standing on its own promotion rank.',
           'The census must accept the regain. If an identity is fully claimed elsewhere the heal overflows upward: with both your knights known, a bare pawn you protect becomes a Pawn–BISHOP.',
-          'Defense is regeneration: a protected army does not just hold its ground — it re-blurs. Leave a wounded piece unattended and it stays exactly as collapsed as your opponent made it.',
-          'Feedback: green particles always travel to every friendly contact. A solid green circle blooms over a successful Heal; a contracting dashed green circle shows that every joint regain was exhausted.',
         ],
       },
       {
         title: 'Shields',
         content: [
-          'Sometimes a zap finds nothing it can remove cleanly: every possibility the target holds is load-bearing, and removing any of them would force other pieces to change. The zap fizzles — the piece is SHIELDED.',
-          'Shields come from closed groups: N pieces sharing exactly N identities (say, three survivors that are exactly {Queen-King, Rook-King, Rook-Queen}). No member can lose anything locally.',
-          'Break the group and the shield drops: capture a member, or force a collapse elsewhere that reopens the ledger.',
-          'A volley shields together: when several struck pieces could each shed alone but not all at once, no one is chosen — every one of them shields. Symmetric situations resolve symmetrically; nothing in this game is decided by which square comes first in the alphabet.',
-          'The final King safeguard first redirects the attempted King shed: Zap tries Queen and then the rest of its normal ladder on each affected piece. If a guarded piece still loses nothing, it shows the same shield feedback as every other fizzled zap.',
-          'Feedback: a gold ring pops over a shielded piece so a fizzled zap never reads as a bug.',
+          'A gold shield means the contact removed nothing: the piece is fully known, the last King is protected, or no removal fits the joint census.',
+          'A closed group is not automatically shielded. Zapping one member can force the other members to collapse, even across the board.',
         ],
       },
       {
@@ -79,7 +72,6 @@ export default function RulesModal({ open = false, onClose = () => {}, onPlayLes
         content: [
           'On capture, the captured piece collapses immediately to its least valuable possibility: P < N < B < R < Q — and King only when King is all it could be.',
           'Resolution order is fixed: the mover lands; the captured piece resolves and leaves the board; conservation collapses both teams; only then do contact particles launch and the Zap/Heal volley resolve.',
-          'Strip first, then take: capturing a fresh superposition usually kills a mere pawn. Zap a piece\'s cheap identities away first and it has to die as something expensive.',
           'The captured piece is displayed in the capturing player\'s bin, in its true colors, as the type it died as. Captured pieces count toward the census forever.',
           'A King possibility can be zapped while another maybe-King remains, and a captured superposition can take a King possibility with it. Neither creates an instant victory. The final King possibility is protected from Zap, and King can return through Heal.',
         ],

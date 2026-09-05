@@ -383,7 +383,7 @@ export default function App({ entryAction = null }) {
   const { isNarrow, isWide, boardSize, currentPieceSize } = layout;
 
   const isOnlineBars = isOnlineGameRef.current;
-  const handleOpenAccountFromRating = useCallback(() => setAccountOpen(true), [setAccountOpen]);
+  const handleOpenAccountFromRating = useCallback(() => setAccountOpen(true, 'signup'), [setAccountOpen]);
   const bars = usePlayerBars({
     auth,
     aiBot,
@@ -1185,10 +1185,6 @@ export default function App({ entryAction = null }) {
       </div>
 
       <footer className="qc-site-footer" style={styles.footer}>
-        <a href="/guides.html" style={styles.footerLink}>Guides</a>
-        <span style={{ opacity: 0.4 }}>·</span>
-        <a href="/about.html" style={styles.footerLink}>About</a>
-        <span style={{ opacity: 0.4 }}>·</span>
         <a href="/privacy.html" style={styles.footerLink}>Privacy</a>
         <span style={{ opacity: 0.4 }}>·</span>
         <a href="/terms.html" style={styles.footerLink}>Terms</a>

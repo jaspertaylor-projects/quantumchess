@@ -43,7 +43,7 @@ function fixtureSources(engineFixtures, minedGames) {
   // These two mined games replay cleanly through the current engine and end
   // in actual checkmates; the thirteen engine fixtures cover long games,
   // castling, and en passant.
-  const extra = [mined[5], mined[8]].filter(Boolean);
+  const extra = [mined[5], mined[12]].filter(Boolean);
   return [
     ...fixtures.slice(0, 13).map((fixture) => ({ moves: fixture.moves })),
     ...extra.map((game) => ({ moves: game.moves })),
