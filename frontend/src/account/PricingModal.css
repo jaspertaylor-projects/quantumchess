@@ -25,7 +25,6 @@
   font-size: 28px;
   font-weight: 700;
   color: #fff;
-  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
 .qc-pm-subtitle {
@@ -84,7 +83,6 @@
 
 .qc-pm-card.premium .qc-pm-card-title {
   color: #f6c445;
-  text-shadow: 0 0 10px rgba(246, 196, 69, 0.4);
 }
 
 .qc-pm-card-price {
@@ -122,7 +120,6 @@
 
 .qc-pm-card.premium .qc-pm-feature-item .check {
   color: #f6c445;
-  text-shadow: 0 0 5px rgba(246, 196, 69, 0.5);
 }
 
 .qc-pm-btn {

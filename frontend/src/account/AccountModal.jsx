@@ -9,7 +9,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import theme from '../theme.js';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
-import { Eye, EyeOff, User as UserIcon, Sparkles as SparklesIcon } from 'lucide-react';
+import {
+  ChevronDown, Eye, EyeOff, Image as ImageIcon, Link2, MessageCircle,
+  Share2, User as UserIcon, Sparkles as SparklesIcon, Video,
+} from 'lucide-react';
 import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
 import {
@@ -19,13 +22,27 @@ import {
   reviewCapFor, reviewsRemaining, markReviewUsed,
 } from './billing.js';
 import { rewardedAdsEnabled, showRewardedAd } from '../ads/adService.js';
-import { uploadAvatar } from './avatarUpload.js';
-import { taglineOptions } from '../sayings/sayingsCatalog.js';
+import {
+  taglineOptions, sayingOptionsForEvent, SAYING_EVENTS,
+  DEFAULT_SAYINGS, DEFAULT_CHARACTER_ID,
+} from '../sayings/sayingsCatalog.js';
+import { unlockedCharacters } from '../characters/characterCatalog.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
+import { getBotById } from '../ai/bots.js';
+import { loadDevSavedGames } from '../dev/devSavedGames.js';
 import './AccountModal.css';
+
+const PROFILE_REACTION_LABELS = {
+  win: 'Win',
+  loss: 'Loss',
+  draw: 'Draw',
+  capture: 'Capture',
+  collapse: 'Full collapse',
+};
 
 export default function AccountModal({
   open = false,
+  page = false,
   onClose = () => {},
   auth, // the useAuth() bundle from App
   upsellSource = 'account',
@@ -42,27 +59,75 @@ export default function AccountModal({
   const [signupUsername, setSignupUsername] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(null); // { kind: 'info'|'error', text }
+  const [resendAt, setResendAt] = useState(0);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
   const [games, setGames] = useState([]);
   const [sharingGameId, setSharingGameId] = useState(null);
+  const [shareMenuGameId, setShareMenuGameId] = useState(null);
   const [reviewingGameId, setReviewingGameId] = useState(null);
   const [, setReviewQuotaVersion] = useState(0);
-  const [usernameDraft, setUsernameDraft] = useState('');
   const [taglineDraft, setTaglineDraft] = useState('');
-  const avatarInputRef = useRef(null);
+  const [sayingsDraft, setSayingsDraft] = useState({});
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [sayingsEditorOpen, setSayingsEditorOpen] = useState(false);
   const upsellViewedRef = useRef(false);
 
   const { authEnabled, user, profile, refreshProfile, signIn, signUp, signOut, resetPassword, updatePassword, recoveryMode } = auth;
   const isPaid = Boolean(profile && profile.tier === 'paid');
-  const accountTierLabel = isPaid ? 'Premium' : isTipper(profile) ? 'Supporter' : 'Free';
-  const accountTierClass = isPaid
-    ? 'qc-am-tier-badge-paid'
-    : isTipper(profile) ? 'qc-am-tier-badge-supporter' : 'qc-am-tier-badge-free';
+  // Unlocking a character unlocks all of its lines AND its avatar image; every
+  // picker below draws from this one set so only unlocked items ever show.
+  const unlockedIds = Array.isArray(profile?.unlocked_characters) ? profile.unlocked_characters : [];
+  const avatarRoster = unlockedCharacters({ isPaid, unlockedIds }).filter((c) => c.image);
   const rewardedReviewsActive = rewardedAdsEnabled();
+  const isProfilePage = Boolean(page && user);
+  const recentWins = games.filter((game) => game.result === 'win').length;
+  const recentLosses = games.filter((game) => game.result === 'loss').length;
+  const recentDraws = games.filter((game) => game.result === 'draw').length;
+
+  useEffect(() => {
+    if (!open || !page) return undefined;
+    const previousTitle = document.title;
+    document.title = user
+      ? `${profile?.username || 'Player'} — Quantum Chess Profile`
+      : 'Sign In — Quantum Chess';
+    return () => { document.title = previousTitle; };
+  }, [open, page, user, profile?.username]);
 
   useEffect(() => {
     setPasswordVisible(false);
   }, [recoveryMode, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setShareMenuGameId(null);
+      setAvatarPickerOpen(false);
+      setSayingsEditorOpen(false);
+      return undefined;
+    }
+    if (!shareMenuGameId) return undefined;
+    const closeOnOutsidePress = (event) => {
+      const menuRow = event.target.closest?.('[data-qc-share-menu]');
+      if (menuRow?.dataset?.qcShareMenu !== String(shareMenuGameId)) {
+        setShareMenuGameId(null);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setShareMenuGameId(null);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePress);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePress);
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, [open, shareMenuGameId]);
+
+  useEffect(() => {
+    if (open && upsellSource === 'signup') setAuthMode((mode) => mode === 'confirm-sent' ? mode : 'signup');
+  }, [open, upsellSource]);
 
   const selectAuthMode = (mode) => {
     setPasswordVisible(false);
@@ -91,9 +156,23 @@ export default function AccountModal({
         setNotice(null);
       }
       setBusy(false);
-      setUsernameDraft(profile && profile.username ? profile.username : '');
       setTaglineDraft(profile && profile.tagline ? profile.tagline : '');
-      if (user && !auth.isDevPreview) fetchMyGames(user).then(setGames);
+      // Seed each event's pick, falling back to the default character when the
+      // saved value points at something no longer unlocked (or legacy text).
+      const savedSayings = (profile && profile.sayings) || {};
+      const nextSayings = {};
+      for (const ev of SAYING_EVENTS) {
+        const value = savedSayings[ev.key] || DEFAULT_SAYINGS[ev.key];
+        const options = sayingOptionsForEvent(ev.key, { isPaid, unlockedIds });
+        nextSayings[ev.key] = options.some((o) => o.id === value) ? value : DEFAULT_CHARACTER_ID;
+      }
+      setSayingsDraft(nextSayings);
+      if (
+        user
+        && auth.isDevPreview
+        && (auth.devPreviewLevel === 'premium' || auth.devPreviewLevel === 'admin')
+      ) loadDevSavedGames().then(setGames);
+      else if (user && !auth.isDevPreview) fetchMyGames(user).then(setGames);
       else setGames([]);
     }
   }, [open, user, profile, billingReturn]);
@@ -116,17 +195,29 @@ export default function AccountModal({
     return true;
   };
 
+  const shareGameLink = async (game) => {
+    setSharingGameId(game.id);
+    const result = await onShareGame(game, { delivery: 'copy' });
+    setSharingGameId(null);
+    if (result?.error) setNotice({ kind: 'error', text: result.error });
+    else if (result?.copied) setNotice({ kind: 'info', text: 'Replay link copied!' });
+    else if (result?.shared) setNotice({ kind: 'info', text: 'Replay link shared!' });
+    if (!result?.cancelled) setShareMenuGameId(null);
+  };
+
   if (!open) return null;
 
   const handleSignIn = async () => {
+    if (busy) return;
     setBusy(true);
     setNotice(null);
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signIn(email.trim(), password).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
   };
 
   const handleSignUp = async () => {
+    if (busy) return;
     const name = signupUsername.trim();
     if (!/^[A-Za-z0-9_-]{3,20}$/.test(name)) {
       setNotice({ kind: 'error', text: 'Pick a username first: 3–20 characters, letters/numbers/dashes/underscores.' });
@@ -146,7 +237,7 @@ export default function AccountModal({
       // rpc missing (schema not installed yet): the signup trigger's
       // collision fallback still guarantees a unique name.
     }
-    const { error, needsConfirmation } = await signUp(email.trim(), password, name);
+    const { error, needsConfirmation } = await signUp(email.trim(), password, name).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) {
       setNotice({ kind: 'error', text: error.message });
@@ -155,6 +246,8 @@ export default function AccountModal({
         // Its own page, not a one-line notice: people missed that signup
         // isn't finished until the emailed link is clicked.
         setNotice(null);
+        setPassword('');
+        setResendAt(Date.now() + 60_000);
         selectAuthMode('confirm-sent');
       }
       trackProductEvent(PRODUCT_EVENT.ACCOUNT_CREATED, { method: 'email' });
@@ -171,7 +264,7 @@ export default function AccountModal({
     }
     setBusy(true);
     setNotice(null);
-    const { error } = await resetPassword(email.trim());
+    const { error } = await resetPassword(email.trim()).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
     else setNotice({ kind: 'info', text: 'Password reset link sent! Check your email.' });
@@ -184,28 +277,10 @@ export default function AccountModal({
     }
     setBusy(true);
     setNotice(null);
-    const { error } = await updatePassword(password);
+    const { error } = await updatePassword(password).catch(() => ({ error: { message: 'Could not connect. Check your connection and try again.' } }));
     setBusy(false);
     if (error) setNotice({ kind: 'error', text: error.message });
     else setNotice({ kind: 'info', text: 'Password successfully updated.' });
-  };
-
-  const handleSaveUsername = async () => {
-    if (blockDevPreviewAction()) return;
-    if (!supabase || !user) return;
-    const name = usernameDraft.trim().slice(0, 24);
-    if (!name) return;
-    setBusy(true);
-    const { error } = await supabase.from('qc_profiles').update({ username: name }).eq('id', user.id);
-    setBusy(false);
-    if (error) {
-      const friendly = /duplicate key|unique/i.test(error.message) ? `"${name}" is taken — try another username.` : error.message;
-      setNotice({ kind: 'error', text: friendly });
-    }
-    else {
-      setNotice({ kind: 'info', text: 'Username saved.' });
-      refreshProfile();
-    }
   };
 
   // All three redirect away from the app on success; busy stays on until then.
@@ -268,7 +343,7 @@ export default function AccountModal({
   const handleSaveTagline = async () => {
     if (blockDevPreviewAction()) return;
     if (!supabase || !user) return;
-    const options = taglineOptions({ isPaid });
+    const options = taglineOptions({ isPaid, unlockedIds });
     const tagline = options.some((o) => o.tagline === taglineDraft) ? taglineDraft : '';
     setBusy(true);
     const { error } = await supabase.from('qc_profiles').update({ tagline: tagline || null }).eq('id', user.id);
@@ -280,41 +355,87 @@ export default function AccountModal({
     }
   };
 
-  const handleAvatarFile = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = ''; // allow re-picking the same file
+  // Avatars are catalog-only. Custom file uploads are intentionally not
+  // exposed from the profile so every public identity uses a vetted image.
+  const handlePickAvatar = async (imageUrl) => {
     if (blockDevPreviewAction()) return;
-    if (!file || !user) return;
+    if (!supabase || !user) return;
     setBusy(true);
     setNotice(null);
-    const { url, error } = await uploadAvatar(user, file);
-    if (error) {
-      setBusy(false);
-      setNotice({ kind: 'error', text: error });
-      return;
-    }
-    const { error: profileError } = await supabase.from('qc_profiles').update({ avatar_url: url }).eq('id', user.id);
+    const { error } = await supabase.from('qc_profiles').update({ avatar_url: imageUrl }).eq('id', user.id);
     setBusy(false);
-    if (profileError) setNotice({ kind: 'error', text: profileError.message });
+    if (error) setNotice({ kind: 'error', text: error.message });
     else {
-      setNotice({ kind: 'info', text: 'Profile pic updated.' });
+      setNotice({ kind: 'info', text: 'Avatar updated.' });
+      setAvatarPickerOpen(false);
+      refreshProfile();
+    }
+  };
+
+  const handleSaveSayings = async () => {
+    if (blockDevPreviewAction()) return;
+    if (!supabase || !user) return;
+    const sayings = {};
+    for (const ev of SAYING_EVENTS) sayings[ev.key] = sayingsDraft[ev.key] || DEFAULT_SAYINGS[ev.key];
+    setBusy(true);
+    const { error } = await supabase.from('qc_profiles').update({ sayings }).eq('id', user.id);
+    setBusy(false);
+    if (error) setNotice({ kind: 'error', text: error.message });
+    else {
+      setNotice({ kind: 'info', text: 'Game reactions saved.' });
+      setSayingsEditorOpen(false);
       refreshProfile();
     }
   };
 
   return (
-    <ModalShell
+    <>
+      <ModalShell
       onClose={onClose}
-      closeOnBackdrop
+      closeOnBackdrop={!page}
       zIndex={10001}
+      role={isProfilePage ? 'main' : 'dialog'}
+      ariaModal={!isProfilePage}
       ariaLabelledBy="qc-account-title"
-      backdropClassName="qc-account-backdrop"
-      panelClassName="qc-account-panel qc-am-panel"
+      backdropClassName={`qc-account-backdrop${isProfilePage ? ' qc-account-backdrop--page' : ''}`}
+      panelClassName={`qc-account-panel qc-am-panel${isProfilePage ? ' qc-am-panel--profile-page' : ''}`}
       panelStyle={{}}
     >
         <div className="qc-am-header">
-          <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {recoveryMode ? 'Reset Password' : user ? 'Your Account' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
-          <ModalCloseButton ariaLabel="Close account panel" className="qc-account-close" onClick={onClose} />
+          {user && !recoveryMode ? (
+            <>
+              <div className="qc-am-header-identity">
+                <div className="qc-am-header-avatar" aria-hidden>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" />
+                  ) : (
+                    <span>{(profile?.username?.[0] || user?.email?.[0] || '?').toUpperCase()}</span>
+                  )}
+                </div>
+                <h2 id="qc-account-title" className="qc-am-title qc-am-header-name">{profile?.username || 'Quantum Player'}</h2>
+              </div>
+              <div className="qc-am-header-actions">
+                {isPaid ? (
+                  <button
+                    type="button" className="qc-account-manage-sub qc-am-ghost-btn qc-am-header-btn"
+                    style={{ borderColor: 'rgba(246,196,69,0.4)', color: '#f6c445' }}
+                    disabled={busy} onClick={handleManageSubscription}
+                  >
+                    {busy ? 'Working…' : 'Manage subscription'}
+                  </button>
+                ) : null}
+                <button type="button" className="qc-account-signout qc-am-ghost-btn qc-am-header-btn" onClick={() => { signOut(); }}>
+                  Sign Out
+                </button>
+                <ModalCloseButton ariaLabel={isProfilePage ? 'Back to game' : 'Close account panel'} className="qc-account-close" onClick={onClose} />
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 id="qc-account-title" className="qc-am-title"><UserIcon size={20} color="#61dafb" /> {recoveryMode ? 'Reset Password' : authMode === 'confirm-sent' ? 'One More Step' : authMode === 'signup' ? 'Create Account' : 'Sign In'}</h2>
+              <ModalCloseButton ariaLabel={isProfilePage ? 'Back to game' : 'Close account panel'} className="qc-account-close" onClick={onClose} />
+            </>
+          )}
         </div>
 
         {!authEnabled ? (
@@ -332,7 +453,7 @@ export default function AccountModal({
                 autoComplete="new-password" autoFocus
               />
             </div>
-            {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+            {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
               <button type="button" className="qc-account-signin qc-am-primary-btn" style={{flex: 1}} disabled={busy} onClick={handleUpdatePassword}>
                 {busy ? 'Working…' : 'Set New Password'}
@@ -342,14 +463,14 @@ export default function AccountModal({
         ) : !user ? (
           <>
             {authMode === 'signin' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleSignIn(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                   Sign in to continue. Accounts are optional but keep your rating and history safe.
                 </p>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
@@ -358,7 +479,7 @@ export default function AccountModal({
                   <div className="qc-am-password-wrap">
                     <input
                       className="qc-account-password qc-am-input qc-am-password-input"
-                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      aria-label="Password" required minLength={1} name="password" type={passwordVisible ? 'text' : 'password'} value={password}
                       onChange={(e) => setPassword(e.target.value)} autoComplete="current-password"
                     />
                     <button
@@ -374,9 +495,9 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleSignIn}>
+                  <button type="submit" className="qc-account-signin qc-am-primary-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Sign In'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -388,13 +509,13 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
 
             {authMode === 'signup' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleSignUp(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                  Join the ladder! Sign up to get a rating and keep your recent games.
+                  Save your games, track your rating, and unlock opponents. Free to join.
                 </p>
                 <div>
                   <div className="qc-am-label">Username (shown when you play)</div>
@@ -405,23 +526,23 @@ export default function AccountModal({
                   <input
                     className="qc-account-signup-username qc-am-input" value={signupUsername}
                     onChange={(e) => setSignupUsername(e.target.value)} maxLength={20}
-                    placeholder="e.g. WaveFunctionWrecker"
-                    name="qc-display-name" autoComplete="nickname"
+                    placeholder="3–20 letters, numbers, _ or -"
+                    required minLength={3} pattern="[A-Za-z0-9_-]{3,20}" aria-label="Username" name="qc-display-name" autoComplete="nickname"
                   />
                 </div>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
                 <div>
-                  <div className="qc-am-label">Password</div>
+                  <div className="qc-am-label">Password · at least 6 characters</div>
                   <div className="qc-am-password-wrap">
                     <input
                       className="qc-account-password qc-am-input qc-am-password-input"
-                      type={passwordVisible ? 'text' : 'password'} value={password}
+                      aria-label="Password" required minLength={6} name="password" type={passwordVisible ? 'text' : 'password'} value={password}
                       onChange={(e) => setPassword(e.target.value)} autoComplete="new-password"
                     />
                     <button
@@ -437,9 +558,9 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signup qc-am-create-btn" disabled={busy} onClick={handleSignUp}>
+                  <button type="submit" className="qc-account-signup qc-am-create-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Create Account'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
@@ -448,7 +569,7 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
 
             {authMode === 'confirm-sent' && (
@@ -465,6 +586,19 @@ export default function AccountModal({
                   from noreply@quantumchess.ninja — check spam if it&rsquo;s not there
                   within a minute. The link brings you straight back here, signed in.
                 </p>
+                {notice ? <div role="status" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                <button type="button" className="qc-am-link-ghost" disabled={busy} onClick={async () => {
+                  if (Date.now() < resendAt) { setNotice({ kind: 'info', text: 'Please wait one minute before requesting another email.' }); return; }
+                  setBusy(true);
+                  try {
+                    const { error } = await auth.resendConfirmation(email);
+                    setNotice({ kind: error ? 'error' : 'info', text: error ? error.message : 'Confirmation email sent. Check your inbox and spam folder.' });
+                    setResendAt(Date.now() + 60_000);
+                  } catch (_) { setNotice({ kind: 'error', text: 'Could not send the email. Please try again.' }); }
+                  finally { setBusy(false); }
+                }}>{busy ? 'Sending…' : 'Resend confirmation email'}</button>
+                <button type="button" className="qc-am-link-ghost" disabled={busy} onClick={() => selectAuthMode('signup')}>Change email</button>
+                <button type="button" className="qc-am-primary-btn" onClick={onClose}>Keep playing while you wait</button>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button type="button" className="qc-am-link-ghost" onClick={() => selectAuthMode('signin')}>
                     Back to Sign In
@@ -474,20 +608,20 @@ export default function AccountModal({
             )}
 
             {authMode === 'forgot' && (
-              <>
+              <form className="qc-am-auth-form" onSubmit={(event) => { event.preventDefault(); if (!busy) handleResetPassword(); }}>
                 <p style={{ margin: '0 0 16px 0', fontSize: 13.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                   Enter your email address and we'll send you a link to reset your password.
                 </p>
                 <div>
                   <div className="qc-am-label">Email</div>
                   <input
-                    className="qc-account-email qc-am-input" type="email" value={email}
+                    className="qc-account-email qc-am-input" type="email" name="email" aria-label="Email" required value={email}
                     onChange={(e) => setEmail(e.target.value)} autoComplete="email"
                   />
                 </div>
-                {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+                {notice ? <div role="status" aria-live="polite" className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
                 <div style={{ display: 'flex', gap: 12, marginTop: 4, flexDirection: 'column' }}>
-                  <button type="button" className="qc-account-signin qc-am-primary-btn" disabled={busy} onClick={handleResetPassword}>
+                  <button type="submit" className="qc-account-signin qc-am-primary-btn" disabled={busy}>
                     {busy ? 'Working…' : 'Send Reset Link'}
                   </button>
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
@@ -496,12 +630,13 @@ export default function AccountModal({
                     </button>
                   </div>
                 </div>
-              </>
+              </form>
             )}
           </>
         ) : (
-          <>
-            <div className="qc-am-stat-row">
+          <div className="qc-profile-content">
+            <section className="qc-profile-hero">
+              <div className="qc-am-stat-row">
               <div className="qc-am-stat">
                 <div className="qc-am-stat-label">Rating</div>
                 <div className="qc-am-stat-value">{profile ? profile.rating : '…'}</div>
@@ -511,97 +646,105 @@ export default function AccountModal({
                 <div className="qc-am-stat-value">{profile ? profile.games_played : '…'}</div>
               </div>
               <div className="qc-am-stat">
-                <div className="qc-am-stat-label">Tier</div>
-                <div style={{ marginTop: 8 }}><span className={accountTierClass}>{accountTierLabel}</span></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="qc-am-label">Username</div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <input
-                  className="qc-account-username qc-am-input" style={{ flex: 1 }} value={usernameDraft}
-                  onChange={(e) => setUsernameDraft(e.target.value)} maxLength={24}
-                />
-                <button type="button" className="qc-am-ghost-btn" disabled={busy} onClick={handleSaveUsername}>Save</button>
-              </div>
-            </div>
-
-            {isPaid ? (
-              <div>
-                <div className="qc-am-label">Profile Pic & Tagline <span style={{ color: '#f6c445', textShadow: '0 0 8px rgba(246,196,69,0.6)' }}>★</span></div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
-                  <div
-                    style={{
-                      width: 60, height: 60, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
-                      border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 900, fontSize: 24, color: '#a8b2d1',
-                      boxShadow: '0 0 15px rgba(0,0,0,0.5) inset'
-                    }}
-                  >
-                    {profile && profile.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Your avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      (usernameDraft[0] || '?').toUpperCase()
-                    )}
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <select
-                        className="qc-account-tagline qc-am-input" style={{ flex: 1 }} value={taglineDraft}
-                        onChange={(e) => setTaglineDraft(e.target.value)}
-                        aria-label="Pick a tagline from your characters"
-                      >
-                        <option value="">No tagline</option>
-                        {taglineOptions({ isPaid }).map((o) => (
-                          <option key={o.id} value={o.tagline}>{`${o.name} — “${o.tagline}”`}</option>
-                        ))}
-                      </select>
-                      <button type="button" className="qc-am-ghost-btn" disabled={busy} onClick={handleSaveTagline}>Save</button>
-                    </div>
-                    <div>
-                      <input
-                        ref={avatarInputRef} type="file" accept="image/*"
-                        style={{ display: 'none' }} onChange={handleAvatarFile}
-                      />
-                      <button
-                        type="button" className="qc-account-avatar-upload qc-am-ghost-btn" disabled={busy}
-                        onClick={() => {
-                          if (blockDevPreviewAction()) return;
-                          if (avatarInputRef.current) avatarInputRef.current.click();
-                        }}
-                      >
-                        {busy ? 'Working…' : 'Upload profile pic'}
-                      </button>
-                    </div>
-                  </div>
+                <div className="qc-am-stat-label">Recent Record</div>
+                <div className="qc-am-stat-value qc-am-stat-value--record">
+                  <span className="is-win">{recentWins}W</span>
+                  <span className="is-loss">{recentLosses}L</span>
+                  <span>{recentDraws}D</span>
                 </div>
               </div>
-            ) : null}
+              <div className="qc-am-stat">
+                <div className="qc-am-stat-label">Saved Games</div>
+                <div className="qc-am-stat-value">{games.length}</div>
+              </div>
+              </div>
+            </section>
 
-            {notice ? <div className={`qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+            <section className="qc-profile-card qc-profile-editor">
+              <h3 className="qc-profile-section-title">Player style</h3>
 
-            {isPaid ? (
-              <div className="qc-am-premium-card" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Premium active</div>
+              <div className="qc-profile-identity-row">
+                <div className="qc-avatar-current" aria-hidden>
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" />
+                  ) : (
+                    <span>{(profile?.username?.[0] || '?').toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="qc-profile-identity-copy">
+                  <strong>{profile?.username || 'Quantum Player'}</strong>
+                  <span>Player name</span>
+                </div>
                 <button
-                  type="button" className="qc-account-manage-sub qc-am-ghost-btn"
-                  style={{ borderColor: 'rgba(246,196,69,0.4)', color: '#f6c445' }}
-                  disabled={busy} onClick={handleManageSubscription}
+                  type="button"
+                  className="qc-account-choose-avatar qc-am-ghost-btn qc-am-header-btn"
+                  disabled={busy}
+                  onClick={() => setAvatarPickerOpen(true)}
                 >
-                  {busy ? 'Working…' : 'Manage subscription'}
+                  <ImageIcon size={15} />
+                  Choose avatar
                 </button>
               </div>
+
+              <div className="qc-profile-setting-row">
+                <div className="qc-profile-setting-heading">
+                  <span>Tagline</span>
+                  {!isPaid ? <small>Premium</small> : null}
+                </div>
+                {isPaid ? (
+                  <div className="qc-profile-tagline-control">
+                    <select
+                      className="qc-account-tagline qc-am-input"
+                      value={taglineDraft}
+                      onChange={(e) => setTaglineDraft(e.target.value)}
+                      aria-label="Pick a tagline from your characters"
+                    >
+                      <option value="">No tagline</option>
+                      {taglineOptions({ isPaid, unlockedIds }).map((o) => (
+                        <option key={o.id} value={o.tagline}>{o.tagline}</option>
+                      ))}
+                    </select>
+                    <button type="button" className="qc-am-ghost-btn" disabled={busy} onClick={handleSaveTagline}>
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <span className="qc-profile-setting-value">No tagline selected</span>
+                )}
+              </div>
+
+              <div className="qc-profile-setting-row qc-profile-reactions-row">
+                <div className="qc-profile-setting-heading">
+                  <span>Game reactions</span>
+                  <small>{SAYING_EVENTS.length} moments</small>
+                </div>
+                <button
+                  type="button"
+                  className="qc-account-edit-reactions qc-am-ghost-btn qc-am-header-btn"
+                  disabled={busy}
+                  onClick={() => setSayingsEditorOpen(true)}
+                >
+                  <MessageCircle size={15} />
+                  Customize
+                </button>
+              </div>
+            </section>
+
+            {notice ? <div className={`qc-profile-notice qc-am-notice-${notice.kind}`}>{notice.text}</div> : null}
+
+            {isPaid ? (
+              <div className="qc-profile-membership qc-am-premium-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Premium active</div>
+              </div>
             ) : (
-              <div className="qc-account-premium qc-am-premium-card">
+              <div className="qc-profile-membership qc-account-premium qc-am-premium-card">
                 <div className="qc-am-premium-title"><SparklesIcon size={18} /> Go Premium · {PREMIUM_PRICE_LABEL}</div>
                 <div style={{ fontSize: 13.5, color: '#fff', lineHeight: 1.55 }}>
                   {PREMIUM_PITCH}
                 </div>
                 <ul className="qc-am-feature-list">
                   {PREMIUM_FEATURES.map((f) => (
-                    <li key={f} className="qc-am-feature-item"><span style={{ color: '#f6c445', textShadow: '0 0 5px rgba(246,196,69,0.5)' }}>✦</span> {f}</li>
+                    <li key={f} className="qc-am-feature-item"><span style={{ color: '#f6c445' }}>✦</span> {f}</li>
                   ))}
                 </ul>
                 <button
@@ -619,7 +762,7 @@ export default function AccountModal({
                 >
                   <span style={{ flex: '1 1 200px', fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
                     {isAdFree(profile)
-                      ? `You're a Supporter until ${new Date(profile.ad_free_until).toLocaleDateString()}: no ads, 5 engine reviews a day, and 3 Supporter bots. Thank you! ♥`
+                      ? `You're a Supporter until ${new Date(profile.ad_free_until).toLocaleDateString()}: no ads, 5 engine reviews a day, and 6 Supporter bots. Thank you! ♥`
                       : TIP_PITCH}
                   </span>
                   <button
@@ -641,19 +784,24 @@ export default function AccountModal({
               </div>
             )}
 
-            <div>
+            <section className="qc-profile-card qc-profile-games">
+              <h3 className="qc-profile-section-title">Game history</h3>
               <div className="qc-am-label">
                 Saved Games ({isPaid ? `${games.length} of 1,000` : `${games.length} of last 10`})
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto', paddingRight: 4 }}>
+              <div className="qc-profile-games-list">
                 {games.length === 0 ? (
                   <div style={{ fontSize: 13, color: '#a8b2d1', fontStyle: 'italic' }}>Finished games will appear here.</div>
                 ) : (
                   games.map((g) => (
-                    <div key={g.id} className="qc-account-game-row qc-am-game-row">
+                    <div
+                      key={g.id}
+                      className="qc-account-game-row qc-am-game-row"
+                      data-qc-share-menu={shareMenuGameId === g.id ? String(g.id) : undefined}
+                    >
                       <span className={`qc-am-result-${g.result}`}>{g.result}</span>
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>
-                        vs {g.opponent}{g.opponent_rating ? ` (${g.opponent_rating})` : ''} <span style={{color: '#a8b2d1'}}>· {g.user_side}</span>
+                        vs {getBotById(g.opponent)?.name || g.opponent}{g.opponent_rating ? ` (${g.opponent_rating})` : ''} <span style={{color: '#a8b2d1'}}>· {g.user_side}</span>
                       </span>
                       <span style={{ color: '#a8b2d1', fontWeight: 600 }}>
                         {g.rating_after ? `${g.rating_before}→${g.rating_after}` : 'unrated'}
@@ -663,26 +811,26 @@ export default function AccountModal({
                         <button
                           type="button"
                           className="qc-account-replay-game qc-am-review-btn standard"
-                          title="Replay this game and explore variations"
+                          title="View this game and explore variations"
                           onClick={() => onReplayGame(g)}
                         >
-                          Replay
+                          View
                         </button>
                         <button
                           type="button"
-                          className="qc-account-share-game qc-am-review-btn standard"
-                          title="Share a public replay link"
-                          disabled={sharingGameId === g.id}
-                          onClick={async () => {
-                            setSharingGameId(g.id);
-                            const result = await onShareGame(g);
-                            setSharingGameId(null);
-                            if (result?.error) setNotice({ kind: 'error', text: result.error });
-                            else if (result?.copied) setNotice({ kind: 'info', text: 'Replay link copied!' });
-                            else if (result?.shared) setNotice({ kind: 'info', text: 'Replay link shared!' });
-                          }}
+                          className="qc-account-share-game qc-am-review-btn standard qc-am-share-trigger"
+                          title="Share this game"
+                          aria-expanded={shareMenuGameId === g.id}
+                          onClick={() => setShareMenuGameId((current) => (current === g.id ? null : g.id))}
                         >
-                          {sharingGameId === g.id ? '…' : 'Share'}
+                          <Share2 size={13} />
+                          Share
+                          <ChevronDown
+                            className="qc-am-share-trigger-chevron"
+                            size={13}
+                            aria-hidden="true"
+                            style={{ transform: shareMenuGameId === g.id ? 'rotate(180deg)' : 'none' }}
+                          />
                         </button>
                         <button
                           type="button"
@@ -724,27 +872,150 @@ export default function AccountModal({
                               : rewardedReviewsActive ? '▷ Review (watch ad)' : 'Review'}
                         </button>
                       </span>
+                      {shareMenuGameId === g.id ? (
+                        <div className="qc-am-share-menu" role="menu" aria-label="Share game options">
+                          <button
+                            type="button"
+                            className="qc-am-share-choice"
+                            role="menuitem"
+                            disabled={sharingGameId === g.id}
+                            onClick={() => shareGameLink(g)}
+                          >
+                            <span className="qc-am-share-choice-icon is-link"><Link2 size={18} /></span>
+                            <span>
+                              <strong>{sharingGameId === g.id ? 'Creating link…' : 'Share game link'}</strong>
+                              <small>Send a link that opens this replay</small>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="qc-am-share-choice"
+                            role="menuitem"
+                            onClick={() => {
+                              setShareMenuGameId(null);
+                              onReplayGame(g, { initialReplayAction: 'video' });
+                            }}
+                          >
+                            <span className="qc-am-share-choice-icon is-video"><Video size={18} /></span>
+                            <span>
+                              <strong>Create replay clip</strong>
+                              <small>Export the game as a social video</small>
+                            </span>
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </section>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16 }}>
-              <span style={{ fontSize: 12.5, color: '#a8b2d1' }}>Logged in as <strong style={{color: '#fff'}}>{user.email}</strong></span>
-              <span style={{ display: 'flex', gap: 8 }}>
-                {profile?.is_admin ? (
+            <section className="qc-profile-card qc-profile-account-access">
+              <h3 className="qc-profile-section-title">Account access</h3>
+              <span className="qc-profile-account-email">Signed in as <strong>{user.email}</strong></span>
+              {profile?.is_admin ? (
+                <span style={{ display: 'flex', gap: 8 }}>
                   <button type="button" className="qc-account-admin-stats qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={onOpenAdminStats}>
                     Site Stats
                   </button>
-                ) : null}
-                <button type="button" className="qc-account-signout qc-am-ghost-btn" style={{ padding: '8px 14px', fontSize: 12 }} onClick={() => { signOut(); }}>
-                  Sign Out
-                </button>
-              </span>
-            </div>
-          </>
+                </span>
+              ) : null}
+            </section>
+          </div>
         )}
-    </ModalShell>
+      </ModalShell>
+
+      {avatarPickerOpen ? (
+          <ModalShell
+            onClose={() => setAvatarPickerOpen(false)}
+            closeOnBackdrop
+            zIndex={10020}
+            ariaLabelledBy="qc-avatar-picker-title"
+            backdropClassName="qc-profile-picker-backdrop"
+            panelClassName="qc-profile-picker-panel qc-avatar-picker-modal"
+          >
+            <div className="qc-profile-picker-header">
+              <div>
+                <h3 id="qc-avatar-picker-title">Choose your avatar</h3>
+                <span>{avatarRoster.length} unlocked</span>
+              </div>
+              <ModalCloseButton ariaLabel="Close avatar picker" onClick={() => setAvatarPickerOpen(false)} />
+            </div>
+            <div className="qc-avatar-grid" role="group" aria-label="Available character avatars">
+              {avatarRoster.map((character) => {
+                const selected = profile?.avatar_url === character.image;
+                return (
+                  <button
+                    key={character.id}
+                    type="button"
+                    className={`qc-avatar-choice${selected ? ' is-selected' : ''}`}
+                    aria-pressed={selected}
+                    disabled={busy}
+                    onClick={() => handlePickAvatar(character.image)}
+                  >
+                    <img src={character.image} alt="" loading="lazy" />
+                    <span>{character.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </ModalShell>
+      ) : null}
+
+      {sayingsEditorOpen ? (
+          <ModalShell
+            onClose={() => setSayingsEditorOpen(false)}
+            closeOnBackdrop
+            zIndex={10020}
+            ariaLabelledBy="qc-reactions-picker-title"
+            backdropClassName="qc-profile-picker-backdrop"
+            panelClassName="qc-profile-picker-panel qc-reactions-picker-modal"
+          >
+            <div className="qc-profile-picker-header">
+              <div>
+                <h3 id="qc-reactions-picker-title">Game reactions</h3>
+                <span>Choose a voice for each moment.</span>
+              </div>
+              <ModalCloseButton ariaLabel="Close game reactions" onClick={() => setSayingsEditorOpen(false)} />
+            </div>
+            <div className="qc-profile-sayings-grid">
+              {SAYING_EVENTS.map((event) => {
+                const options = sayingOptionsForEvent(event.key, { isPaid, unlockedIds });
+                const value = sayingsDraft[event.key] || DEFAULT_CHARACTER_ID;
+                return (
+                  <label key={event.key} className="qc-profile-saying-row">
+                    <span className="qc-profile-saying-label">
+                      {PROFILE_REACTION_LABELS[event.key] || event.label}
+                    </span>
+                    <select
+                      className={`qc-saying-select-${event.key} qc-am-input`}
+                      value={value}
+                      disabled={busy}
+                      onChange={(e) => setSayingsDraft((previous) => ({
+                        ...previous,
+                        [event.key]: e.target.value,
+                      }))}
+                    >
+                      {options.map((option) => (
+                        <option key={option.id} value={option.id}>{option.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="qc-profile-picker-footer">
+              <button
+                type="button"
+                className="qc-sayings-save qc-am-primary-btn"
+                disabled={busy}
+                onClick={handleSaveSayings}
+              >
+                {busy ? 'Saving…' : 'Save reactions'}
+              </button>
+            </div>
+          </ModalShell>
+      ) : null}
+    </>
   );
 }

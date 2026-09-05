@@ -165,7 +165,7 @@ export default function PricingModal({
               <CheckIcon size={16} className="check" /> Five engine game reviews a day
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> 3 Supporter bots to discover
+              <CheckIcon size={16} className="check" /> 6 Supporter bots to discover
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> (Tips stack in three-month windows)

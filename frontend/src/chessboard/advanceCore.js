@@ -1,3 +1,4 @@
+import { explainMove } from './moveExplanation.js';
 // frontend/src/chessboard/advanceCore.js
 // Purpose: THE single implementation of "apply one move and derive the next
 // game snapshot" — lastMove construction (with the double-step / en passant
@@ -54,12 +55,13 @@ export function countPossibilities(pieces) {
 // opponent's en passant window opens. A double-step is a two-rank straight
 // advance by a piece that can still be a pawn (geometry restricts it to the
 // side's own first two ranks — back-rank maybe-pawns included).
-export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, usedEnPassant = false, wasFirstMove = false, zappedSquares = [], healedSquares = [], failedHealSquares = [], fizzledSquares = [] }) {
+export function buildLastMoveRecord({ finalPieces, moverId, from, to, side, didCapture = false, usedEnPassant = false, wasFirstMove = false, zappedSquares = [], healedSquares = [], failedHealSquares = [], fizzledSquares = [] }) {
   const lastMove = {
     side,
     pieceId: moverId,
     from,
     to,
+    didCapture: Boolean(didCapture),
     isDoubleStep: false,
     crossedSquare: null,
     zappedSquares: zappedSquares || [],
@@ -116,6 +118,7 @@ export function moveOutcome(prev, sim, info) {
     from,
     to,
     side,
+    didCapture,
     usedEnPassant,
     wasFirstMove, // legacy field; double-step detection is positional now
 
@@ -155,6 +158,7 @@ export function moveOutcome(prev, sim, info) {
   else if (nextHalfmoveClock >= FIFTY_MOVE_HALFMOVES) { gameOver = true; gameOverReason = 'fifty-move rule'; }
 
   return {
+    explanation: explainMove(prevPieces, finalPieces, sim, info),
     finalPieces,
     didCapture,
     nextCaptureCounter,
@@ -220,8 +224,8 @@ export function advanceEntry(snap, entry, priorSnaps) {
       ok: true,
       snap: outcomeToSnapshot(snap, outcome, priorSnaps),
       records: [
-        { from: res.plan.piece1_from, to: res.plan.piece1_to, side, enPassant: false, castle: true },
-        { from: res.plan.piece2_from, to: res.plan.piece2_to, side, enPassant: false, castle: true },
+        { from: res.plan.piece1_from, to: res.plan.piece1_to, side, enPassant: false, castle: true, explanation: outcome.explanation },
+        { from: res.plan.piece2_from, to: res.plan.piece2_to, side, enPassant: false, castle: true, explanation: outcome.explanation },
       ],
     };
   }
@@ -262,6 +266,7 @@ export function advanceEntry(snap, entry, priorSnaps) {
       side,
       enPassant: usedEnPassant,
       capture: outcome.didCapture,
+      explanation: outcome.explanation,
     }],
   };
 }

@@ -150,7 +150,6 @@ export default function HoverTip() {
         lineHeight: 1.38,
         letterSpacing: '0.035em',
         textAlign: 'center',
-        textShadow: '0 0 8px rgba(127, 231, 255, 0.34)',
         boxShadow: '0 7px 20px rgba(0,0,0,0.52), 0 0 11px rgba(127,231,255,0.22), 0 0 18px rgba(199,146,234,0.12)',
         pointerEvents: 'none',
         whiteSpace: 'normal',

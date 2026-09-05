@@ -14,8 +14,8 @@ import IconButton from '../components/IconButton.jsx';
 import ModalShell from '../components/ModalShell.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import {
-  ChevronLeft, ChevronRight, SkipBack, SkipForward, History, Microscope, Sparkles, Undo2,
-  Play, Pause, Video,
+  ChevronDown, ChevronLeft, ChevronRight, SkipBack, SkipForward, History, Microscope,
+  Sparkles, Undo2, Gauge, Link2, Play, Pause, Share2, Video,
 } from 'lucide-react';
 import Board from '../chessboard/Board.jsx';
 import { lastMoveHighlights } from '../chessboard/lastMoveHighlights.js';
@@ -29,6 +29,7 @@ import useReviewVariation from './useReviewVariation.js';
 import EvalTraceGraph from './EvalTraceGraph.jsx';
 import styles from './reviewStyles.js';
 import { staysInSameDecisiveBand } from './reviewMoveMarks.js';
+import QuantumOrbit from '../welcome/QuantumOrbit.jsx';
 import {
   REPLAY_PLY_INTERVAL_MS,
   canMakeReplayVideo,
@@ -36,6 +37,11 @@ import {
   paintReplayVideoFrame,
   startReplayVideoRecorder,
 } from './socialReplayVideo.js';
+import {
+  DEFAULT_REPLAY_MOVES_PER_SECOND,
+  REPLAY_SPEED_OPTIONS,
+  replayIntervalMs,
+} from './replaySpeed.js';
 
 // Mover-perspective eval drop (in pawns) that earns a mark in the move list.
 const MISTAKE_DROP = 1.5;
@@ -82,17 +88,15 @@ function normalizeWorkerMove(move, score, depth) {
   };
 }
 
-const sameHintMove = (a, b) => Boolean(a && b)
-  && a.from === b.from && a.to === b.to
-  && Boolean(a.castle) === Boolean(b.castle)
-  && Boolean(a.enPassant) === Boolean(b.enPassant);
-
 export default function ReviewModal({
   open = false,
+  page = false,
   onClose = () => {},
+  onShareGame = null,
   game = null, // { id, opponent, opponent_rating, user_side, result, created_at, headline? }
   moves = null, // stored qc_games.moves array
   analysisEnabled = true, // false = free replay + variations, with no engine output/work
+  initialReplayAction = null,
   loading = false,
   loadError = null,
   showEvalGraph = false, // dev/mined only: show the graph strip; move-list evals always compute
@@ -117,9 +121,21 @@ export default function ReviewModal({
   const v = useReviewVariation({ open, snapshots, onClose });
   const { bounded, snap, variation, varSel } = v;
   const [replayPlaying, setReplayPlaying] = useState(false);
+  const [replayMovesPerSecond, setReplayMovesPerSecond] = useState(DEFAULT_REPLAY_MOVES_PER_SECOND);
+  const [replayMenuOpen, setReplayMenuOpen] = useState(false);
+  const [shareState, setShareState] = useState({ status: 'idle', message: '' });
   const [videoState, setVideoState] = useState({ status: 'idle', progress: 0, message: '' });
   const videoCancelledRef = useRef(false);
+  const replayMenuRef = useRef(null);
+  const initialReplayActionHandledRef = useRef(null);
   const makingVideo = videoState.status === 'recording';
+
+  useEffect(() => {
+    if (!open || !page) return undefined;
+    const previousTitle = document.title;
+    document.title = analysisEnabled ? 'Game Review | Quantum Chess' : 'Game Replay | Quantum Chess';
+    return () => { document.title = previousTitle; };
+  }, [open, page, analysisEnabled]);
 
   useEffect(() => {
     if (!open || !replayPlaying || makingVideo || variation) return undefined;
@@ -127,16 +143,53 @@ export default function ReviewModal({
       setReplayPlaying(false);
       return undefined;
     }
-    const timer = window.setTimeout(() => v.goMainline(bounded + 1), REPLAY_PLY_INTERVAL_MS);
+    const timer = window.setTimeout(
+      () => v.goMainline(bounded + 1),
+      replayIntervalMs(replayMovesPerSecond),
+    );
     return () => window.clearTimeout(timer);
-  }, [open, replayPlaying, makingVideo, variation, bounded, snapshots.length]);
+  }, [
+    open,
+    replayPlaying,
+    replayMovesPerSecond,
+    makingVideo,
+    variation,
+    bounded,
+    snapshots.length,
+  ]);
 
   useEffect(() => {
     if (!open) {
       setReplayPlaying(false);
+      setReplayMenuOpen(false);
+      setShareState({ status: 'idle', message: '' });
       videoCancelledRef.current = true;
     }
+    return () => {
+      videoCancelledRef.current = true;
+    };
   }, [open]);
+
+  useEffect(() => {
+    if (!replayMenuOpen) return undefined;
+    const closeOnOutsidePress = (event) => {
+      if (replayMenuRef.current && !replayMenuRef.current.contains(event.target)) {
+        setReplayMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setReplayMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePress);
+    document.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePress);
+      document.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, [replayMenuOpen]);
 
   const stopPlayback = () => setReplayPlaying(false);
   const playFullReplay = () => {
@@ -148,6 +201,55 @@ export default function ReviewModal({
     v.goMainline(0);
     setVideoState({ status: 'idle', progress: 0, message: '' });
     setReplayPlaying(true);
+  };
+
+  const sharedGameToken = typeof window === 'undefined'
+    ? ''
+    : new URLSearchParams(window.location.search).get('game') || '';
+  const canShareReplayLink = Boolean(sharedGameToken || (game?.id && onShareGame));
+
+  const deliverReplayLink = async (link) => {
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: 'Quantum Chess game replay', url: link });
+      return 'Game link shared.';
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(link);
+      return 'Game link copied.';
+    }
+    window.prompt('Copy this game replay link:', link);
+    return 'Game link ready to copy.';
+  };
+
+  const shareReplayLink = async () => {
+    if (!canShareReplayLink || shareState.status === 'working') return;
+    setShareState({ status: 'working', message: 'Preparing game link…' });
+    try {
+      if (sharedGameToken) {
+        const link = `${window.location.origin}/play?game=${encodeURIComponent(sharedGameToken)}`;
+        const message = await deliverReplayLink(link);
+        setShareState({ status: 'done', message });
+        return;
+      }
+      const result = await onShareGame(game);
+      if (result?.cancelled) {
+        setShareState({ status: 'idle', message: '' });
+      } else if (result?.error) {
+        setShareState({ status: 'error', message: result.error });
+      } else if (result?.shared) {
+        setShareState({ status: 'done', message: 'Game link shared.' });
+      } else if (result?.copied) {
+        setShareState({ status: 'done', message: 'Game link copied.' });
+      } else {
+        setShareState({ status: 'error', message: 'The game link could not be created.' });
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        setShareState({ status: 'idle', message: '' });
+      } else {
+        setShareState({ status: 'error', message: error?.message || 'The game link could not be shared.' });
+      }
+    }
   };
 
   const waitForBoardPaint = () => new Promise((resolve) => {
@@ -225,6 +327,24 @@ export default function ReviewModal({
     }
   };
 
+  useEffect(() => {
+    if (
+      !open
+      || loading
+      || initialReplayAction !== 'video'
+      || snapshots.length <= 1
+    ) return undefined;
+    const actionKey = `${game?.id || 'game'}:video`;
+    if (initialReplayActionHandledRef.current === actionKey) return undefined;
+    setReplayMenuOpen(true);
+    const timer = window.setTimeout(() => {
+      if (initialReplayActionHandledRef.current === actionKey) return;
+      initialReplayActionHandledRef.current = actionKey;
+      makeReplayVideo();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [open, loading, initialReplayAction, snapshots.length, game?.id]);
+
   const actualNextMove = useMemo(() => {
     if (variation || !timeline || bounded >= timeline.entries.length) return null;
     const entry = timeline.entries[bounded];
@@ -244,10 +364,11 @@ export default function ReviewModal({
   // Engine suggestions for the viewed position, computed off-thread: the
   // THREE strongest moves drawn as layered green arrows — the best one
   // boldest. A full-root depth-2 pass makes them appear quickly, then an
-  // iterative search keeps deepening through a long selected-position
-  // budget. Every completed layer refreshes the best arrow, eval bar, and
-  // move-list value. The game's actual continuation is pinned into the root
-  // beam so review never prunes the move it is trying to judge.
+  // iterative Multi-PV search keeps deepening through a long
+  // selected-position budget. Every completed layer replaces all three
+  // suggestions with a freshly ranked, same-depth set and refreshes the eval
+  // bar and move-list value. The game's actual continuation is pinned into
+  // the root beam so review never prunes the move it is trying to judge.
   const [hints, setHints] = useState(null); // [{ from, to, enPassant, castle, score }] best-first
   const [hintDepth, setHintDepth] = useState(0);
   const reqIdRef = useRef(0);
@@ -280,16 +401,18 @@ export default function ReviewModal({
       }
     };
 
-    const publishBestMove = (move, score, depth) => {
+    const publishBestMoves = (moves, move, score, depth) => {
       if (depth < lastDepth) return;
-      const normalized = normalizeWorkerMove(move, score, depth);
       publishEval(score, depth);
-      if (!normalized) return;
-      setHints((previous) => {
-        const next = [normalized, ...(previous || []).filter((candidate) => !sameHintMove(candidate, normalized))].slice(0, 3);
-        cacheHints(sig, next);
-        return next;
-      });
+      const ranked = (Array.isArray(moves) ? moves : [])
+        .map((line) => normalizeWorkerMove(line, line.score, depth))
+        .filter(Boolean)
+        .slice(0, 3);
+      const fallback = normalizeWorkerMove(move, score, depth);
+      const next = ranked.length ? ranked : (fallback ? [fallback] : []);
+      if (!next.length) return;
+      setHints(next);
+      cacheHints(sig, next);
     };
 
     const postQuick = () => worker.postMessage({
@@ -318,6 +441,7 @@ export default function ReviewModal({
         timeMs: 300000,
         timeMode: 'until-timeout',
         preferredMove: actualNextMove,
+        multiPv: 3,
       },
     });
     worker.addEventListener('message', (e) => {
@@ -335,7 +459,7 @@ export default function ReviewModal({
       }
       if ((data.type === 'bestMoveProgress' || data.type === 'bestMove')
         && data.id === `${reqId}:progress`) {
-        publishBestMove(data.move, data.score, data.depth);
+        publishBestMoves(data.moves, data.move, data.score, data.depth);
       }
     });
     if (cached) postDeepening();
@@ -446,8 +570,9 @@ export default function ReviewModal({
     const bot = botOf(side);
     return bot && Number.isFinite(bot.rating) ? bot.rating : '????';
   };
+  const headlineOpponent = getBotById(game?.opponent)?.name || game?.opponent || 'unknown';
   const headline = game && game.headline ? game.headline : game
-    ? `vs ${game.opponent || 'unknown'}${game.opponent_rating ? ` (${game.opponent_rating})` : ''} · ${game.result || ''}`
+    ? `vs ${headlineOpponent}${game.opponent_rating ? ` (${game.opponent_rating})` : ''} · ${game.result || ''}`
     : '';
 
   const reviewBar = (side) => (
@@ -465,17 +590,8 @@ export default function ReviewModal({
     />
   );
 
-  return (
-    <ModalShell
-      onClose={onClose}
-      closeOnBackdrop
-      escapeToClose={false} // the keyboard-navigation effect in useReviewVariation already handles Escape
-      zIndex={1002}
-      ariaLabelledBy="qc-review-title"
-      backdropClassName="qc-review-backdrop"
-      panelClassName="qc-review-panel"
-      panelStyle={styles.panel}
-    >
+  const content = (
+    <>
         <div style={styles.header}>
           <h2 id="qc-review-title" style={styles.title}>
             {analysisEnabled
@@ -488,8 +604,12 @@ export default function ReviewModal({
         </div>
 
         {loading ? (
-          <div style={{ fontSize: 13, color: theme.textSecondary, padding: 12 }}>
-            Loading shared game…
+          <div className="qc-review-loading" role="status">
+            <QuantumOrbit className="qc-review-loading__orbit" ariaHidden />
+            <strong className="qc-review-loading__title">
+              {analysisEnabled ? 'Preparing game review' : 'Loading game replay'}
+            </strong>
+            <span className="qc-review-loading__message">Resolving the saved timeline…</span>
           </div>
         ) : loadError ? (
           <div style={{ fontSize: 13, color: '#ff8f8f', padding: 12 }}>
@@ -507,7 +627,7 @@ export default function ReviewModal({
                 first {snapshots.length - 1} moves.
               </div>
             ) : null}
-            <div style={styles.content}>
+            <div className="qc-review-content" style={styles.content}>
               <div className="qc-review-board" style={styles.boardCol}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', justifyContent: 'center' }}>
                 {analysisEnabled ? <div style={styles.evalBarVertical} title={`Eval ${formatEval(currentEval)} (white)`}>
@@ -523,7 +643,7 @@ export default function ReviewModal({
                   }} />
                   <span style={styles.evalBarNumber(evalTextDark)}>{exactEval === null ? '…' : formatEval(currentEval)}</span>
                 </div> : null}
-                <div style={{ width: 'min(60vmin, 440px)', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="qc-review-board-shell" style={{ width: 'min(60vmin, 440px)', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {reviewBar(topSide)}
                 <div className="qc-review-board-capture">
                 <Board
@@ -575,40 +695,42 @@ export default function ReviewModal({
 
               <div className="qc-review-side" style={styles.sideCol}>
                 {analysisEnabled ? <div>
-                  <div style={styles.hintHead}>
-                    <Sparkles size={13} strokeWidth={2.5} />
+                  <div className="qc-review-hint-heading" style={styles.hintHead}>
+                    <Sparkles size={15} strokeWidth={2.5} />
                     {snap.gameOver
                       ? 'Final position'
                       : hints && hints.length
                         ? `Engine suggests${hintDepth ? ` · depth ${hintDepth}` : ''}`
                         : 'Engine is thinking…'}
                   </div>
-                  <div style={styles.hintBox}>
+                  <div className="qc-review-hint-box" style={styles.hintBox}>
                     {snap.gameOver ? (
-                      <span>
+                      <span className="qc-review-hint-final">
                         {snap.gameOverReason}
                         {snap.winner ? ` — ${snap.winner} wins` : ''}.
                       </span>
                     ) : hints && hints.length ? (
-                      <span>
+                      <div className="qc-review-hint-list">
                         {hints.map((m, i) => (
-                          <span key={`hint-${i}`} style={{ display: 'block', opacity: i === 0 ? 1 : 0.65 }}>
-                            {`${i + 1}. `}
-                            <strong>{describeHintMove(m)}</strong>
-                            {Number.isFinite(m.score) ? ` · ${formatEval(hintEvalWhite(m.score))}` : ''}
-                          </span>
+                          <div
+                            key={`hint-${i}`}
+                            className={`qc-review-hint-line${i === 0 ? ' is-best' : ''}`}
+                          >
+                            <span className="qc-review-hint-rank">{i === 0 ? 'Best' : i + 1}</span>
+                            <strong className="qc-review-hint-move">{describeHintMove(m)}</strong>
+                            {Number.isFinite(m.score) ? (
+                              <span className="qc-review-hint-eval">
+                                {formatEval(hintEvalWhite(m.score))}
+                              </span>
+                            ) : null}
+                          </div>
                         ))}
-                      </span>
+                      </div>
                     ) : (
-                      <span style={{ opacity: 0.6 }}>scanning the position…</span>
+                      <span className="qc-review-hint-thinking">Scanning the position…</span>
                     )}
                   </div>
-                </div> : (
-                  <div style={styles.replayHelp}>
-                    <strong>Explore the game</strong>
-                    <span>Choose any move, then move a piece on the board to branch into a variation.</span>
-                  </div>
-                )}
+                </div> : null}
                 {variation ? (
                   <div style={styles.variationStrip}>
                     <span style={styles.variationLabel}>
@@ -636,7 +758,7 @@ export default function ReviewModal({
                 <div className="qc-review-moves" style={styles.moveList}>
                   {rowsToPairs(rows).map((pair) => (
                     <React.Fragment key={`mv-${pair.moveNo}`}>
-                      <span style={styles.moveNo}>{pair.moveNo}.</span>
+                      <span className="qc-review-move-number" style={styles.moveNo}>{pair.moveNo}.</span>
                       {[pair.white, pair.black].map((r, col) => (r ? (
                         <div
                           key={`cell-${r.snapIdx}`}
@@ -644,11 +766,17 @@ export default function ReviewModal({
                           style={styles.moveCell(!variation && bounded === r.snapIdx)}
                           onClick={(e) => { e.currentTarget.blur(); stopPlayback(); v.goMainline(r.snapIdx); }}
                           role="button" tabIndex={0}
+                          aria-current={!variation && bounded === r.snapIdx ? 'step' : undefined}
                         >
-                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+                          <span
+                            className="qc-review-move-label"
+                            style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
+                            {r.label}
+                          </span>
                           {analysisEnabled ? <span style={styles.mark(r.mark)} title={r.markTitle}>{r.mark}</span> : null}
                           {analysisEnabled ? <span
-                            style={{ color: theme.textSecondary, minWidth: 38, textAlign: 'right' }}
+                            className="qc-review-move-eval"
                             title="Engine eval after this move (positive is better for White)"
                           >{r.evalAfter === null ? '…' : formatEval(r.evalAfter)}</span> : null}
                         </div>
@@ -669,34 +797,114 @@ export default function ReviewModal({
                   <IconButton icon={ChevronRight} size={18} title="Next move (→)" suppressTitle ariaLabel="Next move" onClick={() => { stopPlayback(); v.seekNext(); }} width={44} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
                   <IconButton icon={SkipForward} size={16} title="End" suppressTitle ariaLabel="Jump to end" onClick={() => { stopPlayback(); v.seekEnd(); }} width={36} height={30} radius={8} bg={theme.secondary} color={theme.primary} hoverInvert shadow="transparent" />
                 </div>
-                <div style={styles.replayTools}>
+                <div className="qc-review-replay-actions" style={styles.replayActions} ref={replayMenuRef}>
                   <button
                     type="button"
-                    className="qc-review-play-replay"
-                    style={styles.replayToolButton(replayPlaying)}
-                    disabled={makingVideo}
-                    onClick={playFullReplay}
+                    className="qc-review-actions-trigger"
+                    style={styles.replayActionsTrigger(replayMenuOpen)}
+                    aria-expanded={replayMenuOpen}
+                    aria-controls="qc-review-replay-menu"
+                    onClick={() => setReplayMenuOpen((shown) => !shown)}
                   >
-                    {replayPlaying ? <Pause size={15} /> : <Play size={15} />}
-                    {replayPlaying ? 'Pause replay' : 'Play replay · 2 plies/sec'}
-                  </button>
-                  <button
-                    type="button"
-                    className="qc-review-make-video"
-                    style={styles.replayToolButton(makingVideo)}
-                    disabled={makingVideo}
-                    onClick={makeReplayVideo}
-                  >
-                    <Video size={15} />
-                    {makingVideo ? 'Making video…' : 'Make social video'}
-                  </button>
-                  {makingVideo ? (
-                    <span style={styles.videoProgressTrack} aria-label={videoState.message}>
-                      <span style={styles.videoProgressFill(videoState.progress)} />
+                    <span style={styles.replayToolIcon}>
+                      {replayPlaying ? <Pause size={16} /> : <Share2 size={16} />}
                     </span>
-                  ) : null}
-                  {videoState.message ? (
-                    <span style={styles.videoStatus(videoState.status === 'error')}>{videoState.message}</span>
+                    <span style={{ flex: 1, textAlign: 'left' }}>
+                      {replayPlaying
+                        ? `Replay playing · ${replayMovesPerSecond} moves/sec`
+                        : 'Replay & share'}
+                    </span>
+                    <ChevronDown
+                      className="qc-review-actions-chevron"
+                      size={17}
+                      style={{ transform: replayMenuOpen ? 'rotate(180deg)' : 'none' }}
+                    />
+                  </button>
+                  {replayMenuOpen ? (
+                    <div
+                      id="qc-review-replay-menu"
+                      className="qc-review-replay-menu"
+                      style={styles.replayMenu}
+                      role="dialog"
+                      aria-label="Replay and sharing controls"
+                    >
+                      <div style={styles.replayMenuHeading}>
+                        <strong>Replay & share</strong>
+                        <span>Play it back, save a clip, or send the game.</span>
+                      </div>
+                      <div className="qc-review-replay-toolbar" style={styles.replayTools}>
+                        <button
+                          type="button"
+                          className="qc-review-play-replay"
+                          style={styles.replayToolButton(replayPlaying, 'play')}
+                          aria-label={replayPlaying ? 'Pause full game replay' : 'Play full game replay'}
+                          disabled={makingVideo}
+                          onClick={playFullReplay}
+                        >
+                          <span style={styles.replayToolIcon}>
+                            {replayPlaying ? <Pause size={16} /> : <Play size={16} />}
+                          </span>
+                          {replayPlaying ? 'Pause replay' : 'Play replay'}
+                        </button>
+                        <label className="qc-review-speed-control" style={styles.replaySpeedControl}>
+                          <Gauge size={16} aria-hidden="true" />
+                          <span style={styles.replaySpeedLabel}>Speed</span>
+                          <select
+                            className="qc-review-speed-select"
+                            style={styles.replaySpeedSelect}
+                            aria-label="Replay speed in moves per second"
+                            value={replayMovesPerSecond}
+                            onChange={(event) => setReplayMovesPerSecond(Number(event.target.value))}
+                          >
+                            {REPLAY_SPEED_OPTIONS.map((speed) => (
+                              <option key={speed} value={speed}>
+                                {speed} {speed === 1 ? 'move' : 'moves'} per second
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          className="qc-review-make-video"
+                          style={styles.replayToolButton(makingVideo, 'video')}
+                          aria-label="Make social replay video"
+                          disabled={makingVideo}
+                          onClick={makeReplayVideo}
+                        >
+                          <span style={styles.replayToolIcon}>
+                            <Video size={16} />
+                          </span>
+                          {makingVideo ? 'Making video…' : 'Make social video'}
+                        </button>
+                        <button
+                          type="button"
+                          className="qc-review-share-link"
+                          style={styles.replayToolButton(false, 'share')}
+                          aria-label="Share game replay link"
+                          disabled={!canShareReplayLink || shareState.status === 'working'}
+                          onClick={shareReplayLink}
+                          title={canShareReplayLink
+                            ? 'Share a link that opens this game replay'
+                            : 'Open a saved game from your profile to create a shareable link'}
+                        >
+                          <span style={styles.replayToolIcon}>
+                            {shareState.status === 'done' ? <Link2 size={16} /> : <Share2 size={16} />}
+                          </span>
+                          {shareState.status === 'working' ? 'Preparing link…' : 'Share game link'}
+                        </button>
+                        {makingVideo ? (
+                          <span style={styles.videoProgressTrack} aria-label={videoState.message}>
+                            <span style={styles.videoProgressFill(videoState.progress)} />
+                          </span>
+                        ) : null}
+                        {videoState.message ? (
+                          <span style={styles.videoStatus(videoState.status === 'error')}>{videoState.message}</span>
+                        ) : null}
+                        {shareState.message ? (
+                          <span style={styles.videoStatus(shareState.status === 'error')}>{shareState.message}</span>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
                 </div>
                 {analysisEnabled && showEvalGraph ? (
@@ -714,6 +922,34 @@ export default function ReviewModal({
             </div>
           </>
         )}
+    </>
+  );
+
+  if (page) {
+    return (
+      <main
+        className={`qc-review-page ${analysisEnabled ? 'qc-review-page--analysis' : 'qc-review-page--replay'}`}
+        aria-labelledby="qc-review-title"
+      >
+        <section className="qc-review-page__panel">
+          {content}
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <ModalShell
+      onClose={onClose}
+      closeOnBackdrop
+      escapeToClose={false} // the keyboard-navigation effect in useReviewVariation already handles Escape
+      zIndex={1002}
+      ariaLabelledBy="qc-review-title"
+      backdropClassName="qc-review-backdrop"
+      panelClassName={`qc-review-panel ${analysisEnabled ? 'qc-review-panel--analysis' : 'qc-review-panel--replay'}`}
+      panelStyle={styles.panel}
+    >
+      {content}
     </ModalShell>
   );
 }

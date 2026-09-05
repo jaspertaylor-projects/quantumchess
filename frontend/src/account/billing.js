@@ -19,13 +19,13 @@ export const PREMIUM_PITCH =
   '$3/month keeps the servers on and the ads off, and gets you:';
 
 export const TIP_PITCH =
-  'Not a subscription person? Tip $5 for three months with no ads, 5 engine game reviews a day, and the 3 Supporter bots.';
+  'Not a subscription person? Tip $5 for three months with no ads, 5 engine game reviews a day, and the 6 Supporter bots.';
 
 export const PREMIUM_FEATURES = [
   'No ads',
   'Unlimited game reviews with engine moves',
   'Up to 1,000 saved games',
-  'All 12 active bots, including 3 Premium-only opponents',
+  'All 18 active bots, including 6 Premium-only opponents',
   'Custom profile pic & tagline',
   'The full character roster — 32 more taglines & sayings',
 ];

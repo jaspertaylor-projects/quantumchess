@@ -21,6 +21,7 @@ import {
 } from './fastRules.js';
 import { evaluateFast, MATE } from './fastEval.js';
 import { BOT_TIME_MODES, DEFAULT_WEIGHTS, DIFFICULTY_CONFIG } from '../alphaBetaEngine.js';
+import { applyRootMovePolicy, rootPersonalityBias } from '../botPersonality.js';
 
 class SearchTimeout extends Error {}
 
@@ -74,7 +75,11 @@ function madeMoveIsMate(bd, moverSide, desc) {
   const childEp = epWindowAfter(bd, numeric);
   let escaped = false;
   forEachLegalReply(bd, defender, childEp, () => {
-    if (!lostInCheck(bd, defender)) escaped = true;
+    if (!lostInCheck(bd, defender)) {
+      escaped = true;
+      return false;
+    }
+    return true;
   });
   return !escaped;
 }
@@ -239,6 +244,7 @@ export function searchBestMoveFast({
   openingVariety = true,
   adaptiveDepth = true,
   preferredMove = null,
+  multiPv = 1,
 }) {
   const base = DIFFICULTY_CONFIG[(bot && bot.tier) || difficulty] || DIFFICULTY_CONFIG.medium;
   const cfg = { ...base, ...((bot && bot.search) || {}) };
@@ -290,7 +296,24 @@ export function searchBestMoveFast({
     else if (extraTypes <= 24) maxDepth = cfg.maxDepth + 1;
   }
 
-  const rootChildren = orderedChildrenFast(bd, side, ctx, ep, Boolean(repetitionSigs), true);
+  let rootChildren = orderedChildrenFast(bd, side, ctx, ep, Boolean(repetitionSigs), true);
+  const hasCastled = pieces.some((p) => !p.captured && p.side === sideToMove && p.castled);
+  const rootFacts = (child) => ({
+    isCastle: child.desc.kind === 'castle',
+    isCapture: child.desc.kind === 'enpassant' || child.desc.victimIdx >= 0,
+    isMate: child.score >= MATE - 100,
+    to: child.desc.kind === 'castle' ? ALGEBRAIC[child.desc.plan.to1] : ALGEBRAIC[child.desc.to],
+    lastMove,
+  });
+  rootChildren = applyRootMovePolicy(rootChildren, bot, rootFacts);
+  for (const child of rootChildren) {
+    child.rootBias = rootPersonalityBias(bot, {
+      ...rootFacts(child),
+      sideMoveCount,
+      hasCastled,
+    });
+  }
+  rootChildren.sort((a, b) => (b.score + b.rootBias) - (a.score + a.rootBias));
   if (rootChildren.length === 0) return { move: null, score: 0, depth: 0, nodes: ctx.nodes };
 
   // REF: retain the review's played continuation just beyond the normal
@@ -323,12 +346,39 @@ export function searchBestMoveFast({
   // REF: depth-1 baseline.
   let initIdx = 0;
   for (let i = 1; i < rootChildren.length; i++) {
-    if (rootChildren[i].score - repPen[i] > rootChildren[initIdx].score - repPen[initIdx]) initIdx = i;
+    if (
+      rootChildren[i].score + rootChildren[i].rootBias - repPen[i]
+      > rootChildren[initIdx].score + rootChildren[initIdx].rootBias - repPen[initIdx]
+    ) initIdx = i;
   }
-  let best = { desc: rootChildren[initIdx].desc, score: rootChildren[initIdx].score, depth: 1, nodes: ctx.nodes };
+  const lineCount = Math.max(1, Math.floor(Number(multiPv) || 1));
+  const initialLines = rootChildren
+    .map((child, i) => ({
+      desc: child.desc,
+      score: child.score,
+      adjusted: child.score + child.rootBias - repPen[i],
+    }))
+    .sort((a, b) => b.adjusted - a.adjusted)
+    .slice(0, lineCount);
+  let best = {
+    desc: rootChildren[initIdx].desc,
+    score: rootChildren[initIdx].score,
+    depth: 1,
+    nodes: ctx.nodes,
+    lines: initialLines,
+  };
   const report = (b) => {
     if (typeof onDepthComplete === 'function') {
-      onDepthComplete({ move: materializeMove(bd, b.desc), score: b.score, depth: b.depth, nodes: b.nodes });
+      onDepthComplete({
+        move: materializeMove(bd, b.desc),
+        score: b.score,
+        depth: b.depth,
+        nodes: b.nodes,
+        moves: (b.lines || []).map((line) => ({
+          move: materializeMove(bd, line.desc),
+          score: line.score,
+        })),
+      });
     }
   };
   report(best);
@@ -340,6 +390,7 @@ export function searchBestMoveFast({
     try {
       let alpha = -Infinity;
       let depthBest = null;
+      const depthLines = [];
       for (let i = 0; i < rootWidth; i++) {
         const child = rootChildren[i];
         let s;
@@ -349,18 +400,29 @@ export function searchBestMoveFast({
           const mark = watermark(bd);
           remake(bd, child.desc);
           try {
-            s = -negamaxFast(bd, otherB(side), depth - 1, 1, -Infinity, -alpha, ctx);
+            // Multi-PV review lines need exact, comparable root scores. The
+            // usual narrow root window is valid for finding one best move,
+            // but its fail-low bounds cannot be displayed as ranks 2 and 3.
+            const beta = lineCount > 1 ? Infinity : -alpha;
+            s = -negamaxFast(bd, otherB(side), depth - 1, 1, -Infinity, beta, ctx);
           } finally {
             rollback(bd, mark);
           }
         }
         child.deepScore = s; // deepest completed-iteration score (noise jitter)
-        const adjusted = s - repPen[i];
+        const adjusted = s + child.rootBias - repPen[i];
+        depthLines.push({ desc: child.desc, score: s, adjusted });
         if (!depthBest || adjusted > depthBest.adjusted) depthBest = { desc: child.desc, score: s, adjusted };
         if (s > alpha) alpha = s;
       }
       if (depthBest) {
-        best = { desc: depthBest.desc, score: depthBest.score, depth, nodes: ctx.nodes };
+        best = {
+          desc: depthBest.desc,
+          score: depthBest.score,
+          depth,
+          nodes: ctx.nodes,
+          lines: depthLines.sort((a, b) => b.adjusted - a.adjusted).slice(0, lineCount),
+        };
         report(best);
       }
     } catch (err) {
@@ -379,12 +441,19 @@ export function searchBestMoveFast({
   if (cfg.noise > 0 && rootChildren.length > 1) {
     const jittered = rootChildren
       .slice(0, Math.min(6, rootChildren.length))
-      .map((c, i) => ({ desc: c.desc, s: (c.deepScore ?? c.score) - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise }))
+      .map((c, i) => ({
+        desc: c.desc,
+        s: (c.deepScore ?? c.score) + c.rootBias - repPen[i] + (Math.random() - 0.5) * 2 * cfg.noise,
+      }))
       .sort((a, b) => b.s - a.s);
     chosenDesc = jittered[0].desc;
   }
 
   const move = materializeMove(bd, chosenDesc);
+  const moves = (best.lines || []).map((line) => ({
+    move: materializeMove(bd, line.desc),
+    score: line.score,
+  }));
   if (rootWords && !wordsEqual(bd.words, rootWords)) throw new Error('fast engine: root state corrupted');
-  return { move, score: best.score, depth: best.depth, nodes: ctx.nodes };
+  return { move, score: best.score, depth: best.depth, nodes: ctx.nodes, moves };
 }

@@ -1,6 +1,6 @@
 // frontend/src/ai/bots.js
-// Purpose: The active 12-bot roster — six Free, three Supporter-or-Premium,
-// and three Premium opponents — plus a shelved legacy roster retained only so
+// Purpose: The active 18-bot roster — six Free, six Supporter-or-Premium,
+// and six Premium opponents — plus a shelved legacy roster retained only so
 // old saved games can still resolve their opponent identity.
 // Legal guardrail: both halves of every mashup must be deceased, and avatar
 // art must not depict a real person's likeness or imply endorsement.
@@ -265,15 +265,17 @@ export const BOTS = [
     },
   },
 
-  // ----------------------- SHELVED LEGACY ROSTER --------------------
-  // These identities remain readable for old saved games, but are excluded
-  // from every active roster, unlock offer, and opponent picker.
+  // ------------------------ EXPANDED ROSTER -------------------------
+  // Six of these legacy identities have returned to the active ladder. The
+  // remaining six stay readable for old saves but remain shelved.
   {
     id: 'freeman-morphy',
     name: 'Freeman Morphy',
-    rating: 1300,
-    tier: 'easy',
-    tagline: 'Builds a sphere around your king and harvests the energy.',
+    rating: 1680,
+    tier: 'medium',
+    access: 'supporter',
+    personality: 'early-castler',
+    tagline: 'Builds his king a castled Dyson sphere before harvesting yours.',
     sayings: {
       win: 'Sphere complete. Energy harvested.',
       loss: 'A design flaw in my sphere.',
@@ -282,16 +284,20 @@ export const BOTS = [
       collapse: 'Your entire star system is mapped.',
     },
     hue: 240,
-    premium: true,
-    search: { noise: 1.0, timeMs: 900 },
-    weights: { kingHunt: 0.28, soleKingAttacked: 5.2, development: 0.08 },
+    search: { noise: 0, timeMs: 5200 },
+    weights: {
+      kingHunt: 0.24, soleKingAttacked: 5.2,
+      development: 0.1, hangUndefended: 0.96,
+    },
   },
   {
     id: 'david-feynman',
     name: 'David Feynman',
-    rating: 1450,
+    rating: 1760,
     tier: 'medium',
-    tagline: 'Sketches every tactic, including the arrows you missed.',
+    access: 'supporter',
+    personality: 'counterpuncher',
+    tagline: 'Never draws the first capture arrow—then calculates the recapture.',
     sayings: {
       win: 'The winning line fit in the margin.',
       loss: 'My diagram omitted one important arrow.',
@@ -300,16 +306,20 @@ export const BOTS = [
       collapse: 'I\'ve drawn diagrams of your entire army.',
     },
     hue: 20,
-    premium: true,
-    search: { noise: 0.4 },
-    weights: { extraType: 0.13, mobility: 0.018 },
+    search: { noise: 0, timeMs: 6200 },
+    weights: {
+      material: 1.12, extraType: 0.13, mobility: 0.02,
+      hangUndefended: 1.08, hangBadTrade: 0.72,
+    },
   },
   {
     id: 'edith-franklin',
     name: 'Edith Franklin',
-    rating: 1550,
+    rating: 1840,
     tier: 'medium',
-    tagline: 'Photographed the structure of your position long before you saw it.',
+    access: 'supporter',
+    personality: 'structure-photographer',
+    tagline: 'Develops a crystal-clear structure and reinforces every weak bond.',
     sayings: {
       win: 'The structure was visible in every turn.',
       loss: 'You read my diffraction pattern.',
@@ -318,16 +328,20 @@ export const BOTS = [
       collapse: 'Every strand of yours is imaged.',
     },
     hue: 350,
-    premium: true,
-    search: { noise: 0.3 },
-    weights: { development: 0.085, kingSpread: 0.3, hangBadTrade: 0.62 },
+    search: { noise: 0, timeMs: 7600, widths: [46, 18, 12] },
+    weights: {
+      development: 0.14, center: 0.065, friendlyContact: 0.11,
+      kingSpread: 0.34, hangUndefended: 1.12, hangBadTrade: 0.76,
+    },
   },
   {
     id: 'savielly-dirac',
     name: 'Savielly Dirac',
-    rating: 1650,
-    tier: 'medium',
-    tagline: 'Draws impossible staircases. Your king climbs them forever.',
+    rating: 1920,
+    tier: 'hard',
+    access: 'premium',
+    personality: 'maze-maker',
+    tagline: 'Draws impossible staircases until your king has no legal landing.',
     sayings: {
       win: 'Your king ran out of staircase.',
       loss: 'I tiled myself into a corner.',
@@ -336,16 +350,20 @@ export const BOTS = [
       collapse: 'The impossible object is complete.',
     },
     hue: 300,
-    premium: true,
-    search: { noise: 0.1 },
-    weights: { extraType: 0.14, kingHunt: 0.22 },
+    search: { noise: 0, widths: [26, 16, 11] },
+    weights: {
+      mobility: 0.034, center: 0.07, extraType: 0.15,
+      kingHunt: 0.3, hangUndefended: 0.94,
+    },
   },
   {
     id: 'james-euwe',
     name: 'James Euwe',
-    rating: 1750,
-    tier: 'medium',
-    tagline: 'Unified your kingside and queenside weaknesses into one field.',
+    rating: 2010,
+    tier: 'hard',
+    access: 'premium',
+    personality: 'field-unifier',
+    tagline: 'Unifies heal networks and zap pressure into one force field.',
     sayings: {
       win: 'It was all one field in the end.',
       loss: 'My demon let the wrong piece through.',
@@ -354,16 +372,21 @@ export const BOTS = [
       collapse: 'All your charges are measured.',
     },
     hue: 330,
-    premium: true,
-    search: { noise: 0 },
-    weights: { development: 0.09, center: 0.05, extraType: 0.1 },
+    search: { noise: 0, widths: [30, 18, 12] },
+    weights: {
+      development: 0.1, center: 0.055, extraType: 0.16,
+      enemyContact: 0.17, friendlyContact: 0.17,
+      kingSpread: 0.36, hangBadTrade: 0.66,
+    },
   },
   {
     id: 'stephen-reti',
     name: 'Stephen Reti',
-    rating: 1850,
+    rating: 2140,
     tier: 'hard',
-    tagline: 'Your king’s escape squares end at the event horizon.',
+    access: 'premium',
+    personality: 'event-horizon',
+    tagline: 'Compresses every escape square until your king crosses the horizon.',
     sayings: {
       win: 'Past the event horizon, nothing escapes.',
       loss: 'Radiation leaked out — well spotted.',
@@ -372,9 +395,16 @@ export const BOTS = [
       collapse: 'Your army\'s information has fully radiated away.',
     },
     hue: 190,
-    premium: true,
-    search: {},
-    weights: { center: 0.045, development: 0.08, mobility: 0.017, hangUndefended: 0.85 },
+    // Wide beams preserve the event-horizon style; the standard hard-tier
+    // clock keeps the premium opponent responsive instead of making every
+    // non-mating turn consume the former 14-second bespoke budget.
+    search: { timeMs: 12000, widths: [34, 20, 14, 12] },
+    weights: {
+      kingHunt: 0.38, soleKingAttacked: 5.8,
+      soleKingCollapsedAttacked: 9.2,
+      mobility: 0.022, hangUndefended: 0.98,
+      mopUpEdge: 0.52, mopUpClose: 0.38,
+    },
   },
   {
     id: 'tigran-turing',
@@ -538,6 +568,12 @@ const ACTIVE_BOT_IDS = new Set([
   'werner-lasker',
   'nikola-tal',
   'rudolf-einstein',
+  'freeman-morphy',
+  'david-feynman',
+  'edith-franklin',
+  'savielly-dirac',
+  'james-euwe',
+  'stephen-reti',
 ]);
 
 export const ACTIVE_BOTS = BOTS.filter((bot) => ACTIVE_BOT_IDS.has(bot.id));

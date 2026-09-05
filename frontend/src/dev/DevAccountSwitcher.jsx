@@ -23,7 +23,7 @@ const OPTIONS = [
   { value: DEV_ACCOUNT_LEVEL.SIGNED_OUT, label: 'Signed out', detail: 'Anonymous' },
   { value: DEV_ACCOUNT_LEVEL.FREE, label: 'Free account', detail: 'Standard access' },
   { value: DEV_ACCOUNT_LEVEL.SUPPORTER, label: 'Supporter account', detail: 'Tip · ad-free + daily review' },
-  { value: DEV_ACCOUNT_LEVEL.PREMIUM, label: 'Premium account', detail: 'All access' },
+  { value: DEV_ACCOUNT_LEVEL.PREMIUM, label: 'Premium account', detail: 'All access · 15 saved games' },
   { value: DEV_ACCOUNT_LEVEL.ADMIN, label: 'Admin account', detail: 'Premium + stats dashboard' },
 ];
 

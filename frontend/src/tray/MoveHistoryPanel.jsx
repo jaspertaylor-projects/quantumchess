@@ -25,6 +25,7 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
 
   const [index, setIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);
+  const [hoveredMove, setHoveredMove] = useState(null);
 
   const highlightRef = useRef(onHighlightMove);
   const clearRef = useRef(onClearHighlights);
@@ -403,6 +404,14 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
               >
                 <div
                   className="qc-move-history-cell-white"
+                  title={moves[pair.whiteIndex]?.explanation}
+                  role={pair.white ? 'button' : undefined}
+                  tabIndex={pair.white ? 0 : undefined}
+                  onMouseEnter={() => setHoveredMove(pair.whiteIndex)}
+                  onMouseLeave={() => setHoveredMove(null)}
+                  onFocus={() => setHoveredMove(pair.whiteIndex)}
+                  onBlur={() => setHoveredMove(null)}
+                  onKeyDown={(event) => { if (pair.white && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setIndexAndSeek(pair.whiteIndex); } }}
                   style={styles.cell(isWhiteActive(rowIdx), !!pair.white)}
                   onClick={pair.white ? () => setIndexAndSeek(pair.whiteIndex) : undefined}
                   aria-label={pair.white ? `White move ${pair.white.label}` : 'No move'}
@@ -415,6 +424,14 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
                 </div>
                 <div
                   className="qc-move-history-cell-black"
+                  title={moves[pair.blackIndex]?.explanation}
+                  role={pair.black ? 'button' : undefined}
+                  tabIndex={pair.black ? 0 : undefined}
+                  onMouseEnter={() => setHoveredMove(pair.blackIndex)}
+                  onMouseLeave={() => setHoveredMove(null)}
+                  onFocus={() => setHoveredMove(pair.blackIndex)}
+                  onBlur={() => setHoveredMove(null)}
+                  onKeyDown={(event) => { if (pair.black && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); setIndexAndSeek(pair.blackIndex); } }}
                   style={styles.cell(isBlackActive(rowIdx), !!pair.black)}
                   onClick={pair.black ? () => setIndexAndSeek(pair.blackIndex) : undefined}
                   aria-label={pair.black ? `Black move ${pair.black.label}` : 'No move'}
@@ -431,9 +448,9 @@ export default function MoveHistoryPanel({ infoMessage = '', onHighlightMove = (
         </div>
       </div>
 
-      {infoMessage && (
-        <div className="qc-move-history-infobox" style={styles.infoBox}>
-          {infoMessage}
+      {(infoMessage || moves[hoveredMove ?? index]?.explanation) && (
+        <div className="qc-move-history-infobox" style={{ ...styles.infoBox, whiteSpace: 'pre-line' }} role="status" aria-live="polite">
+          {hoveredMove !== null ? moves[hoveredMove]?.explanation || infoMessage : infoMessage || moves[index]?.explanation}
         </div>
       )}
     </div>

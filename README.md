@@ -13,55 +13,24 @@ promotion, census conservation — deterministic throughout, no dice anywhere.
   failed with anyone. Every existing account is a disposable test account
   that can be nuked; deploys and even destructive migrations don't need a
   customer-safety review until real users arrive. Update this line at launch.
-- **Play:** vs 12 active AI bots (6 Free, 3 Supporter-or-Premium, 3
+- **Play:** vs 18 active AI bots (6 Free, 6 Supporter-or-Premium, 6
   Premium-only), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
 
 ---
 
-## ⚡ THE RULES — Contact Zap/Heal (adopted 2026-07-11)
+## Current rules — census-cascade zaps
 
-The 2026-07-10 "Contact Zap/Heal" experiment won: it is now THE game, and the
-old classic ruleset (measurement pulses, coherence points, recoherence
-clocks, Zeno, sealed pieces, superposed-king check) is **deleted**, not
-dormant. One engine, one ruleset.
+Move as any remaining identity, then keep only identities compatible with the move.
+Contact uses the mover’s cheapest identity. Enemies lose the strongest jointly
+census-safe identity; friends regain feasible missing identities. Zaps may force
+census collapses anywhere on the target team. The final King possibility is
+protected; revealed Kings obey check and checkmate.
 
-- **On every move, the moved piece touches every square it could capture
-  on** — reach projects from its LEAST valuable remaining type (p<n<b<r<q<k):
-  a fresh blur pokes like a pawn, a confirmed queen sweeps like one.
-  - Enemy contacts are **zapped**: each sheds the most valuable possibility
-    it can lose CLEANLY (King first), walking down k→q→r→b→n→p. A shed whose
-    census cascade would rewrite any other piece is skipped; if nothing sheds
-    cleanly the target is **shielded** (gold ring, fizzle).
-  - **Zaps strike as one volley** (2026-07-13): every shed is judged against
-    the board as the mover landed, then all land together — if the combined
-    cascade would ripple beyond the struck pieces, the WHOLE volley fizzles.
-    A zap never chooses between victims (no square-order tie-breaks); they
-    shed together or shield together. Heals bloom as a volley the same way:
-    the census searches joint regain combinations, so two identities can
-    support each other even when neither would survive alone. It heals the
-    most contacts possible, then chooses the least-value valid combination.
-  - Friendly contacts are **healed**: each regains its cheapest missing
-    feasible identity, including King as the last rung; when the team is
-    kingless, Heal tries King first so it can return (never Pawn on promoted
-    pieces/promotion rank; census-claimed types are skipped).
-- **Royal safeguard**: if a Zap volley would remove King from every remaining
-  holder, all affected King sheds retry from Queen downward. There is no
-  victory by wave-function collapse. A temporarily kingless side keeps
-  playing and can Heal King back. **Check exists only for a revealed King**
-  (`possibleTypes === ['k']`): victory comes by real checkmate.
-- **Zap feedback invariant**: every contacted enemy either loses a possibility
-  and shows the red zap, or loses nothing and shows the gold shield. This also
-  covers fully known pieces and King Guard with no lower identity to shed.
-- Resolution order is mover lands → captured victim resolves → conservation
-  collapses both sides → contact particles launch → Zap/Heal volley resolves.
-- Captures collapse the victim to its least valuable identity. Castling,
-  en passant, and promotion carry over
-  (castle-through-threat is gone with the check rule).
-- UI: red spin-out circle = zap, green bloom = heal, gold ring = shield;
-  promoted pieces wear a solid bar. The coherence pips/recoherence dots and
-  measurement rings are gone.
+See [quick rules](frontend/public/rules.html), the in-game lessons, and
+[the rule change](docs/census-cascade-zap-experiment.md). Run
+`node frontend/tests/tutorial-exercises-verify.mjs` after changing teaching content.
 
 Where things stand after the adoption commit:
 
@@ -320,8 +289,8 @@ benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
-- Active access split: 6 Free / 3 Supporter-or-Premium / 3 Premium-only.
-  The older twelve-bot paid roster is shelved and retained only so saved
+- Active access split: 6 Free / 6 Supporter-or-Premium / 6 Premium-only.
+  Six more legacy identities remain shelved and retained only so saved
   replays can still resolve its names and avatars.
 - Signed-in wins, including a win over the intro bot, offer three randomized
   unlock candidates. At least two match the account's current access tier
@@ -414,16 +383,16 @@ Legend: [ ] not started · [~] in progress · [X] done
         13-game fixture suite replays it move-for-move). The pre-flag
         legacy-record translator was removed in the 2026-07-07 cleanup
         (no saved games predate lossless recording).
-  - [X] Tiered bot roster — **reworked 2026-07-21**: the twelve distinctive
-        bots are split 6 Free / 3 Supporter-or-Premium / 3 Premium-only.
-        The older twelve paid bots are shelved from the picker but retained
+  - [X] Tiered bot roster — **expanded 2026-07-22**: the eighteen distinctive
+        bots are split 6 Free / 6 Supporter-or-Premium / 6 Premium-only.
+        Six legacy bots remain shelved from the picker but retained
         for replay compatibility. Avatar PNGs live at `public/bots/<id>.png`.
-  - [X] Fully customizable profile pic + tagline — **built + browser-tested
-        2026-07-06**: editor in `AccountModal.jsx` (paid only), canvas
-        center-crop → 256px webp → `qc-avatars` bucket (`avatarUpload.js`);
-        `tagline` column + paid-only enforcement trigger in migration
-        `20260707000000_qc_profile_tagline.sql` (applied). Avatar + tagline
-        show on the player bar (`App.jsx` selfAvatar).
+  - [X] Curated character avatar + tagline — players choose from the model
+        roster instead of changing their username or uploading arbitrary
+        profile art. The starter roster is free and Premium unlocks the full
+        character, tagline, and saying catalog. The legacy avatar bucket and
+        upload helper remain in the repository for migration compatibility,
+        but are not exposed in the profile UI.
   - [~] No ads for premium (`maybeShowGameEndAd()` gated on `isAdFree()` —
         paid tier OR a tip's `ad_free_until` — in `App.jsx`; ships with next
         frontend deploy)
@@ -574,6 +543,14 @@ Legend: [ ] not started · [~] in progress · [X] done
       to the 180-second floor, and the solved-puzzle card shows a labeled ad
       separated from Share. Then remove the test flag. Keep the existing
       consent choice in place unless the CMP rollout is deliberately changed.
+- [ ] ON APPROVAL — in AdSense **Ads → By site → Edit**, leave **Auto ads
+      OFF for the entire site**. Do not substitute page exclusions: the game
+      is monetized only through the explicit H5 game-end and opt-in
+      rewarded-review placements, while the completed-puzzle display slot is
+      a separately labeled, manually positioned unit. Guides, Rules, Strategy,
+      FAQ, and About intentionally contain no AdSense loader and stay ad-free.
+      This keeps automated display units away from the board, move controls,
+      Welcome, and the learning library.
 
 ### Product / features (nice-to-have)
 #### Immediate — DONE (2026-07-05, verified locally in-browser)
@@ -707,8 +684,11 @@ Legend: [ ] not started · [~] in progress · [X] done
       "Analyze this game" after a loss, saved-game cap reached, profile
       character/tagline preview clicked. The account panel remains the
       checkout surface; the pitch starts from intent.
-- [ ] Daily-puzzle leaderboard (today's fastest solves — resets daily so it
-      never looks dead; needs a small Supabase table + rate limiting).
+- [ ] **POST-LAUNCH** — Daily-puzzle leaderboard (today's fastest solves —
+      resets daily so it never looks dead; needs a small Supabase table + rate
+      limiting). Deferred until after launch. **When built, exclude the
+      warm-queue bots** (see below) — any public ranking must never list a bot
+      as a human. Same rule applies to a public ranked/Elo leaderboard.
 - [~] **Shareable replay / collapse cards**: saved-game public replay links
       are built (`qc_share_game`/`qc_get_shared_game` capability-token RPCs;
       anonymous links expose one game only). Remaining: after wild moments (full-army
@@ -717,7 +697,14 @@ Legend: [ ] not started · [~] in progress · [X] done
       story. Text-only is fine for v1; best version is a tiny animated replay
       or generated card built for Reddit/Twitter/Discord.
 - [ ] **Shareable replay / Strategy**: donate to popular streamers and ask them to challenge me on my site in the donation.  If they do clip it and post on socials.
-- [ ]  Have a few bots deployed that will seem as if they are users to fillqueues for  awhile and possibly permanently during low periods of activity.
+- [ ] Warm the queue during low-activity periods: run a few varying-strength
+      bots (real accounts, honest K=32 ratings) in the **unranked** pool so a
+      lone player never faces an empty queue. Constraints agreed 2026-07-22:
+      keep them OUT of the ranked pool (server-authoritative Elo), and flag the
+      accounts so any future public leaderboard (puzzle or ranked) excludes
+      them — never present a bot as a human. Existing bots already randomize
+      moves (`noise` + random openings), so a memorized-line rating farm is not
+      a concern.
 #### Later
 - [X] Replay saved games from stored move lists: all signed-in tiers can step
       through the mainline and play legal what-if variations without engine

@@ -51,11 +51,6 @@ export default function AppHeader({
       backgroundClip: 'text',
       color: 'transparent',
       WebkitTextFillColor: 'transparent',
-      textShadow: [
-        '0 0 6px rgba(0,245,255,0.45)',
-        '0 0 12px rgba(180,0,255,0.35)',
-        '0 0 22px rgba(255,59,127,0.35)',
-      ].join(', '),
       lineHeight: 1,
       display: 'inline-block',
       whiteSpace: 'nowrap',
@@ -122,8 +117,6 @@ export default function AppHeader({
             textTransform: 'uppercase',
             cursor: 'pointer',
             maxWidth: 'clamp(140px, 20vw, 240px)',
-            boxShadow: '0 0 10px rgba(0,245,255,0.35), 0 0 22px rgba(180,0,255,0.18), inset 0 0 8px rgba(0,245,255,0.08)',
-            textShadow: '0 0 8px rgba(0,245,255,0.5)',
           }}
         >
           {accountSignedIn ? (

@@ -141,7 +141,7 @@ describe('royal safeguard', () => {
     expect(fastPieces.find((p) => p.id === 'WT').possibleTypes).toEqual(['b', 'q']);
   });
 
-  it('keeps walking the Zap ladder through three blocked identities', () => {
+  it('removes the highest identity even when the census collapses a bystander', () => {
     const pieces = [
       piece('WN', 'white', 'f3', ['n']),
       piece('BT', 'black', 'e5', ['b', 'r', 'q', 'k']),
@@ -156,10 +156,10 @@ describe('royal safeguard', () => {
     const { reference, fastPieces } = resolveBoth(pieces, 'white', 'WN');
     expect(reference.zappedSquares).toEqual(['e5']);
     expect(reference.fizzledSquares).toEqual([]);
-    // King, Queen, and Rook all trigger a conservation cascade here; Bishop
-    // is the first clean shed and must still be reached.
-    expect(reference.pieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['r', 'q', 'k']);
-    expect(fastPieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['r', 'q', 'k']);
+    expect(reference.pieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['b', 'r', 'q']);
+    expect(reference.pieces.find((p) => p.id === 'B4').possibleTypes).toEqual(['k']);
+    expect(fastPieces.find((p) => p.id === 'BT').possibleTypes).toEqual(['b', 'r', 'q']);
+    expect(fastPieces.find((p) => p.id === 'B4').possibleTypes).toEqual(['k']);
   });
 
   it('reports a failed Heal after exhausting every identity', () => {

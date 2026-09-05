@@ -129,7 +129,7 @@ export const LESSONS = [
       {
         title: 'Touch is a zap',
         text: [
-          'When your piece finishes a move, it TOUCHES every square it could capture on. Every enemy piece it touches is ZAPPED: it loses the most valuable possibility it can cleanly give up — King first, then Queen, and on down.',
+          'When your piece finishes a move, it TOUCHES every square it could capture on. Every enemy piece it touches is ZAPPED: it loses the most valuable possibility the census allows it to lose — King first, then Queen, and on down.',
           'A red ring marks each zap. Attack a fresh superposition and its maybe-King is usually the first thing to die.',
         ],
         physics: "Landing a piece couples it to every system in its interaction range. For enemy systems the coupling is dissipative: the highest-value amplitude that can decay without disturbing the rest of the board is projected out.",
@@ -157,10 +157,10 @@ export const LESSONS = [
       {
         title: 'The zap walks down',
         text: [
-          'A zap tries to remove King, then Queen, then Rook, Bishop, Knight, Pawn — and takes the FIRST one it can remove cleanly, without forcing any other piece on the board to change.',
-          'A piece that is fully known (one possibility) has nothing left to lose: zaps pass through it.',
+          'A zap tries to remove King, then Queen, then Rook, Bishop, Knight, Pawn — and chooses a jointly census-safe removal. This can force other pieces on the board to collapse.',
+          'A piece that is fully known (one possibility) has nothing left to lose: it shows a shield.',
         ],
-        physics: "The zap is a guarded projection: it scans the value ladder top-down and removes the first amplitude whose loss leaves every other system's state invariant. A pure state has no amplitude to shed.",
+        physics: "The zap is a guarded projection: it scans the value ladder top-down and removes an identity compatible with the joint census; other pieces may collapse as a result. A pure state has no amplitude to shed.",
         interactive: {
           prompt: 'Zap a wounded piece: hop d2 → f3 and touch the Rook-or-Queen on e5.',
           pieces: [
@@ -382,12 +382,12 @@ export const LESSONS = [
     rulesPage: 'Shields',
     steps: [
       {
-        title: 'Census-locked',
+        title: 'Census cascades',
         text: [
-          'Whenever a zap finds NOTHING it can remove — whether the target is fully known, census-locked, or protected by King Guard — it fizzles against a shield.',
-          'A gold ring marks the shield. These pieces are locked into a closed group: N pieces sharing exactly N identities. Break the group — capture one, or force a collapse — and the shield drops.',
+          'Whenever a zap finds NOTHING it can remove — whether the target is fully known, protected by King Guard, or has no jointly census-safe removal — it fizzles against a shield.',
+          'A closed group does not guarantee a shield. Zap one member and the census can force distant teammates to collapse too. Try it below.',
         ],
-        physics: "A maximally-entangled closed subgroup admits no local projection: removing any amplitude from one member forces a global rearrangement. The guarded zap refuses non-local action and dissipates instead.",
+        physics: "The census links the possible identities of teammates: removing one possibility can determine the identities of the whole group.",
         interactive: {
           prompt: 'Black’s three survivors share exactly three identities. Push e3 → e4 and try to zap d5.',
           pieces: [
@@ -411,14 +411,14 @@ export const LESSONS = [
             { side: 'black', types: 'r', captured: true },
           ],
           goal: { kind: 'move', from: 'e3', to: 'e4' },
-          success: 'SHIELDED. Removing King from d5 would force e8 to be THE king; removing Rook would collapse d5 outright and rearrange the rest. No clean shed exists, so the zap dissipated against the gold ring.',
+          success: 'Zap removed King from d5, revealing a Rook. The census then revealed e8 as King and a8 as Queen. Those distant pieces changed because the three survivors must fill one Rook, one Queen, and one King slot.',
         },
         board: {
           files: 6,
           ranks: 6,
           pieces: [
             { sq: 'e4', side: 'white', types: 'p' },
-            { sq: 'd5', side: 'black', types: 'rk', shield: true },
+            { sq: 'd5', side: 'black', types: 'r' },
           ],
         },
       },

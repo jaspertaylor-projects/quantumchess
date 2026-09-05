@@ -29,6 +29,7 @@ import PlayerBar from './components/PlayerBar.jsx';
 import MobileNewGameSheet from './components/MobileNewGameSheet.jsx';
 import { StartGameCta, IntroNudgeToast, IntroSpeechOverlay } from './components/BoardOverlays.jsx';
 import AppModals from './components/AppModals.jsx';
+import ReviewModal from './review/ReviewModal.jsx';
 import appLayoutStyles from './components/appLayoutStyles.js';
 import useLocalAi from './ai/useLocalAi.js';
 import { canAccessBot, devUnlockAllBots, getActiveBotById, DEFAULT_BOT_ID } from './ai/bots.js';
@@ -58,6 +59,9 @@ import {
 } from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
+import {
+  isProfileRoute, isReviewRoute, profileUrlFrom, reviewUrlFrom,
+} from './welcome/welcomeRouting.js';
 
 const DEFAULT_SOUND_SETTINGS = Object.freeze({ moveSounds: true });
 
@@ -147,13 +151,15 @@ export default function App({ entryAction = null }) {
     'qcSoundSettings', DEFAULT_SOUND_SETTINGS,
   );
 
-  // Unlock Web Audio during the first genuine interaction so delayed bot,
-  // tutorial, and online replies can still make sound under autoplay rules.
+  // Unlock Web Audio on genuine interactions so delayed bot, tutorial, and
+  // online replies can still make sound under autoplay rules. This remains
+  // installed (rather than once-only) because mobile browsers interrupt the
+  // context whenever the app is backgrounded and require a later gesture.
   useEffect(() => {
     if (!soundSettings.moveSounds) return undefined;
     const prime = () => primeMoveAudio();
-    window.addEventListener('pointerdown', prime, { once: true, capture: true });
-    window.addEventListener('keydown', prime, { once: true, capture: true });
+    window.addEventListener('pointerdown', prime, { capture: true });
+    window.addEventListener('keydown', prime, { capture: true });
     return () => {
       window.removeEventListener('pointerdown', prime, { capture: true });
       window.removeEventListener('keydown', prime, { capture: true });
@@ -265,6 +271,86 @@ export default function App({ entryAction = null }) {
     isOnlineGame: isOnlineGameRef.current,
   });
 
+  // The account chip opens a genuine /profile page. Contextual account opens
+  // (locked bots, billing returns, password recovery) remain compact modals
+  // so they do not unexpectedly navigate away from the task that invoked them.
+  const [profilePage, setProfilePage] = useState(() => isProfileRoute(window.location.pathname));
+  const openProfileOnMount = useRef(entryAction === 'profile' || profilePage);
+  useEffect(() => {
+    if (!openProfileOnMount.current) return;
+    openProfileOnMount.current = false;
+    setProfilePage(true);
+    setAccountOpen(true, 'account');
+  }, [setAccountOpen]);
+  const openProfilePage = useCallback(() => {
+    if (!isProfileRoute(window.location.pathname)) {
+      window.history.pushState(
+        { ...(window.history.state || {}), qcProfilePage: true },
+        '',
+        profileUrlFrom(window.location.search),
+      );
+    }
+    setProfilePage(true);
+    setAccountOpen(true, 'account');
+  }, [setAccountOpen]);
+  useEffect(() => {
+    const onPopState = () => {
+      const onProfile = isProfileRoute(window.location.pathname);
+      setProfilePage(onProfile);
+      if (onProfile) setAccountOpen(true, 'account');
+      else setAccountOpen(false);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [setAccountOpen]);
+  const handleCloseAccount = useCallback(() => {
+    setAccountOpen(false);
+    setBillingReturn(null);
+    if (!isProfileRoute(window.location.pathname)) return;
+    setProfilePage(false);
+    if (window.history.state && window.history.state.qcProfilePage) {
+      window.history.back();
+    } else {
+      window.history.replaceState({}, '', '/play');
+    }
+  }, [setAccountOpen, setBillingReturn]);
+
+  // Review is a real page in the browser history, while its loaded game stays
+  // in App state so opening from the winner/account screens is instantaneous.
+  // Back closes it; Forward restores the same review without another fetch.
+  const latestReviewGameRef = useRef(reviewGame);
+  useEffect(() => {
+    if (!reviewGame) return;
+    latestReviewGameRef.current = reviewGame;
+    if (!isReviewRoute(window.location.pathname)) {
+      window.history.pushState(
+        { ...(window.history.state || {}), qcReviewPage: true },
+        '',
+        reviewUrlFrom(window.location.search),
+      );
+    }
+  }, [reviewGame]);
+  useEffect(() => {
+    const onPopState = () => {
+      if (isReviewRoute(window.location.pathname)) {
+        if (latestReviewGameRef.current) setReviewGame(latestReviewGameRef.current);
+      } else {
+        setReviewGame(null);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [setReviewGame]);
+  const handleCloseReview = useCallback(() => {
+    setReviewGame(null);
+    if (!isReviewRoute(window.location.pathname)) return;
+    if (window.history.state && window.history.state.qcReviewPage) {
+      window.history.back();
+    } else {
+      window.history.replaceState({}, '', '/play');
+    }
+  }, [setReviewGame]);
+
   const handleDevAccountLevelChange = useCallback((level) => {
     devAccountPreview.setLevel(level);
     setAccountOpen(true, 'account');
@@ -297,7 +383,7 @@ export default function App({ entryAction = null }) {
   const { isNarrow, isWide, boardSize, currentPieceSize } = layout;
 
   const isOnlineBars = isOnlineGameRef.current;
-  const handleOpenAccountFromRating = useCallback(() => setAccountOpen(true), [setAccountOpen]);
+  const handleOpenAccountFromRating = useCallback(() => setAccountOpen(true, 'signup'), [setAccountOpen]);
   const bars = usePlayerBars({
     auth,
     aiBot,
@@ -343,6 +429,7 @@ export default function App({ entryAction = null }) {
     isOnlineGameRef,
     isRankedOnlineRef: online.isRankedOnlineRef,
     moves,
+    gameInstanceId,
   });
 
   const didUserBeatBot = Boolean(
@@ -504,7 +591,10 @@ export default function App({ entryAction = null }) {
   // Engaging with a glowing onboarding button also retires the glow.
   const handleOpenSettings = useCallback(() => { setSettingsOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
   const handleOpenRules = useCallback(() => { setRulesOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
-  const handleOpenAccount = useCallback(() => { setAccountOpen(true); dismissOnboarding(); }, [setAccountOpen, dismissOnboarding]);
+  const handleOpenAccount = useCallback(() => {
+    openProfilePage();
+    dismissOnboarding();
+  }, [openProfilePage, dismissOnboarding]);
   const handleOpenTutorial = useCallback(() => { setTutorialOpen(true); dismissOnboarding(); }, [dismissOnboarding]);
 
   const handleStartGame = useCallback((settings) => {
@@ -521,6 +611,7 @@ export default function App({ entryAction = null }) {
 
     dispatch(setGameSettings(settings));
     dispatch(resetGame());
+    setShowWinPopup(false);
 
     // Bump engine reset key to clear the internal timeline and view index
     setGameInstanceId((n) => n + 1);
@@ -853,6 +944,65 @@ export default function App({ entryAction = null }) {
     onIntroSpeechExpand: intro.expandIntroSpeech,
   };
 
+  if (reviewGame) {
+    // Full-page Replay/Review still belongs to the app shell: desktop keeps
+    // the branded header and phones keep their familiar bottom navigation.
+    // Shell actions intentionally leave /review for /play before opening the
+    // requested surface; the red X retains browser-Back semantics.
+    const leaveReviewFor = (action) => {
+      setReviewGame(null);
+      if (isReviewRoute(window.location.pathname)) {
+        window.history.replaceState({}, '', '/play');
+      }
+      action();
+    };
+    return (
+      <div className={`qc-review-app-shell${isNarrow ? ' qc-review-app-shell--mobile' : ' qc-review-app-shell--desktop'}`}>
+        {!isNarrow ? (
+          <AppHeader
+            accountSignedIn={Boolean(auth.user)}
+            accountName={(auth.profile && auth.profile.username) || ''}
+            accountAvatarUrl={(auth.profile && auth.profile.avatar_url) || null}
+            onOpenAccount={() => leaveReviewFor(handleOpenAccount)}
+            onOpenSettings={() => leaveReviewFor(handleOpenSettings)}
+          />
+        ) : null}
+
+        <ReviewModal
+          open
+          page
+          onClose={handleCloseReview}
+          onShareGame={handleShareGame}
+          game={reviewGame.game}
+          moves={reviewGame.moves}
+          analysisEnabled={reviewGame.analysisEnabled !== false}
+          initialReplayAction={reviewGame.initialReplayAction || null}
+          loading={Boolean(reviewGame.loading)}
+          loadError={reviewGame.loadError}
+          showEvalGraph={Boolean(reviewGame.showEvalGraph)}
+          pieceSvgStyles={svgStyles}
+          indicators={indicators}
+          squareColors={boardColors}
+        />
+
+        {isNarrow ? (
+          <MobileBar
+            onNewGame={() => leaveReviewFor(() => {
+              setMobileNewGameOpen(true);
+              dismissOnboarding();
+            })}
+            onOpenAccount={() => leaveReviewFor(handleOpenAccount)}
+            accountSignedIn={Boolean(auth.user)}
+            onOpenTutorial={() => leaveReviewFor(handleOpenTutorial)}
+            onOpenSettings={() => leaveReviewFor(handleOpenSettings)}
+            onOpenPuzzle={() => leaveReviewFor(puzzleLinks.handleOpenPuzzle)}
+            puzzleUnsolved={puzzleLinks.puzzleUnsolved}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="qc-app-container" style={styles.appContainer}>
       {/* Phones skip the banner — every vertical pixel goes to the board. */}
@@ -1035,8 +1185,6 @@ export default function App({ entryAction = null }) {
       </div>
 
       <footer className="qc-site-footer" style={styles.footer}>
-        <a href="/about.html" style={styles.footerLink}>About</a>
-        <span style={{ opacity: 0.4 }}>·</span>
         <a href="/privacy.html" style={styles.footerLink}>Privacy</a>
         <span style={{ opacity: 0.4 }}>·</span>
         <a href="/terms.html" style={styles.footerLink}>Terms</a>
@@ -1167,8 +1315,9 @@ export default function App({ entryAction = null }) {
         onChooseGameAfterInviteError={handleChooseGameAfterInviteError}
         auth={auth}
         accountOpen={accountOpen}
+        accountPage={profilePage}
         accountUpsellSource={accountUpsellSource}
-        onCloseAccount={() => { setAccountOpen(false); setBillingReturn(null); }}
+        onCloseAccount={handleCloseAccount}
         billingReturn={billingReturn}
         handleReplayGame={handleReplayGame}
         handleReviewGame={handleReviewGame}
@@ -1181,8 +1330,6 @@ export default function App({ entryAction = null }) {
         }}
         pricingOpen={pricingOpen}
         onClosePricing={() => setPricingOpen(false)}
-        reviewGame={reviewGame}
-        onCloseReview={() => setReviewGame(null)}
         adminStatsOpen={adminStatsOpen}
         onOpenAdminStats={() => setAdminStatsOpen(true)}
         onCloseAdminStats={() => setAdminStatsOpen(false)}

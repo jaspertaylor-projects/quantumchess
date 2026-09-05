@@ -6,7 +6,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BOTS, BOT_INSPIRATIONS } from '../src/ai/bots.js';
+import {
+  ACTIVE_BOTS,
+  BOTS,
+  BOT_INSPIRATIONS,
+  FREE_BOTS,
+  PREMIUM_BOTS,
+  SHELVED_BOTS,
+  SUPPORTER_BOTS,
+} from '../src/ai/bots.js';
 import { CHARACTERS } from '../src/characters/characterCatalog.js';
 
 const frontendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,7 +80,12 @@ function printList(label, items) {
   for (const item of items) console.log(`  - ${item}`);
 }
 
-console.log(`Bot catalog: ${BOTS.length} bots (${BOTS.filter((b) => !b.premium).length} free, ${BOTS.filter((b) => b.premium).length} premium)`);
+console.log(
+  `Bot catalog: ${BOTS.length} identities `
+  + `(${ACTIVE_BOTS.length} active: ${FREE_BOTS.length} Free, `
+  + `${SUPPORTER_BOTS.length} Supporter, ${PREMIUM_BOTS.length} Premium; `
+  + `${SHELVED_BOTS.length} shelved)`,
+);
 console.log(`Bot avatar files: ${actualBotPngs.size} pngs (${playerSeatPngs.size} player-seat assets)`);
 console.log(`Character catalog: ${CHARACTERS.length} characters`);
 console.log(`Character avatar files: ${actualCharacterImages.size} pngs`);

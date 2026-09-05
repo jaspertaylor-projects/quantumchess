@@ -9,7 +9,10 @@ function contextConstructor() {
 }
 
 function getContext() {
-  if (audioContext) return audioContext;
+  // Mobile browsers can permanently close a context under memory pressure.
+  // Holding that dead instance made every later move silently no-op.
+  if (audioContext && audioContext.state !== 'closed') return audioContext;
+  audioContext = null;
   const AudioContextClass = contextConstructor();
   if (!AudioContextClass) return null;
   try {
@@ -39,7 +42,7 @@ function scheduleRustle(ctx, capture) {
   const duration = capture ? 0.22 : 0.135;
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(capture ? 0.31 : 0.18, now + 0.012);
+  master.gain.exponentialRampToValueAtTime(capture ? 0.682 : 0.572, now + 0.012);
   master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   master.connect(ctx.destination);
 
@@ -49,14 +52,14 @@ function scheduleRustle(ctx, capture) {
   noise.buffer = makeNoise(ctx, duration);
   const highpass = ctx.createBiquadFilter();
   highpass.type = 'highpass';
-  highpass.frequency.setValueAtTime(capture ? 430 : 900, now);
+  highpass.frequency.setValueAtTime(capture ? 220 : 520, now);
   const bandpass = ctx.createBiquadFilter();
   bandpass.type = 'bandpass';
-  bandpass.Q.setValueAtTime(capture ? 1.1 : 2.2, now);
-  bandpass.frequency.setValueAtTime(capture ? 3200 : 5100, now);
-  bandpass.frequency.exponentialRampToValueAtTime(capture ? 950 : 2100, now + duration);
+  bandpass.Q.setValueAtTime(capture ? 0.9 : 1.35, now);
+  bandpass.frequency.setValueAtTime(capture ? 2800 : 3600, now);
+  bandpass.frequency.exponentialRampToValueAtTime(capture ? 750 : 1200, now + duration);
   const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(capture ? 0.72 : 0.54, now);
+  noiseGain.gain.setValueAtTime(capture ? 0.95 : 1.1, now);
   noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   noise.connect(highpass);
   highpass.connect(bandpass);
@@ -78,13 +81,28 @@ function scheduleRustle(ctx, capture) {
       now + offset + (capture ? 0.055 : 0.033),
     );
     gain.gain.setValueAtTime(0.0001, now + offset);
-    gain.gain.exponentialRampToValueAtTime(capture ? 0.16 : 0.09, now + offset + 0.002);
+    gain.gain.exponentialRampToValueAtTime(capture ? 0.28 : 0.22, now + offset + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + (capture ? 0.06 : 0.038));
     osc.connect(gain);
     gain.connect(master);
     osc.start(now + offset);
     osc.stop(now + offset + (capture ? 0.065 : 0.043));
   });
+
+  // A very short mid-frequency body makes the rustle survive laptop and
+  // phone speakers. It stays underneath the noise/snaps, so the result still
+  // reads as an electronic branch movement rather than a chess-clock beep.
+  const body = ctx.createOscillator();
+  const bodyGain = ctx.createGain();
+  body.type = 'triangle';
+  body.frequency.setValueAtTime(capture ? 540 : 760, now);
+  body.frequency.exponentialRampToValueAtTime(capture ? 170 : 260, now + (capture ? 0.12 : 0.085));
+  bodyGain.gain.setValueAtTime(capture ? 0.2 : 0.16, now);
+  bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + (capture ? 0.13 : 0.095));
+  body.connect(bodyGain);
+  bodyGain.connect(master);
+  body.start(now);
+  body.stop(now + (capture ? 0.135 : 0.1));
 
   if (capture) {
     // A compact low thump supplies force without turning the effect into an
@@ -94,7 +112,7 @@ function scheduleRustle(ctx, capture) {
     impact.type = 'sine';
     impact.frequency.setValueAtTime(145, now);
     impact.frequency.exponentialRampToValueAtTime(52, now + 0.12);
-    impactGain.gain.setValueAtTime(0.26, now);
+    impactGain.gain.setValueAtTime(0.42, now);
     impactGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
     impact.connect(impactGain);
     impactGain.connect(master);
@@ -118,7 +136,7 @@ export function positionAddedCapture(beforePieces, afterPieces) {
 
 export function primeMoveAudio() {
   const ctx = getContext();
-  if (!ctx || ctx.state !== 'suspended') return;
+  if (!ctx || !ctx.state || ctx.state === 'running') return;
   try { ctx.resume().catch(() => {}); } catch (_) { /* unsupported/blocked */ }
 }
 
@@ -129,7 +147,11 @@ export function playMoveSound({ capture = false, enabled = true } = {}) {
   const play = () => {
     try { scheduleRustle(ctx, Boolean(capture)); } catch (_) { /* audio is cosmetic */ }
   };
-  if (ctx.state === 'suspended') {
+  // Safari uses `interrupted` in addition to the standard `suspended` state.
+  // Resume every non-running context while this call is still inside the
+  // move gesture; a suspended-only check reported success but produced air.
+  if (ctx.state && ctx.state !== 'running') {
+    if (typeof ctx.resume !== 'function') return false;
     try { ctx.resume().then(play).catch(() => {}); } catch (_) { return false; }
   } else {
     play();

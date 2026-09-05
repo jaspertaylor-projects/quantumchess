@@ -130,6 +130,17 @@ function canSeatAll(pieceOptions, slots, forcedPieceIdx = -1, forcedSlotIdx = -1
   return true;
 }
 
+// Whether the side still has at least one complete census seating. Zap uses
+// this before committing a volley: collapse chains are welcome, but removing
+// a combination of possibilities that leaves no legal chess set is not.
+export function isCensusConsistent(pieces, side) {
+  const sidePieces = pieces.filter((p) => p.side === side);
+  const slots = buildSlotPool();
+  if (sidePieces.length === 0) return true;
+  if (sidePieces.length > slots.length) return false;
+  return canSeatAll(sidePieces.map(poolOptionsForPiece), slots);
+}
+
 // Prune every (piece, pool) option that appears in no full seating.
 // Returns whether anything changed; returns false untouched when the side has
 // no consistent seating at all (a lost/terminal state the game-over logic owns).

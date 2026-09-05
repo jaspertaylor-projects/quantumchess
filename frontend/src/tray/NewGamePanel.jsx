@@ -100,7 +100,6 @@ function OptionSelect({ label, value, options, onChange, ariaLabel }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={ariaLabel || label}
-        title={`Choose ${label.toLowerCase()}`}
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 1fr) auto',

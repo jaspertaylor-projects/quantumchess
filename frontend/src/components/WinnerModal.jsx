@@ -6,9 +6,10 @@
 // Exported To: ../App.jsx (via AppModals)
 
 import React from 'react';
-import { RotateCcw, ChartSpline, X as XIcon, Sparkles, Lock as LockIcon, UserPlus } from 'lucide-react';
+import { RotateCcw, ChartSpline, Sparkles, Lock as LockIcon, UserPlus } from 'lucide-react';
 import theme from '../theme.js';
 import ModalShell from './ModalShell.jsx';
+import ModalCloseButton from './ModalCloseButton.jsx';
 import { botAccess, botAccessLabel, canAccessBot, getBotAvatarUrl } from '../ai/bots.js';
 
 export default function WinnerModal({
@@ -44,12 +45,6 @@ export default function WinnerModal({
       display: 'grid',
       gap: 14,
       textAlign: 'center',
-    },
-    close: {
-      position: 'absolute', top: 10, right: 10,
-      width: 30, height: 30, display: 'grid', placeItems: 'center',
-      borderRadius: 8, border: 'none', background: 'transparent',
-      color: 'rgba(255,255,255,0.45)', cursor: 'pointer',
     },
     title: {
       fontSize: '1.45rem', fontWeight: 900, letterSpacing: '-0.015em',
@@ -116,9 +111,12 @@ export default function WinnerModal({
       panelClassName="qc-winner-modal"
       panelStyle={styles.panel}
     >
-      <button type="button" style={styles.close} onClick={onClose} aria-label="Close">
-        <XIcon size={17} />
-      </button>
+      <ModalCloseButton
+        onClick={onClose}
+        ariaLabel="Close game over screen"
+        className="qc-winner-close"
+        style={{ position: 'absolute', top: 10, right: 10 }}
+      />
       <h2 id="qc-winner-title" className="qc-winner-title" style={styles.title}>{title}</h2>
       <p className="qc-winner-sub" style={styles.sub}>{winnerText || 'Game over.'}</p>
 
@@ -217,7 +215,7 @@ export default function WinnerModal({
           <span style={styles.promoChip}>AD</span>
           <span style={styles.promoText}>
             <span style={styles.promoStrong}>$5 once</span> — three ad-free months,
-            five daily reviews, and three Supporter bots.
+            five daily reviews, and six Supporter bots.
           </span>
           <Sparkles size={16} color="#ffd166" style={{ flex: 'none' }} aria-hidden="true" />
         </div>

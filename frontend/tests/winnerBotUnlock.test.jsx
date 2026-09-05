@@ -6,6 +6,14 @@ import WinnerModal from '../src/components/WinnerModal.jsx';
 import { FREE_BOTS, SUPPORTER_BOTS } from '../src/ai/bots.js';
 
 describe('winner bot unlock reward', () => {
+  it('uses the shared red modal close control on game-over screens', () => {
+    const html = renderToStaticMarkup(
+      <WinnerModal open title="Draw" winnerText="Draw by agreement." />
+    );
+    expect(html).toContain('qc-icon-button qc-winner-close');
+    expect(html).toContain('aria-label="Close game over screen"');
+  });
+
   it('shows three personalities and clearly labels a gated choice', () => {
     const candidates = [FREE_BOTS[1], FREE_BOTS[2], SUPPORTER_BOTS[0]];
     const html = renderToStaticMarkup(

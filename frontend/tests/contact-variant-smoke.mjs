@@ -1,9 +1,13 @@
 // Smoke test for the contact zap/heal rules — random full games with
-// per-ply invariants (zap sheds cleanly, heals may restore king, terminal
+// per-ply invariants (zaps may propagate collapse chains, heals may restore king, terminal
 // states legal). Not part of the vitest suite — run on demand:
 //   docker exec -u 1000:1000 -w /app quantumchess-frontend-1 node tests/contact-variant-smoke.mjs
 import { makeInitialSnapshot, advanceEntry } from '../src/chessboard/advanceCore.js';
-import { generateLegalReplies, simulateStandardMove } from '../src/chessboard/quantumEngine.js';
+import {
+  generateLegalReplies,
+  isCensusConsistent,
+  simulateStandardMove,
+} from '../src/chessboard/quantumEngine.js';
 import { CONTACT_ZAP_ORDER } from '../src/chessboard/gameConstants.js';
 
 let fails = 0;
@@ -75,12 +79,9 @@ for (const seed of [11, 42, 77]) {
     const lm = snap.lastMove || {};
     
 
-    // Zap invariant (guarded shed): the zap itself is a single clean shed,
-    // but the same ply's move resolution (capture-collapse cascades) can
-    // narrow the target too before the pulse fires. Ply-wide we can only
-    // assert: a zapped piece lost possibilities and gained none. The
-    // exactly-one-shed guarantee is covered by the hand-built guard
-    // scenarios below, where no capture muddies the ply.
+    // Zap invariant: the contacted target loses possibilities and gains
+    // none. The census may propagate that fact into additional collapses on
+    // the target and elsewhere.
     for (const sq of lm.zappedSquares || []) {
       zapEvents += 1;
       const beforePiece = before.find((p) => !p.captured && p.square === sq);
@@ -91,17 +92,23 @@ for (const seed of [11, 42, 77]) {
       assert(gained.length === 0, `seed ${seed} ply ${plies}: zapped ${sq} gained nothing`);
       assert(lost.length >= 1, `seed ${seed} ply ${plies}: zapped ${sq} lost a possibility`);
     }
-    // Heal invariant: the contacted piece gains a possibility, or a restored
-    // King immediately resolves it to the royal slot through conservation.
+    // A marked Heal took root against the post-move/pre-heal board. A
+    // move-wide comparison can show no net gain when the same move's census
+    // propagation narrowed that piece first, so only require a live result
+    // here; focused Heal tests pin the regain itself.
     for (const sq of lm.healedSquares || []) {
       healEvents += 1;
       const beforePiece = before.find((p) => !p.captured && p.square === sq);
       const afterPiece = snap.pieces.find((p) => beforePiece && p.id === beforePiece.id);
       if (!beforePiece || !afterPiece) continue;
-      const gained = (afterPiece.possibleTypes || []).filter((t) => !beforePiece.possibleTypes.includes(t));
-      assert(gained.length >= 1 || afterPiece.possibleTypes.join('') === 'k',
-        `seed ${seed} ply ${plies}: healed ${sq} gained or restored King`);
+      assert((afterPiece.possibleTypes || []).length > 0,
+        `seed ${seed} ply ${plies}: healed ${sq} remains a valid piece`);
     }
+
+    assert(isCensusConsistent(snap.pieces, 'white'),
+      `seed ${seed} ply ${plies}: white census has a complete seating`);
+    assert(isCensusConsistent(snap.pieces, 'black'),
+      `seed ${seed} ply ${plies}: black census has a complete seating`);
 
     // Dead-economy invariant: coherence/recohere/observed frozen at defaults.
     for (const p of snap.pieces) {
@@ -116,7 +123,7 @@ for (const seed of [11, 42, 77]) {
   assert(zapEvents > 0, `seed ${seed}: at least one zap happened`);
 }
 
-// --- 3. Guarded zap: census cascades block the shed; clean sheds land.
+// --- 3. Cascade zap: a contacted shed may settle a closed census group.
 // Hand-built positions (custom piece arrays with consistent censuses).
 function makePiece(id, side, square, types, { captured = false, captureIndex = null } = {}) {
   return {
@@ -140,9 +147,7 @@ const whiteSide = (sq) => [
 ];
 
 {
-  // FIZZLE: two black king-holders. Zapping k off d5 would force e8 to be
-  // the definite king (cascade); zapping r off d5 collapses it to {k} and
-  // forces the others too. Nothing sheds cleanly -> the zap dissipates.
+  // The zap removes King from d5 and the census resolves all three survivors.
   const pieces = [
     ...whiteSide('e3'),
     makePiece('b-A', 'black', 'e8', ['q', 'k']),
@@ -152,18 +157,20 @@ const whiteSide = (sq) => [
   ];
   const sim = simulateStandardMove(pieces, 'w-M', 'e4', 50);
   assert(sim.ok, 'guard fizzle: 1.e4 simulates');
-  assert((sim.zappedSquares || []).length === 0,
-    `guard: no clean shed on d5 -> zap dissipates (got ${(sim.zappedSquares || []).join(',')})`);
-  assert((sim.fizzledSquares || []).join(',') === 'd5',
-    `guard: fizzle reported on d5 for the shield UI (got ${(sim.fizzledSquares || []).join(',')})`);
+  assert((sim.zappedSquares || []).join(',') === 'd5',
+    `cascade: d5 zapped (got ${(sim.zappedSquares || []).join(',')})`);
+  assert((sim.fizzledSquares || []).length === 0,
+    `cascade: d5 does not shield (got ${(sim.fizzledSquares || []).join(',')})`);
   const b = sim.pieces.find((p) => p.id === 'b-B');
-  assert(b.possibleTypes.join('') === 'rk', `guard: d5 keeps {r,k} (got ${b.possibleTypes.join('')})`);
+  assert(b.possibleTypes.join('') === 'r', `cascade: d5 resolves as Rook (got ${b.possibleTypes.join('')})`);
   const a = sim.pieces.find((p) => p.id === 'b-A');
-  assert(a.possibleTypes.join('') === 'qk', `guard: e8 untouched (got ${a.possibleTypes.join('')})`);
+  const c = sim.pieces.find((p) => p.id === 'b-C');
+  assert(a.possibleTypes.join('') === 'k', `cascade: e8 resolves as King (got ${a.possibleTypes.join('')})`);
+  assert(c.possibleTypes.join('') === 'q', `cascade: a8 resolves as Queen (got ${c.possibleTypes.join('')})`);
 }
 {
-  // CLEAN SHED: three black king-holders. Zapping k off d5 leaves the king
-  // seatable on e8 or a8 — local, so the most valuable type still goes.
+  // Three black king-holders: zapping k off d5 leaves the King seatable
+  // elsewhere, so the most valuable type goes without forcing a collapse.
   const pieces = [
     ...whiteSide('e3'),
     makePiece('b-A', 'black', 'd5', ['r', 'q', 'k']),
@@ -174,15 +181,15 @@ const whiteSide = (sq) => [
   ];
   const sim = simulateStandardMove(pieces, 'w-M', 'e4', 50);
   assert(sim.ok, 'guard clean: 1.e4 simulates');
-  assert((sim.zappedSquares || []).join(',') === 'd5', `guard: d5 zapped (got ${(sim.zappedSquares || []).join(',')})`);
+  assert((sim.zappedSquares || []).join(',') === 'd5', `cascade: d5 zapped (got ${(sim.zappedSquares || []).join(',')})`);
   assert((sim.fizzledSquares || []).length === 0,
-    `guard: clean shed reports no fizzle (got ${(sim.fizzledSquares || []).join(',')})`);
+    `cascade: shed reports no fizzle (got ${(sim.fizzledSquares || []).join(',')})`);
   const a = sim.pieces.find((p) => p.id === 'b-A');
-  assert(a.possibleTypes.join('') === 'rq', `guard: d5 shed k cleanly (got ${a.possibleTypes.join('')})`);
+  assert(a.possibleTypes.join('') === 'rq', `cascade: d5 shed k (got ${a.possibleTypes.join('')})`);
   const bAfter = sim.pieces.find((p) => p.id === 'b-B');
   const cAfter = sim.pieces.find((p) => p.id === 'b-C');
   assert(bAfter.possibleTypes.join('') === 'rqk' && cAfter.possibleTypes.join('') === 'rk',
-    `guard: bystanders untouched (got ${bAfter.possibleTypes.join('')}/${cAfter.possibleTypes.join('')})`);
+    `cascade: unconstrained bystanders stay open (got ${bAfter.possibleTypes.join('')}/${cAfter.possibleTypes.join('')})`);
 }
 
 // --- 4. Back-rank pawn rights: after 1.e4 clears e2, the e1 piece may

@@ -2,11 +2,9 @@
 // Purpose: Rules on the packed board — make (standard / en passant / castle)
 // with the shared conservation + contact zap/heal tail, legality, terminal
 // tests, and legal-reply generation as a make → visit → rollback walk. The
-// zap clean-shed guard reads the JOURNAL instead of diffing boards: a shed is
-// clean iff every word the trial's conservation cascade touched belongs to
-// the target and the target lost exactly the shed type (possible-mask
-// comparison, matching reference shedIsLocal which ignores base/promo
-// redistribution). Mirror points marked "REF:" against quantumEngine.js.
+// zap volley deliberately permits the shared conservation pass to collapse
+// bystanders after a possibility is removed. Mirror points marked "REF:"
+// against quantumEngine.js.
 // Imports From: ./fastBoard.js, ./fastGeometry.js, ./fastConservation.js
 // Exported To: ./fastSearch.js, ../../../tests/fastEngineDiff.test.js
 
@@ -19,7 +17,7 @@ import {
 import {
   emitMovesForType, emitAttacksForType, typeCanMove, isSquareCapturableBy,
 } from './fastGeometry.js';
-import { applyConstraintsFast } from './fastConservation.js';
+import { applyConstraintsFast, censusIsConsistentFast } from './fastConservation.js';
 
 const otherSideBit = (s) => s ^ BLACK;
 
@@ -88,13 +86,9 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     }
   }
 
-  // Zaps strike TOGETHER (REF: the volley, rules change 2026-07-13). Every
-  // target's candidate shed is judged in ISOLATION against the pre-zap
-  // state (trial then rollback), then all candidates land as one volley:
-  // joint-clean commits, anything else fizzles the whole volley. If the
-  // candidates would collectively shed every last King, each King target
-  // retries from Queen downward. Order-independent by construction.
-  const volleyCandidates = []; // [pieceIdx, shedBit, preTypes] triplets, flat
+  // Zaps strike TOGETHER (REF: the volley). Build each target's high-to-low
+  // shed ladder from the pre-zap state.
+  const zapTargets = []; // { i, options }
   for (let c = 0; c < contacts.length; c++) {
     const i = contacts[c];
     const w = bd.words[i];
@@ -102,106 +96,96 @@ export function contactZapHeal(bd, moverSide, moverIdxA, moverIdxB) {
     if (w & CAPTURED) continue;
     const types = possibleOf(w);
     if (popcount6(types) <= 1) continue;
-    let found = false;
-    for (let z = 0; z < 6 && !found; z++) {
+    const options = [];
+    for (let z = 0; z < ZAP_ORDER.length; z++) {
       const shed = ZAP_ORDER[z];
-      if (!(types & shed)) continue;
-      const mark = watermark(bd);
-      setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
-      applyConstraintsFast(bd, sideBit(w) === 0 ? 1 : 2);
-
-      // Isolated cleanliness via the journal (possible-mask comparison, as
-      // the reference's shedIsLocal).
-      let clean = true;
-      const j = bd.journal;
-      for (let k = mark; k < j.length; k += 2) {
-        if (j[k] !== i) { clean = false; break; }
-      }
-      if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
-
-      rollback(bd, mark); // isolation: the trial never persists
-      if (clean) {
-        volleyCandidates.push(i, shed, types);
-        found = true;
-      }
+      if (types & shed) options.push(shed);
     }
+    if (options.length) zapTargets.push({ i, options });
   }
 
-  let targetSide = -1;
-  for (let k = 0; k < volleyCandidates.length; k += 3) {
-    targetSide = sideBit(bd.words[volleyCandidates[k]]);
-    break;
-  }
+  const targetSide = otherSideBit(moverSide);
   const kingHolderIdxs = [];
-  if (targetSide >= 0) {
-    for (let i = 0; i < bd.n; i++) {
-      const w = bd.words[i];
-      if (!(w & CAPTURED) && sideBit(w) === targetSide && (possibleOf(w) & TK)) kingHolderIdxs.push(i);
-    }
+  for (let i = 0; i < bd.n; i++) {
+    const w = bd.words[i];
+    if (!(w & CAPTURED) && sideBit(w) === targetSide && (possibleOf(w) & TK)) kingHolderIdxs.push(i);
   }
   const hasKingShed = (idx) => {
-    for (let q = 0; q < volleyCandidates.length; q += 3) {
-      if (volleyCandidates[q] === idx && volleyCandidates[q + 1] === TK) return true;
+    for (let q = 0; q < zapTargets.length; q++) {
+      if (zapTargets[q].i === idx && zapTargets[q].options[0] === TK) return true;
     }
     return false;
   };
   const wouldEraseFinalKing = kingHolderIdxs.length > 0 && kingHolderIdxs.every(hasKingShed);
   if (wouldEraseFinalKing) {
-    for (let q = volleyCandidates.length - 3; q >= 0; q -= 3) {
-      if (volleyCandidates[q + 1] !== TK) continue;
-      const i = volleyCandidates[q];
-      const w = bd.words[i];
-      const types = volleyCandidates[q + 2];
-      let fallback = 0;
-      for (let z = 1; z < ZAP_ORDER.length; z++) {
-        const shed = ZAP_ORDER[z];
-        if (!(types & shed)) continue;
-        const mark = watermark(bd);
-        setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
-        applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
-        let clean = true;
-        const j = bd.journal;
-        for (let k = mark; k < j.length; k += 2) {
-          if (j[k] !== i) { clean = false; break; }
-        }
-        if (clean && possibleOf(bd.words[i]) !== (types & ~shed)) clean = false;
-        rollback(bd, mark);
-        if (clean) { fallback = shed; break; }
-      }
-      if (fallback) volleyCandidates[q + 1] = fallback;
-      else volleyCandidates.splice(q, 3);
+    for (let q = 0; q < zapTargets.length; q++) {
+      if (zapTargets[q].options[0] === TK) zapTargets[q].options.shift();
     }
   }
 
-  if (volleyCandidates.length > 0) {
-    const mark = watermark(bd);
-    for (let k = 0; k < volleyCandidates.length; k += 3) {
-      const i = volleyCandidates[k];
-      const shed = volleyCandidates[k + 1];
+  // REF: joint zap search. Maximize successful contacts, then keep contact
+  // order + k->p ordering as the deterministic tie-break. Each partial
+  // selection must retain a King branch (when one existed) and at least one
+  // complete census seating. The winning removals are committed together,
+  // followed by one unrestricted conservation cascade.
+  const zapSelection = new Int32Array(zapTargets.length);
+  const bestZapSelection = new Int32Array(zapTargets.length);
+  let bestZapCount = -1;
+  const mustKeepKing = kingHolderIdxs.length > 0;
+  const stateIsSafe = () => {
+    if (mustKeepKing) {
+      let hasKing = false;
+      for (let i = 0; i < bd.n; i++) {
+        const w = bd.words[i];
+        if (!(w & CAPTURED) && sideBit(w) === targetSide && (possibleOf(w) & TK)) {
+          hasKing = true;
+          break;
+        }
+      }
+      if (!hasKing) return false;
+    }
+    return censusIsConsistentFast(bd, targetSide);
+  };
+
+  const searchJointZaps = (index, count) => {
+    if (bestZapCount === zapTargets.length) return;
+    if (count + (zapTargets.length - index) < bestZapCount) return;
+    if (index === zapTargets.length) {
+      if (count > bestZapCount) {
+        bestZapCount = count;
+        bestZapSelection.set(zapSelection);
+      }
+      return;
+    }
+
+    const target = zapTargets[index];
+    for (let option = 0; option < target.options.length; option++) {
+      const shed = target.options[option];
+      const mark = watermark(bd);
+      const w = bd.words[target.i];
+      setWord(bd, target.i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
+      if (stateIsSafe()) {
+        zapSelection[index] = shed;
+        searchJointZaps(index + 1, count + 1);
+      }
+      rollback(bd, mark);
+      if (bestZapCount === zapTargets.length) return;
+    }
+
+    zapSelection[index] = 0;
+    searchJointZaps(index + 1, count);
+  };
+
+  searchJointZaps(0, 0);
+  if (bestZapCount > 0) {
+    for (let k = 0; k < zapTargets.length; k++) {
+      const shed = bestZapSelection[k];
+      if (!shed) continue;
+      const i = zapTargets[k].i;
       const w = bd.words[i];
-      targetSide = sideBit(w);
       setWord(bd, i, withMasks(w, baseOf(w) & ~shed, promoOf(w) & ~shed));
     }
     applyConstraintsFast(bd, targetSide === 0 ? 1 : 2);
-
-    let jointClean = true;
-    const j = bd.journal;
-    for (let k = mark; k < j.length && jointClean; k += 2) {
-      const idx = j[k];
-      let isCandidate = false;
-      for (let q = 0; q < volleyCandidates.length; q += 3) {
-        if (volleyCandidates[q] === idx) { isCandidate = true; break; }
-      }
-      if (!isCandidate) jointClean = false;
-    }
-    for (let q = 0; q < volleyCandidates.length && jointClean; q += 3) {
-      const i = volleyCandidates[q];
-      const shed = volleyCandidates[q + 1];
-      const pre = volleyCandidates[q + 2];
-      if (possibleOf(bd.words[i]) !== (pre & ~shed)) jointClean = false;
-    }
-
-    if (!jointClean) rollback(bd, mark); // whole volley fizzles
   }
 
   // Heals bloom TOGETHER (REF: the joint heal search). A regain that fails
@@ -669,10 +653,12 @@ export function forEachLegalReply(bd, side, ep, visit) {
     const mark = watermark(bd);
     const from = sqOf(bd.words[cand.pieceIdx]);
     const legal = makeEnPassant(bd, cand.pieceIdx, cand.to, cand.victimIdx);
+    let keepGoing = true;
     if (legal) {
-      visit({ kind: 'enpassant', pieceIdx: cand.pieceIdx, from, to: cand.to, victimIdx: cand.victimIdx, plan: null });
+      keepGoing = visit({ kind: 'enpassant', pieceIdx: cand.pieceIdx, from, to: cand.to, victimIdx: cand.victimIdx, plan: null }) !== false;
     }
     rollback(bd, mark);
+    if (!keepGoing) return false;
   }
 
   // Standard moves.
@@ -708,10 +694,12 @@ export function forEachLegalReply(bd, side, ep, visit) {
       const victimIdx = victim >= 0 && sideBit(bd.words[victim]) !== side ? victim : -1;
       const mark = watermark(bd);
       const legal = makeStandardMove(bd, i, to);
+      let keepGoing = true;
       if (legal) {
-        visit({ kind: 'move', pieceIdx: i, from, to, victimIdx, plan: null });
+        keepGoing = visit({ kind: 'move', pieceIdx: i, from, to, victimIdx, plan: null }) !== false;
       }
       rollback(bd, mark);
+      if (!keepGoing) return false;
     }
   }
 
@@ -727,10 +715,14 @@ export function forEachLegalReply(bd, side, ep, visit) {
       if (!plan) continue;
       const mark = watermark(bd);
       const legal = makeCastle(bd, plan);
+      let keepGoing = true;
       if (legal) {
-        visit({ kind: 'castle', pieceIdx: plan.i1, from: plan.from1, to: plan.to1, victimIdx: -1, plan });
+        keepGoing = visit({ kind: 'castle', pieceIdx: plan.i1, from: plan.from1, to: plan.to1, victimIdx: -1, plan }) !== false;
       }
       rollback(bd, mark);
+      if (!keepGoing) return false;
     }
   }
+
+  return true;
 }

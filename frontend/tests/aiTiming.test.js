@@ -22,4 +22,10 @@ describe('AI worker timing', () => {
     const easy = getBotById('isaac-steinitz');
     expect(aiWorkerHardCapMs('easy', easy)).toBe(MIN_AI_HARD_CAP_MS);
   });
+
+  it('keeps Stephen on the standard hard-tier search budget', () => {
+    const stephen = getBotById('stephen-reti');
+    expect(searchBudgetMs('hard', stephen)).toBe(12000);
+    expect(aiWorkerHardCapMs('hard', stephen)).toBe(15000);
+  });
 });

@@ -9,6 +9,7 @@ export const WELCOME_ACTION = Object.freeze({
   PLAY: 'play',
   INTRO: 'intro',
   PUZZLE: 'puzzle',
+  PROFILE: 'profile',
   RULES: 'rules',
 });
 
@@ -33,6 +34,8 @@ export function resolveWelcomeEntry({
   const action = welcomeActionFromSearch(search);
   const onPlayRoute = pathname === '/play' || pathname === '/play/';
   const onPuzzleRoute = pathname === '/puzzle' || pathname === '/puzzle/';
+  const onReviewRoute = isReviewRoute(pathname);
+  const onProfileRoute = isProfileRoute(pathname);
   const puzzleDeepLink = new URLSearchParams(search).has('puzzle');
   // The old in-game coach flag is deliberately NOT a welcome-page flag.
   // Deep-linked puzzle players dismiss that coach as part of opening the
@@ -43,7 +46,10 @@ export function resolveWelcomeEntry({
   if (onPuzzleRoute || puzzleDeepLink) {
     return { surface: 'play', action: WELCOME_ACTION.PUZZLE, markSeen: false };
   }
-  if (onPlayRoute || hasAppDeepLink(search) || returning) {
+  if (onProfileRoute) {
+    return { surface: 'play', action: WELCOME_ACTION.PROFILE, markSeen: false };
+  }
+  if (onPlayRoute || onReviewRoute || hasAppDeepLink(search) || returning) {
     return { surface: 'play', action: null, markSeen: false };
   }
   return { surface: 'welcome', action: null, markSeen: false };
@@ -62,4 +68,29 @@ export function puzzleUrlFrom(search = '') {
   params.delete('puzzle');
   const rest = params.toString();
   return `/puzzle${rest ? `?${rest}` : ''}`;
+}
+
+export function isReviewRoute(pathname = '') {
+  return pathname === '/review' || pathname === '/review/';
+}
+
+export function reviewUrlFrom(search = '') {
+  const params = new URLSearchParams(search);
+  params.delete('welcome');
+  params.delete('puzzle');
+  const rest = params.toString();
+  return `/review${rest ? `?${rest}` : ''}`;
+}
+
+export function isProfileRoute(pathname = '') {
+  return pathname === '/profile' || pathname === '/profile/';
+}
+
+export function profileUrlFrom(search = '') {
+  const params = new URLSearchParams(search);
+  params.delete('welcome');
+  params.delete('puzzle');
+  params.delete('game');
+  const rest = params.toString();
+  return `/profile${rest ? `?${rest}` : ''}`;
 }

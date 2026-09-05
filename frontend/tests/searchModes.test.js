@@ -106,6 +106,44 @@ describe('review root beam', () => {
     expect(preferredFast.nodes).toBe(preferredRef.nodes);
     expect(preferredFast.score).toBe(preferredRef.score);
   });
+
+  it('returns same-depth Multi-PV lines in mover order on Black turns', () => {
+    const { snapshots } = buildReviewTimeline([
+      { from: 'e2', to: 'e4', side: 'white', enPassant: false },
+    ]);
+    const position = snapshots[1];
+    const progress = [];
+    const opts = {
+      pieces: position.pieces,
+      sideToMove: 'black',
+      lastMove: position.lastMove,
+      openingVariety: false,
+      adaptiveDepth: false,
+      multiPv: 3,
+      bot: { search: { maxDepth: 2, widths: [12, 5], timeMs: 10000, noise: 0 } },
+    };
+    const ref = searchBestMove(opts);
+    const fast = searchBestMoveFast({
+      ...opts,
+      onDepthComplete: (partial) => progress.push(partial),
+    });
+
+    expect(fast.depth).toBe(2);
+    expect(fast.moves).toHaveLength(3);
+    expect(fast.moves.map((line) => line.score)).toEqual(
+      [...fast.moves.map((line) => line.score)].sort((a, b) => b - a),
+    );
+    // Engine scores are mover-positive. Once converted for the white-positive
+    // review display, Black's ranked recommendations must run low-to-high.
+    const whitePositive = fast.moves.map((line) => -line.score);
+    expect(whitePositive).toEqual([...whitePositive].sort((a, b) => a - b));
+    expect(fast.moves.map((line) => `${line.move.from}>${line.move.to}`)).toEqual(
+      ref.moves.map((line) => `${line.move.from}>${line.move.to}`),
+    );
+    expect(fast.moves.map((line) => line.score)).toEqual(ref.moves.map((line) => line.score));
+    expect(progress.map((partial) => partial.depth)).toEqual([1, 2]);
+    expect(progress.every((partial) => partial.moves.length === 3)).toBe(true);
+  });
 });
 
 describe('bot time modes', () => {

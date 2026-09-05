@@ -3,7 +3,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, GraduationCap, LockKeyhole, Puzzle, Star, Swords } from 'lucide-react';
-import QuantumPiece from '../chessboard/QuantumPiece.jsx';
 import ConsentBanner, {
   CONSENT_CHOICE,
   readStoredConsent,
@@ -11,6 +10,7 @@ import ConsentBanner, {
 import { initAnalytics } from '../analytics/analytics.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import { WELCOME_ACTION } from './welcomeRouting.js';
+import QuantumOrbit from './QuantumOrbit.jsx';
 import './WelcomeLanding.css';
 
 const choices = [
@@ -38,71 +38,6 @@ const choices = [
     tone: 'green',
   },
 ];
-
-// Material order is also the orbit order: cheapest on the widest ring,
-// King closest to the unresolved six-type state in the center.
-const orbitPieces = [
-  { type: 'p', label: 'Pawn', inset: '1%', duration: '24s', delay: '-3s' },
-  { type: 'n', label: 'Knight', inset: '7.5%', duration: '21s', delay: '-14s' },
-  { type: 'b', label: 'Bishop', inset: '14%', duration: '18s', delay: '-7s' },
-  { type: 'r', label: 'Rook', inset: '20.5%', duration: '15s', delay: '-11s' },
-  { type: 'q', label: 'Queen', inset: '27%', duration: '12s', delay: '-5s' },
-  { type: 'k', label: 'King', inset: '33.5%', duration: '9s', delay: '-2s' },
-];
-
-const welcomePieceStyles = {
-  white: {
-    '--band-fill': '#dff8ff',
-    '--band-stroke': '#21354d',
-    '--piece-outline': '#6ee7ff',
-    '--icon-color': '#17243a',
-  },
-  black: {},
-};
-
-function QuantumOrbit() {
-  return (
-    <div className="qc-welcome-quantum" role="img" aria-label="Pawn, Knight, Bishop, Rook, Queen, and King orbit a full quantum superposition, least valuable to most valuable from outside in">
-      <div className="qc-welcome-quantum-glow" aria-hidden="true" />
-      {orbitPieces.map((piece) => (
-        <div
-          key={piece.type}
-          className={`qc-welcome-piece-orbit qc-welcome-piece-orbit--${piece.type}`}
-          style={{
-            '--orbit-inset': piece.inset,
-            '--orbit-duration': piece.duration,
-            '--orbit-delay': piece.delay,
-          }}
-          aria-hidden="true"
-        >
-          <div className="qc-welcome-orbit-anchor">
-            <div className="qc-welcome-orbit-upright">
-              <QuantumPiece
-                id={`welcome-${piece.type}`}
-                side="white"
-                possibleTypes={[piece.type]}
-                size={48}
-                ariaLabel={piece.label}
-                svgStyleBySide={welcomePieceStyles}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-
-      <div className="qc-welcome-superposition" aria-hidden="true">
-        <QuantumPiece
-          id="welcome-superposition"
-          side="white"
-          possibleTypes={['p', 'n', 'b', 'r', 'q', 'k']}
-          size={118}
-          ariaLabel="Full six-piece quantum superposition"
-          svgStyleBySide={welcomePieceStyles}
-        />
-      </div>
-    </div>
-  );
-}
 
 export default function WelcomeLanding({ onChoose }) {
   const [consentChoice, setConsentChoice] = useState(() => readStoredConsent());
@@ -201,9 +136,6 @@ export default function WelcomeLanding({ onChoose }) {
 
         <nav className="qc-welcome-footer-links" aria-label="More about Quantum Chess">
           <a href="/rules.html">Rules</a>
-          <a href="/strategy.html">Strategy</a>
-          <a href="/faq.html">FAQ</a>
-          <a href="/about.html">About</a>
           <a href="/privacy.html">Privacy</a>
           <a href="/terms.html">Terms</a>
           <button type="button" onClick={() => setConsentPromptOpen(true)}>Privacy choices</button>
