@@ -46,6 +46,13 @@ Where things stand after the adoption commit:
   Census/Winning pages; lesson → rules-page links intact).
 - **Fixtures**: `tests/fixtures/engine-games.json` regenerated under the new
   rules (140-halfmove cap); `tests/contact-variant-smoke.mjs` is the rules smoke.
+- **Puzzle verification**: each new candidate records `verification.status`.
+  All par positions must agree above confirmation depth; timeout, rejected,
+  and cap-skipped candidates stay blocked from the daily. Every output starts
+  `devOnly:true`, including streamed candidates. Curate only indexes listed in
+  `gate.verifiedChainIndexes`, then remove `devOnly` when scheduling. The report
+  keeps incomplete/rejected candidates for diagnosis, and exits nonzero if any
+  candidate fails the complete gate. Existing curated fixtures remain compatible.
 - **Daily puzzle: the MINED daily is LIVE (2026-07-14).** The Daily button
   serves `loadDailyMinedPuzzle` (chains mined from real twin-bot games,
   `minedPreviewData.json`: date-pinned `schedule` + rotation fallback +

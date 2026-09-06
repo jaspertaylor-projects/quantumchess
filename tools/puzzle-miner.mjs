@@ -5,8 +5,8 @@
 // White), (2) probe every White-to-move position and find Black's first
 // MISTAKE FROM BALANCE, (3) roll a fixed-length PAR LINE in which every ply
 // must stay quantum-tricky, (4) tag quantum themes and trickiness, (5) GATE:
-// re-search each par ply at a higher depth — par must hold. High agreement
-// (95%+) is the go signal for feeding mined puzzles into the daily rotation.
+// re-search every par position above confirmation depth. Every position must
+// agree before that candidate is ready for curation.
 // The machinery lives in tools/miner/{config,gameplay,themes,swing}.mjs;
 // this file is the CLI driver: run games, mine, gate, report.
 //
@@ -27,6 +27,7 @@ import path from 'node:path';
 import { args, CFG, rng } from './miner/config.mjs';
 import { minerBot, mirrorGame, twinBots, BY_RATING, MID_STRONG, MID_WEAK, playGame } from './miner/gameplay.mjs';
 import { mineGame, verifyParPly } from './miner/swing.mjs';
+import { verifyChains } from './miner/verification.mjs';
 
 // -------------------------------------------------------------------- main
 
@@ -36,7 +37,6 @@ console.log(`swing bar: balanced |eval|<=${CFG.balanceBand} for ${CFG.balanceStr
 const stats = { scanned: 0, swings: 0, balancedEligible: 0, weakSwingRejects: 0, funnelSurvivors: 0, prefilterTimeouts: 0, timeouts: 0, insane: 0, censusBug: 0, sizeRejects: 0, perishRejects: 0, dullRejects: 0, shortLineRejects: 0, parCollapseRejects: 0, firstGrabPrefilter: 0, confirmRejects: 0, confirmTimeouts: 0, filteredRecapture: 0, filteredClassical: 0, mineMsTotal: 0, verifyMsTotal: 0 };
 const games = [];
 const allChains = [];
-const verifiable = []; // { gameIdx, startPly, entry } for the gate
 
 // Chains stream to disk AS FOUND (one JSON per line), so a multi-hour run's
 // finds are inspectable/previewable before the final report exists.
@@ -99,32 +99,24 @@ for (let g = 0; g < CFG.games; g++) {
   games.push({ gameIdx: g, white: game.white, black: game.black, opening: game.opening, plies: game.plies, result: game.result, moves: game.stored, evals });
   const mineSec = ((performance.now() - t1) / 1000).toFixed(1);
   for (const chain of [...mined.chains, ...minedMirror.chains]) {
-    for (const entry of chain._verify) verifiable.push({ gameIdx: g, startPly: chain.startPly, entry });
     const { _verify, ...saved } = chain;
-    allChains.push(saved);
-    fs.appendFileSync(chainStream, JSON.stringify(saved) + '\n');
+    allChains.push(chain);
+    fs.appendFileSync(chainStream, JSON.stringify({ ...saved, devOnly: true, verification: { status: 'pending' } }) + '\n');
     console.log(`  chain${chain.mirrored ? ' [mirror]' : ''} @ply ${chain.startPly}: mistake ${chain.mistake.from}->${chain.mistake.to} (${chain.mistake.evalBefore} -> ${chain.mistake.evalAfter})${chain.endsInMate ? ' +mate' : ''} par=[${chain.parEvals.join(', ')}] medianFrac=${chain.spread.medianFrac} trick=${chain.trickiness}/min${chain.trickMin} themes=[${chain.themes.join(',')}]`);
   }
   console.log(`  mined ${mined.chains.length + minedMirror.chains.length} chain(s) (${mined.chains.length} white-window, ${minedMirror.chains.length} mirrored black-window) from ${game.record.filter((r) => r.ply >= CFG.minPly).length} positions [${mineSec}s]`);
 }
 
-// GATE: par must hold under a deeper, independent search (capped).
-console.log(`\n--- verification gate: re-searching ${Math.min(verifiable.length, CFG.verifyCap)} par plies at depth ${CFG.verifyDepth} ---`);
-let agreed = 0;
-let checked = 0;
-let vTimeouts = 0;
-const verdicts = [];
-for (const { gameIdx, startPly, entry } of verifiable.slice(0, CFG.verifyCap)) {
-  const v = verifyParPly(entry, stats);
-  if (v.verdict === 'timeout') { vTimeouts++; continue; }
-  checked++;
-  if (v.verdict === 'agree') agreed++;
-  verdicts.push({ game: gameIdx, startPly, plyIdx: entry.plyIdx, parEval: entry.parEval, ...v });
-  if (v.verdict === 'disagree') {
-    console.log(`  DISAGREE game ${gameIdx} chain@${startPly} ply ${entry.plyIdx}: par ${entry.parEval} vs deep ${v.deepBest} (${v.deepBestScore}) parHolds=${v.parHolds} swingHolds=${v.swingHolds}`);
-  }
-}
-const rate = checked ? (100 * agreed / checked) : 0;
+// GATE: every par ply must agree; timeouts and capped candidates stay staged.
+console.log(`\n--- verification gate: whole chains, cap ${CFG.verifyCap} par plies, target depth ${CFG.verifyDepth} ---`);
+const { chains: verifiedChains, gate } = verifyChains(allChains, {
+  cap: CFG.verifyCap,
+  verify: (entry) => verifyParPly(entry, stats),
+});
+// Replace pending stream records only after the gate completes. If interrupted,
+// streamed candidates remain explicitly pending and dev-only.
+fs.writeFileSync(`${chainStream}.tmp`, verifiedChains.map((chain) => JSON.stringify(chain) + '\n').join(''));
+fs.renameSync(`${chainStream}.tmp`, chainStream);
 
 // ------------------------------------------------------------------ report
 
@@ -157,16 +149,8 @@ const report = {
     censusFixedPointFailures: stats.censusBug,
     avgMineMsPerPosition: stats.scanned ? Math.round(stats.mineMsTotal / stats.scanned) : 0,
   },
-  gate: {
-    verified: checked,
-    agreed,
-    timeouts: vTimeouts,
-    agreementRate: Number(rate.toFixed(1)),
-    threshold: 95,
-    pass: rate >= 95,
-    verdicts,
-  },
-  chains: allChains,
+  gate,
+  chains: verifiedChains,
 };
 
 fs.mkdirSync(CFG.outDir, { recursive: true });
@@ -178,7 +162,7 @@ console.log(`white positions scanned: ${stats.scanned}  (avg ${report.stats.avgM
 console.log(`balance-window positions: ${stats.balancedEligible}; swings confirmed: ${stats.swings}  -> chains kept: ${allChains.length} (all ${CFG.parPlies}-movers)`);
 console.log(`rejects: ${stats.weakSwingRejects} weak swing, ${stats.perishRejects} not perishable, ${stats.sizeRejects} size, ${stats.confirmRejects} depth-confirm, ${stats.dullRejects} dull ply, ${stats.shortLineRejects} short line, ${stats.parCollapseRejects} par collapse, ${stats.filteredRecapture} first grabs (+${stats.firstGrabPrefilter} pre-filtered), ${stats.filteredClassical} classical/inert`);
 console.log(`census fixed-point failures (engine-bug detector): ${stats.censusBug}`);
-console.log(`GATE — par holds at depth ${CFG.verifyDepth}: ${agreed}/${checked} = ${rate.toFixed(1)}%  (need 95%+ to feed mined puzzles into rotation)${vTimeouts ? `, ${vTimeouts} verify timeouts` : ''}`);
+console.log(`GATE — ${gate.verifiedChainIndexes.length}/${verifiedChains.length} complete chains verified; ${gate.rejectedChains} rejected, ${gate.incompleteChains} incomplete (${gate.timeouts} timeouts). Only verified chains are ready for curation.`);
 console.log(`report: ${outFile}`);
-process.exit(0);
+process.exit(allChains.length && !gate.pass ? 1 : 0);
 

@@ -27,11 +27,13 @@ shift || true
 cd "$(dirname "$0")/.."
 LOG="tools/mined/run-seed${SEED}-twins.log"
 
+status=0
 docker compose run --rm --no-deps -v "$PWD":/repo -w /repo frontend \
   node tools/puzzle-miner.mjs --twins \
     --games 24 --seed "$SEED" \
     --playMs 1000 --strongMs 4000 \
     --twinDelta 5 --twinNoise 0.1 \
-    "$@" > "$LOG" 2>&1
+    "$@" > "$LOG" 2>&1 || status=$?
 
 tail -8 "$LOG"
+exit "$status"

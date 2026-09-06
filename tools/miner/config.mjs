@@ -73,6 +73,15 @@ const CFG = {
   outDir: argVal('out', path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'mined')),
 };
 
+// Reject invalid gate settings before spending hours on self-play. A zero cap
+// is diagnostic-only: all candidates will remain unverified and dev-only.
+if (!Number.isInteger(CFG.verifyCap) || CFG.verifyCap < 0) {
+  throw new Error('--verifyCap must be a non-negative integer');
+}
+if (!Number.isInteger(CFG.verifyDepth) || CFG.verifyDepth <= CFG.mineDepth + 1) {
+  throw new Error('--verifyDepth must exceed the confirmation depth (mineDepth + 1)');
+}
+
 // Root widths must NEVER truncate — quantum midgames reach 60-80 legal
 // moves, and a root-pruned move silently corrupts evals (a graph point drew
 // 0.8 where the true value was 3.45 because the root beam was 40).

@@ -470,7 +470,7 @@ function verifyParPly(entry, stats) {
   // best move's score, and root-wide alpha pruning is ~6x cheaper — which
   // is what makes depth 8 affordable (~20 min/ply vs ~2 h; Jasper asked
   // for the deeper gate 2026-07-13). Even depths stay parity-sober.
-  for (let d = CFG.verifyDepth; d > CFG.mineDepth && !best; d--) {
+  for (let d = CFG.verifyDepth; d > CFG.mineDepth + 1 && !best; d--) {
     const res = searchBestMove({
       pieces: entry.position.pieces,
       sideToMove: 'white',
