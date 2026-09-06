@@ -13,8 +13,11 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
       - name: Frontend serves the game
-        run: curl -fsS --max-time 20 --retry 2 https://quantumchess.ninja/ | grep -qi "quantum"
+        run: bash tools/uptime-probe.sh frontend https://quantumchess.ninja/ quantum
       - name: API answers
-        run: curl -fsS --max-time 20 --retry 2 https://api.quantumchess.ninja/api/hello >/dev/null
+        if: ${{ !cancelled() }}
+        run: bash tools/uptime-probe.sh API https://api.quantumchess.ninja/api/hello

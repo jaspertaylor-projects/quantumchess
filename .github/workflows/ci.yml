@@ -9,11 +9,15 @@ on:
 jobs:
   frontend-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      - name: Verify uptime retry behavior
+        working-directory: .
+        run: python3 tools/tests/test_uptime_probe.py
       - uses: actions/setup-node@v4
         with:
           node-version: 22

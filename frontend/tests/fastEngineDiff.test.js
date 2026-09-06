@@ -134,7 +134,9 @@ describe('fast engine differential net', () => {
         expect(fastMoves[m].evalScore, `${ctx} eval`).toBe(evaluatePosition(ref[m].resultPieces, DEFAULT_WEIGHTS));
       }
     }
-  }, 120000);
+  // Shared CI runners have taken ~119 seconds here. Keep every assertion,
+  // but allow runner-speed variation; this is correctness, not a benchmark.
+  }, 300000);
 
   it('root evaluation is bit-identical', () => {
     for (const pos of POSITIONS) {
