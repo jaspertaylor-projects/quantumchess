@@ -1,0 +1,11 @@
+// Run after editing the shared rule copy: node scripts/generate-rulebook.mjs
+import { writeFileSync } from 'node:fs';
+import { RULES } from '../src/rules/rulebook.js';
+const escape = (value) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Rulebook — Quantum Chess</title><meta name="description" content="Superposition, measurement, contact and the census. The rules of Quantum Chess."><link rel="canonical" href="https://quantumchess.ninja/rules.html"><style>
+body{font:16px/1.7 system-ui,sans-serif;background:#101821;color:#c5d2df;max-width:760px;margin:auto;padding:32px 22px}a{color:#a1e1de}h1,h2{color:#edf3f9;font-weight:550;letter-spacing:-.035em;line-height:1.2}h1{font-size:40px;margin:14px 0}h2{font-size:27px}nav{display:flex;gap:18px;flex-wrap:wrap}.topics{margin:28px 0;font-size:13px}.topics a{padding:5px 10px;border:1px solid #ffffff20;border-radius:7px;text-decoration:none}section{padding:26px 0;border-top:1px solid #ffffff20;scroll-margin-top:20px}small{color:#85cbd4;text-transform:uppercase;letter-spacing:.1em}details{font-size:14px;color:#a6b8c8}summary{cursor:pointer;color:#b9dfdf}footer{padding:26px 0}a:focus-visible,summary:focus-visible{outline:2px solid #85cbd4;outline-offset:3px}
+</style></head><body><nav><a href="/play">Play</a><a href="/play?welcome=intro">Tutorial</a></nav><header><small>Quantum Chess</small><h1>The rulebook</h1><p>Superposition. Measurement. Conservation.<br>Every move changes the space of possible states.</p></header><nav class="topics" aria-label="Rule topics">${RULES.map((r) => `<a href="#${r.id}">${escape(r.title)}</a>`).join('')}</nav>
+${RULES.map((r) => `<section id="${r.id}"><small>${escape(r.title)}</small><h2>${escape(r.concept)}</h2><p>${escape(r.summary)}</p>${r.paragraphs.map((p) => `<p>${escape(p)}</p>`).join('')}<details><summary>Rule details</summary><p>${escape(r.detail)}</p></details></section>`).join('\n')}
+<footer><nav><a href="/play?welcome=intro">Play the tutorial</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav></footer></body></html>\n`;
+writeFileSync(new URL('../public/rules.html', import.meta.url), html);
