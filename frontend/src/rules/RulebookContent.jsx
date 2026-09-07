@@ -24,6 +24,11 @@ function RuleReference({ rule }) {
       {rule.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       {expanded && rule.before && <RuleIllustration rule={rule} />}
       <p>{rule.detail}</p>
+      {rule.physics && <aside className="qr-physics" aria-label={`The physics behind ${rule.title}`}>
+        <span className="qr-eyebrow">The quantum connection</span>
+        <p>{rule.physics.explanation}</p>
+        <a href={rule.physics.href} target="_blank" rel="noopener noreferrer">{rule.physics.label}<ArrowUpRight size={14} aria-hidden="true" /><span className="qr-sr-only"> (opens in a new tab)</span></a>
+      </aside>}
     </div>
   </details>;
 }
@@ -47,7 +52,7 @@ export default function RulebookContent({ onOpenTutorial }) {
     <div className="qr-sections">{RULE_GROUPS.map((group) => <section className={`qr-section qr-section--${group.id}`} key={group.id} id={`qr-${group.id}`}>
       <div className="qr-section-title"><span className="qr-eyebrow">{group.label}</span><h3>{group.title}</h3></div>
       <div className="qr-section-body"><p className="qr-lead">{group.intro}</p><p className="qr-note">{group.note}</p>
-        {group.id === 'contact' && <div className="qr-contact-key"><span className="qr-zap"><i />Enemy contact · Zap</span><span className="qr-heal"><i />Friendly contact · Heal</span><span className="qr-shield"><i />No removal · Shield</span></div>}
+        {group.id === 'contact' && <div className="qr-contact-key"><span className="qr-zap"><i />Attack an enemy · Zap</span><span className="qr-heal"><i />Protect an ally · Heal</span><span className="qr-shield"><i />No removal · Shield</span></div>}
         {group.rules.map((id) => <RuleReference key={id} rule={RULES.find((rule) => rule.id === id)} />)}
       </div>
     </section>)}</div>

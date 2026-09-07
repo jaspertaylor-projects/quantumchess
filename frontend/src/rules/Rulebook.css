@@ -63,6 +63,11 @@
 .qr-details-content { padding:0 16px 10px; }
 .qr-details-content p { color:#a8b4ce; font-size:13px; line-height:1.8; margin:8px 0 14px; }
 .qr-details-content h3,.qr-details-content h4 { color:#d5dcef; font-size:15px; margin:5px 0 12px; }
+.qr-physics { margin:20px 0 8px; padding:16px; border-left:2px solid #8ecfdf; border-radius:0 8px 8px 0; background:#8ecfdf0a; }
+.qr-physics a { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; color:#9de8f7; font-size:12px; line-height:1.7; text-decoration:underline; text-underline-offset:4px; }
+.qr-physics a:is(:hover,:focus-visible) { color:#fff; background:#24445b; }
+.qr-physics a svg { flex-shrink:0; }
+.qr-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .qr-static-comparison { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
 .qr-static-state { margin-top:16px; }
 .qr-static-identities { display:flex; flex-wrap:wrap; gap:5px; }
