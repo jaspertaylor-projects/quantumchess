@@ -35,8 +35,8 @@ export const RULES = [
   },
   {
     id: 'royal', title: 'King & shield', legacy: 'Winning: Checkmate', concept: 'Royal possibility is conserved by Zap',
-    summary: 'Zap cannot remove the final King possibility. Check applies only to a revealed King.',
-    paragraphs: ['A revealed King has exactly one identity: King. It cannot be left capturable. Checkmate ends the game.', 'A gold shield marks an interaction that removes nothing: the state is already definite, or no removal preserves the census and royal safeguard.'],
+    summary: 'Zap cannot remove the final King possibility. Check applies only to a piece whose sole remaining identity is King: a revealed King.',
+    paragraphs: ['For example, a Rook–King piece is still in superposition: attacking it is not check. Once only King remains, an enemy threatens check if any of its remaining identities can capture that square, even if the attacker is still in superposition.', 'Every move is checked after movement, capture, census, Zap and Heal resolve. If your King is revealed in the resulting position, no enemy may be able to capture its square. This also applies when your move reveals your King.', 'If you are in check, your next move must resolve it. Moving the King to safety, blocking the attack or capturing the attacker can do this, provided the final position passes the same safety check. Check with no legal reply is checkmate.', 'A gold shield marks an interaction that removes nothing: the state is already definite, or no removal preserves the census and royal safeguard.'],
     detail: 'When a proposed volley would erase every King possibility, those targets retry below King. A definite King has no lower identity to lose, so it shields. A shield blocks the Zap effect; it does not stop an attack, check or checkmate. If another resolution leaves a side temporarily without a King possibility, play continues; a later heal can restore King.',
   },
   {

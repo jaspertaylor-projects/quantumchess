@@ -13,7 +13,7 @@ export const RULE_GROUPS = [
     intro: 'Castle two back-rank superpositions that each contain Rook and King. En passant projects both pieces onto Pawn. Promotion transforms the Pawn branch while preserving its Pawn census slot.',
     note: 'These moves obey the same conservation rules as the rest of the game. Open a rule below for its conditions.' },
   { id: 'checkmate', title: 'Checkmate & shields', label: 'Ending the game', nav: 'Checkmate & draws', rules: ['royal', 'draw'],
-    intro: 'Check applies only when a piece has resolved to King alone. You cannot leave a revealed King capturable. Checkmate wins the game.',
+    intro: 'A revealed King is a piece whose only remaining identity is King. It is in check when an enemy can capture its square. A piece that still mixes King with other identities is not subject to check. Checkmate wins the game.',
     note: 'Zap preserves the final King possibility by attempting a lower identity. A gold shield marks an interaction with no admissible removal. Stalemate, threefold repetition and the fifty-move rule draw the game.' },
 ];
 
@@ -25,10 +25,12 @@ export const TUTORIAL_COPY = {
 };
 
 // Read this once before the reference; detailed exceptions follow in the sections below.
+export const TURN_INTRO = 'White moves first. Turns alternate. A revealed King has only King left among its identities. After your move and all its effects resolve, any revealed King of yours must be on a square no enemy can capture.';
+
 export const TURN_STEPS = [
   { title: 'Move and measure', text: 'Choose a move allowed by a remaining identity. Keep the identities that can make that move.' },
   { title: 'Resolve a capture', text: 'If an enemy is taken, resolve it as its cheapest remaining identity. It leaves the board but still counts in the chess set.' },
   { title: 'Apply the census', text: 'Every possibility must still fit one complete chess set per side. Remove identities that no longer fit.' },
   { title: 'Resolve interaction', text: 'From the landing square, use the mover’s lowest-value identity: Zap attacked enemies, then Heal protected allies. Recheck the census as these effects resolve.' },
-  { title: 'Check the position', text: 'Check applies to a revealed King. Checkmate wins; stalemate and the other draw rules end the game. Otherwise, the other side moves.' },
+  { title: 'Check the position', text: 'If the opponent has a piece with only King remaining and you attack its square, they are in check and must resolve it on their turn. If they have no legal reply, it is checkmate and you win. Stalemate and the other draw rules end the game in a draw. Otherwise, the other side moves.' },
 ];

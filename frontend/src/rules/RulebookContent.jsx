@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ArrowUpRight, Play } from 'lucide-react';
 import { SINGLE_ASSET_BY_TYPE } from '../chessboard/assetsIndex.js';
 import { RULES } from './rulebook.js';
-import { RULE_GROUPS, TUTORIAL_COPY, TURN_STEPS } from './rulebookPresentation.js';
+import { RULE_GROUPS, TUTORIAL_COPY, TURN_INTRO, TURN_STEPS } from './rulebookPresentation.js';
 import RuleIllustration from './RuleIllustration.jsx';
 import { RULE_EXAMPLES } from './ruleExamples.js';
 
@@ -48,7 +48,7 @@ export default function RulebookContent({ onOpenTutorial }) {
       <span className="qr-learn-copy"><span className="qr-eyebrow">{TUTORIAL_COPY.eyebrow}</span><strong>{TUTORIAL_COPY.title}</strong><span>{TUTORIAL_COPY.body}</span></span>
       <span className="qr-learn-action">{TUTORIAL_COPY.action}<ArrowUpRight size={17} /></span>
     </button>}
-    <section className="qr-turn-order" aria-labelledby="qr-turn-title"><span className="qr-eyebrow">Start here</span><h3 id="qr-turn-title">One turn, in order</h3><p>White moves first. Turns alternate. Every move must leave your revealed King safe.</p><ol>{TURN_STEPS.map((step) => <li key={step.title}><strong>{step.title}</strong><span>{step.text}</span></li>)}</ol></section>
+    <section className="qr-turn-order" aria-labelledby="qr-turn-title"><span className="qr-eyebrow">Start here</span><h3 id="qr-turn-title">Turn sequence</h3><p>{TURN_INTRO}</p><ol>{TURN_STEPS.map((step) => <li key={step.title}><strong>{step.title}</strong><span>{step.text}</span></li>)}</ol></section>
     <div className="qr-reference-heading"><span className="qr-eyebrow">The rulebook</span><p>Keep the rules at hand while you play.</p></div>
     <nav className="qr-jumps" aria-label="Rule topics">{RULE_GROUPS.map((group) => <a key={group.id} href={`#qr-${group.id}`}>{group.nav}</a>)}</nav>
     <div className="qr-sections">{RULE_GROUPS.map((group) => <section className={`qr-section qr-section--${group.id}`} key={group.id} id={`qr-${group.id}`}>
