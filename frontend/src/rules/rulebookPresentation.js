@@ -25,8 +25,6 @@ export const TUTORIAL_COPY = {
 };
 
 // Read this once before the reference; detailed exceptions follow in the sections below.
-export const TURN_INTRO = 'White moves first. Turns alternate. A revealed King has only King left among its identities. After your move and all its effects resolve, any revealed King of yours must be on a square no enemy can capture.';
-
 export const TURN_STEPS = [
   { title: 'Move and measure', text: 'Choose a move allowed by a remaining identity. Keep the identities that can make that move.' },
   { title: 'Resolve a capture', text: 'If an enemy is taken, resolve it as its cheapest remaining identity. It leaves the board but still counts in the chess set.' },
