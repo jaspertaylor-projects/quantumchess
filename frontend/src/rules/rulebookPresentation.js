@@ -5,7 +5,7 @@ export const RULE_GROUPS = [
     note: 'Capture resolves the victim as its lowest-value identity. A captured Knight–Queen becomes Knight and still counts in the census.' },
   { id: 'contact', title: 'Zap & Heal', label: 'Contact', nav: 'Zap & Heal', rules: ['zap', 'heal'],
     intro: 'After a move, contact follows the capture geometry of the mover’s lowest-value identity: Pawn → Knight → Bishop → Rook → Queen → King.',
-    note: 'Enemy contact removes the highest-value admissible identity. Friendly contact restores the lowest-value admissible missing identity. Both resolve jointly with the census.' },
+    note: 'Zap echoes a partial measurement, narrowing an enemy’s possibilities. Heal echoes state preparation, where a friendly interaction opens a possibility again. These quantum metaphors describe deterministic game rules: remove the highest-value admissible identity or restore the lowest-value admissible missing one, subject to the census.' },
   { id: 'conservation', title: 'The quantum census', label: 'Conservation', nav: 'Census', rules: ['census'],
     intro: 'Each side must fit 8 Pawns, 2 Knights, 2 Bishops, 2 Rooks, 1 Queen and 1 King. Every living or captured piece occupies a slot in each admissible state.',
     note: 'A claim in one place constrains possibilities elsewhere. A zap can therefore trigger a collapse cascade across the board—even in pieces outside its contact geometry.' },

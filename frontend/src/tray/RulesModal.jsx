@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { Atom } from 'lucide-react';
 import ModalShell from '../components/ModalShell.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
 import { RULES } from '../rules/rulebook.js';
@@ -21,7 +20,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onOpenTut
   }, [open, initialPageTitle]);
   if (!open) return null;
   return <ModalShell onClose={onClose} closeOnBackdrop zIndex={1000} ariaLabelledBy="qc-rules-title" panelClassName="qc-rules-panel qr-panel">
-    <header className="qr-header"><span id="qc-rules-title"><Atom size={16} /> Quantum Chess <span className="qr-header-divider">/</span> Rulebook</span><ModalCloseButton ariaLabel="Close rulebook" onClick={onClose} /></header>
+    <header className="qr-header"><span id="qc-rules-title"><img className="qr-brand-icon" src="/favicon.ico" width="24" height="24" alt="" /> Quantum Chess <span className="qr-header-divider">/</span> Rulebook</span><ModalCloseButton ariaLabel="Close rulebook" title="Back to the board (Esc)" onClick={onClose} style={{ width: 44, height: 44 }} /></header>
     <div className="qr-scroll" ref={scroll} onClick={(event) => {
       const link = event.target.closest('a[href^="#qr-"]');
       if (!link) return;
