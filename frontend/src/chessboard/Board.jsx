@@ -13,6 +13,7 @@ import {
   fromBoardIndex,
 } from './boardUtils.js';
 import theme from '../theme.js';
+import './boardEffects.css';
 import QuantumPiece from './QuantumPiece.jsx';
 import { hexToRgbString } from '../settings/useMeasurementColors.js';
 import { arrowGeometry } from './arrowGeometry.js';

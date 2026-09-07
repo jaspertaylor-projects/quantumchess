@@ -28,7 +28,7 @@ census-safe identity; friends regain feasible missing identities. Zaps may force
 census collapses anywhere on the target team. The final King possibility is
 protected; revealed Kings obey check and checkmate.
 
-See [quick rules](frontend/public/rules.html), the guided tutorial, and
+See [quick rules](frontend/rules.html), the guided tutorial, and
 [the rule change](docs/census-cascade-zap-experiment.md). Run
 `cd frontend && npx vitest run tests/introSequence.test.js` after changing teaching content.
 

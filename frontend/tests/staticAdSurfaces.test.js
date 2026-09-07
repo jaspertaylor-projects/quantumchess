@@ -25,7 +25,7 @@ describe('static AdSense surface allowlist', () => {
     const adFreePages = [
       'public/guides.html',
       ...guideArticles,
-      'public/rules.html',
+      'rules.html',
       'public/strategy.html',
       'public/faq.html',
       'public/about.html',
