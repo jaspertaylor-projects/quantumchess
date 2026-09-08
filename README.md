@@ -58,6 +58,10 @@ Where things stand after the adoption commit:
   `minedPreviewData.json`: date-pinned `schedule` + rotation fallback +
   `devOnly` staging flag). The old composed generator survives only as the
   dev-only `?puzzleDate` practice preview.
+- **Latest puzzle release (2026-09-07):** three seed-16 puzzles scheduled
+  for September 9–11. All nine par positions passed depth 8; the intro,
+  legal replies and complete gauge tables replay under the current engine.
+  Verification verdicts and source provenance ship with each new chain.
 - **Miner**: pipeline runs on the new rules (and on the FAST engine, ~15x);
   theme tagging keys on zaps/heals. Canonical batch = `./tools/mine-twins.sh
   <seed>` — 24 twin games (identical bots; strong twin +5 beam widths &

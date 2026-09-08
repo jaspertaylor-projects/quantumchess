@@ -12,9 +12,9 @@ export const RULE_GROUPS = [
   { id: 'special', title: 'Special moves', label: 'Castling, en passant & promotion', nav: 'Special moves', rules: ['castle', 'enpassant', 'promotion'],
     intro: 'Castle two back-rank superpositions that each contain Rook and King. En passant projects both pieces onto Pawn. Promotion transforms the Pawn branch while preserving its Pawn census slot.',
     note: 'These moves obey the same conservation rules as the rest of the game. Open a rule below for its conditions.' },
-  { id: 'checkmate', title: 'Checkmate & shields', label: 'Ending the game', nav: 'Checkmate & draws', rules: ['royal', 'draw'],
+  { id: 'checkmate', title: 'Shields, checkmate & draws', label: 'Shields & ending the game', nav: 'Shields & endings', rules: ['shield', 'definite-shield', 'king', 'draw'],
     intro: 'A revealed King is a piece whose only remaining identity is King. It is in check when an enemy can capture its square. A piece that still mixes King with other identities is not subject to check. Checkmate wins the game.',
-    note: 'Zap preserves the final King possibility by attempting a lower identity. A gold shield marks an interaction with no admissible removal. Stalemate, threefold repetition and the fifty-move rule draw the game.' },
+    note: 'A gold shield means the direct Zap removes no identity. It can appear when attacked pieces start in superposition, and always appears when a target has only one identity left. It does not prevent capture, check or checkmate. Explore the examples below.' },
 ];
 
 export const TUTORIAL_COPY = {

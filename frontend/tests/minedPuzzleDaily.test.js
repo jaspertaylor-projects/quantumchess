@@ -58,6 +58,7 @@ describe('mined daily puzzle', () => {
     // Flag every chain but one devOnly (module instances are shared, so the
     // loader sees the same objects); restore before anyone else looks.
     const keepIdx = 0;
+    const originalFlags = minedData.chains.map((chain) => chain.devOnly);
     try {
       minedData.chains.forEach((chain, idx) => { if (idx !== keepIdx) chain.devOnly = true; });
       for (const date of [...Object.keys(minedData.schedule), '2027-01-01', '2027-01-02']) {
@@ -68,7 +69,10 @@ describe('mined daily puzzle', () => {
       minedData.chains[keepIdx].devOnly = true;
       expect(await loadDailyMinedPuzzle('2027-01-01')).toBeNull();
     } finally {
-      minedData.chains.forEach((chain) => { delete chain.devOnly; });
+      minedData.chains.forEach((chain, idx) => {
+        if (originalFlags[idx] === undefined) delete chain.devOnly;
+        else chain.devOnly = originalFlags[idx];
+      });
     }
   });
 

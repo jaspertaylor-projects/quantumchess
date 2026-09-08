@@ -88,7 +88,7 @@
 .qr-experiment { --accent:#82dce1; position:relative; margin:0 0 24px; padding:18px; background:radial-gradient(ellipse at 50% 0,#82dce10b,transparent 75%),#0b121a; border:1px solid #ffffff14; border-radius:13px; }
 .qr-experiment--zap { --accent:#f194a0; }
 .qr-experiment--heal { --accent:#92deb8; }
-.qr-experiment--royal { --accent:#efd09a; }
+.qr-experiment--shield, .qr-experiment--definite-shield, .qr-experiment--king { --accent:#efd09a; }
 .qr-experiment-label { font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--accent); margin-bottom:18px; }
 .qr-experiment figcaption { font-size:12px; line-height:1.6; color:#8ea5b6; margin:18px 0 12px; }
 .qr-details .qr-experiment { margin-top:16px; background:#080c19; border-color:#8db0df26; }

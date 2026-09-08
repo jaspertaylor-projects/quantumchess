@@ -34,9 +34,21 @@ export const RULES = [
     detail: 'The capture order is Pawn, Knight, Bishop, Rook, Queen, King. Capturing a superposition that includes King does not by itself win the game: the victim resolves as its cheapest identity. The ending rules below explain revealed Kings and checkmate.',
   },
   {
-    id: 'royal', title: 'King & shield', legacy: 'Winning: Checkmate', concept: 'Royal possibility is conserved by Zap',
+    id: 'shield', title: 'Shields in superposition', legacy: 'Shields', concept: 'A shield means the direct Zap removes nothing',
+    summary: 'A gold shield can appear on a piece that was in superposition when attacked. It marks a direct Zap that cannot join the successful removals while preserving the census and at least one King possibility.',
+    paragraphs: ['Zaps resolve together. If attacking every remaining possible King would remove King everywhere, those targets try their next-highest identities instead.', 'Two Queen–King pieces sharing one Queen slot and one King slot illustrate this. When both are attacked, both try to lose Queen instead of King. They cannot both become King: one Zap succeeds, and the other target shields.'],
+    detail: 'In this example, the successful Zap resolves one piece as King, so the census resolves the shielded piece as Queen. The pieces start in superposition but do not stay that way. A shield blocks a direct Zap; it does not prevent a census collapse or a capture. Being part of a constrained group does not automatically grant a shield.',
+  },
+  {
+    id: 'definite-shield', title: 'Shields with one identity', legacy: 'Definite shields', concept: 'Zap cannot erase a piece',
+    summary: 'A piece with just one identity left always shields against Zap: removing that identity would leave no piece.',
+    paragraphs: ['This applies to Pawns, Knights, Bishops, Rooks, Queens and Kings. A definite Rook stays a Rook when zapped; a definite King stays a King.', 'The shield only stops the Zap effect. An enemy still attacks the square and can capture the piece with a legal move onto it. A shielded King can still be in check or checkmate.'],
+    detail: 'Checkmate requires check and no legal reply. If a checked King has a legal escape, play continues. If the side to move has no legal move but its King is not in check, the result is stalemate. The following boards compare checkmate with stalemate.',
+  },
+  {
+    id: 'king', title: 'King & checkmate', legacy: 'Winning: Checkmate', concept: 'A shield does not stop checkmate',
     summary: 'Zap cannot remove the final King possibility. Check applies only to a piece whose sole remaining identity is King: a revealed King.',
-    paragraphs: ['For example, a Rook–King piece is still in superposition: attacking it is not check. Once only King remains, an enemy threatens check if any of its remaining identities can capture that square, even if the attacker is still in superposition.', 'Every move is checked after movement, capture, census, Zap and Heal resolve. If your King is revealed in the resulting position, no enemy may be able to capture its square. This also applies when your move reveals your King.', 'If you are in check, your next move must resolve it. Moving the King to safety, blocking the attack or capturing the attacker can do this, provided the final position passes the same safety check. Check with no legal reply is checkmate.', 'A gold shield marks an interaction that removes nothing: the state is already definite, or no removal preserves the census and royal safeguard.'],
+    paragraphs: ['For example, a Rook–King piece is still in superposition: attacking it is not check. Once only King remains, an enemy threatens check if any of its remaining identities can capture that square, even if the attacker is still in superposition.', 'Every move is checked after movement, capture, census, Zap and Heal resolve. If your King is revealed in the resulting position, no enemy may be able to capture its square. This also applies when your move reveals your King.', 'If you are in check, your next move must resolve it. Moving the King to safety, blocking the attack or capturing the attacker can do this, provided the final position passes the same safety check. Check with no legal reply is checkmate.'],
     detail: 'When a proposed volley would erase every King possibility, those targets retry below King. A definite King has no lower identity to lose, so it shields. A shield blocks the Zap effect; it does not stop an attack, check or checkmate. If another resolution leaves a side temporarily without a King possibility, play continues; a later heal can restore King.',
   },
   {

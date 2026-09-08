@@ -11,7 +11,7 @@ export default function RulesModal({ open = false, onClose = () => {}, onOpenTut
     if (!open || !scroll.current) return;
     scroll.current.querySelectorAll('details').forEach((node) => { node.open = false; });
     scroll.current.scrollTop = 0;
-    const alias = initialPageTitle === 'Shields' ? 'royal' : initialPageTitle === 'Turn Order' ? 'measurement' : initialPageTitle;
+    const alias = initialPageTitle === 'Shields' ? 'shield' : initialPageTitle === 'Turn Order' ? 'measurement' : initialPageTitle;
     const rule = RULES.find((r) => [r.id, r.title, r.legacy].includes(alias));
     if (rule) {
       const detail = scroll.current.querySelector(`#qr-rule-${rule.id}`);

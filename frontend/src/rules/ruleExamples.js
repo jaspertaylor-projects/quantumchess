@@ -102,13 +102,32 @@ export const RULE_EXAMPLES = {
     start: 'Move the Pawn from c7 onto White’s farthest rank. Watch both the identities and the promotion marker.',
     steps: [{ from: 'c7', to: 'c8', notice: 'At c8 the Pawn becomes Knight–Bishop–Rook–Queen. The bar under the piece marks its Pawn origin: four movement possibilities, still one Pawn census slot.' }],
   },
-  royal: {
+  shield: {
+    title: 'Attack two superpositions and see a shield',
+    setup: () => position([whiteKing, ['mover', 'c2', 'n']], [['left', 'b3', 'qk'], ['right', 'f3', 'qk']], 'kn', 'qk'),
+    context: 'Black’s b3 and f3 pieces share exactly one Queen slot and one King slot. Both begin as Queen–King.',
+    watch: ['mover', 'left', 'right'],
+    start: 'Move the Knight to d4, where it attacks both Queen–King pieces. Watch f3 for a gold shield.',
+    steps: [
+      { from: 'c2', to: 'd4', notice: 'Both Zaps try Queen instead of removing every King possibility. Only one Queen removal fits: b3 becomes King; f3 shields against its direct Zap but becomes Queen through the census. The Knight checks the revealed King at b3. This is not checkmate: Black can escape to a3.' },
+      { from: 'b3', to: 'a3', notice: 'Black moves its King to a3, out of the Knight’s attack. Play continues. The shield at f3 stopped its direct Zap, but the census still resolved it as Queen. Check only becomes checkmate when there is no legal reply.' },
+    ],
+  },
+  'definite-shield': {
+    title: 'One identity left: nothing to Zap away',
+    setup: () => position([whiteKing, ['mover', 'c3', 'n']], [['target', 'f6', 'r'], blackKing], 'kn', 'rk'),
+    context: 'The Black piece at f6 is already a definite Rook. Shields apply to every piece type, not just Kings.',
+    watch: ['mover', 'target'],
+    start: 'Move the Knight to e4. It attacks the Rook at f6 without landing on it.',
+    steps: [{ from: 'c3', to: 'e4', notice: 'The Rook at f6 shows a gold shield and stays a Rook. Removing its last identity would erase the piece, which Zap cannot do. The Knight still attacks f6: the shield does not prevent a later capture.' }],
+  },
+  king: {
     title: 'A shield does not stop checkmate',
     setup: () => position([['wk', 'c7', 'k'], ['mover', 'b6', 'r']], [['bk', 'a8', 'k']], 'kr', 'k'),
     context: 'Both Kings are definite. White’s King on c7 controls b7 and b8.',
     watch: ['mover', 'bk'],
     start: 'Move the Rook to a6. Notice the Black King at a8 and its three possible escape squares: a7, b7 and b8.',
-    steps: [{ from: 'b6', to: 'a6', notice: 'The definite King shields against Zap, but the Rook still checks it along the a-file and covers a7. White’s King covers b7 and b8: checkmate.' }],
+    steps: [{ from: 'b6', to: 'a6', notice: 'The King has only one identity left, so it shields against Zap. The Rook still checks it along the a-file and covers a7. White’s King covers b7 and b8. Black has no legal escape: checkmate, despite the shield.' }],
   },
   draw: {
     title: 'No move, but no check',
@@ -116,7 +135,7 @@ export const RULE_EXAMPLES = {
     context: 'Black has only its King. Compare this position with the checkmate example above.',
     watch: ['mover', 'bk'],
     start: 'Move the Queen to b6. Watch a8 and the escape squares a7, b7 and b8.',
-    steps: [{ from: 'c5', to: 'b6', notice: 'The Queen controls a7, b7 and b8, but does not attack a8. Black has no legal move and is not in check: stalemate, a draw.' }],
+    steps: [{ from: 'c5', to: 'b6', notice: 'The Queen controls a7, b7 and b8, but does not attack a8, so the King receives no Zap or shield. Black has no legal move and is not in check: stalemate, a draw, not checkmate.' }],
   },
 };
 

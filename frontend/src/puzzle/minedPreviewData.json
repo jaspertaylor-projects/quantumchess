@@ -1,5 +1,5 @@
 {
- "source": "seed-4 TWINS 4x (2026-07-13, fast engine): identical default-weight bots, until-timeout; twin-strong +4 widths & 4000ms vs twin-weak 1000ms \u2014 the funded clock: decisives 7-1. 24 games; gate 6/6 = 100% at depth 6, 0 timeouts; par-hold gate native (0 collapses shipped). Chains carry evalTables + intro (pre-mistake) snapshots. | + LIVE seed-6 no-grab chains appended mid-run (unverified: gate off) | + LIVE seed-8 twins chains (2026-07-14, twinNoise 0.1, gate off) appended mid-run: chains 4..9 (run complete: 6 chains from 24 games) | 2026-07-14: dropped 2 first-grab chains (old 0,1); schedule pins the seed-8 six as dailies Jul 15-20 by trickiness | + seed-13 twins chains (2026-07-16, first post-royal-rules batch, mine-twins.sh, GATE ON depth 8: 9/12 = 75%): chains 8..11. Clean 3/3 chains 8 & 11 scheduled (07-18 re-pinned over drifted old chain 6, 07-21 new); gate-failed chains 9 (swing illusion) & 10 (par overstated) are devOnly pending curation.",
+ "source": "seed-4 TWINS 4x (2026-07-13, fast engine): identical default-weight bots, until-timeout; twin-strong +4 widths & 4000ms vs twin-weak 1000ms — the funded clock: decisives 7-1. 24 games; gate 6/6 = 100% at depth 6, 0 timeouts; par-hold gate native (0 collapses shipped). Chains carry evalTables + intro (pre-mistake) snapshots. | + LIVE seed-6 no-grab chains appended mid-run (unverified: gate off) | + LIVE seed-8 twins chains (2026-07-14, twinNoise 0.1, gate off) appended mid-run: chains 4..9 (run complete: 6 chains from 24 games) | 2026-07-14: dropped 2 first-grab chains (old 0,1); schedule pins the seed-8 six as dailies Jul 15-20 by trickiness | + seed-13 twins chains (2026-07-16, first post-royal-rules batch, mine-twins.sh, GATE ON depth 8: 9/12 = 75%): chains 8..11. Clean 3/3 chains 8 & 11 scheduled (07-18 re-pinned over drifted old chain 6, 07-21 new); gate-failed chains 9 (swing illusion) & 10 (par overstated) are devOnly pending curation. | Seed 16: three new curated puzzles released 2026-09-07; all nine par positions passed depth 8. Scheduled 2026-09-09..11 after preserving existing 2026-09-07..08 dailies.",
  "schedule": {
   "2026-07-15": 5,
   "2026-07-16": 4,
@@ -14,7 +14,12 @@
   "2026-07-25": 17,
   "2026-07-26": 16,
   "2026-07-27": 15,
-  "2026-07-28": 13
+  "2026-07-28": 13,
+  "2026-09-07": 16,
+  "2026-09-08": 17,
+  "2026-09-09": 19,
+  "2026-09-10": 20,
+  "2026-09-11": 21
  },
  "chains": [
   {
@@ -32897,6 +32902,4925 @@
    "white": "twin-weak",
    "black": "twin-strong",
    "mirrored": true
+  },
+  {
+   "startPly": 34,
+   "parPlies": 3,
+   "endsInMate": false,
+   "mistake": {
+    "from": "d6",
+    "to": "f5",
+    "evalBefore": 0.39,
+    "evalAfter": 6.55,
+    "swing": 6.16
+   },
+   "spread": {
+    "best": 6.551999999999999,
+    "median": -6.31,
+    "medianFrac": 0,
+    "numChoices": 81
+   },
+   "parEvals": [
+    6.55,
+    6.19,
+    10.89
+   ],
+   "trickiness": 6.6,
+   "trickMin": 6.6,
+   "trickAvg": 11.07,
+   "themes": [
+    "check",
+    "recohere",
+    "heal2",
+    "quiet"
+   ],
+   "steps": [
+    {
+     "ply": 34,
+     "bestMove": {
+      "type": "move",
+      "from": "b7",
+      "to": "b8",
+      "enPassant": false
+     },
+     "parEval": 6.55,
+     "spread": {
+      "best": 6.551999999999999,
+      "median": -6.31,
+      "medianFrac": 0,
+      "numChoices": 81
+     },
+     "numChoices": 81,
+     "shallowRank": 1,
+     "possDelta": 4,
+     "themes": [
+      "check",
+      "recohere"
+     ],
+     "trickiness": 6.6
+    },
+    {
+     "ply": 36,
+     "bestMove": {
+      "type": "move",
+      "from": "b8",
+      "to": "b3",
+      "enPassant": false
+     },
+     "parEval": 6.19,
+     "spread": {
+      "best": 6.194999999999999,
+      "median": 1.22,
+      "medianFrac": 0.197,
+      "numChoices": 89
+     },
+     "numChoices": 89,
+     "shallowRank": 6,
+     "possDelta": -3,
+     "themes": [
+      "heal2",
+      "quiet",
+      "recohere"
+     ],
+     "trickiness": 15.07
+    },
+    {
+     "ply": 38,
+     "bestMove": {
+      "type": "move",
+      "from": "e6",
+      "to": "g7",
+      "enPassant": false
+     },
+     "parEval": 10.89,
+     "spread": {
+      "best": 10.890000000000002,
+      "median": 2.73,
+      "medianFrac": 0.251,
+      "numChoices": 76
+     },
+     "numChoices": 76,
+     "shallowRank": 6,
+     "possDelta": 9,
+     "themes": [],
+     "trickiness": 11.53
+    }
+   ],
+   "blackReplies": [
+    {
+     "type": "move",
+     "from": "d7",
+     "to": "g7"
+    },
+    {
+     "type": "move",
+     "from": "f5",
+     "to": "g3"
+    }
+   ],
+   "start": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "white",
+      "square": "a1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "white",
+      "square": "b1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "white",
+      "square": "c1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d1_3",
+      "side": "white",
+      "square": "d1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "white",
+      "square": "e6",
+      "possibleTypes": [
+       "p",
+       "r"
+      ],
+      "baseTypes": [
+       "p",
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_g1_6",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "W_a2_8",
+      "side": "white",
+      "square": "a3",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c2_10",
+      "side": "white",
+      "square": "b7",
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "white",
+      "square": "d4",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 9
+     },
+     {
+      "id": "W_f2_13",
+      "side": "white",
+      "square": "g3",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g2_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "W_h2_15",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_a8_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "black",
+      "square": "b8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "black",
+      "square": "d7",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "B_e8_4",
+      "side": "black",
+      "square": "e8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f8_5",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "B_g8_6",
+      "side": "black",
+      "square": "g6",
+      "possibleTypes": [
+       "k"
+      ],
+      "baseTypes": [
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_h8_7",
+      "side": "black",
+      "square": "h7",
+      "possibleTypes": [
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "black",
+      "square": "a6",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b7_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 11
+     },
+     {
+      "id": "B_c7_10",
+      "side": "black",
+      "square": "f5",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "B_e7_12",
+      "side": "black",
+      "square": "f6",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f7_13",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 10
+     },
+     {
+      "id": "B_g7_14",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_h7_15",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     }
+    ],
+    "lastMove": {
+     "side": "black",
+     "pieceId": "B_c7_10",
+     "from": "d6",
+     "to": "f5",
+     "didCapture": false,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "d4",
+      "g3"
+     ],
+     "healedSquares": [],
+     "failedHealSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 12,
+    "sideToMove": "white"
+   },
+   "intro": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "white",
+      "square": "a1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "white",
+      "square": "b1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "white",
+      "square": "c1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d1_3",
+      "side": "white",
+      "square": "d1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "white",
+      "square": "e6",
+      "possibleTypes": [
+       "p",
+       "r"
+      ],
+      "baseTypes": [
+       "p",
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_g1_6",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "W_a2_8",
+      "side": "white",
+      "square": "a3",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c2_10",
+      "side": "white",
+      "square": "b7",
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "white",
+      "square": "d4",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 9
+     },
+     {
+      "id": "W_f2_13",
+      "side": "white",
+      "square": "g3",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g2_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "W_h2_15",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 3,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_a8_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "black",
+      "square": "b8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "black",
+      "square": "d7",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "B_e8_4",
+      "side": "black",
+      "square": "e8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f8_5",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "B_g8_6",
+      "side": "black",
+      "square": "g6",
+      "possibleTypes": [
+       "k"
+      ],
+      "baseTypes": [
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_h8_7",
+      "side": "black",
+      "square": "h7",
+      "possibleTypes": [
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "black",
+      "square": "a6",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b7_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 11
+     },
+     {
+      "id": "B_c7_10",
+      "side": "black",
+      "square": "d6",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "B_e7_12",
+      "side": "black",
+      "square": "f6",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f7_13",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 10
+     },
+     {
+      "id": "B_g7_14",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_h7_15",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     }
+    ],
+    "lastMove": {
+     "side": "white",
+     "pieceId": "W_c2_10",
+     "from": "b3",
+     "to": "b7",
+     "didCapture": true,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "a6",
+      "a8",
+      "b8",
+      "d7"
+     ],
+     "healedSquares": [],
+     "failedHealSquares": [
+      "b2"
+     ],
+     "fizzledSquares": []
+    },
+    "captureCounter": 12,
+    "sideToMove": "black"
+   },
+   "evalTables": [
+    {
+     "sig": "white#-#B_a7_8:a6:prq::m:|B_a8_0:a8:pnrq::f:|B_b7_9:x:p::f:|B_b8_1:b8:pnrq::f:|B_c7_10:f5:n::m:|B_c8_2:d7:pq::m:|B_d7_11:x:p::m:|B_d8_3:x:p::m:|B_e7_12:f6:p::m:|B_e8_4:e8:pnr::f:|B_f7_13:x:p::m:|B_f8_5:x:b::m:|B_g7_14:x:b::m:|B_g8_6:g6:k::m:|B_h7_15:x:r::m:|B_h8_7:h7:rq::m:|W_a1_0:a1:pnk::f:|W_a2_8:a3:pn::m:|W_b1_1:b1:pnk::f:|W_b2_9:b2:pnrk::f:|W_c1_2:c1:pnk::f:|W_c2_10:b7:q::m:|W_d1_3:d1:pnrk::f:|W_d2_11:d4:p::m:|W_e1_4:e6:pr::m:|W_e2_12:x:r::m:|W_f1_5:x:b::m:|W_f2_13:g3:pn::m:|W_g1_6:h2:b::m:|W_g2_14:x:p::m:|W_h1_7:x:n::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "b7>b8": 6.552,
+      "b7>f3": 5.226,
+      "b7>c7": 3.945,
+      "b7>g2": 3.068,
+      "b7>e4": 2.638,
+      "b7>d5": 2.524,
+      "b7>h1": 1.513,
+      "b2>b6": 1.429,
+      "c1>e2": 0.523,
+      "b2>b5": -0.696,
+      "b7>b4": -1.3,
+      "e6>b6": -1.49,
+      "b7>c8": -2.48,
+      "g3>g4": -3.24,
+      "b7>a6": -3.241,
+      "b7>a8": -3.457,
+      "b7>d7": -3.661,
+      "b7>b3": -4.107,
+      "b7>c6": -4.392,
+      "g3>e2": -4.405,
+      "g3>h5": -4.633,
+      "h2>g1": -4.71,
+      "c1>d3": -4.828,
+      "e6>d7": -4.838,
+      "b2>c2": -4.838,
+      "g3>f5": -4.857,
+      "b7>a7": -4.928,
+      "b7>b5": -4.948,
+      "d4>d5": -4.95,
+      "b2>e2": -5.015,
+      "b7>b6": -5.041,
+      "b2>a2": -5.107,
+      "a3>a4": -5.148,
+      "d1>d2": -5.205,
+      "d1>d3": -5.436,
+      "c1>c3": -5.46,
+      "e6>e7": -5.556,
+      "b2>d2": -5.622,
+      "e6>e2": -6.261,
+      "g3>f1": -6.315,
+      "a1>b3": -6.361,
+      "c1>b3": -6.421,
+      "b1>c3": -6.447,
+      "c1>c2": -6.647,
+      "b2>f2": -6.688,
+      "b2>b3": -6.705,
+      "e6>e4": -6.758,
+      "b2>g2": -6.975,
+      "a3>c4": -6.988,
+      "b2>b4": -7.044,
+      "a1>a2": -7.07,
+      "a3>b5": -7.197,
+      "e6>e3": -7.349,
+      "d1>c3": -7.357,
+      "g3>e4": -7.454,
+      "d1>e1": -7.454,
+      "b1>d2": -7.465,
+      "d1>e3": -7.499,
+      "a1>c2": -7.5,
+      "e6>e8": -7.528,
+      "a3>c2": -7.569,
+      "b2>d3": -7.592,
+      "e6>c6": -7.702,
+      "g3>h1": -7.714,
+      "d1>h1": -7.753,
+      "e6>f6": -7.787,
+      "d1>g1": -7.792,
+      "c1>a2": -7.957,
+      "e6>e1": -8.452,
+      "e6>e5": -8.452,
+      "d1>f1": -8.525,
+      "e6>a6": -8.618,
+      "d1>f2": -8.708,
+      "e6>d6": -9.206,
+      "b2>c4": -9.821,
+      "b2>a4": -11.199,
+      "b1>a2": -14.781,
+      "b2>c3": -14.83,
+      "b1>c2": -15.313,
+      "c1>d2": -15.361,
+      "d1>c2": -15.531
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:a6:p::m:|B_a8_0:a8:pn::f:|B_b7_9:x:p::f:|B_b8_1:x:p::f:|B_c7_10:f5:n::m:|B_c8_2:g7:q::m:|B_d7_11:x:p::m:|B_d8_3:x:p::m:|B_e7_12:f6:pn::m:|B_e8_4:e8:pn::f:|B_f7_13:x:p::m:|B_f8_5:x:b::m:|B_g7_14:x:b::m:|B_g8_6:g6:rk::m:|B_h7_15:x:r::m:|B_h8_7:h7:rk::m:|W_a1_0:a1:pnk::f:|W_a2_8:a3:pn::m:|W_b1_1:b1:pnk::f:|W_b2_9:b2:pnrk::f:|W_c1_2:c1:pnk::f:|W_c2_10:b8:q::m:|W_d1_3:d1:pnrk::f:|W_d2_11:d4:p::m:|W_e1_4:e6:pr::m:|W_e2_12:x:r::m:|W_f1_5:x:b::m:|W_f2_13:g3:pnr::m:|W_g1_6:h2:b::m:|W_g2_14:x:p::m:|W_h1_7:x:n::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "b8>b3": 6.195,
+      "d4>d5": 5.78,
+      "b8>c8": 5.443,
+      "b8>f4": 5.411,
+      "b8>b4": 5.333,
+      "g3>f5": 5.011,
+      "b8>d8": 3.798,
+      "h2>g1": 3.687,
+      "e6>a6": 3.414,
+      "b8>e8": 3.28,
+      "g3>b3": 3.119,
+      "c1>c3": 3.105,
+      "a1>a2": 3.019,
+      "a3>a4": 2.985,
+      "b8>a8": 2.785,
+      "d1>d3": 2.736,
+      "b2>c2": 2.719,
+      "b8>b6": 2.691,
+      "b2>a2": 2.678,
+      "d1>d2": 2.65,
+      "g3>g4": 2.632,
+      "a3>c4": 2.405,
+      "g3>d3": 2.257,
+      "c1>e2": 2.248,
+      "b2>d3": 2.214,
+      "b1>c3": 2.101,
+      "c1>a2": 2.065,
+      "g3>h1": 1.95,
+      "g3>f1": 1.938,
+      "b8>d6": 1.909,
+      "e6>e7": 1.902,
+      "b2>f2": 1.885,
+      "g3>h5": 1.815,
+      "g3>f3": 1.714,
+      "c1>c2": 1.704,
+      "b1>a2": 1.669,
+      "b2>g2": 1.608,
+      "g3>c3": 1.539,
+      "b8>e5": 1.497,
+      "d1>e1": 1.469,
+      "g3>g6": 1.423,
+      "g3>e3": 1.315,
+      "b2>d2": 1.244,
+      "d1>h1": 1.22,
+      "g3>e4": 1.173,
+      "d1>g1": 1.119,
+      "c1>d3": 1.001,
+      "a3>c2": 0.781,
+      "b2>e2": 0.676,
+      "a1>b3": 0.551,
+      "a1>c2": 0.551,
+      "c1>b3": 0.539,
+      "b2>b3": 0.512,
+      "d1>c3": 0.505,
+      "b2>a4": 0.465,
+      "d1>e3": 0.427,
+      "g3>e2": 0.195,
+      "g3>h3": 0.171,
+      "a3>b5": -0.12,
+      "b1>d2": -0.267,
+      "d1>f2": -0.359,
+      "b2>c4": -0.414,
+      "e6>e1": -0.588,
+      "b1>c2": -0.624,
+      "b2>b4": -0.645,
+      "g3>g1": -0.703,
+      "e6>c6": -1.111,
+      "e6>e2": -1.892,
+      "d1>f1": -2.026,
+      "b8>b5": -2.404,
+      "d1>c2": -2.417,
+      "b2>b5": -2.598,
+      "e6>f6": -2.665,
+      "b8>b7": -2.732,
+      "b2>b6": -2.837,
+      "g3>g5": -2.907,
+      "e6>e8": -2.939,
+      "e6>b6": -3.242,
+      "b8>c7": -3.295,
+      "c1>d2": -3.574,
+      "b8>a7": -3.586,
+      "b2>c3": -3.773,
+      "e6>e5": -4.274,
+      "e6>d6": -4.286,
+      "b2>b7": -4.434,
+      "g3>g2": -4.701,
+      "e6>e4": -5.997,
+      "e6>e3": -6.671,
+      "d1>e2": -8.061
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:a6:p::m:|B_a8_0:a8:pn::f:|B_b7_9:x:p::f:|B_b8_1:x:p::f:|B_c7_10:g3:n::m:|B_c8_2:g7:q::m:|B_d7_11:x:p::m:|B_d8_3:x:p::m:|B_e7_12:f6:pn::m:|B_e8_4:e8:pn::f:|B_f7_13:x:p::m:|B_f8_5:x:b::m:|B_g7_14:x:b::m:|B_g8_6:g6:rk::m:|B_h7_15:x:r::m:|B_h8_7:h7:rk::m:|W_a1_0:a1:pnk::f:|W_a2_8:a3:pnr::m:|W_b1_1:b1:pnk::f:|W_b2_9:b2:pnrk::f:|W_c1_2:c1:pnk::f:|W_c2_10:b3:q::m:|W_d1_3:d1:pnrk::f:|W_d2_11:d4:p::m:|W_e1_4:e6:pnr::m:|W_e2_12:x:r::m:|W_f1_5:x:b::m:|W_f2_13:x:p::m:|W_g1_6:h2:b::m:|W_g2_14:x:p::m:|W_h1_7:x:n::m:|W_h2_15:x:p::m:",
+     "evals": {
+      "e6>g7": 10.89,
+      "h2>g3": 9.001,
+      "b3>c2": 7.473,
+      "d4>d5": 6.29,
+      "b3>a4": 6.28,
+      "b3>c3": 6.206,
+      "b3>d3": 6.009,
+      "b3>c4": 5.958,
+      "b3>e3": 5.48,
+      "b3>a2": 5.415,
+      "b2>a2": 5.348,
+      "d1>e1": 5.129,
+      "b3>b8": 5.018,
+      "d1>d3": 4.749,
+      "a3>a4": 4.731,
+      "b3>f3": 4.716,
+      "a1>a2": 4.537,
+      "d1>d2": 4.536,
+      "h2>g1": 4.42,
+      "c1>c2": 4.279,
+      "b2>f2": 4.105,
+      "b2>d2": 4.093,
+      "b3>g3": 4.085,
+      "a3>a6": 4.045,
+      "b2>c2": 3.816,
+      "e6>e7": 3.766,
+      "b3>b4": 3.739,
+      "c1>c3": 3.477,
+      "a3>a2": 3.397,
+      "b2>c4": 3.313,
+      "e6>f4": 3.259,
+      "e6>a6": 2.987,
+      "b2>a4": 2.762,
+      "a3>b5": 2.649,
+      "d1>g1": 2.574,
+      "c1>a2": 2.518,
+      "a3>c4": 2.515,
+      "b2>g2": 2.475,
+      "a1>c2": 2.427,
+      "d1>f2": 2.377,
+      "a3>a5": 2.354,
+      "d1>e3": 2.3,
+      "a3>c2": 2.287,
+      "c1>e2": 2.184,
+      "b1>c3": 2.015,
+      "b2>e2": 1.96,
+      "d1>c3": 1.955,
+      "b2>d3": 1.936,
+      "e6>c6": 1.923,
+      "c1>d3": 1.844,
+      "e6>c5": 1.664,
+      "e6>f8": 1.585,
+      "d1>h1": 1.474,
+      "e6>e3": 1.433,
+      "b3>b6": 1.341,
+      "b1>a2": 1.188,
+      "e6>e1": 1.106,
+      "b1>d2": 0.848,
+      "d1>f1": 0.737,
+      "e6>g5": 0.594,
+      "e6>f6": 0.584,
+      "c1>d2": 0.29,
+      "e6>e8": 0.253,
+      "b3>d5": -0.011,
+      "e6>e2": -0.174,
+      "e6>d8": -0.259,
+      "e6>c7": -0.407,
+      "e6>b6": -0.537,
+      "e6>e5": -0.927,
+      "b3>b5": -1.082,
+      "e6>d6": -1.733,
+      "b2>c3": -2.11,
+      "b3>b7": -2.511,
+      "e6>e4": -3.234,
+      "d1>c2": -3.986,
+      "b1>c2": -4.877
+     }
+    }
+   ],
+   "game": 17,
+   "white": "twin-strong",
+   "black": "twin-weak",
+   "mirrored": false,
+   "verification": {
+    "status": "verified",
+    "required": 3,
+    "attempted": 3,
+    "verdicts": [
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:b7->b8",
+      "deepBestScore": 8.18,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 2,
+      "game": 17,
+      "startPly": 34,
+      "mirrored": false,
+      "plyIdx": 0,
+      "parEval": 6.55
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:d4->d5",
+      "deepBestScore": 7.82,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 2,
+      "game": 17,
+      "startPly": 34,
+      "mirrored": false,
+      "plyIdx": 1,
+      "parEval": 6.19
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:e6->g7",
+      "deepBestScore": 13.73,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 2,
+      "game": 17,
+      "startPly": 34,
+      "mirrored": false,
+      "plyIdx": 2,
+      "parEval": 10.89
+     }
+    ]
+   },
+   "provenance": {
+    "seed": 16,
+    "chainIndex": 2,
+    "sourceCommit": "384c83e97a79ba819997b6595ba1a9238148f37e",
+    "curatedOn": "2026-09-07"
+   }
+  },
+  {
+   "startPly": 21,
+   "parPlies": 3,
+   "endsInMate": false,
+   "mistake": {
+    "from": "d6",
+    "to": "e4",
+    "evalBefore": -1.33,
+    "evalAfter": 5.73,
+    "swing": 7.06
+   },
+   "spread": {
+    "best": 5.732000000000001,
+    "median": -1.04,
+    "medianFrac": 0,
+    "numChoices": 45
+   },
+   "parEvals": [
+    5.73,
+    5.4,
+    5.61
+   ],
+   "trickiness": 10.8,
+   "trickMin": 7.8,
+   "trickAvg": 10.4,
+   "themes": [
+    "quiet",
+    "heal2",
+    "recohere"
+   ],
+   "steps": [
+    {
+     "ply": 21,
+     "bestMove": {
+      "type": "move",
+      "from": "f2",
+      "to": "a7",
+      "enPassant": false
+     },
+     "parEval": 5.73,
+     "spread": {
+      "best": 5.732000000000001,
+      "median": -1.04,
+      "medianFrac": 0,
+      "numChoices": 45
+     },
+     "numChoices": 45,
+     "shallowRank": 4,
+     "possDelta": 2,
+     "themes": [
+      "quiet"
+     ],
+     "trickiness": 10.8
+    },
+    {
+     "ply": 23,
+     "bestMove": {
+      "type": "move",
+      "from": "a7",
+      "to": "a3",
+      "enPassant": false
+     },
+     "parEval": 5.4,
+     "spread": {
+      "best": 5.401999999999997,
+      "median": 3.06,
+      "medianFrac": 0.567,
+      "numChoices": 49
+     },
+     "numChoices": 49,
+     "shallowRank": 0,
+     "possDelta": -1,
+     "themes": [
+      "heal2",
+      "quiet",
+      "recohere"
+     ],
+     "trickiness": 7.8
+    },
+    {
+     "ply": 25,
+     "bestMove": {
+      "type": "move",
+      "from": "a3",
+      "to": "e3",
+      "enPassant": false
+     },
+     "parEval": 5.61,
+     "spread": {
+      "best": 5.607999999999999,
+      "median": 2.41,
+      "medianFrac": 0.43,
+      "numChoices": 58
+     },
+     "numChoices": 58,
+     "shallowRank": 4,
+     "possDelta": -2,
+     "themes": [
+      "heal2",
+      "quiet",
+      "recohere"
+     ],
+     "trickiness": 12.6
+    }
+   ],
+   "blackReplies": [
+    {
+     "type": "move",
+     "from": "f6",
+     "to": "f5"
+    },
+    {
+     "type": "move",
+     "from": "d8",
+     "to": "e6"
+    }
+   ],
+   "start": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "black",
+      "square": "c6",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 10
+     },
+     {
+      "id": "W_d1_3",
+      "side": "black",
+      "square": "d8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "black",
+      "square": "e7",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "black",
+      "square": "f6",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "W_b2_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "W_c2_10",
+      "side": "black",
+      "square": "c7",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "W_e2_12",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_f2_13",
+      "side": "black",
+      "square": "e4",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g2_14",
+      "side": "black",
+      "square": "g7",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h2_15",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "B_a8_0",
+      "side": "white",
+      "square": "f2",
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 11
+     },
+     {
+      "id": "B_c8_2",
+      "side": "white",
+      "square": "c1",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "white",
+      "square": "e2",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e8_4",
+      "side": "white",
+      "square": "e1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f8_5",
+      "side": "white",
+      "square": "f1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_g8_6",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_h8_7",
+      "side": "white",
+      "square": "h1",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 9
+     },
+     {
+      "id": "B_b7_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c7_10",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_d7_11",
+      "side": "white",
+      "square": "d2",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e7_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "B_f7_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "B_g7_14",
+      "side": "white",
+      "square": "h3",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_h7_15",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "black",
+     "pieceId": "W_f2_13",
+     "from": "d6",
+     "to": "e4",
+     "didCapture": true,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "d2"
+     ],
+     "healedSquares": [
+      "f6"
+     ],
+     "failedHealSquares": [],
+     "fizzledSquares": [
+      "f7"
+     ]
+    },
+    "captureCounter": 12,
+    "sideToMove": "white"
+   },
+   "intro": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "black",
+      "square": "c6",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 10
+     },
+     {
+      "id": "W_d1_3",
+      "side": "black",
+      "square": "d8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "black",
+      "square": "e7",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "black",
+      "square": "f6",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "W_b2_9",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "W_c2_10",
+      "side": "black",
+      "square": "c7",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "W_e2_12",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_f2_13",
+      "side": "black",
+      "square": "d6",
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g2_14",
+      "side": "black",
+      "square": "g7",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h2_15",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "B_a8_0",
+      "side": "white",
+      "square": "f2",
+      "possibleTypes": [
+       "q"
+      ],
+      "baseTypes": [
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "white",
+      "square": "e4",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "white",
+      "square": "c1",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "white",
+      "square": "e2",
+      "possibleTypes": [
+       "p",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e8_4",
+      "side": "white",
+      "square": "e1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f8_5",
+      "side": "white",
+      "square": "f1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_g8_6",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "B_h8_7",
+      "side": "white",
+      "square": "h1",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 9
+     },
+     {
+      "id": "B_b7_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c7_10",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_d7_11",
+      "side": "white",
+      "square": "d2",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e7_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "B_f7_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "B_g7_14",
+      "side": "white",
+      "square": "h3",
+      "possibleTypes": [
+       "p"
+      ],
+      "baseTypes": [
+       "p"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_h7_15",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "white",
+     "pieceId": "B_a8_0",
+     "from": "a7",
+     "to": "f2",
+     "didCapture": false,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "f6"
+     ],
+     "healedSquares": [
+      "e2",
+      "e1",
+      "f1",
+      "h2"
+     ],
+     "failedHealSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 11,
+    "sideToMove": "black"
+   },
+   "evalTables": [
+    {
+     "sig": "white#-#B_a7_8:x:r::m:|B_a8_0:f2:q::m:|B_b7_9:b2:pn::f:|B_b8_1:x:p::m:|B_c7_10:x:b::m:|B_c8_2:c1:pn::f:|B_d7_11:d2:p::f:|B_d8_3:e2:pk::m:|B_e7_12:x:r::m:|B_e8_4:e1:pnk::f:|B_f7_13:x:b::m:|B_f8_5:f1:pnk::f:|B_g7_14:h3:p::m:|B_g8_6:x:n::m:|B_h7_15:h2:pnk::f:|B_h8_7:h1:pn::f:|W_a1_0:a8:pn::f:|W_a2_8:x:p::f:|W_b1_1:c6:p::m:|W_b2_9:x:r::m:|W_c1_2:x:q::m:|W_c2_10:c7:pn::f:|W_d1_3:d8:pnk::f:|W_d2_11:x:b::m:|W_e1_4:e7:pk::m:|W_e2_12:x:r::m:|W_f1_5:f8:pnk::f:|W_f2_13:e4:n::m:|W_g1_6:f6:pn::m:|W_g2_14:g7:pnk::f:|W_h1_7:h8:pnk::f:|W_h2_15:x:b::m:",
+     "evals": {
+      "f2>g1": 5.464,
+      "f2>g2": 5.418,
+      "f2>f3": 5.284,
+      "f2>e3": 5.147,
+      "f2>d4": 5.057,
+      "c1>d3": 4.48,
+      "h2>g1": 4.412,
+      "f1>g1": 4.4,
+      "f1>g2": 4.284,
+      "e1>d3": 4.171,
+      "b2>d3": 4.131,
+      "h2>g2": 3.914,
+      "f2>f4": 2.366,
+      "f2>h4": 2.336,
+      "f2>a7": 1.267,
+      "e2>e3": -0.796,
+      "d2>d3": -0.886,
+      "c1>b3": -0.959,
+      "c1>c3": -0.965,
+      "h2>g4": -0.973,
+      "f2>g3": -0.975,
+      "b2>b3": -1.035,
+      "b2>d1": -1.044,
+      "c1>c2": -1.092,
+      "h2>f3": -1.303,
+      "h1>g3": -1.362,
+      "h3>h4": -1.415,
+      "c1>a2": -1.421,
+      "d2>d4": -1.54,
+      "f1>e3": -1.685,
+      "f2>f6": -1.709,
+      "f1>g3": -1.732,
+      "b2>b4": -1.736,
+      "e2>d1": -2.457,
+      "e2>d3": -2.46,
+      "e2>f3": -2.562,
+      "b2>c4": -2.747,
+      "f2>f5": -2.791,
+      "b2>a4": -3.247,
+      "f2>c5": -3.457,
+      "f2>b6": -3.59,
+      "e1>f3": -4.092,
+      "e1>c2": -4.754,
+      "e1>g2": -4.766,
+      "e1>d1": -8.449
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:x:r::m:|B_a8_0:a7:q::m:|B_b7_9:b2:pn::f:|B_b8_1:x:p::m:|B_c7_10:x:b::m:|B_c8_2:c1:pn::f:|B_d7_11:d2:p::f:|B_d8_3:e2:pk::m:|B_e7_12:x:r::m:|B_e8_4:e1:pnk::f:|B_f7_13:x:b::m:|B_f8_5:f1:pnk::f:|B_g7_14:h3:p::m:|B_g8_6:x:n::m:|B_h7_15:h2:pnk::f:|B_h8_7:h1:pn::f:|W_a1_0:a8:p::f:|W_a2_8:x:p::f:|W_b1_1:c6:p::m:|W_b2_9:x:r::m:|W_c1_2:x:q::m:|W_c2_10:c7:p::f:|W_d1_3:d8:pnk::f:|W_d2_11:x:b::m:|W_e1_4:e7:pk::m:|W_e2_12:x:r::m:|W_f1_5:f8:pnk::f:|W_f2_13:e4:pn::m:|W_g1_6:f5:p::m:|W_g2_14:g7:pnk::f:|W_h1_7:h8:pnk::f:|W_h2_15:x:b::m:",
+     "evals": {
+      "a7>a3": 5.402,
+      "a7>a2": 5.306,
+      "a7>a1": 5.124,
+      "a7>e3": 5.111,
+      "a7>a4": 5.014,
+      "a7>g1": 4.299,
+      "a7>d4": 3.743,
+      "b2>b4": 3.614,
+      "a7>a6": 3.235,
+      "a7>a5": 3.121,
+      "c1>b3": 3.085,
+      "e1>c2": 1.947,
+      "e2>e3": 1.778,
+      "e1>g2": 1.733,
+      "h3>h4": 1.291,
+      "c1>c3": 1.247,
+      "b2>b3": 1.177,
+      "f1>f2": 1.144,
+      "c1>c2": 1.12,
+      "f1>g3": 0.73,
+      "h1>g3": 0.718,
+      "d2>d4": 0.651,
+      "c1>a2": 0.611,
+      "d2>d3": 0.595,
+      "b2>c4": 0.582,
+      "b2>d1": 0.552,
+      "h1>f2": 0.297,
+      "f1>f3": 0.158,
+      "a7>a8": 0.103,
+      "a7>b8": -0.053,
+      "e2>d1": -0.315,
+      "e1>d1": -0.342,
+      "h2>g2": -0.416,
+      "f1>g2": -0.416,
+      "f1>g1": -0.717,
+      "f1>e3": -0.722,
+      "c1>d3": -0.795,
+      "h2>f3": -0.807,
+      "h2>g1": -0.807,
+      "b2>d3": -0.842,
+      "a7>f2": -0.858,
+      "h2>g4": -1.554,
+      "e1>d3": -1.637,
+      "e1>f3": -1.657,
+      "a7>c7": -2.25,
+      "b2>a4": -2.304,
+      "a7>c5": -3.211,
+      "a7>b6": -3.729,
+      "a7>b7": -4.026
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:x:r::m:|B_a8_0:a3:q::m:|B_b7_9:b2:pnk::f:|B_b8_1:x:p::m:|B_c7_10:x:b::m:|B_c8_2:c1:pn::f:|B_d7_11:d2:p::f:|B_d8_3:e2:pk::m:|B_e7_12:x:r::m:|B_e8_4:e1:pnk::f:|B_f7_13:x:b::m:|B_f8_5:f1:pnk::f:|B_g7_14:h3:pn::m:|B_g8_6:x:n::m:|B_h7_15:h2:pnk::f:|B_h8_7:h1:pn::f:|W_a1_0:a8:p::f:|W_a2_8:x:p::f:|W_b1_1:c6:p::m:|W_b2_9:x:r::m:|W_c1_2:x:q::m:|W_c2_10:c7:pn::f:|W_d1_3:e6:n::m:|W_d2_11:x:b::m:|W_e1_4:e7:p::m:|W_e2_12:x:r::m:|W_f1_5:f8:pnk::f:|W_f2_13:e4:pn::m:|W_g1_6:f5:p::m:|W_g2_14:g7:pnk::f:|W_h1_7:h8:pnk::f:|W_h2_15:x:b::m:",
+     "evals": {
+      "a3>e3": 5.608,
+      "e2>e3": 5.381,
+      "a3>a7": 4.935,
+      "a3>a1": 4.884,
+      "a3>b3": 4.728,
+      "a3>a2": 4.675,
+      "c1>c3": 4.611,
+      "c1>c2": 4.597,
+      "d2>d3": 4.524,
+      "h3>h4": 4.522,
+      "b2>b3": 4.492,
+      "f1>f2": 4.227,
+      "a3>a4": 4.02,
+      "f1>g3": 3.992,
+      "b2>b4": 3.832,
+      "c1>b3": 3.82,
+      "h1>g3": 3.795,
+      "d2>d4": 3.639,
+      "e1>c2": 3.471,
+      "h3>g1": 3.467,
+      "a3>b4": 3.439,
+      "e1>g2": 3.362,
+      "a3>a5": 3.18,
+      "f1>f3": 3.067,
+      "b2>c4": 3.047,
+      "h1>f2": 3.035,
+      "b2>a2": 2.886,
+      "h3>f2": 2.883,
+      "f1>e3": 2.78,
+      "h3>g5": 2.153,
+      "c1>d3": 1.881,
+      "e1>f3": 1.869,
+      "e1>d3": 1.869,
+      "c1>a2": 1.86,
+      "h2>f3": 1.845,
+      "b2>a4": 1.756,
+      "h2>g4": 1.694,
+      "h3>f4": 1.598,
+      "b2>b1": 1.047,
+      "a3>c3": 1.017,
+      "b2>d3": 0.973,
+      "b2>c2": 0.704,
+      "b2>d1": 0.474,
+      "a3>g3": -0.371,
+      "e1>d1": -0.583,
+      "f1>g2": -0.586,
+      "e2>d1": -0.69,
+      "b2>a1": -1.318,
+      "a3>e7": -1.455,
+      "a3>d3": -1.646,
+      "a3>f3": -1.646,
+      "h2>g2": -1.708,
+      "a3>a8": -1.774,
+      "f1>g1": -1.918,
+      "a3>a6": -3.09,
+      "h2>g1": -3.445,
+      "a3>d6": -3.695,
+      "a3>c5": -4.254
+     }
+    }
+   ],
+   "game": 3,
+   "white": "twin-weak",
+   "black": "twin-strong",
+   "mirrored": true,
+   "verification": {
+    "status": "verified",
+    "required": 3,
+    "attempted": 3,
+    "verdicts": [
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:f2->d4",
+      "deepBestScore": 5.82,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 0,
+      "game": 3,
+      "startPly": 21,
+      "mirrored": true,
+      "plyIdx": 0,
+      "parEval": 5.73
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:d2->d3",
+      "deepBestScore": 5.07,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 0,
+      "game": 3,
+      "startPly": 21,
+      "mirrored": true,
+      "plyIdx": 1,
+      "parEval": 5.4
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:d2->d3",
+      "deepBestScore": 5.14,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 0,
+      "game": 3,
+      "startPly": 21,
+      "mirrored": true,
+      "plyIdx": 2,
+      "parEval": 5.61
+     }
+    ]
+   },
+   "provenance": {
+    "seed": 16,
+    "chainIndex": 0,
+    "sourceCommit": "384c83e97a79ba819997b6595ba1a9238148f37e",
+    "curatedOn": "2026-09-07"
+   }
+  },
+  {
+   "startPly": 18,
+   "parPlies": 3,
+   "endsInMate": false,
+   "mistake": {
+    "from": "h7",
+    "to": "f5",
+    "evalBefore": -0.04,
+    "evalAfter": 4.09,
+    "swing": 4.13
+   },
+   "spread": {
+    "best": 4.0939999999999985,
+    "median": -1.96,
+    "medianFrac": 0,
+    "numChoices": 129
+   },
+   "parEvals": [
+    4.09,
+    5.21,
+    3.11
+   ],
+   "trickiness": 16.51,
+   "trickMin": 4.09,
+   "trickAvg": 12.37,
+   "themes": [
+    "heal2",
+    "check",
+    "recohere"
+   ],
+   "steps": [
+    {
+     "ply": 18,
+     "bestMove": {
+      "type": "move",
+      "from": "f1",
+      "to": "g1",
+      "enPassant": false
+     },
+     "parEval": 4.09,
+     "spread": {
+      "best": 4.0939999999999985,
+      "median": -1.96,
+      "medianFrac": 0,
+      "numChoices": 129
+     },
+     "numChoices": 129,
+     "shallowRank": 43,
+     "possDelta": -2,
+     "themes": [
+      "heal2",
+      "check",
+      "recohere"
+     ],
+     "trickiness": 16.51
+    },
+    {
+     "ply": 20,
+     "bestMove": {
+      "type": "move",
+      "from": "e1",
+      "to": "e4",
+      "enPassant": false
+     },
+     "parEval": 5.21,
+     "spread": {
+      "best": 5.213000000000002,
+      "median": -2.64,
+      "medianFrac": 0,
+      "numChoices": 81
+     },
+     "numChoices": 81,
+     "shallowRank": 23,
+     "possDelta": 2,
+     "themes": [
+      "heal2",
+      "check",
+      "recohere"
+     ],
+     "trickiness": 16.51
+    },
+    {
+     "ply": 22,
+     "bestMove": {
+      "type": "move",
+      "from": "g4",
+      "to": "f6",
+      "enPassant": false
+     },
+     "parEval": 3.11,
+     "spread": {
+      "best": 3.1130000000000067,
+      "median": -8.72,
+      "medianFrac": 0,
+      "numChoices": 40
+     },
+     "numChoices": 40,
+     "shallowRank": 0,
+     "possDelta": 4,
+     "themes": [],
+     "trickiness": 4.09
+    }
+   ],
+   "blackReplies": [
+    {
+     "type": "move",
+     "from": "f5",
+     "to": "f6"
+    },
+    {
+     "type": "move",
+     "from": "b6",
+     "to": "g1"
+    }
+   ],
+   "start": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "white",
+      "square": "a1",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "white",
+      "square": "b1",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "W_d1_3",
+      "side": "white",
+      "square": "d2",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "white",
+      "square": "e1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "white",
+      "square": "f1",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "white",
+      "square": "g4",
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "white",
+      "square": "h1",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "white",
+      "square": "b3",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c2_10",
+      "side": "white",
+      "square": "b4",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "white",
+      "square": "c3",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_f2_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "W_g2_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "W_h2_15",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a8_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "black",
+      "square": "b8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "black",
+      "square": "c8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "black",
+      "square": "d8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e8_4",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "B_f8_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_g8_6",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "B_h8_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "black",
+      "square": "b6",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b7_9",
+      "side": "black",
+      "square": "b7",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c7_10",
+      "side": "black",
+      "square": "c7",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_e7_12",
+      "side": "black",
+      "square": "e6",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f7_13",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "B_g7_14",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "B_h7_15",
+      "side": "black",
+      "square": "f5",
+      "possibleTypes": [
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "black",
+     "pieceId": "B_h7_15",
+     "from": "h7",
+     "to": "f5",
+     "didCapture": false,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [
+      "b1",
+      "g4"
+     ],
+     "healedSquares": [
+      "e6"
+     ],
+     "failedHealSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 9,
+    "sideToMove": "white"
+   },
+   "intro": {
+    "pieces": [
+     {
+      "id": "W_a1_0",
+      "side": "white",
+      "square": "a1",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b1_1",
+      "side": "white",
+      "square": "b1",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c1_2",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 2
+     },
+     {
+      "id": "W_d1_3",
+      "side": "white",
+      "square": "d2",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e1_4",
+      "side": "white",
+      "square": "e1",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_f1_5",
+      "side": "white",
+      "square": "f1",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_g1_6",
+      "side": "white",
+      "square": "g4",
+      "possibleTypes": [
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_h1_7",
+      "side": "white",
+      "square": "h1",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_a2_8",
+      "side": "white",
+      "square": "b3",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_b2_9",
+      "side": "white",
+      "square": "b2",
+      "possibleTypes": [
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "n",
+       "r",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_c2_10",
+      "side": "white",
+      "square": "b4",
+      "possibleTypes": [
+       "p",
+       "n"
+      ],
+      "baseTypes": [
+       "p",
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_d2_11",
+      "side": "white",
+      "square": "c3",
+      "possibleTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "W_e2_12",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 5
+     },
+     {
+      "id": "W_f2_13",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 1
+     },
+     {
+      "id": "W_g2_14",
+      "side": "white",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 7
+     },
+     {
+      "id": "W_h2_15",
+      "side": "white",
+      "square": "h2",
+      "possibleTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "r",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a8_0",
+      "side": "black",
+      "square": "a8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b8_1",
+      "side": "black",
+      "square": "b8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c8_2",
+      "side": "black",
+      "square": "c8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d8_3",
+      "side": "black",
+      "square": "d8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_e8_4",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 2,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 4
+     },
+     {
+      "id": "B_f8_5",
+      "side": "black",
+      "square": "f8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_g8_6",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 8
+     },
+     {
+      "id": "B_h8_7",
+      "side": "black",
+      "square": "h8",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_a7_8",
+      "side": "black",
+      "square": "b6",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_b7_9",
+      "side": "black",
+      "square": "b7",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_c7_10",
+      "side": "black",
+      "square": "c7",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_d7_11",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "n"
+      ],
+      "baseTypes": [
+       "n"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 0
+     },
+     {
+      "id": "B_e7_12",
+      "side": "black",
+      "square": "e6",
+      "possibleTypes": [
+       "p",
+       "q"
+      ],
+      "baseTypes": [
+       "p",
+       "q"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false
+     },
+     {
+      "id": "B_f7_13",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "b"
+      ],
+      "baseTypes": [
+       "b"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 3
+     },
+     {
+      "id": "B_g7_14",
+      "side": "black",
+      "square": null,
+      "possibleTypes": [
+       "r"
+      ],
+      "baseTypes": [
+       "r"
+      ],
+      "promoTypes": [],
+      "captured": true,
+      "moveCount": 1,
+      "wasPromoted": false,
+      "castled": false,
+      "captureIndex": 6
+     },
+     {
+      "id": "B_h7_15",
+      "side": "black",
+      "square": "h7",
+      "possibleTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "baseTypes": [
+       "p",
+       "b",
+       "q",
+       "k"
+      ],
+      "promoTypes": [],
+      "captured": false,
+      "moveCount": 0,
+      "wasPromoted": false,
+      "castled": false
+     }
+    ],
+    "lastMove": {
+     "side": "white",
+     "pieceId": "W_g1_6",
+     "from": "g1",
+     "to": "g4",
+     "didCapture": true,
+     "isDoubleStep": false,
+     "crossedSquare": null,
+     "zappedSquares": [],
+     "healedSquares": [
+      "b4"
+     ],
+     "failedHealSquares": [],
+     "fizzledSquares": []
+    },
+    "captureCounter": 9,
+    "sideToMove": "black"
+   },
+   "evalTables": [
+    {
+     "sig": "white#-#B_a7_8:b6:pbq::m:|B_a8_0:a8:pbqk::f:|B_b7_9:b7:pbqk::f:|B_b8_1:b8:pbqk::f:|B_c7_10:c7:pbq::f:|B_c8_2:c8:pbqk::f:|B_d7_11:x:n::m:|B_d8_3:d8:pbqk::f:|B_e7_12:e6:pbq::m:|B_e8_4:x:n::m:|B_f7_13:x:b::m:|B_f8_5:f8:pbqk::f:|B_g7_14:x:r::m:|B_g8_6:x:r::m:|B_h7_15:f5:bq::m:|B_h8_7:h8:pbqk::f:|W_a1_0:a1:pqk::f:|W_a2_8:b3:pq::m:|W_b1_1:b1:pq::f:|W_b2_9:b2:pnqk::f:|W_c1_2:x:n::m:|W_c2_10:b4:pn::m:|W_d1_3:d2:pq::m:|W_d2_11:c3:pqk::m:|W_e1_4:e1:pnqk::f:|W_e2_12:x:b::m:|W_f1_5:f1:pqk::f:|W_f2_13:x:b::m:|W_g1_6:g4:r::m:|W_g2_14:x:r::m:|W_h1_7:h1:pqk::f:|W_h2_15:h2:pq::f:",
+     "evals": {
+      "f1>g1": 4.094,
+      "g4>g3": 3.389,
+      "d2>f4": 2.926,
+      "d2>e2": 2.711,
+      "h2>h3": 2.261,
+      "f1>f4": 1.802,
+      "h2>f4": 1.798,
+      "f1>f3": 1.599,
+      "g4>g1": 1.557,
+      "g4>c4": 1.456,
+      "h1>f3": 1.419,
+      "b1>d1": 1.368,
+      "f1>e2": 1.367,
+      "h2>g1": 1.311,
+      "e1>d1": 1.273,
+      "d2>d1": 1.253,
+      "c3>g3": 1.185,
+      "b3>c4": 1.147,
+      "b3>d1": 1.079,
+      "g4>g8": 1.01,
+      "g4>g5": 0.663,
+      "g4>h4": 0.581,
+      "e1>f2": 0.178,
+      "h2>h5": -0.405,
+      "g4>f4": -0.466,
+      "f1>c4": -0.493,
+      "g4>e4": -0.52,
+      "d2>d4": -0.585,
+      "h1>g2": -0.674,
+      "b2>c4": -0.69,
+      "f1>f2": -0.714,
+      "b1>f5": -0.717,
+      "a1>a2": -0.72,
+      "g4>d4": -0.73,
+      "c3>c4": -0.759,
+      "f1>g2": -0.76,
+      "d2>d3": -0.767,
+      "b4>d5": -0.778,
+      "b4>b5": -0.801,
+      "h2>h4": -0.825,
+      "g4>g6": -0.826,
+      "b2>c1": -0.897,
+      "a1>a3": -0.924,
+      "c3>f3": -0.928,
+      "b4>c2": -0.97,
+      "e1>e2": -1.004,
+      "e1>c2": -1.013,
+      "b4>d3": -1.017,
+      "b2>a2": -1.03,
+      "e1>d3": -1.048,
+      "h2>g3": -1.065,
+      "b2>d3": -1.083,
+      "e1>e3": -1.125,
+      "e1>g2": -1.127,
+      "b2>d1": -1.162,
+      "h2>e2": -1.181,
+      "b4>a2": -1.419,
+      "d2>f2": -1.434,
+      "h2>g2": -1.464,
+      "b2>a4": -1.478,
+      "c3>h3": -1.923,
+      "b4>a6": -1.959,
+      "g4>g7": -1.962,
+      "b4>c6": -2.029,
+      "d2>g5": -2.109,
+      "f1>f5": -2.219,
+      "h2>f2": -2.525,
+      "f1>h3": -2.683,
+      "d2>c1": -2.829,
+      "e1>c1": -2.95,
+      "b1>c1": -2.969,
+      "e1>f3": -3.033,
+      "d2>g2": -3.037,
+      "e1>g3": -3.091,
+      "h1>g1": -3.182,
+      "a1>a4": -3.257,
+      "b1>a2": -3.381,
+      "d2>d8": -3.392,
+      "e1>h4": -3.415,
+      "b3>a3": -4.256,
+      "h2>h8": -4.36,
+      "b3>e6": -4.423,
+      "c3>h8": -4.47,
+      "d2>h6": -4.504,
+      "c3>d4": -4.608,
+      "e1>e6": -4.63,
+      "b3>a4": -4.634,
+      "c3>c1": -4.699,
+      "d2>c2": -4.826,
+      "a1>a8": -4.84,
+      "f1>b5": -4.939,
+      "h1>e4": -5.416,
+      "d2>e3": -5.465,
+      "b1>e4": -5.478,
+      "b1>d3": -5.527,
+      "h2>h6": -5.582,
+      "f1>d3": -5.617,
+      "h2>c7": -5.637,
+      "b2>a3": -5.754,
+      "h1>d5": -5.878,
+      "h2>e5": -5.945,
+      "b3>d5": -5.963,
+      "b3>a2": -5.985,
+      "d2>d5": -5.997,
+      "c3>g7": -6.013,
+      "h1>b7": -6.028,
+      "e1>e5": -6.047,
+      "h2>h7": -6.157,
+      "c3>e3": -6.216,
+      "b1>c2": -6.315,
+      "b3>c2": -6.502,
+      "c3>c7": -6.541,
+      "c3>f6": -6.562,
+      "a1>a5": -6.637,
+      "c3>d3": -6.725,
+      "c3>c5": -6.813,
+      "d2>d6": -6.892,
+      "b2>c2": -6.937,
+      "g4>g2": -6.957,
+      "a1>a6": -6.968,
+      "h2>d6": -7.008,
+      "c3>c2": -7.019,
+      "h1>c6": -7.398,
+      "d2>d7": -7.443,
+      "f1>a6": -7.6,
+      "a1>a7": -7.671,
+      "e1>e4": -7.813,
+      "c3>e5": -8.476,
+      "c3>c6": -8.864
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:b6:pb::m:|B_a8_0:a8:pbk::f:|B_b7_9:b7:pbk::f:|B_b8_1:b8:pbk::f:|B_c7_10:c7:pb::f:|B_c8_2:c8:pbk::f:|B_d7_11:x:n::m:|B_d8_3:d8:pbk::f:|B_e7_12:e6:pbk::m:|B_e8_4:x:n::m:|B_f7_13:x:b::m:|B_f8_5:f8:pbk::f:|B_g7_14:x:r::m:|B_g8_6:x:r::m:|B_h7_15:f6:q::m:|B_h8_7:h8:pbk::f:|W_a1_0:a1:pqk::f:|W_a2_8:b3:pq::m:|W_b1_1:b1:pq::f:|W_b2_9:b2:pnqk::f:|W_c1_2:x:n::m:|W_c2_10:b4:pn::m:|W_d1_3:d2:pq::m:|W_d2_11:c3:pq::m:|W_e1_4:e1:pnrqk::f:|W_e2_12:x:b::m:|W_f1_5:g1:qk::m:|W_f2_13:x:b::m:|W_g1_6:g4:pr::m:|W_g2_14:x:r::m:|W_h1_7:h1:pnqk::f:|W_h2_15:h2:pnq::f:",
+     "evals": {
+      "e1>f1": 5.139,
+      "e1>c1": 4.921,
+      "e1>d1": 4.921,
+      "e1>e4": 4.713,
+      "g4>g2": 4.285,
+      "g1>f1": 3.847,
+      "g4>g3": 3.606,
+      "g1>g3": 3.326,
+      "d2>d4": 3.196,
+      "g4>g5": 3.175,
+      "g1>g2": 2.993,
+      "h2>f3": 2.981,
+      "g1>f2": 2.843,
+      "b2>c4": 2.394,
+      "b4>d5": 2.089,
+      "g1>e3": 2.048,
+      "g1>d4": 1.931,
+      "e1>f3": 1.839,
+      "b2>a4": 1.544,
+      "g4>g8": 1.194,
+      "e1>e6": 0.808,
+      "h1>f2": 0.051,
+      "e1>e3": -0.274,
+      "g4>d4": -0.653,
+      "g4>g7": -1.004,
+      "a1>a2": -1.147,
+      "d2>d3": -1.17,
+      "h2>h3": -1.287,
+      "c3>c4": -1.56,
+      "g4>g6": -1.568,
+      "b4>b5": -1.584,
+      "a1>a3": -1.869,
+      "e1>e2": -2.062,
+      "b4>c2": -2.161,
+      "h2>h4": -2.179,
+      "b4>a2": -2.196,
+      "e1>g2": -2.433,
+      "b2>d1": -2.464,
+      "d2>f2": -2.632,
+      "b2>a2": -2.637,
+      "c3>e3": -2.718,
+      "g4>f4": -2.831,
+      "h2>f2": -2.966,
+      "e1>c2": -2.998,
+      "g4>c4": -3.43,
+      "g4>h4": -3.501,
+      "b2>d3": -3.579,
+      "h1>g3": -3.716,
+      "g4>e4": -3.787,
+      "b4>d3": -3.864,
+      "b2>a3": -3.905,
+      "g1>b6": -3.978,
+      "e1>d3": -4.034,
+      "c3>g3": -4.343,
+      "b4>c6": -4.424,
+      "h2>f1": -4.524,
+      "b4>a6": -4.62,
+      "e1>e5": -5.213,
+      "d2>g2": -5.469,
+      "g1>c5": -5.859,
+      "e1>f2": -7.837,
+      "h2>g2": -8.066,
+      "h1>b7": -8.314,
+      "b2>c2": -8.606,
+      "d2>e3": -9.135,
+      "h2>g3": -9.869,
+      "h1>c6": -10.026,
+      "h1>g2": -10.582,
+      "c3>c6": -10.761,
+      "e1>g3": -11.337,
+      "c3>c7": -11.803,
+      "d2>d6": -12.542,
+      "h2>d6": -13.19,
+      "b2>c1": -13.464,
+      "a1>a5": -13.488,
+      "c3>c5": -14.074,
+      "a1>a7": -14.326,
+      "a1>a6": -14.373,
+      "h2>c7": -14.639,
+      "b3>e6": -16.943,
+      "c3>d4": -17.264
+     }
+    },
+    {
+     "sig": "white#-#B_a7_8:g1:b::m:|B_a8_0:a8:pk::f:|B_b7_9:b7:pk::f:|B_b8_1:b8:pk::f:|B_c7_10:c7:p::f:|B_c8_2:c8:pk::f:|B_d7_11:x:n::m:|B_d8_3:d8:pk::f:|B_e7_12:e6:p::m:|B_e8_4:x:n::m:|B_f7_13:x:b::m:|B_f8_5:f8:pk::f:|B_g7_14:x:r::m:|B_g8_6:x:r::m:|B_h7_15:f6:q::m:|B_h8_7:h8:pk::f:|W_a1_0:a1:pk::f:|W_a2_8:b3:p::m:|W_b1_1:b1:p::f:|W_b2_9:b2:pnk::f:|W_c1_2:x:n::m:|W_c2_10:b4:pn::m:|W_d1_3:d2:p::m:|W_d2_11:c3:p::m:|W_e1_4:e4:r::m:|W_e2_12:x:b::m:|W_f1_5:x:q::m:|W_f2_13:x:b::m:|W_g1_6:g4:pn::m:|W_g2_14:x:r::m:|W_h1_7:h1:pnk::f:|W_h2_15:h2:p::f:",
+     "evals": {
+      "g4>f6": 3.113,
+      "e4>e1": -2.336,
+      "e4>d4": -3.737,
+      "e4>e3": -4.48,
+      "d2>d3": -5.323,
+      "e4>c4": -5.761,
+      "h2>h3": -5.761,
+      "a1>a2": -5.959,
+      "e4>e2": -5.972,
+      "h1>g1": -6.175,
+      "g4>g5": -6.47,
+      "b4>b5": -7.176,
+      "a1>a3": -7.241,
+      "d2>d4": -7.258,
+      "h2>h4": -7.421,
+      "b4>d5": -7.999,
+      "e4>e5": -8.062,
+      "b2>d3": -8.479,
+      "g4>e3": -8.724,
+      "b4>d3": -8.783,
+      "c3>c4": -9.015,
+      "b4>a2": -9.127,
+      "b4>c2": -9.165,
+      "b2>c2": -9.221,
+      "b2>c1": -9.226,
+      "e4>e6": -9.262,
+      "g4>e5": -9.97,
+      "b2>a4": -10.233,
+      "h1>g3": -10.835,
+      "b2>d1": -10.992,
+      "e4>f4": -11.101,
+      "b2>a2": -11.249,
+      "b2>a3": -11.249,
+      "b4>c6": -11.392,
+      "g4>h6": -11.483,
+      "g4>f2": -11.81,
+      "b2>c4": -12.288,
+      "b4>a6": -12.619,
+      "h1>f2": -15.459,
+      "h1>g2": -15.858
+     }
+    }
+   ],
+   "game": 6,
+   "white": "twin-strong",
+   "black": "twin-weak",
+   "mirrored": false,
+   "verification": {
+    "status": "verified",
+    "required": 3,
+    "attempted": 3,
+    "verdicts": [
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:f1->e2",
+      "deepBestScore": 4.47,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 1,
+      "game": 6,
+      "startPly": 18,
+      "mirrored": false,
+      "plyIdx": 0,
+      "parEval": 4.09
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:g1->g2",
+      "deepBestScore": 4.43,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 1,
+      "game": 6,
+      "startPly": 18,
+      "mirrored": false,
+      "plyIdx": 1,
+      "parEval": 5.21
+     },
+     {
+      "verdict": "agree",
+      "depth": 8,
+      "deepBest": "move:g4->f6",
+      "deepBestScore": 4.38,
+      "parHolds": true,
+      "swingHolds": true,
+      "chainIndex": 1,
+      "game": 6,
+      "startPly": 18,
+      "mirrored": false,
+      "plyIdx": 2,
+      "parEval": 3.11
+     }
+    ]
+   },
+   "provenance": {
+    "seed": 16,
+    "chainIndex": 1,
+    "sourceCommit": "384c83e97a79ba819997b6595ba1a9238148f37e",
+    "curatedOn": "2026-09-07"
+   }
   }
  ]
 }
