@@ -1,66 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  FREE_REVIEW_CAP,
-  TIP_PITCH,
-  TIP_PRICE_LABEL,
-  TIP_PRICE_VALUE,
-  TIP_REVIEW_CAP,
-  markReviewUsed,
-  reviewCapFor,
-  reviewsRemaining,
-  reviewsUsedToday,
-} from '../src/account/billing.js';
+import { describe, expect, it } from 'vitest';
+import { PREMIUM_PRICE_LABEL, PREMIUM_PRICE_VALUE, PREMIUM_FEATURES, isAdFree, botAccountAccess, reviewCapFor } from '../src/account/billing.js';
+import { ACTIVE_BOTS, canAccessBot } from '../src/ai/bots.js';
+import { unlockedCharacters, CHARACTERS } from '../src/characters/characterCatalog.js';
 
-function memoryStorage() {
-  const data = new Map();
-  return {
-    getItem: (key) => data.get(key) ?? null,
-    setItem: (key, value) => data.set(key, String(value)),
-    clear: () => data.clear(),
-  };
-}
-
-describe('daily engine-review ladder', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-20T12:00:00'));
-    vi.stubGlobal('localStorage', memoryStorage());
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-  });
-
-  it('keeps Free below Tip and Premium unlimited', () => {
-    const tipper = { tier: 'free', ad_free_until: '2026-10-20T00:00:00Z' };
-    expect(reviewCapFor(null)).toBe(FREE_REVIEW_CAP);
-    expect(reviewCapFor(tipper)).toBe(TIP_REVIEW_CAP);
+describe('two-tier permanent Premium', () => {
+  it('offers one $10 purchase with all bots and unlimited reviews', () => {
+    expect(PREMIUM_PRICE_LABEL).toBe('$10 once');
+    expect(PREMIUM_PRICE_VALUE).toBe(10);
+    expect(PREMIUM_FEATURES.join(' ')).toContain('All 18 active bots, unlocked immediately');
     expect(reviewCapFor({ tier: 'paid' })).toBe(Infinity);
-    expect(FREE_REVIEW_CAP).toBeLessThan(TIP_REVIEW_CAP);
+    expect(ACTIVE_BOTS.every(bot => canAccessBot(bot, botAccountAccess({ tier: 'paid' })))).toBe(true);
+    expect(unlockedCharacters({ isPaid: true })).toHaveLength(CHARACTERS.length);
   });
-
-  it('advertises the same five-dollar tip that Checkout charges', () => {
-    expect(TIP_PRICE_LABEL).toBe('$5');
-    expect(TIP_PRICE_VALUE).toBe(5);
-    expect(TIP_PITCH).toContain('three months');
-    expect(TIP_PITCH).toContain('5 engine game reviews a day');
+  it('keeps Free accounts free without a temporary intermediate tier', () => {
+    for (const profile of [null, { tier: 'free' }, { tier: 'free', ad_free_until: '2099-01-01' }]) {
+      expect(isAdFree(profile)).toBe(false);
+      expect(botAccountAccess(profile)).toBe('free');
+      expect(reviewCapFor(profile)).toBe(0);
+    }
   });
-
-  it('counts usage per account and local calendar day', () => {
-    markReviewUsed('alice');
-    markReviewUsed('alice');
-    expect(reviewsUsedToday('alice')).toBe(2);
-    expect(reviewsRemaining(null, 'alice')).toBe(1);
-    expect(reviewsUsedToday('bob')).toBe(0);
-
-    vi.setSystemTime(new Date('2026-07-21T12:00:00'));
-    expect(reviewsUsedToday('alice')).toBe(0);
-    expect(reviewsRemaining(null, 'alice')).toBe(3);
-  });
-
-  it('clamps exhausted quotas at zero', () => {
-    for (let i = 0; i < 5; i += 1) markReviewUsed('alice');
-    expect(reviewsRemaining(null, 'alice')).toBe(0);
+  it('keeps purchased access independent of timestamps or a subscription', () => {
+    const profile = { tier: 'paid', premium_unlocked_at: '2026-09-08', stripe_subscription_id: null, ad_free_until: '2020-01-01' };
+    expect(isAdFree(profile)).toBe(true);
+    expect(reviewCapFor(profile)).toBe(Infinity);
   });
 });

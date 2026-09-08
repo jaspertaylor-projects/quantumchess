@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_WEIGHTS, evaluatePosition, searchBestMove } from '../src/ai/alphaBetaEngine.js';
 import {
-  ACTIVE_BOTS, FREE_BOTS, SUPPORTER_BOTS, PREMIUM_BOTS, SHELVED_BOTS, getBotById,
+  ACTIVE_BOTS, FREE_BOTS, PREMIUM_BOTS, SHELVED_BOTS, getBotById,
 } from '../src/ai/bots.js';
 import { configuredBeamWidth } from '../src/ai/fast/fastSearch2.js';
 import { searchBestMoveV2 } from '../src/ai/fast/fastSearch2.js';
@@ -35,8 +35,7 @@ describe('active bot personalities', () => {
   it('gives all eighteen active bots a unique, explicit strategic identity', () => {
     expect(ACTIVE_BOTS).toHaveLength(18);
     expect(FREE_BOTS).toHaveLength(6);
-    expect(SUPPORTER_BOTS).toHaveLength(6);
-    expect(PREMIUM_BOTS).toHaveLength(6);
+    expect(PREMIUM_BOTS).toHaveLength(12);
     expect(SHELVED_BOTS).toHaveLength(6);
     expect(new Set(ACTIVE_BOTS.map((bot) => bot.personality)).size).toBe(18);
 

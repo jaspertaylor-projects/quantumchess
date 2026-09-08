@@ -1,5 +1,5 @@
 // Purpose: Development-only account overlays for inspecting anonymous, free,
-// supporter, and Premium UI without mutating a real Supabase profile.
+// and Premium UI without mutating a real Supabase profile.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DEV_PREMIUM_GAME_COUNT, DEV_PREMIUM_RATING } from './devSavedGames.js';
@@ -10,7 +10,6 @@ export const DEV_ACCOUNT_LEVEL = Object.freeze({
   ACTUAL: 'actual',
   SIGNED_OUT: 'signed-out',
   FREE: 'free',
-  SUPPORTER: 'supporter',
   PREMIUM: 'premium',
   ADMIN: 'admin',
 });
@@ -48,16 +47,6 @@ export function previewProfileFor(level) {
       tier: 'free',
       avatar_url: '/avatars/free/human-01.png',
       tagline: '',
-    };
-  }
-  if (level === DEV_ACCOUNT_LEVEL.SUPPORTER) {
-    return {
-      ...common,
-      username: 'Supporter Preview',
-      tier: 'free',
-      avatar_url: '/avatars/free/queen_avatar.png',
-      tagline: '',
-      ad_free_until: '2099-12-31T23:59:59.000Z',
     };
   }
   if (level === DEV_ACCOUNT_LEVEL.PREMIUM) {

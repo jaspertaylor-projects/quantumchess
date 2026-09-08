@@ -1,6 +1,6 @@
 // frontend/src/ladder/BotLadderPanel.jsx
 // Purpose: The vs-AI opponent picker for the branching bot roster. Wins unlock
-// chosen opponents, while Free/Supporter/Premium access remains a separate gate.
+// chosen opponents, while Free/Premium access remains a separate gate.
 // Imports From: react, ../theme.js, ../components/ChevronBadge.jsx, ../ai/bots.js, ../account/botProgress.js
 // Exported To: ../tray/NewGamePanel.jsx
 
@@ -176,7 +176,6 @@ export default function BotLadderPanel({
   const trackedIds = useMemo(() => roster.map((bot) => bot.id), [roster]);
   const groups = useMemo(() => ([
     { access: BOT_ACCESS.FREE, title: 'Free roster' },
-    { access: BOT_ACCESS.SUPPORTER, title: 'Supporter + Premium' },
     { access: BOT_ACCESS.PREMIUM, title: 'Premium' },
   ].map((group) => ({
     ...group,
@@ -237,7 +236,7 @@ export default function BotLadderPanel({
 
   const isUnlocked = useCallback(
     (bot) => {
-      if (unlockAll) return true;
+      if (unlockAll || accountAccess === BOT_ACCESS.PREMIUM) return true;
       if (!canAccessBot(bot, accountAccess)) return false;
       return botAccess(bot) !== BOT_ACCESS.FREE || unlockedIds.has(bot.id);
     },
@@ -245,7 +244,7 @@ export default function BotLadderPanel({
   );
 
   // Keep a stale saved choice from bypassing either progression or account
-  // access after a subscription/tip lapses.
+  // access after an account changes.
   useEffect(() => {
     if (!progressLoaded) return;
     const selected = getActiveBotById(selectedBotId);
@@ -264,9 +263,7 @@ export default function BotLadderPanel({
 
   const lockFor = (bot) => {
     if (!canAccessBot(bot, accountAccess)) {
-      return botAccess(bot) === BOT_ACCESS.SUPPORTER
-        ? 'Unlock with a $5 tip or Premium'
-        : 'Unlock with Premium';
+      return 'Unlock with Premium — $10 once';
     }
     return user ? 'Win a bot game and choose this opponent' : 'Sign in to earn bot unlocks';
   };
@@ -286,7 +283,9 @@ export default function BotLadderPanel({
       {open ? (
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.45 }}>
-            {user
+            {accountAccess === BOT_ACCESS.PREMIUM
+              ? `Premium: ${unlockedCount}/${roster.length} unlocked. Choose any opponent.`
+              : user
               ? `Every bot win lets you choose one of three new opponents. ${unlockedCount}/${roster.length} unlocked.`
               : 'Isaac is ready now. Sign in to choose a new opponent after each bot win.'}
           </div>

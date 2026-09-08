@@ -8,8 +8,8 @@ sayings, and hues. Drop a square PNG named `<bot-id>.png` in this folder and
 player bar falls back to procedural initials.
 
 Do not maintain active or shelved bot lists here by hand; read the Free,
-Supporter, Premium, and compatibility rosters from the catalog
-(`FREE_BOTS`, `SUPPORTER_BOTS`, `PREMIUM_BOTS`, `SHELVED_BOTS`) or run:
+Premium, and compatibility rosters from the catalog
+(`FREE_BOTS`, `PREMIUM_BOTS`, `SHELVED_BOTS`) or run:
 
 ```bash
 cd frontend

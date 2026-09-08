@@ -52,11 +52,11 @@ export default function useBotUnlockReward({
         ...unlocks.map((row) => row.bot_id),
       ]);
       const accountAccess = botAccountAccess(profile);
-      // Supporter/Premium membership unlocks its paid roster directly. Win
+      // Premium unlocks the entire roster directly. Win
       // choices are the progression mechanism for Free bots; paid cards in a
       // lower-tier reward are an upgrade preview, not a second lock to clear.
       for (const bot of ACTIVE_BOTS) {
-        if (botAccess(bot) !== BOT_ACCESS.FREE && canAccessBot(bot, accountAccess)) {
+        if (accountAccess === BOT_ACCESS.PREMIUM) {
           unlockedIds.add(bot.id);
         }
       }
@@ -79,7 +79,7 @@ export default function useBotUnlockReward({
         const fallbackUnlocked = [
           STARTER_BOT_ID,
           ...ACTIVE_BOTS
-            .filter((bot) => botAccess(bot) !== BOT_ACCESS.FREE && canAccessBot(bot, accountAccess))
+            .filter((bot) => accountAccess === BOT_ACCESS.PREMIUM)
             .map((bot) => bot.id),
         ];
         setReward({
@@ -107,7 +107,7 @@ export default function useBotUnlockReward({
     if (reward.accountAccess !== nextAccess) {
       setReward((current) => current ? { ...current, accountAccess: nextAccess } : current);
     }
-  }, [profile && profile.tier, profile && profile.ad_free_until, reward && reward.accountAccess]);
+  }, [profile && profile.tier, reward && reward.accountAccess]);
 
   useEffect(() => {
     if (active) return;

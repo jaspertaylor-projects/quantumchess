@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ModalShell from '../components/ModalShell.jsx';
 import ModalCloseButton from '../components/ModalCloseButton.jsx';
-import { Sparkles as SparklesIcon, Check as CheckIcon, Coffee as CoffeeIcon, Play as PlayIcon } from 'lucide-react';
+import { Sparkles as SparklesIcon, Check as CheckIcon, Play as PlayIcon } from 'lucide-react';
 import {
   PREMIUM_FEATURES,
   PREMIUM_PRICE_LABEL,
   PREMIUM_PRICE_VALUE,
-  TIP_PRICE_LABEL,
-  TIP_PRICE_VALUE,
   startCheckout,
-  startTipCheckout,
 } from './billing.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import './PricingModal.css';
@@ -38,7 +35,7 @@ export default function PricingModal({
   const handleUpgrade = async () => {
     trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
       source: 'post_signup_pricing',
-      offer: 'subscription',
+      offer: 'lifetime',
     });
     setBusy(true);
     setNotice(null);
@@ -46,29 +43,8 @@ export default function PricingModal({
     if (url) {
       trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
         source: 'post_signup_pricing',
-        offer: 'subscription',
+        offer: 'lifetime',
         value: PREMIUM_PRICE_VALUE,
-      });
-      window.location.assign(url);
-      return;
-    }
-    setBusy(false);
-    setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
-  };
-
-  const handleTip = async () => {
-    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
-      source: 'post_signup_pricing',
-      offer: 'tip',
-    });
-    setBusy(true);
-    setNotice(null);
-    const { url, error } = await startTipCheckout();
-    if (url) {
-      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
-        source: 'post_signup_pricing',
-        offer: 'tip',
-        value: TIP_PRICE_VALUE,
       });
       window.location.assign(url);
       return;
@@ -117,7 +93,7 @@ export default function PricingModal({
               <CheckIcon size={16} className="check" /> 6 Free bots to discover
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> 3 rewarded-ad game reviews a day
+              <CheckIcon size={16} className="check" /> 16 starter avatars
             </li>
           </ul>
           
@@ -133,7 +109,7 @@ export default function PricingModal({
         {/* Premium Tier */}
         <div className="qc-pm-card premium">
           <div className="qc-pm-card-title"><SparklesIcon size={20} /> Premium</div>
-          <div className="qc-pm-card-price">{PREMIUM_PRICE_LABEL}</div>
+          <div className="qc-pm-card-price">{PREMIUM_PRICE_LABEL}</div><p>No subscription. No renewal.</p>
           
           <ul className="qc-pm-feature-list">
             {PREMIUM_FEATURES.map((feature, idx) => (
@@ -148,38 +124,10 @@ export default function PricingModal({
             onClick={handleUpgrade}
             disabled={busy}
           >
-            {busy ? 'Working…' : `Subscribe - ${PREMIUM_PRICE_LABEL}`}
+            {busy ? 'Working…' : `Unlock Premium — ${PREMIUM_PRICE_LABEL}`}
           </button>
         </div>
 
-        {/* Tip Tier */}
-        <div className="qc-pm-card">
-          <div className="qc-pm-card-title"><CoffeeIcon size={20} color="#f6c445" /> Supporter Tip</div>
-          <div className="qc-pm-card-price">One-time payment of {TIP_PRICE_LABEL}</div>
-          
-          <ul className="qc-pm-feature-list">
-            <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> Three months with no ads
-            </li>
-            <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> Five engine game reviews a day
-            </li>
-            <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> 6 Supporter bots to discover
-            </li>
-            <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> (Tips stack in three-month windows)
-            </li>
-          </ul>
-          
-          <button 
-            className="qc-pm-btn qc-pm-btn-tip" 
-            onClick={handleTip}
-            disabled={busy}
-          >
-            {busy ? 'Working…' : `Tip ${TIP_PRICE_LABEL} once`}
-          </button>
-        </div>
       </div>
       
       <div style={{ position: 'absolute', top: 16, right: 16 }}>

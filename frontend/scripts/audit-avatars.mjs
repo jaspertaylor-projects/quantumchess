@@ -13,7 +13,6 @@ import {
   FREE_BOTS,
   PREMIUM_BOTS,
   SHELVED_BOTS,
-  SUPPORTER_BOTS,
 } from '../src/ai/bots.js';
 import { CHARACTERS } from '../src/characters/characterCatalog.js';
 
@@ -83,7 +82,7 @@ function printList(label, items) {
 console.log(
   `Bot catalog: ${BOTS.length} identities `
   + `(${ACTIVE_BOTS.length} active: ${FREE_BOTS.length} Free, `
-  + `${SUPPORTER_BOTS.length} Supporter, ${PREMIUM_BOTS.length} Premium; `
+  + `${PREMIUM_BOTS.length} Premium; `
   + `${SHELVED_BOTS.length} shelved)`,
 );
 console.log(`Bot avatar files: ${actualBotPngs.size} pngs (${playerSeatPngs.size} player-seat assets)`);

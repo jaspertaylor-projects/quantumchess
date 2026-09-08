@@ -17,11 +17,8 @@ import { fetchMyGames } from './gameSync.js';
 import { supabase } from './supabaseClient.js';
 import {
   PREMIUM_FEATURES, PREMIUM_PRICE_LABEL, PREMIUM_PRICE_VALUE, PREMIUM_PITCH,
-  TIP_PITCH, TIP_PRICE_LABEL, TIP_PRICE_VALUE,
-  startCheckout, startTipCheckout, openBillingPortal, isAdFree, isTipper,
-  reviewCapFor, reviewsRemaining, markReviewUsed,
+  startCheckout,
 } from './billing.js';
-import { rewardedAdsEnabled, showRewardedAd } from '../ads/adService.js';
 import {
   taglineOptions, sayingOptionsForEvent, SAYING_EVENTS,
   DEFAULT_SAYINGS, DEFAULT_CHARACTER_ID,
@@ -65,7 +62,6 @@ export default function AccountModal({
   const [sharingGameId, setSharingGameId] = useState(null);
   const [shareMenuGameId, setShareMenuGameId] = useState(null);
   const [reviewingGameId, setReviewingGameId] = useState(null);
-  const [, setReviewQuotaVersion] = useState(0);
   const [taglineDraft, setTaglineDraft] = useState('');
   const [sayingsDraft, setSayingsDraft] = useState({});
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
@@ -78,7 +74,6 @@ export default function AccountModal({
   // picker below draws from this one set so only unlocked items ever show.
   const unlockedIds = Array.isArray(profile?.unlocked_characters) ? profile.unlocked_characters : [];
   const avatarRoster = unlockedCharacters({ isPaid, unlockedIds }).filter((c) => c.image);
-  const rewardedReviewsActive = rewardedAdsEnabled();
   const isProfilePage = Boolean(page && user);
   const recentWins = games.filter((game) => game.result === 'win').length;
   const recentLosses = games.filter((game) => game.result === 'loss').length;
@@ -143,12 +138,7 @@ export default function AccountModal({
           kind: 'info',
           text: upgraded
             ? 'Welcome to Premium — your account is upgraded!'
-            : 'Payment received — welcome to Premium! Your account upgrades within a few seconds.',
-        });
-      } else if (billingReturn === 'tip_thanks') {
-        setNotice({
-          kind: 'info',
-          text: 'Thank you for the tip! ♥ Supporter bots and ad-free play are active for the next three months.',
+            : 'Confirming your purchase. Your Premium unlock will appear here once payment is verified.',
         });
       } else if (billingReturn === 'cancelled') {
         setNotice({ kind: 'info', text: 'Checkout cancelled — nothing was charged.' });
@@ -283,12 +273,12 @@ export default function AccountModal({
     else setNotice({ kind: 'info', text: 'Password successfully updated.' });
   };
 
-  // All three redirect away from the app on success; busy stays on until then.
+  // Checkout redirects away from the app on success; busy stays on until then.
   const handleUpgrade = async () => {
     if (blockDevPreviewAction()) return;
     trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
       source: upsellSource,
-      offer: 'subscription',
+      offer: 'lifetime',
     });
     setBusy(true);
     setNotice(null);
@@ -296,7 +286,7 @@ export default function AccountModal({
     if (url) {
       trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
         source: upsellSource,
-        offer: 'subscription',
+        offer: 'lifetime',
         value: PREMIUM_PRICE_VALUE,
       });
       window.location.assign(url);
@@ -304,38 +294,6 @@ export default function AccountModal({
     }
     setBusy(false);
     setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
-  };
-
-  const handleTip = async () => {
-    if (blockDevPreviewAction()) return;
-    trackProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
-      source: upsellSource,
-      offer: 'tip',
-    });
-    setBusy(true);
-    setNotice(null);
-    const { url, error } = await startTipCheckout();
-    if (url) {
-      trackProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
-        source: upsellSource,
-        offer: 'tip',
-        value: TIP_PRICE_VALUE,
-      });
-      window.location.assign(url);
-      return;
-    }
-    setBusy(false);
-    setNotice({ kind: 'error', text: error || 'Could not start checkout.' });
-  };
-
-  const handleManageSubscription = async () => {
-    if (blockDevPreviewAction()) return;
-    setBusy(true);
-    setNotice(null);
-    const { url, error } = await openBillingPortal();
-    if (url) { window.location.assign(url); return; }
-    setBusy(false);
-    setNotice({ kind: 'error', text: error || 'Could not open the billing portal.' });
   };
 
   // Taglines are picked from the character roster, never typed — the draft
@@ -415,15 +373,6 @@ export default function AccountModal({
                 <h2 id="qc-account-title" className="qc-am-title qc-am-header-name">{profile?.username || 'Quantum Player'}</h2>
               </div>
               <div className="qc-am-header-actions">
-                {isPaid ? (
-                  <button
-                    type="button" className="qc-account-manage-sub qc-am-ghost-btn qc-am-header-btn"
-                    style={{ borderColor: 'rgba(246,196,69,0.4)', color: '#f6c445' }}
-                    disabled={busy} onClick={handleManageSubscription}
-                  >
-                    {busy ? 'Working…' : 'Manage subscription'}
-                  </button>
-                ) : null}
                 <button type="button" className="qc-account-signout qc-am-ghost-btn qc-am-header-btn" onClick={() => { signOut(); }}>
                   Sign Out
                 </button>
@@ -734,7 +683,7 @@ export default function AccountModal({
 
             {isPaid ? (
               <div className="qc-profile-membership qc-am-premium-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Premium active</div>
+                <div className="qc-am-premium-title"><SparklesIcon size={18} /> Premium unlocked · no further payments</div>
               </div>
             ) : (
               <div className="qc-profile-membership qc-account-premium qc-am-premium-card">
@@ -754,29 +703,8 @@ export default function AccountModal({
                 >
                   {busy ? 'Working…' : `Upgrade — ${PREMIUM_PRICE_LABEL}`}
                 </button>
-                <div
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                    borderTop: '1px solid rgba(246,196,69,0.25)', paddingTop: 12, marginTop: 4,
-                  }}
-                >
-                  <span style={{ flex: '1 1 200px', fontSize: 12.5, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
-                    {isAdFree(profile)
-                      ? `You're a Supporter until ${new Date(profile.ad_free_until).toLocaleDateString()}: no ads, 5 engine reviews a day, and 6 Supporter bots. Thank you! ♥`
-                      : TIP_PITCH}
-                  </span>
-                  <button
-                    type="button" className="qc-account-tip qc-am-ghost-btn"
-                    style={{ borderColor: 'rgba(246,196,69,0.3)', color: '#f6c445' }}
-                    disabled={busy} onClick={handleTip}
-                    title="One-time payment — no ads for three months (tips stack)"
-                  >
-                    {busy ? 'Working…' : `Tip ${TIP_PRICE_LABEL}`}
-                  </button>
-                </div>
                 <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.5)' }}>
-                  The subscription renews automatically at {PREMIUM_PRICE_LABEL} until cancelled —
-                  cancel anytime from this panel. The tip is a one-time payment. Secure payment via Stripe.{' '}
+                  One payment of $10 unlocks Premium permanently on your account. No renewals. Secure payment via Stripe.{' '}
                   <a href="/terms.html" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms</a>
                   {' · '}
                   <a href="/terms.html#refunds" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>Refund policy</a>
@@ -834,42 +762,17 @@ export default function AccountModal({
                         </button>
                         <button
                           type="button"
-                          className={`qc-account-review-game qc-am-review-btn ${isPaid || isTipper(profile) ? 'premium' : 'standard'}`}
-                          title={isPaid
-                            ? 'Unlimited engine game reviews'
-                            : `${reviewsRemaining(profile, user.id)} engine reviews left today${isTipper(profile) || !rewardedReviewsActive ? '' : ' · rewarded ad required'}`}
+                          className={`qc-account-review-game qc-am-review-btn ${isPaid ? 'premium' : 'standard'}`}
+                          title={isPaid ? 'Unlimited engine game reviews' : 'Unlock game review with Premium — $10 once'}
                           disabled={reviewingGameId !== null}
                           onClick={async () => {
-                            const cap = reviewCapFor(profile);
-                            const remaining = reviewsRemaining(profile, user.id);
-                            if (remaining === 0) {
-                              setNotice({ kind: 'info', text: `You've used today's ${cap} reviews — more tomorrow, or go Premium for unlimited.` });
-                              return;
-                            }
+                            if (!isPaid) { await handleUpgrade(); return; }
                             setReviewingGameId(g.id);
-                            try {
-                              if (!isPaid && !isTipper(profile) && rewardedReviewsActive) {
-                                const rewarded = await showRewardedAd();
-                                if (!rewarded) {
-                                  setNotice({ kind: 'info', text: 'No review ad is available right now. Please try again in a moment.' });
-                                  return;
-                                }
-                              }
-                              const opened = await onReviewGame(g);
-                              if (opened !== false && !isPaid) {
-                                markReviewUsed(user.id);
-                                setReviewQuotaVersion((version) => version + 1);
-                              }
-                            } finally {
-                              setReviewingGameId(null);
-                            }
+                            try { await onReviewGame(g); }
+                            finally { setReviewingGameId(null); }
                           }}
                         >
-                          {reviewingGameId === g.id
-                            ? '…'
-                            : isPaid || isTipper(profile) || reviewsRemaining(profile, user.id) === 0
-                              ? 'Review'
-                              : rewardedReviewsActive ? '▷ Review (watch ad)' : 'Review'}
+                          {reviewingGameId === g.id ? '…' : isPaid ? 'Review' : 'Unlock review · $10 once'}
                         </button>
                       </span>
                       {shareMenuGameId === g.id ? (

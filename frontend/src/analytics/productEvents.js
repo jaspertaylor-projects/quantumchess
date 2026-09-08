@@ -154,8 +154,8 @@ export function buildProductEvent(type, details = {}) {
       };
 
     case PRODUCT_EVENT.CHECKOUT_STARTED: {
-      const offer = details.offer === 'tip' ? 'tip' : 'subscription';
-      const value = safeNumber(details.value, 3);
+      const offer = 'lifetime';
+      const value = safeNumber(details.value, 10);
       return {
         name: 'begin_checkout',
         params: {
@@ -164,8 +164,8 @@ export function buildProductEvent(type, details = {}) {
           upsell_source: safeText(details.source),
           offer,
           items: [{
-            item_id: offer === 'tip' ? 'quantum_chess_tip' : 'quantum_chess_premium_monthly',
-            item_name: offer === 'tip' ? 'Quantum Chess Tip' : 'Quantum Chess Premium',
+            item_id: 'quantum_chess_premium_lifetime',
+            item_name: 'Quantum Chess Premium',
             item_category: 'support',
             price: value,
             quantity: 1,

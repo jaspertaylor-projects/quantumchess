@@ -1,5 +1,5 @@
 // Purpose: Large always-reachable development control for swapping the live
-// app among real, signed-out, free, supporter, and Premium account views.
+// app among real, signed-out, free and Premium account views.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DEV_ACCOUNT_LEVEL } from './useDevAccountPreview.js';
@@ -22,7 +22,6 @@ const OPTIONS = [
   { value: DEV_ACCOUNT_LEVEL.ACTUAL, label: 'Actual browser session', detail: 'Live auth' },
   { value: DEV_ACCOUNT_LEVEL.SIGNED_OUT, label: 'Signed out', detail: 'Anonymous' },
   { value: DEV_ACCOUNT_LEVEL.FREE, label: 'Free account', detail: 'Standard access' },
-  { value: DEV_ACCOUNT_LEVEL.SUPPORTER, label: 'Supporter account', detail: 'Tip · ad-free + daily review' },
   { value: DEV_ACCOUNT_LEVEL.PREMIUM, label: 'Premium account', detail: 'All access · 15 saved games' },
   { value: DEV_ACCOUNT_LEVEL.ADMIN, label: 'Admin account', detail: 'Premium + stats dashboard' },
 ];

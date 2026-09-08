@@ -53,9 +53,8 @@ import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
 import usePuzzleDeepLinks from './puzzle/usePuzzleDeepLinks.js';
 import { PRODUCT_EVENT, trackProductEvent } from './analytics/productEvents.js';
-import { rewardedAdsEnabled, showRewardedAd } from './ads/adService.js';
 import {
-  botAccountAccess, isAdFree, isTipper, markReviewUsed, reviewCapFor, reviewsRemaining,
+  botAccountAccess, isAdFree,
 } from './account/billing.js';
 import useDevAccountPreview from './dev/useDevAccountPreview.js';
 import DevAccountSwitcher from './dev/DevAccountSwitcher.jsx';
@@ -879,18 +878,10 @@ export default function App({ entryAction = null }) {
     handleStartGame(gameSettings);
   }, [gameSettings, handleStartGame]);
 
-  // Review ladder: Premium unlimited; tippers get five without ads; free
-  // accounts get three. Configured builds require a completed rewarded ad;
-  // pre-ad builds skip that unavailable step while keeping the daily cap.
-  const [, setPostGameReviewQuotaVersion] = useState(0);
+  // Engine review is part of the permanent Premium unlock.
   const [postGameReviewNotice, setPostGameReviewNotice] = useState('');
   const [postGameReviewBusy, setPostGameReviewBusy] = useState(false);
-  const reviewUserId = auth.user && auth.user.id;
-  const postGameReviewsRemaining = reviewsRemaining(auth.profile, reviewUserId);
-  const rewardedReviewsActive = rewardedAdsEnabled();
-  const postGameReviewAccess = isPaidUser ? 'premium'
-    : postGameReviewsRemaining === 0 ? 'limit'
-      : isTipper(auth.profile) ? 'tip' : rewardedReviewsActive ? 'ad' : 'free';
+  const postGameReviewAccess = isPaidUser ? 'premium' : 'locked';
   useEffect(() => {
     setPostGameReviewNotice('');
     setPostGameReviewBusy(false);
@@ -898,24 +889,13 @@ export default function App({ entryAction = null }) {
 
   const handlePostGameReview = useCallback(async () => {
     if (postGameReviewBusy) return;
-    const cap = reviewCapFor(auth.profile);
-    if (reviewsRemaining(auth.profile, reviewUserId) === 0) {
-      setPostGameReviewNotice(`You've used today's ${cap} reviews — more tomorrow, or go Premium for unlimited.`);
+    if (!isPaidUser) {
+      setAccountOpen(true, 'game_review');
+      setShowWinPopup(false);
       return;
     }
     setPostGameReviewBusy(true);
     try {
-      if (!isPaidUser && !isTipper(auth.profile) && rewardedReviewsActive) {
-        const rewarded = await showRewardedAd();
-        if (!rewarded) {
-          setPostGameReviewNotice('No review ad is available right now. Please try again in a moment.');
-          return;
-        }
-      }
-      if (!isPaidUser) {
-        markReviewUsed(reviewUserId);
-        setPostGameReviewQuotaVersion((version) => version + 1);
-      }
       setShowWinPopup(false);
       setReviewGame({
         game: {
@@ -926,14 +906,14 @@ export default function App({ entryAction = null }) {
         moves,
       });
       trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
-        accessType: isPaidUser ? 'premium' : isTipper(auth.profile) ? 'tip' : rewardedReviewsActive ? 'rewarded_ad' : 'free_fallback',
+        accessType: 'premium',
         gameResult: resolvedWinnerText,
         moveCount: moves.length,
       });
     } finally {
       setPostGameReviewBusy(false);
     }
-  }, [postGameReviewBusy, auth.profile, reviewUserId, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, rewardedReviewsActive, setReviewGame]);
+  }, [postGameReviewBusy, userTeam, aiBot, resolvedWinnerText, moves, isPaidUser, setAccountOpen, setReviewGame]);
 
   const showClockUI = isOnlineGameRef.current; // only show timers for online games
   const onlineDrawOfferRole = isOnlineGameRef.current && online.drawOffer
@@ -1278,11 +1258,10 @@ export default function App({ entryAction = null }) {
         onSignInForBots={() => setAccountOpen(true, 'bot_unlock')}
         onGameReview={handlePostGameReview}
         reviewAccess={postGameReviewAccess}
-        reviewRemaining={postGameReviewsRemaining}
         reviewNotice={postGameReviewNotice}
         reviewDisabled={moves.length === 0 || postGameReviewBusy}
-        showTipPromo={!isAdFree(auth.profile)}
-        onTipPromo={() => { setShowWinPopup(false); setAccountOpen(true, 'game_end_promo'); }}
+        showPremiumPromo={!isAdFree(auth.profile)}
+        onUpgradePromo={() => { setShowWinPopup(false); setAccountOpen(true, 'game_end_promo'); }}
         pendingEpChoice={input.pendingEpChoice}
         performMove={performMove}
         onCancelEpChoice={() => {

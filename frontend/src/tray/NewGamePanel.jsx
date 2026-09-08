@@ -200,7 +200,7 @@ export default function NewGamePanel({
   const handleStart = () => {
     const bot = getActiveBotById(aiBotId) || getActiveBotById(DEFAULT_BOT_ID);
     // Higher-tier bots remain visible, but cannot be launched until the
-    // account has Supporter/Premium access.
+    // account has Premium access.
     if (gameMode === 'ai' && bot && !canAccessBot(bot, accountAccess) && !unlockAll) {
       if (onRequirePremium) onRequirePremium();
       return;

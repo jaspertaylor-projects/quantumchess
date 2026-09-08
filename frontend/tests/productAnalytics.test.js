@@ -50,23 +50,23 @@ describe('product analytics event contract', () => {
     });
   });
 
-  it('builds a complete subscription checkout payload', () => {
+  it('builds a complete one-time checkout payload', () => {
     expect(buildProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
-      offer: 'subscription',
+      offer: 'lifetime',
       source: 'account',
-      value: 3,
+      value: 10,
     })).toEqual({
       name: 'begin_checkout',
       params: {
         currency: 'USD',
-        value: 3,
+        value: 10,
         upsell_source: 'account',
-        offer: 'subscription',
+        offer: 'lifetime',
         items: [{
-          item_id: 'quantum_chess_premium_monthly',
+          item_id: 'quantum_chess_premium_lifetime',
           item_name: 'Quantum Chess Premium',
           item_category: 'support',
-          price: 3,
+          price: 10,
           quantity: 1,
         }],
       },
@@ -98,18 +98,18 @@ describe('product analytics event contract', () => {
     }).params).toEqual({ upsell_source: 'premium_bot' });
     expect(buildProductEvent(PRODUCT_EVENT.PREMIUM_UPSELL_CLICKED, {
       source: 'premium_bot',
-      offer: 'subscription',
+      offer: 'lifetime',
     }).params).toEqual({
       upsell_source: 'premium_bot',
-      offer: 'subscription',
+      offer: 'lifetime',
     });
     expect(buildProductEvent(PRODUCT_EVENT.CHECKOUT_STARTED, {
       source: 'premium_bot',
-      offer: 'subscription',
-      value: 3,
+      offer: 'lifetime',
+      value: 10,
     }).params).toMatchObject({
       upsell_source: 'premium_bot',
-      offer: 'subscription',
+      offer: 'lifetime',
     });
   });
 

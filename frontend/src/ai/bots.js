@@ -1,5 +1,5 @@
 // frontend/src/ai/bots.js
-// Purpose: The active 18-bot roster — six Free, six Supporter-or-Premium,
+// Purpose: The active 18-bot roster — six Free and twelve Premium,
 // and six Premium opponents — plus a shelved legacy roster retained only so
 // old saved games can still resolve their opponent identity.
 // Legal guardrail: both halves of every mashup must be deceased, and avatar
@@ -142,7 +142,7 @@ export const BOTS = [
       collapse: 'Estimated, then confirmed: all of it.',
     },
     hue: 45,
-    access: 'supporter',
+    access: 'premium',
     search: { noise: 0 },
     weights: {
       friendlyContact: 0.24, extraType: 0.16,
@@ -165,7 +165,7 @@ export const BOTS = [
       collapse: 'Every box on your side is open.',
     },
     hue: 265,
-    access: 'supporter',
+    access: 'premium',
     search: {
       noise: 0, widths: [176, 176, 2, 2], adaptiveBeam: false,
       timeMs: 7000,
@@ -189,7 +189,7 @@ export const BOTS = [
       collapse: 'Total decoherence. Nothing left uncertain.',
     },
     hue: 180,
-    access: 'supporter',
+    access: 'premium',
     search: {},
     weights: {
       enemyContact: 0.16, friendlyContact: 0.16, extraType: 0.16,
@@ -273,7 +273,7 @@ export const BOTS = [
     name: 'Freeman Morphy',
     rating: 1680,
     tier: 'medium',
-    access: 'supporter',
+    access: 'premium',
     personality: 'early-castler',
     tagline: 'Builds his king a castled Dyson sphere before harvesting yours.',
     sayings: {
@@ -295,7 +295,7 @@ export const BOTS = [
     name: 'David Feynman',
     rating: 1760,
     tier: 'medium',
-    access: 'supporter',
+    access: 'premium',
     personality: 'counterpuncher',
     tagline: 'Never draws the first capture arrow—then calculates the recapture.',
     sayings: {
@@ -317,7 +317,7 @@ export const BOTS = [
     name: 'Edith Franklin',
     rating: 1840,
     tier: 'medium',
-    access: 'supporter',
+    access: 'premium',
     personality: 'structure-photographer',
     tagline: 'Develops a crystal-clear structure and reinforces every weak bond.',
     sayings: {
@@ -551,7 +551,6 @@ export const DEFAULT_BOT_ID = STARTER_BOT_ID;
 
 export const BOT_ACCESS = Object.freeze({
   FREE: 'free',
-  SUPPORTER: 'supporter',
   PREMIUM: 'premium',
 });
 
@@ -591,19 +590,17 @@ export function botAccess(bot) {
 }
 
 export function canAccessBot(bot, accountAccess = BOT_ACCESS.FREE) {
-  const rank = { [BOT_ACCESS.FREE]: 0, [BOT_ACCESS.SUPPORTER]: 1, [BOT_ACCESS.PREMIUM]: 2 };
+  const rank = { [BOT_ACCESS.FREE]: 0, [BOT_ACCESS.PREMIUM]: 1 };
   return (rank[accountAccess] ?? 0) >= (rank[botAccess(bot)] ?? 0);
 }
 
 export function botAccessLabel(bot) {
   const access = botAccess(bot);
-  if (access === BOT_ACCESS.SUPPORTER) return 'Supporter + Premium';
   if (access === BOT_ACCESS.PREMIUM) return 'Premium';
   return 'Free';
 }
 
 export const FREE_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.FREE);
-export const SUPPORTER_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.SUPPORTER);
 export const PREMIUM_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.PREMIUM);
 
 // Dev-only playtest override: open the app with ?allbots to make every active

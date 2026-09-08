@@ -2,6 +2,9 @@
 
 .qc-pm-panel {
   width: 900px;
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   max-width: 95vw;
   background: rgba(10, 10, 14, 0.85);
   backdrop-filter: blur(24px);
@@ -35,7 +38,7 @@
 
 .qc-pm-columns {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 

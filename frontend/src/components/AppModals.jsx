@@ -27,7 +27,7 @@ export default function AppModals({
   // game end
   showWinPopup, resolvedWinnerText, externalGameOver, winner, onCloseWinPopup,
   onPlayAgain, onGameReview, reviewAccess, reviewRemaining, reviewNotice,
-  reviewDisabled, showTipPromo, onTipPromo, playAgainLabel,
+  reviewDisabled, showPremiumPromo, onUpgradePromo, playAgainLabel,
   botUnlockReward, onChooseBot, onRequireBotAccess, onSignInForBots,
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
@@ -73,8 +73,8 @@ export default function AppModals({
         reviewRemaining={reviewRemaining}
         reviewNotice={reviewNotice}
         reviewDisabled={reviewDisabled}
-        showTipPromo={showTipPromo}
-        onTipPromo={onTipPromo}
+        showPremiumPromo={showPremiumPromo}
+        onUpgradePromo={onUpgradePromo}
       />
 
       <EnPassantChoiceModal
@@ -151,7 +151,7 @@ export default function AppModals({
       />
 
       <PricingModal
-        open={pricingOpen}
+        open={pricingOpen && auth?.profile?.tier !== 'paid'}
         onClose={onClosePricing}
       />
 

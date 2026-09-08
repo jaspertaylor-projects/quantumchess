@@ -11,7 +11,7 @@ import { initAds, maybeShowGameEndAd } from '../ads/adService.js';
 import { initAnalytics } from '../analytics/analytics.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import { sendBotGameFinished } from '../analytics/statsPing.js';
-import { consumeCheckoutReturn, isAdFree, isTipper } from '../account/billing.js';
+import { consumeCheckoutReturn, isAdFree } from '../account/billing.js';
 import {
   buildSharedGameLink,
   fetchGameMoves,
@@ -167,12 +167,9 @@ export default function useMonetization({
     }
   }, []);
   useEffect(() => {
-    if (billingReturn !== 'success' && billingReturn !== 'tip_thanks') return undefined;
-    // Stop polling once the webhook's write has landed: tier for the
-    // subscription, ad_free_until for a tip.
-    const landed = billingReturn === 'success'
-      ? Boolean(auth.profile && auth.profile.tier === 'paid')
-      : isAdFree(auth.profile);
+    if (billingReturn !== 'success') return undefined;
+    // Stop polling once the permanent unlock has landed.
+    const landed = auth.profile?.tier === 'paid';
     if (landed) return undefined;
     const timer = setInterval(() => { auth.refreshProfile(); }, 2500);
     const stop = setTimeout(() => clearInterval(timer), 30000);
@@ -181,8 +178,7 @@ export default function useMonetization({
 
   const isPaidUser = Boolean(auth.profile && auth.profile.tier === 'paid');
 
-  // Higher-tier bots route to the account panel, where both the one-time
-  // Supporter tip and Premium subscription are visible.
+  // Locked bots route to the one-time Premium offer.
   const handleRequirePremium = useCallback(() => {
     if (onRequirePremiumExtra) onRequirePremiumExtra();
     setAccountOpen(true, 'premium_bot');
@@ -256,10 +252,9 @@ export default function useMonetization({
   }, [auth.user, auth.isDevPreview, setAccountOpen]);
 
   // Premium game review adds engine analysis to the same replay surface.
-  // Returns whether it opened so the tipper's daily quota is only charged on
-  // success.
+  // Returns whether the saved game opened successfully.
   const handleReviewGame = useCallback(async (game) => {
-    if (!auth.user || !game) return false;
+    if (!auth.user || !game || auth.profile?.tier !== 'paid') return false;
     const loadId = ++reviewLoadIdRef.current;
     setAccountOpen(false);
     setReviewGame({
@@ -285,11 +280,7 @@ export default function useMonetization({
       : current));
     if (!savedMoves) return false;
     trackProductEvent(PRODUCT_EVENT.REVIEW_OPENED, {
-      accessType: auth.profile?.tier === 'paid'
-        ? 'premium'
-        : isTipper(auth.profile)
-          ? 'tip'
-          : 'standard',
+      accessType: 'premium',
       gameResult: game.result,
       moveCount: Array.isArray(savedMoves) ? savedMoves.length : 0,
     });

@@ -13,8 +13,7 @@ promotion, census conservation — deterministic throughout, no dice anywhere.
   failed with anyone. Every existing account is a disposable test account
   that can be nuked; deploys and even destructive migrations don't need a
   customer-safety review until real users arrive. Update this line at launch.
-- **Play:** vs 18 active AI bots (6 Free, 6 Supporter-or-Premium, 6
-  Premium-only), local 2-player
+- **Play:** vs 18 active AI bots (6 Free, 12 Premium), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
 
@@ -299,7 +298,7 @@ benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
-- Active access split: 6 Free / 6 Supporter-or-Premium / 6 Premium-only.
+- Active access split: 6 Free / 12 Premium.
   Six more legacy identities remain shelved and retained only so saved
   replays can still resolve its names and avatars.
 - Signed-in wins, including a win over the intro bot, offer three randomized
@@ -334,55 +333,23 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [X] Email/password auth + accounts live (rating, saved games)
 - [ ] Decide whether to keep "Confirm email" ON (Dashboard → Authentication).
       With SES SMTP set (below), confirmation emails will actually deliver.
-- [X] Stripe Checkout + webhook to flip `tier` to 'paid' automatically —
-      **fully tested in sandbox, end-to-end** (2026-07-05): browser checkout
-      with the 4242 test card → real webhook flipped tier to paid → Customer
-      Portal shows the sub/invoice → real cancellation flipped it back to
-      free. Edge Functions deployed (checkout, webhook, portal —
-      `tools/deploy-stripe-functions.sh` redeploys), billing migration
-      applied (stripe ids + locks `tier` against client self-upgrade;
-      webhook is signature-checked and idempotent). Premium UI in
-      `AccountModal.jsx`. Sandbox product `prod_UpdjM1t4mob0k4`, price
-      `price_1TpyS2Ia1OXAV1NJoP4YJ2n7` ($3/mo), webhook endpoint
-      `we_1TpyeVIa1OXAV1NJ80EZVZOp`.
-  - [X] Live-mode swap **done 2026-07-06** via `tools/finish-stripe-live.sh`
-        (live product/prices/webhook + `supabase secrets set`; live checkout
-        session creation verified). Live ids:
-        `~/.config/quantumchess-stripe-live.env`; sandbox secrets remain in
-        `~/.config/quantumchess-stripe-deploy.env` for test-mode work.
-  - [X] **GATE cleared (2026-07-16)**: contact@quantumchess.ninja inbox is
-        set up (Proton custom domain) and receiving. It is the published
-        support/refund address on /terms.html, /privacy.html, /about.html,
-        /faq.html.
-  - [X] Terms of service + refund policy (2026-07-06): `/terms.html` —
-        recurring-billing disclosure, 14-day no-questions refund (covers
-        subscription AND tip), one-time tip terms, Hawaii governing law.
-        Linked from all static-page footers + the app footer; renewal/terms/
-        refund text sits under the upgrade button in `AccountModal.jsx`.
-        Public contact email switched to contact@quantumchess.ninja.
-  - [X] **One-time $5 tip → three months ad-free + five engine reviews/day**
-        (frontend + webhook deployed 2026-07-20).
-        The AccountModal pitch leads with the human ("built and run by one
-        person…") and offers "Tip $5" next to the subscription; the webhook
-        stamps `ad_free_until = now + 90 days` (stacks on repeat tips), and ads
-        gate on tier OR `ad_free_until` (`isAdFree` in `billing.js`). Daily
-        engine-review quotas are client-enforced in localStorage: three
-        rewarded-ad reviews for Free, five ad-free reviews for tippers, and
-        unlimited reviews for Premium (`reviewCapFor`, `reviewsRemaining`,
-        `markReviewUsed`). Migration
-        `20260709000000_qc_tip_adfree.sql`. Remaining wiring:
-    - [X] Dedicated live Tip product and $5 one-time price created 2026-07-20;
-          production `STRIPE_TIP_PRICE_ID` switched without touching Premium.
-    - [ ] Test with the 4242 card after deployment: tip →
-          `?premium=tip_thanks` → profile shows "ad-free until <date>"; ad
-          gating off; tip again → date extends by another 90 days.
-    - [X] Checkout catalog copy separated from Premium: live product is
-          "Quantum Chess Tip" and describes the three-month/five-review benefit.
-  - [ ] Cleanup: two e2e test accounts exist (qc-e2e-test-1/2@example.com,
-        E2ETester1/2) — delete via Dashboard or SQL when convenient.
-- [ ] **Premium tier — promised features** ($3/month). These have been promised
-      to users and must ship (or be clearly marked "coming soon") once checkout
-      is live:
+- [X] **Two tiers: Free and Premium ($10 once).** Premium permanently unlocks
+      unlimited engine game review, all 18 active bots immediately, all 48
+      character avatars/taglines/sayings, up to 1,000 saved games and no ads.
+      Free retains ordinary play, six bots through win progression, ten saved
+      games and basic replay. There is no monthly plan or tip tier.
+  - Checkout uses `mode=payment`, card payments and `STRIPE_LIFETIME_PRICE_ID`.
+    Live price: `price_1UDDr4RFHK9IPoTNZStnHgjW` (USD 1000 cents, no recurrence).
+    `tools/deploy-stripe-functions.sh` preserves the existing live secret keys;
+    pass the price ID in the environment. Apply the permanent-Premium migration
+    before deploying the functions. Historical billing migrations remain intact.
+  - Existing paid/tipped profiles receive permanent access. Fulfillment and
+    event deduplication commit together; stale subscription events cannot revoke
+    the unlock. Checkout requests share an account-specific Stripe idempotency
+    key until expiry, and prior paid sessions are reconciled before a new offer.
+  - `/terms.html` describes the one-time purchase and the 14-day refund policy.
+    Support and refund contact: contact@quantumchess.ninja.
+- [X] **Premium features** (included with the permanent unlock):
   - [X] Up to 1,000 saved games (server-enforced by `qc_trim_games`: 10 free /
         1000 paid, and marketed at those exact limits)
   - [X] Game review with engine moves — **built + browser-tested 2026-07-05**
@@ -394,7 +361,7 @@ Legend: [ ] not started · [~] in progress · [X] done
         legacy-record translator was removed in the 2026-07-07 cleanup
         (no saved games predate lossless recording).
   - [X] Tiered bot roster — **expanded 2026-07-22**: the eighteen distinctive
-        bots are split 6 Free / 6 Supporter-or-Premium / 6 Premium-only.
+        bots are split 6 Free / 12 Premium.
         Six legacy bots remain shelved from the picker but retained
         for replay compatibility. Avatar PNGs live at `public/bots/<id>.png`.
   - [X] Curated character avatar + tagline — players choose from the model
@@ -404,7 +371,7 @@ Legend: [ ] not started · [~] in progress · [X] done
         upload helper remain in the repository for migration compatibility,
         but are not exposed in the profile UI.
   - [~] No ads for premium (`maybeShowGameEndAd()` gated on `isAdFree()` —
-        paid tier OR a tip's `ad_free_until` — in `App.jsx`; ships with next
+        permanent paid tier — in `App.jsx`; ships with next
         frontend deploy)
   - [X] Event sayings — **reworked 2026-07-07 to the character system**:
         speech bubbles on the player bars for win/loss/draw/capture/
@@ -426,7 +393,7 @@ Legend: [ ] not started · [~] in progress · [X] done
       - Character tiers roadmap: 'starter' (everyone), 'quest' (planned:
         earned unlocks recorded in `profile.unlocked_characters` — the
         catalog + `unlockedCharacters()` already support it), 'premium'
-        (subscription; tip-unlockables later). Future hardening: a
+        (one-time Premium unlock). Future hardening: a
         `qc_characters` table so the DB can validate taglines/ids by tier
         instead of the in-trigger allowlist.
       Stripe CLI is installed (`~/.local/bin/stripe`) and authenticated against

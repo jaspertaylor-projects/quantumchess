@@ -243,7 +243,7 @@ export const CHARACTERS = [
   },
 
   // ---------------------------------------------------------- premium —
-  // the collector roster: unlocked by subscription (or, later, tips).
+  // the collector roster: included in the one-time Premium unlock.
   {
     id: 'astral-samurai-analyst',
     name: 'The Astral Samurai',

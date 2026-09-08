@@ -1,7 +1,6 @@
 // frontend/src/components/WinnerModal.jsx
 // Purpose: End-of-game screen — result headline, a quiet house promo for the
-// ad-free tip, and the two actions that matter: Play Again (same queue) and
-// Game Review (free for premium/tip; rewarded-ad gated for free users).
+// one-time Premium offer, Play Again, and Premium Game Review.
 // Imports From: ../theme.js, ./ModalShell.jsx
 // Exported To: ../App.jsx (via AppModals)
 
@@ -24,13 +23,13 @@ export default function WinnerModal({
   onRequireBotAccess = () => {},
   onSignInForBots = () => {},
   onGameReview = null,
-  // premium | tip | ad (rewarded) | limit
+  // premium | locked
   reviewAccess = 'premium',
   reviewRemaining = Infinity,
   reviewNotice = '',
   reviewDisabled = false,
-  showTipPromo = false,
-  onTipPromo = () => {},
+  showPremiumPromo = false,
+  onUpgradePromo = () => {},
 }) {
   const styles = {
     panel: {
@@ -94,11 +93,7 @@ export default function WinnerModal({
     },
   };
 
-  const reviewHint = reviewAccess === 'ad'
-    ? `watch a short ad · ${reviewRemaining} left today`
-    : reviewAccess === 'tip'
-      ? `${reviewRemaining} left today`
-      : reviewAccess === 'limit' ? 'daily limit reached' : null;
+  const reviewHint = reviewAccess === 'locked' ? '$10 once to unlock' : null;
 
   return (
     <ModalShell
@@ -188,7 +183,7 @@ export default function WinnerModal({
                           ? '✓ SELECTED'
                           : busy ? 'SAVING…'
                             : gated
-                              ? <><LockIcon size={11} style={{ verticalAlign: -2 }} /> {botAccess(bot) === 'supporter' ? 'UNLOCK WITH TIP OR PREMIUM' : 'UNLOCK WITH PREMIUM'}</>
+                              ? <><LockIcon size={11} style={{ verticalAlign: -2 }} /> UNLOCK WITH PREMIUM</>
                               : paidRosterBot ? 'CHOOSE TO PLAY' : 'UNLOCK'}
                       </span>
                     </button>
@@ -203,19 +198,18 @@ export default function WinnerModal({
         </section>
       ) : null}
 
-      {showTipPromo ? (
+      {showPremiumPromo ? (
         <div
-          className="qc-winner-tip-promo"
+          className="qc-winner-premium-promo"
           style={styles.promo}
-          onClick={onTipPromo}
+          onClick={onUpgradePromo}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter') onTipPromo(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') onUpgradePromo(); }}
         >
           <span style={styles.promoChip}>AD</span>
           <span style={styles.promoText}>
-            <span style={styles.promoStrong}>$5 once</span> — three ad-free months,
-            five daily reviews, and six Supporter bots.
+            <span style={styles.promoStrong}>$10 once</span> — unlimited game review, all bots and avatars, and no ads.
           </span>
           <Sparkles size={16} color="#ffd166" style={{ flex: 'none' }} aria-hidden="true" />
         </div>

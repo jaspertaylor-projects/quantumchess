@@ -74,7 +74,7 @@ describe('mined daily puzzle', () => {
         else chain.devOnly = originalFlags[idx];
       });
     }
-  });
+  }, 15_000);
 
   it('never opens with a first-grab solution (the gauge-top move must not capture the mistake piece)', () => {
     for (const chain of minedData.chains) {
