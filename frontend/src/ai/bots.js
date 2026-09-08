@@ -1,7 +1,6 @@
 // frontend/src/ai/bots.js
-// Purpose: The active roster: one starter, eleven human-match unlocks and
-// six Premium bots, plus a shelved legacy roster retained only so
-// old saved games can still resolve their opponent identity.
+// Purpose: The active roster: one starter, fifteen human-match unlocks and
+// eight Premium bots. Stable ids keep old saved games readable.
 // Legal guardrail: both halves of every mashup must be deceased, and avatar
 // art must not depict a real person's likeness or imply endorsement.
 // Avatar source of truth: this roster owns bot ids and tiers. Drop a PNG at
@@ -266,8 +265,7 @@ export const BOTS = [
   },
 
   // ------------------------ EXPANDED ROSTER -------------------------
-  // Six of these legacy identities have returned to the active ladder. The
-  // remaining six stay readable for old saves but remain shelved.
+  // All twelve expanded identities are now available in the active roster.
   {
     id: 'freeman-morphy',
     name: 'Freeman Morphy',
@@ -420,7 +418,8 @@ export const BOTS = [
       collapse: 'Your entire cipher is broken.',
     },
     hue: 60,
-    premium: true,
+    access: 'premium',
+    personality: 'attack-decoder',
     search: {},
     weights: { hangUndefended: 0.95, kingSpread: 0.32, mobility: 0.018 },
   },
@@ -438,7 +437,8 @@ export const BOTS = [
       collapse: 'Resolved to the Planck scale.',
     },
     hue: 255,
-    premium: true,
+    access: 'premium',
+    personality: 'continuous-pressure',
     search: {},
     weights: { kingHunt: 0.24, mobility: 0.018, center: 0.045 },
   },
@@ -456,7 +456,8 @@ export const BOTS = [
       collapse: 'All of your dark matter is found.',
     },
     hue: 170,
-    premium: true,
+    access: 'free',
+    personality: 'dark-matter-pawns',
     search: {},
     weights: { pawnRace: 0.05, center: 0.05, mobility: 0.017, extraType: 0.11 },
   },
@@ -474,7 +475,8 @@ export const BOTS = [
       collapse: 'Every line of force is traced.',
     },
     hue: 130,
-    premium: true,
+    access: 'free',
+    personality: 'open-line-induction',
     search: { widths: [24, 14, 11] },
     weights: { kingHunt: 0.24, development: 0.075 },
   },
@@ -492,7 +494,8 @@ export const BOTS = [
       collapse: 'I\'ve read your whole army\'s spectrum.',
     },
     hue: 75,
-    premium: true,
+    access: 'free',
+    personality: 'stellar-attack',
     search: { timeMs: 13500, widths: [26, 14, 12] },
     weights: { kingHunt: 0.26, hangUndefended: 0.8 },
   },
@@ -510,7 +513,8 @@ export const BOTS = [
       collapse: 'All of your atoms are mapped.',
     },
     hue: 110,
-    premium: true,
+    access: 'free',
+    personality: 'nucleus-breaker',
     search: { timeMs: 15000, widths: [28, 16, 12] },
     weights: { kingHunt: 0.26, soleKingAttacked: 5.5, mobility: 0.017, hangUndefended: 0.8 },
   },
@@ -573,6 +577,12 @@ const ACTIVE_BOT_IDS = new Set([
   'savielly-dirac',
   'james-euwe',
   'stephen-reti',
+  'tigran-turing',
+  'max-alekhine',
+  'vera-graf',
+  'efim-faraday',
+  'cecilia-chigorin',
+  'ernest-smyslov',
 ]);
 
 export const ACTIVE_BOTS = BOTS.filter((bot) => ACTIVE_BOT_IDS.has(bot.id));
@@ -602,7 +612,8 @@ export function botAccessLabel(bot) {
 
 export const FREE_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.FREE);
 export const PREMIUM_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.PREMIUM);
-export const MATCH_UNLOCK_BOTS = FREE_BOTS.filter((bot) => bot.id !== STARTER_BOT_ID).sort((a, b) => a.rating - b.rating);
+// Catalog order preserves the original reward sequence and appends new bots.
+export const MATCH_UNLOCK_BOTS = FREE_BOTS.filter((bot) => bot.id !== STARTER_BOT_ID);
 
 export function requiresMatchUnlock(bot) {
   return MATCH_UNLOCK_BOTS.some((candidate) => candidate.id === bot?.id);

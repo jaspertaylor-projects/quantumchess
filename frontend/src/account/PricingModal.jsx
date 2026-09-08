@@ -10,6 +10,7 @@ import {
 } from './billing.js';
 import { PRODUCT_EVENT, trackProductEvent } from '../analytics/productEvents.js';
 import './PricingModal.css';
+import { MATCH_UNLOCK_BOTS } from '../ai/bots.js';
 
 export default function PricingModal({
   open = false,
@@ -90,7 +91,7 @@ export default function PricingModal({
               <CheckIcon size={16} className="check" /> Up to 10 saved games
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> Isaac plus 11 bots earned through human matches
+              <CheckIcon size={16} className="check" /> Isaac plus {MATCH_UNLOCK_BOTS.length} bots earned through human matches
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> 16 starter avatars

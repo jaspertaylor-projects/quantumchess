@@ -5,9 +5,9 @@ import { awardGuestMatch, guestUnlockedBotIds, isHumanMatchComplete, nextMatchUn
 const storage = () => { const rows = new Map(); return { getItem: (key) => rows.get(key) || null, setItem: (key, value) => rows.set(key, value) }; };
 
 describe('human-match bot progression', () => {
-  it('keeps eleven earned opponents locked for both tiers until earned', () => {
-    expect(MATCH_UNLOCK_BOTS).toHaveLength(11);
-    expect(PREMIUM_BOTS).toHaveLength(6);
+  it('keeps fifteen earned opponents locked for both tiers until earned', () => {
+    expect(MATCH_UNLOCK_BOTS).toHaveLength(15);
+    expect(PREMIUM_BOTS).toHaveLength(8);
     for (const tier of Object.values(BOT_ACCESS)) {
       expect(canPlayBot(ACTIVE_BOTS.find((b) => b.id === STARTER_BOT_ID), tier)).toBe(true);
       for (const bot of MATCH_UNLOCK_BOTS) {
@@ -20,7 +20,7 @@ describe('human-match bot progression', () => {
       expect(canPlayBot(bot, 'premium')).toBe(true);
     }
   });
-  it('awards each guest match exactly once, survives reloads, and stops at eleven', () => {
+  it('awards each guest match exactly once, survives reloads, and stops at fifteen', () => {
     const browser = storage();
     for (const [i, bot] of MATCH_UNLOCK_BOTS.entries()) {
       expect(awardGuestMatch(`local:${i}`, browser)).toBe(bot.id);
@@ -30,6 +30,16 @@ describe('human-match bot progression', () => {
     expect(awardGuestMatch('local:extra', browser)).toBeNull();
     expect(awardGuestMatch('local:0', browser)).toBe(MATCH_UNLOCK_BOTS[0].id);
     expect(guestUnlockedBotIds(browser)).toEqual(MATCH_UNLOCK_BOTS.map((bot) => bot.id));
+  });
+  it('adds four rewards after the original eleven without resetting guest progress', () => {
+    const browser = storage();
+    const original = MATCH_UNLOCK_BOTS.slice(0, 11);
+    browser.setItem('qcHumanMatchUnlocks:v1', JSON.stringify(Object.fromEntries(original.map((bot, i) => [`old:${i}`, bot.id]))));
+    expect(awardGuestMatch('old:0', browser)).toBe(original[0].id);
+    const added = ['vera-graf', 'efim-faraday', 'cecilia-chigorin', 'ernest-smyslov'];
+    for (const [i, id] of added.entries()) expect(awardGuestMatch(`new:${i}`, browser)).toBe(id);
+    expect(awardGuestMatch('complete', browser)).toBeNull();
+    expect(guestUnlockedBotIds(browser)).toHaveLength(15);
   });
   it('skips earned opponents and never offers a Premium or shelved opponent', () => {
     const earned = MATCH_UNLOCK_BOTS.filter((_, i) => i !== 7).map((bot) => bot.id);

@@ -55,4 +55,19 @@ do $$ begin
     raise exception 'Accepted anonymous RPC';
   exception when raise_exception then assert sqlerrm = 'Sign in required'; end;
 end $$;
+-- The expanded roster must continue from old progress without reusing old matches.
+\ir ../migrations/20260908020000_qc_expand_bot_rewards.sql
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+do $$ begin
+  assert qc_award_human_match_bot('local:exhausted') is null, 'An old completed match must not award a newly added bot';
+  assert qc_award_human_match_bot('online:first') = 'galileo-greco';
+  assert qc_award_human_match_bot('expansion:1') = 'vera-graf';
+  assert qc_award_human_match_bot('expansion:1') = 'vera-graf', 'Expansion rewards remain idempotent';
+  assert qc_award_human_match_bot('expansion:2') = 'efim-faraday';
+  assert qc_award_human_match_bot('expansion:3') = 'cecilia-chigorin';
+  assert qc_award_human_match_bot('expansion:4') = 'ernest-smyslov';
+  assert qc_award_human_match_bot('expansion:5') is null;
+  assert (select count(*) from qc_bot_unlocks where user_id=auth.uid()) = 15;
+  assert not exists(select 1 from qc_bot_unlocks where bot_id in ('tigran-turing','max-alekhine'));
+end $$;
 rollback;

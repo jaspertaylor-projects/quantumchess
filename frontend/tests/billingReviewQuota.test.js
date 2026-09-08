@@ -7,7 +7,7 @@ describe('two-tier permanent Premium', () => {
   it('offers one $10 purchase with Premium bots and unlimited reviews', () => {
     expect(PREMIUM_PRICE_LABEL).toBe('$10 once');
     expect(PREMIUM_PRICE_VALUE).toBe(10);
-    expect(PREMIUM_FEATURES.join(' ')).toContain('All 6 Premium bots, unlocked immediately');
+    expect(PREMIUM_FEATURES.join(' ')).toContain('All 8 Premium bots, unlocked immediately');
     expect(reviewCapFor({ tier: 'paid' })).toBe(Infinity);
     expect(ACTIVE_BOTS.every(bot => canAccessBot(bot, botAccountAccess({ tier: 'paid' })))).toBe(true);
     expect(unlockedCharacters({ isPaid: true })).toHaveLength(CHARACTERS.length);

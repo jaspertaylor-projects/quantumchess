@@ -9,7 +9,7 @@ import { RotateCcw, ChartSpline, Sparkles } from 'lucide-react';
 import theme from '../theme.js';
 import ModalShell from './ModalShell.jsx';
 import ModalCloseButton from './ModalCloseButton.jsx';
-import { getBotAvatarUrl } from '../ai/bots.js';
+import { getBotAvatarUrl, MATCH_UNLOCK_BOTS, PREMIUM_BOTS } from '../ai/bots.js';
 
 export default function WinnerModal({
   open = false,
@@ -124,7 +124,7 @@ export default function WinnerModal({
               <button type="button" style={styles.reviewBtn(false)} onClick={onRetryBotUnlock}>Retry unlock</button>
             </>
           ) : botUnlockReward.status === 'complete' ? (
-            <div>You have earned all 11 match-unlocked bots!</div>
+            <div>You have earned all {MATCH_UNLOCK_BOTS.length} match-unlocked bots!</div>
           ) : botUnlockReward.bot ? (
             <>
               <div style={{ fontWeight: 900, fontSize: 17 }}>{botUnlockReward.bot.name} unlocked!</div>
@@ -155,7 +155,7 @@ export default function WinnerModal({
         >
           <span style={styles.promoChip}>AD</span>
           <span style={styles.promoText}>
-            <span style={styles.promoStrong}>$10 once</span> — unlimited game review, six Premium bots, all avatars, and no ads.
+            <span style={styles.promoStrong}>$10 once</span> — unlimited game review, {PREMIUM_BOTS.length} Premium bots, all avatars, and no ads.
           </span>
           <Sparkles size={16} color="#ffd166" style={{ flex: 'none' }} aria-hidden="true" />
         </div>

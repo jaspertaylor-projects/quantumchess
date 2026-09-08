@@ -18,7 +18,7 @@ describe('human-match result reward', () => {
   });
   it('shows completion for the earned roster without claiming Premium is unlocked', () => {
     const html = renderToStaticMarkup(<WinnerModal open botUnlockReward={{ status: 'complete' }} />);
-    expect(html).toContain('all 11 match-unlocked bots');
+    expect(html).toContain('all 15 match-unlocked bots');
     expect(html).not.toContain('entire active bot roster');
   });
   it('makes storage scope and retry failures clear', () => {

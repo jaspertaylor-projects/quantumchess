@@ -1,4 +1,4 @@
-// Purpose: Pin the eighteen active-bot identities, their deliberately different
+// Purpose: Pin the twenty-four active-bot identities, their deliberately different
 // strategic hooks, the wide-funnel beam schedule, promotion-over-rook
 // valuation, and mate priority shared by every personality.
 
@@ -32,12 +32,12 @@ function piece(id, side, square, possibleTypes, extra = {}) {
 }
 
 describe('active bot personalities', () => {
-  it('gives all eighteen active bots a unique, explicit strategic identity', () => {
-    expect(ACTIVE_BOTS).toHaveLength(18);
-    expect(FREE_BOTS).toHaveLength(12);
-    expect(PREMIUM_BOTS).toHaveLength(6);
-    expect(SHELVED_BOTS).toHaveLength(6);
-    expect(new Set(ACTIVE_BOTS.map((bot) => bot.personality)).size).toBe(18);
+  it('gives all twenty-four active bots a unique, explicit strategic identity', () => {
+    expect(ACTIVE_BOTS).toHaveLength(24);
+    expect(FREE_BOTS).toHaveLength(16);
+    expect(PREMIUM_BOTS).toHaveLength(8);
+    expect(SHELVED_BOTS).toHaveLength(0);
+    expect(new Set(ACTIVE_BOTS.map((bot) => bot.personality)).size).toBe(24);
 
     expect(getBotById('wolfgang-nimzowitsch').weights.knightIdentity).toBeGreaterThan(0);
     expect(getBotById('marie-lane').weights.enemyContact).toBeGreaterThan(0);

@@ -8,7 +8,7 @@ import theme from '../theme.js';
 import { Lock as LockIcon } from 'lucide-react';
 import ChevronBadge from '../components/ChevronBadge.jsx';
 import {
-  ACTIVE_BOTS, BOT_ACCESS, STARTER_BOT_ID, botAccess, botAccessLabel,
+  ACTIVE_BOTS, MATCH_UNLOCK_BOTS, PREMIUM_BOTS, BOT_ACCESS, STARTER_BOT_ID, botAccess, botAccessLabel,
   canAccessBot, canPlayBot, getActiveBotById, getBotAvatarUrl, devUnlockAllBots,
 } from '../ai/bots.js';
 import { fetchBotProgress, fetchBotUnlocks, BOT_PROGRESS_EVENT } from '../account/botProgress.js';
@@ -274,8 +274,8 @@ export default function BotLadderPanel({
       {open ? (
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.45 }}>
-            Isaac is ready from the start. Each completed human match unlocks the next of 11 opponents — win, lose or draw.
-            {' '}{unlockedCount}/{roster.length} available. Premium opens six more bots; match unlocks are earned by everyone.
+            Isaac is ready from the start. Each completed human match unlocks the next of {MATCH_UNLOCK_BOTS.length} opponents — win, lose or draw.
+            {' '}{unlockedCount}/{roster.length} available. Premium opens {PREMIUM_BOTS.length} more bots; match unlocks are earned by everyone.
           </div>
           {!user ? (
             <button

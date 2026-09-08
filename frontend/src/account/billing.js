@@ -5,6 +5,7 @@
 // Exported To: ./AccountModal.jsx, ../App.jsx
 
 import { supabase } from './supabaseClient.js';
+import { MATCH_UNLOCK_BOTS, PREMIUM_BOTS } from '../ai/bots.js';
 
 export const PREMIUM_PRICE_LABEL = '$10 once';
 export const PREMIUM_PRICE_VALUE = 10;
@@ -14,8 +15,8 @@ export const PREMIUM_FEATURES = [
   'No ads',
   'Unlimited game reviews with engine moves',
   'Up to 1,000 saved games',
-  'All 6 Premium bots, unlocked immediately',
-  '11 more bots earned through human matches',
+  `All ${PREMIUM_BOTS.length} Premium bots, unlocked immediately`,
+  `${MATCH_UNLOCK_BOTS.length} more bots earned through human matches`,
   'All extra avatars, character taglines and sayings',
   'Custom profile picture and tagline',
 ];
