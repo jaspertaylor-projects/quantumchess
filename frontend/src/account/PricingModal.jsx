@@ -90,7 +90,7 @@ export default function PricingModal({
               <CheckIcon size={16} className="check" /> Up to 10 saved games
             </li>
             <li className="qc-pm-feature-item">
-              <CheckIcon size={16} className="check" /> 6 Free bots to discover
+              <CheckIcon size={16} className="check" /> Isaac plus 11 bots earned through human matches
             </li>
             <li className="qc-pm-feature-item">
               <CheckIcon size={16} className="check" /> 16 starter avatars

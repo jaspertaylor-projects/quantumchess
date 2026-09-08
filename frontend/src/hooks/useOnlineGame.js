@@ -591,6 +591,7 @@ export default function useOnlineGame({
   }, []);
 
   return {
+    matchRoomIdRef: mmRoomIdRef,
     isOnlineGameRef,
     isRankedOnlineRef,
     mmActive,

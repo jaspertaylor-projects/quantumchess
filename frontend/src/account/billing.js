@@ -14,7 +14,8 @@ export const PREMIUM_FEATURES = [
   'No ads',
   'Unlimited game reviews with engine moves',
   'Up to 1,000 saved games',
-  'All 18 active bots, unlocked immediately',
+  'All 6 Premium bots, unlocked immediately',
+  '11 more bots earned through human matches',
   'All extra avatars, character taglines and sayings',
   'Custom profile picture and tagline',
 ];

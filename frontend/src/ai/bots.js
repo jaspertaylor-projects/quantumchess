@@ -1,6 +1,6 @@
 // frontend/src/ai/bots.js
-// Purpose: The active 18-bot roster — six Free and twelve Premium,
-// and six Premium opponents — plus a shelved legacy roster retained only so
+// Purpose: The active roster: one starter, eleven human-match unlocks and
+// six Premium bots, plus a shelved legacy roster retained only so
 // old saved games can still resolve their opponent identity.
 // Legal guardrail: both halves of every mashup must be deceased, and avatar
 // art must not depict a real person's likeness or imply endorsement.
@@ -273,7 +273,7 @@ export const BOTS = [
     name: 'Freeman Morphy',
     rating: 1680,
     tier: 'medium',
-    access: 'premium',
+    access: 'free',
     personality: 'early-castler',
     tagline: 'Builds his king a castled Dyson sphere before harvesting yours.',
     sayings: {
@@ -295,7 +295,7 @@ export const BOTS = [
     name: 'David Feynman',
     rating: 1760,
     tier: 'medium',
-    access: 'premium',
+    access: 'free',
     personality: 'counterpuncher',
     tagline: 'Never draws the first capture arrow—then calculates the recapture.',
     sayings: {
@@ -317,7 +317,7 @@ export const BOTS = [
     name: 'Edith Franklin',
     rating: 1840,
     tier: 'medium',
-    access: 'premium',
+    access: 'free',
     personality: 'structure-photographer',
     tagline: 'Develops a crystal-clear structure and reinforces every weak bond.',
     sayings: {
@@ -339,7 +339,7 @@ export const BOTS = [
     name: 'Savielly Dirac',
     rating: 1920,
     tier: 'hard',
-    access: 'premium',
+    access: 'free',
     personality: 'maze-maker',
     tagline: 'Draws impossible staircases until your king has no legal landing.',
     sayings: {
@@ -361,7 +361,7 @@ export const BOTS = [
     name: 'James Euwe',
     rating: 2010,
     tier: 'hard',
-    access: 'premium',
+    access: 'free',
     personality: 'field-unifier',
     tagline: 'Unifies heal networks and zap pressure into one force field.',
     sayings: {
@@ -384,7 +384,7 @@ export const BOTS = [
     name: 'Stephen Reti',
     rating: 2140,
     tier: 'hard',
-    access: 'premium',
+    access: 'free',
     personality: 'event-horizon',
     tagline: 'Compresses every escape square until your king crosses the horizon.',
     sayings: {
@@ -597,11 +597,21 @@ export function canAccessBot(bot, accountAccess = BOT_ACCESS.FREE) {
 export function botAccessLabel(bot) {
   const access = botAccess(bot);
   if (access === BOT_ACCESS.PREMIUM) return 'Premium';
-  return 'Free';
+  return requiresMatchUnlock(bot) ? 'Match unlock' : 'Free';
 }
 
 export const FREE_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.FREE);
 export const PREMIUM_BOTS = ACTIVE_BOTS.filter((bot) => botAccess(bot) === BOT_ACCESS.PREMIUM);
+export const MATCH_UNLOCK_BOTS = FREE_BOTS.filter((bot) => bot.id !== STARTER_BOT_ID).sort((a, b) => a.rating - b.rating);
+
+export function requiresMatchUnlock(bot) {
+  return MATCH_UNLOCK_BOTS.some((candidate) => candidate.id === bot?.id);
+}
+
+export function canPlayBot(bot, accountAccess = BOT_ACCESS.FREE, unlockedIds = []) {
+  return Boolean(bot) && canAccessBot(bot, accountAccess)
+    && (!requiresMatchUnlock(bot) || new Set(unlockedIds).has(bot.id));
+}
 
 // Dev-only playtest override: open the app with ?allbots to make every active
 // opponent pickable (progression + account gates skipped). Hard-dead

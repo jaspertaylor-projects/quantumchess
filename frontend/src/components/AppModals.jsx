@@ -28,7 +28,7 @@ export default function AppModals({
   showWinPopup, resolvedWinnerText, externalGameOver, winner, onCloseWinPopup,
   onPlayAgain, onGameReview, reviewAccess, reviewRemaining, reviewNotice,
   reviewDisabled, showPremiumPromo, onUpgradePromo, playAgainLabel,
-  botUnlockReward, onChooseBot, onRequireBotAccess, onSignInForBots,
+  botUnlockReward, onRetryBotUnlock, onPlayUnlockedBot,
   // en passant choice
   pendingEpChoice, performMove, onCancelEpChoice,
   // settings
@@ -65,9 +65,8 @@ export default function AppModals({
         onPlayAgain={onPlayAgain}
         playAgainLabel={playAgainLabel}
         botUnlockReward={botUnlockReward}
-        onChooseBot={onChooseBot}
-        onRequireBotAccess={onRequireBotAccess}
-        onSignInForBots={onSignInForBots}
+        onRetryBotUnlock={onRetryBotUnlock}
+        onPlayUnlockedBot={onPlayUnlockedBot}
         onGameReview={onGameReview}
         reviewAccess={reviewAccess}
         reviewRemaining={reviewRemaining}

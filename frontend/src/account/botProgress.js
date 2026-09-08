@@ -6,6 +6,7 @@
 // Exported To: ../App.jsx, ../ladder/BotLadderPanel.jsx
 
 import { supabase } from './supabaseClient.js';
+import { awardGuestMatch, guestUnlockedBotIds } from './humanMatchRewards.js';
 
 // Fired after a clear is recorded so any mounted ladder UI can refresh.
 export const BOT_PROGRESS_EVENT = 'qcBotProgressUpdated';
@@ -51,7 +52,8 @@ export async function fetchBotProgress(user, botIds = []) {
 }
 
 export async function fetchBotUnlocks(user, botIds = []) {
-  if (!supabase || !user) return [];
+  if (!user) return guestUnlockedBotIds().filter((id) => !botIds.length || botIds.includes(id)).map((bot_id) => ({ bot_id }));
+  if (!supabase) return [];
   try {
     let query = supabase
       .from('qc_bot_unlocks')
@@ -101,4 +103,20 @@ export async function recordBotClear({ user, botId }) {
     try { window.dispatchEvent(new CustomEvent(BOT_PROGRESS_EVENT)); } catch (_) {}
   }
   return { saved: !error, error: error || null };
+}
+
+// The database serializes awards per account and remembers each match key,
+// so retries, reconnects and multiple tabs cannot award extra bots.
+export async function awardHumanMatchBot({ user, gameKey }) {
+  if (!gameKey) throw new Error('Missing match identifier');
+  let botId;
+  if (!user) botId = awardGuestMatch(gameKey);
+  else {
+    if (!supabase) throw new Error('Accounts are unavailable');
+    const { data, error } = await supabase.rpc('qc_award_human_match_bot', { p_match_key: gameKey });
+    if (error) throw error;
+    botId = data;
+  }
+  try { window.dispatchEvent(new CustomEvent(BOT_PROGRESS_EVENT)); } catch (_) {}
+  return botId;
 }

@@ -34,8 +34,8 @@ function piece(id, side, square, possibleTypes, extra = {}) {
 describe('active bot personalities', () => {
   it('gives all eighteen active bots a unique, explicit strategic identity', () => {
     expect(ACTIVE_BOTS).toHaveLength(18);
-    expect(FREE_BOTS).toHaveLength(6);
-    expect(PREMIUM_BOTS).toHaveLength(12);
+    expect(FREE_BOTS).toHaveLength(12);
+    expect(PREMIUM_BOTS).toHaveLength(6);
     expect(SHELVED_BOTS).toHaveLength(6);
     expect(new Set(ACTIVE_BOTS.map((bot) => bot.personality)).size).toBe(18);
 

@@ -1,6 +1,5 @@
 // frontend/src/ladder/BotLadderPanel.jsx
-// Purpose: The vs-AI opponent picker for the branching bot roster. Wins unlock
-// chosen opponents, while Free/Premium access remains a separate gate.
+// Purpose: The bot picker: human matches earn opponents; Premium opens its own roster.
 // Imports From: react, ../theme.js, ../components/ChevronBadge.jsx, ../ai/bots.js, ../account/botProgress.js
 // Exported To: ../tray/NewGamePanel.jsx
 
@@ -10,7 +9,7 @@ import { Lock as LockIcon } from 'lucide-react';
 import ChevronBadge from '../components/ChevronBadge.jsx';
 import {
   ACTIVE_BOTS, BOT_ACCESS, STARTER_BOT_ID, botAccess, botAccessLabel,
-  canAccessBot, getActiveBotById, getBotAvatarUrl, devUnlockAllBots,
+  canAccessBot, canPlayBot, getActiveBotById, getBotAvatarUrl, devUnlockAllBots,
 } from '../ai/bots.js';
 import { fetchBotProgress, fetchBotUnlocks, BOT_PROGRESS_EVENT } from '../account/botProgress.js';
 import { botAccountAccess } from '../account/billing.js';
@@ -175,7 +174,7 @@ export default function BotLadderPanel({
   const roster = useMemo(() => [...ACTIVE_BOTS].sort((a, b) => a.rating - b.rating), []);
   const trackedIds = useMemo(() => roster.map((bot) => bot.id), [roster]);
   const groups = useMemo(() => ([
-    { access: BOT_ACCESS.FREE, title: 'Free roster' },
+    { access: BOT_ACCESS.FREE, title: 'Starter & match unlocks' },
     { access: BOT_ACCESS.PREMIUM, title: 'Premium' },
   ].map((group) => ({
     ...group,
@@ -189,12 +188,6 @@ export default function BotLadderPanel({
   const rootRef = useRef(null);
 
   const refresh = useCallback(async () => {
-    if (!user) {
-      setClearedIds(new Set());
-      setUnlockedIds(new Set([STARTER_BOT_ID]));
-      setProgressLoaded(true);
-      return;
-    }
     const [clears, unlocks] = await Promise.all([
       fetchBotProgress(user, trackedIds),
       fetchBotUnlocks(user, trackedIds),
@@ -236,9 +229,7 @@ export default function BotLadderPanel({
 
   const isUnlocked = useCallback(
     (bot) => {
-      if (unlockAll || accountAccess === BOT_ACCESS.PREMIUM) return true;
-      if (!canAccessBot(bot, accountAccess)) return false;
-      return botAccess(bot) !== BOT_ACCESS.FREE || unlockedIds.has(bot.id);
+      return unlockAll || canPlayBot(bot, accountAccess, unlockedIds);
     },
     [accountAccess, unlockedIds, unlockAll]
   );
@@ -265,7 +256,7 @@ export default function BotLadderPanel({
     if (!canAccessBot(bot, accountAccess)) {
       return 'Unlock with Premium — $10 once';
     }
-    return user ? 'Win a bot game and choose this opponent' : 'Sign in to earn bot unlocks';
+    return 'Earn through human matches — win, lose or draw';
   };
 
   return (
@@ -283,11 +274,8 @@ export default function BotLadderPanel({
       {open ? (
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: theme.textSecondary, lineHeight: 1.45 }}>
-            {accountAccess === BOT_ACCESS.PREMIUM
-              ? `Premium: ${unlockedCount}/${roster.length} unlocked. Choose any opponent.`
-              : user
-              ? `Every bot win lets you choose one of three new opponents. ${unlockedCount}/${roster.length} unlocked.`
-              : 'Isaac is ready now. Sign in to choose a new opponent after each bot win.'}
+            Isaac is ready from the start. Each completed human match unlocks the next of 11 opponents — win, lose or draw.
+            {' '}{unlockedCount}/{roster.length} available. Premium opens six more bots; match unlocks are earned by everyone.
           </div>
           {!user ? (
             <button
@@ -305,7 +293,7 @@ export default function BotLadderPanel({
                 textAlign: 'left',
               }}
             >
-              Sign in or make a free account to unlock more bots.
+              Sign in to save future unlocks to your account.
             </button>
           ) : null}
           {groups.map((group) => (

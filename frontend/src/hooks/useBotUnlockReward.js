@@ -1,145 +1,30 @@
-// Purpose: Prepare and persist the choose-one-of-three bot reward shown after
-// a signed-in player beats any bot, including the guided-intro opponent.
+// Automatically save one bot reward per completed human match, even if its
+// result screen is dismissed. Retry uses the same durable match identifier.
+import { useCallback, useEffect, useState } from 'react';
+import { getActiveBotById } from '../ai/bots.js';
+import { awardHumanMatchBot } from '../account/botProgress.js';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ACTIVE_BOTS, BOT_ACCESS, STARTER_BOT_ID, botAccess, canAccessBot,
-} from '../ai/bots.js';
-import { botAccountAccess } from '../account/billing.js';
-import {
-  fetchBotProgress,
-  fetchBotUnlocks,
-  recordBotUnlock,
-} from '../account/botProgress.js';
-import { chooseBotUnlockCandidates } from '../account/botUnlockChoices.js';
-
-const ACTIVE_IDS = ACTIVE_BOTS.map((bot) => bot.id);
-
-export default function useBotUnlockReward({
-  active = false,
-  auth = null,
-  gameKey = null,
-  beatenBotId = null,
-  onUnlocked = () => {},
-}) {
+export default function useBotUnlockReward({ active = false, auth = null, gameKey = null }) {
   const [reward, setReward] = useState(null);
-  const handledGameRef = useRef(null);
-  const user = auth && auth.user;
-  const profile = auth && auth.profile;
-  const userId = user && user.id;
-
+  const [attempt, setAttempt] = useState(0);
+  const userId = auth?.user?.id;
   useEffect(() => {
-    if (!active || !beatenBotId) return undefined;
-    const rewardKey = `${gameKey}:${userId || 'signed-out'}`;
-    if (handledGameRef.current === rewardKey) return undefined;
-    handledGameRef.current = rewardKey;
-
-    if (!user) {
-      setReward({ status: 'signed-out', candidates: [], accountAccess: 'free' });
-      return undefined;
-    }
-
+    if (!active || !gameKey) { setReward(null); return undefined; }
     let cancelled = false;
-    setReward({ status: 'loading', candidates: [], accountAccess: botAccountAccess(profile) });
-    Promise.all([
-      fetchBotProgress(user, ACTIVE_IDS),
-      fetchBotUnlocks(user, ACTIVE_IDS),
-    ]).then(([clears, unlocks]) => {
-      if (cancelled) return;
-      const unlockedIds = new Set([
-        STARTER_BOT_ID,
-        ...clears.map((row) => row.bot_id),
-        ...unlocks.map((row) => row.bot_id),
-      ]);
-      const accountAccess = botAccountAccess(profile);
-      // Premium unlocks the entire roster directly. Win
-      // choices are the progression mechanism for Free bots; paid cards in a
-      // lower-tier reward are an upgrade preview, not a second lock to clear.
-      for (const bot of ACTIVE_BOTS) {
-        if (accountAccess === BOT_ACCESS.PREMIUM) {
-          unlockedIds.add(bot.id);
-        }
-      }
-      const candidates = chooseBotUnlockCandidates({
-        unlockedIds,
-        beatenBotId,
-        accountAccess,
-      });
-      setReward({
-        status: candidates.length ? 'choices' : 'complete',
-        candidates,
-        accountAccess,
-        selectedBot: null,
-        busyBotId: null,
-        error: '',
-      });
-    }).catch(() => {
-      if (!cancelled) {
-        const accountAccess = botAccountAccess(profile);
-        const fallbackUnlocked = [
-          STARTER_BOT_ID,
-          ...ACTIVE_BOTS
-            .filter((bot) => accountAccess === BOT_ACCESS.PREMIUM)
-            .map((bot) => bot.id),
-        ];
-        setReward({
-          status: 'choices',
-          candidates: chooseBotUnlockCandidates({
-            unlockedIds: fallbackUnlocked,
-            beatenBotId,
-            accountAccess,
-          }),
-          accountAccess,
-          selectedBot: null,
-          busyBotId: null,
-          error: '',
+    setReward({ status: 'loading' });
+    awardHumanMatchBot({ user: auth?.isDevPreview ? null : auth?.user, gameKey })
+      .then((botId) => {
+        if (!cancelled) setReward({
+          status: botId ? 'unlocked' : 'complete',
+          bot: getActiveBotById(botId),
+          guest: !userId,
         });
-      }
-    });
+      })
+      .catch(() => {
+        if (!cancelled) setReward({ status: 'error', error: 'Your bot unlock could not be saved. Please retry.' });
+      });
     return () => { cancelled = true; };
-  }, [active, beatenBotId, gameKey, userId]); // profile refresh is handled below
-
-  // If Checkout returns while the result screen is still mounted, immediately
-  // turn its gated preview into a playable choice.
-  useEffect(() => {
-    if (!reward || !auth || !auth.user) return;
-    const nextAccess = botAccountAccess(auth.profile);
-    if (reward.accountAccess !== nextAccess) {
-      setReward((current) => current ? { ...current, accountAccess: nextAccess } : current);
-    }
-  }, [profile && profile.tier, reward && reward.accountAccess]);
-
-  useEffect(() => {
-    if (active) return;
-    setReward(null);
-  }, [active, gameKey]);
-
-  const choose = useCallback(async (bot) => {
-    if (!reward || reward.status !== 'choices' || reward.selectedBot || !bot) return false;
-    if (!canAccessBot(bot, reward.accountAccess)) return false;
-    setReward((current) => ({ ...current, busyBotId: bot.id, error: '' }));
-    const paidRosterUnlock = botAccess(bot) !== BOT_ACCESS.FREE;
-    const result = paidRosterUnlock || (auth && auth.isDevPreview)
-      ? { saved: true }
-      : await recordBotUnlock({ user: auth && auth.user, botId: bot.id });
-    if (!result.saved) {
-      setReward((current) => ({
-        ...current,
-        busyBotId: null,
-        error: 'That unlock could not be saved. Please try again.',
-      }));
-      return false;
-    }
-    setReward((current) => ({
-      ...current,
-      status: 'selected',
-      selectedBot: bot,
-      busyBotId: null,
-      error: '',
-    }));
-    onUnlocked(bot);
-    return true;
-  }, [auth, onUnlocked, reward]);
-
-  return { reward, choose };
+  }, [active, gameKey, userId, attempt, auth?.isDevPreview]);
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
+  return { reward, retry };
 }

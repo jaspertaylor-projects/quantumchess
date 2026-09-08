@@ -13,7 +13,7 @@ promotion, census conservation — deterministic throughout, no dice anywhere.
   failed with anyone. Every existing account is a disposable test account
   that can be nuked; deploys and even destructive migrations don't need a
   customer-safety review until real users arrive. Update this line at launch.
-- **Play:** vs 18 active AI bots (6 Free, 12 Premium), local 2-player
+- **Play:** vs 18 active AI bots (1 starter, 11 match unlocks, 6 Premium), local 2-player
   hotseat, or online 1v1. Optional
   accounts add a rating and saved games.
 
@@ -298,13 +298,15 @@ benchmark (`node tests/engine-bench.mjs --compare baseline`, snapshots in
 ### The bots
 
 - Roster, ratings, personalities: `frontend/src/ai/bots.js`
-- Active access split: 6 Free / 12 Premium.
-  Six more legacy identities remain shelved and retained only so saved
-  replays can still resolve its names and avatars.
-- Signed-in wins, including a win over the intro bot, offer three randomized
-  unlock candidates. At least two match the account's current access tier
-  whenever possible; an occasional higher-tier card previews its requirement.
-  Choices persist in `qc_bot_unlocks`; clears remain in `qc_bot_progress`.
+- Active access: Isaac is always available, eleven bots unlock one at a time
+  after human matches, and six open immediately with Premium. Both account
+  tiers earn match unlocks; winning is not required. Local two-player and
+  online matches count after play begins; bot games and voided games do not.
+- Rewards are automatic and ordered by rating, excluding previously earned
+  bots. `qc_award_human_match_bot` serializes account awards and deduplicates
+  match IDs in `qc_human_match_bot_rewards`. Earned access remains in
+  `qc_bot_unlocks`; existing clears and legacy wins are preserved. Guests
+  keep unlocks in this browser. Six legacy identities remain shelved.
 - Search/eval engine: `frontend/src/ai/alphaBetaEngine.js`
 - Avatars: `frontend/public/bots/<id>.png` (drop-in; initials tile otherwise)
 - **Bots are fictional scientist × chess-legend parody mashups.** Both
@@ -334,9 +336,9 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Decide whether to keep "Confirm email" ON (Dashboard → Authentication).
       With SES SMTP set (below), confirmation emails will actually deliver.
 - [X] **Two tiers: Free and Premium ($10 once).** Premium permanently unlocks
-      unlimited engine game review, all 18 active bots immediately, all 48
+      unlimited engine game review, all six Premium bots immediately, all 48
       character avatars/taglines/sayings, up to 1,000 saved games and no ads.
-      Free retains ordinary play, six bots through win progression, ten saved
+      Free retains ordinary play, Isaac and eleven bots through human-match progression, ten saved
       games and basic replay. There is no monthly plan or tip tier.
   - Checkout uses `mode=payment`, card payments and `STRIPE_LIFETIME_PRICE_ID`.
     Live price: `price_1UDDr4RFHK9IPoTNZStnHgjW` (USD 1000 cents, no recurrence).
@@ -636,17 +638,12 @@ Legend: [ ] not started · [~] in progress · [X] done
 - [ ] Achievements (~15–20, client-side): tutorial finished, first en
       passant, first quantum promotion, castle-resolve, beat each bot tier…
       surfaced at game end next to the winner modal.
-- [X] **Branching bot roster** (reworked 2026-07-21):
-      `frontend/src/ladder/BotLadderPanel.jsx` is the opponent picker. Isaac
-      Steinitz is always available; every signed-in bot win opens a choice of
-      three not-yet-unlocked opponents on the result screen. Candidate cards
-      include avatars, ratings, and playing styles. Two are playable at the
-      current account tier whenever the remaining roster permits, while an
-      occasional higher-tier card clearly links to Supporter/Premium. The
-      chosen bot becomes the next-game selection and persists in Supabase
-      `qc_bot_unlocks`. Clears persist separately in `qc_bot_progress`, and
-      old saved wins continue to count. Signed-out winners are prompted to
-      sign in or create a free account to begin collecting unlocks.
+- [X] **Human-match bot unlocks** (reworked 2026-09-08):
+      Isaac is always available, eleven opponents are earned automatically
+      after completed human matches (win, loss or draw), and six are Premium.
+      The result screen announces the saved reward and offers a separate
+      Play button, leaving the human rematch action intact. Repeated result
+      delivery cannot grant extra rewards. Previous earned unlocks remain.
   - [ ] Remaining: surface the unlocked tagline/sayings/character flavor
         in the profile and bot picker (the clear + `unlocked_flavor_at`
         timestamp are already recorded per account).

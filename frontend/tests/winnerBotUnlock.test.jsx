@@ -1,45 +1,31 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-
 import WinnerModal from '../src/components/WinnerModal.jsx';
-import { FREE_BOTS, PREMIUM_BOTS } from '../src/ai/bots.js';
+import { MATCH_UNLOCK_BOTS } from '../src/ai/bots.js';
 
-describe('winner bot unlock reward', () => {
-  it('uses the shared red modal close control on game-over screens', () => {
-    const html = renderToStaticMarkup(
-      <WinnerModal open title="Draw" winnerText="Draw by agreement." />
-    );
-    expect(html).toContain('qc-icon-button qc-winner-close');
+describe('human-match result reward', () => {
+  it('announces an automatic unlock even after a draw, preserving the human rematch action', () => {
+    const html = renderToStaticMarkup(<WinnerModal open title="Draw" winnerText="Draw by agreement."
+      onPlayAgain={() => {}} botUnlockReward={{ status: 'unlocked', bot: MATCH_UNLOCK_BOTS[0] }} />);
+    expect(html).toContain('Emmy Menchik unlocked!');
+    expect(html).toContain('win, lose or draw');
+    expect(html).toContain('saved to your account');
+    expect(html).toContain('Play Emmy Menchik');
+    expect(html).toContain('Play Again');
+    expect(html).not.toContain('UNLOCK WITH PREMIUM');
     expect(html).toContain('aria-label="Close game over screen"');
   });
-
-  it('shows three personalities and clearly labels a gated choice', () => {
-    const candidates = [FREE_BOTS[1], FREE_BOTS[2], PREMIUM_BOTS[0]];
-    const html = renderToStaticMarkup(
-      <WinnerModal
-        open
-        winnerText="White wins by checkmate!"
-        botUnlockReward={{ status: 'choices', candidates, accountAccess: 'free' }}
-      />
-    );
-    for (const bot of candidates) {
-      expect(html).toContain(bot.name);
-      expect(html).toContain(bot.tagline.replaceAll("'", '&#x27;'));
-    }
-    expect(html).toContain('UNLOCK WITH PREMIUM');
-    expect(html).toContain('Choose your next bot to unlock');
+  it('shows completion for the earned roster without claiming Premium is unlocked', () => {
+    const html = renderToStaticMarkup(<WinnerModal open botUnlockReward={{ status: 'complete' }} />);
+    expect(html).toContain('all 11 match-unlocked bots');
+    expect(html).not.toContain('entire active bot roster');
   });
-
-  it('asks an anonymous winner to create or sign in to an account', () => {
-    const html = renderToStaticMarkup(
-      <WinnerModal
-        open
-        winnerText="White wins by checkmate!"
-        botUnlockReward={{ status: 'signed-out', candidates: [], accountAccess: 'free' }}
-      />
-    );
-    expect(html).toContain('Sign In or Create Account');
-    expect(html).toContain('choose and keep new bot unlocks after every win');
+  it('makes storage scope and retry failures clear', () => {
+    const guest = renderToStaticMarkup(<WinnerModal open botUnlockReward={{ status: 'unlocked', bot: MATCH_UNLOCK_BOTS[0], guest: true }} />);
+    expect(guest).toContain('saved on this browser');
+    const failed = renderToStaticMarkup(<WinnerModal open botUnlockReward={{ status: 'error', error: 'Could not save.' }} />);
+    expect(failed).toContain('Retry unlock');
+    expect(failed).not.toContain('unlocked!');
   });
 });

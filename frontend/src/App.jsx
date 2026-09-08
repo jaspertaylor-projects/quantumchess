@@ -32,7 +32,7 @@ import AppModals from './components/AppModals.jsx';
 import ReviewModal from './review/ReviewModal.jsx';
 import appLayoutStyles from './components/appLayoutStyles.js';
 import useLocalAi from './ai/useLocalAi.js';
-import { canAccessBot, devUnlockAllBots, getActiveBotById, DEFAULT_BOT_ID } from './ai/bots.js';
+import { canAccessBot, canPlayBot, devUnlockAllBots, getActiveBotById, DEFAULT_BOT_ID } from './ai/bots.js';
 import { decideBotDrawOffer } from './ai/drawDecision.js';
 import useBoardLayout from './hooks/useBoardLayout.js';
 import useBoardInput from './hooks/useBoardInput.js';
@@ -48,6 +48,8 @@ import usePlayerBars from './hooks/usePlayerBars.js';
 import useMonetization from './hooks/useMonetization.js';
 import useGameRecording from './hooks/useGameRecording.js';
 import useBotUnlockReward from './hooks/useBotUnlockReward.js';
+import { isHumanMatchComplete } from './account/humanMatchRewards.js';
+import { fetchBotUnlocks } from './account/botProgress.js';
 import useEffectiveClock from './hooks/useEffectiveClock.js';
 import useTimelineNav from './hooks/useTimelineNav.js';
 import usePlayerSayings from './sayings/usePlayerSayings.js';
@@ -67,6 +69,7 @@ const DEFAULT_SOUND_SETTINGS = Object.freeze({ moveSounds: true });
 export default function App({ entryAction = null }) {
   // Increment this to reset the engine timeline (fresh game state)
   const [gameInstanceId, setGameInstanceId] = useState(0);
+  const [sessionGameKey] = useState(() => crypto.randomUUID());
   const {
     pieces,
     sideToMove,
@@ -420,28 +423,15 @@ export default function App({ entryAction = null }) {
     gameInstanceId,
   });
 
-  const didUserBeatBot = Boolean(
-    showWinPopup
-    && aiBot
-    && !isOnlineGameRef.current
-    && gameOver
-    && winner === userTeam
-  );
-  const handleBotUnlocked = useCallback((bot) => {
-    if (!bot) return;
-    dispatch(setGameSettings({
-      ...gameSettings,
-      gameMode: 'ai',
-      aiBotId: bot.id,
-      aiDifficulty: bot.tier,
-    }));
-  }, [dispatch, gameSettings]);
+  const completedHumanMatch = isHumanMatchComplete({
+    gameOver, externalGameOver, isOnline: isOnlineGameRef.current, aiBot, moves,
+  });
   const botUnlock = useBotUnlockReward({
-    active: didUserBeatBot,
+    active: completedHumanMatch,
     auth,
-    gameKey: gameInstanceId,
-    beatenBotId: aiBot && aiBot.id,
-    onUnlocked: handleBotUnlocked,
+    gameKey: isOnlineGameRef.current && online.matchRoomIdRef.current
+      ? `online:${online.matchRoomIdRef.current}`
+      : `local:${sessionGameKey}:${gameInstanceId}`,
   });
 
   useEffect(() => {
@@ -599,13 +589,21 @@ export default function App({ entryAction = null }) {
     } else start();
   }, [dismissOnboarding, gameStarted, gameOver, externalGameOver.over]);
 
-  const handleStartGame = useCallback((settings) => {
+  const handleStartGame = useCallback(async (settings) => {
     const requestedBot = settings && settings.gameMode === 'ai'
       ? getActiveBotById(settings.aiBotId || DEFAULT_BOT_ID) || getActiveBotById(DEFAULT_BOT_ID)
       : null;
     if (requestedBot && !devUnlockAllBots() && !canAccessBot(requestedBot, botAccountAccess(auth.profile))) {
       setAccountOpen(true, 'bot_unlock');
       return;
+    }
+
+    if (requestedBot && !devUnlockAllBots()) {
+      const unlocks = await fetchBotUnlocks(auth.user);
+      if (!canPlayBot(requestedBot, botAccountAccess(auth.profile), unlocks.map((row) => row.bot_id))) {
+        setInfoMessage('Finish a match against another human to earn your next bot.');
+        return;
+      }
     }
 
     online.teardownForNewGame();
@@ -648,7 +646,7 @@ export default function App({ entryAction = null }) {
     // Local 2 Player always seats Anonymous as White at the bottom.
     dispatch(setUserTeam('white'));
     setInfoMessage('New local game started.');
-  }, [auth.profile, dispatch, online, intro, setAccountOpen]);
+  }, [auth.user, auth.profile, dispatch, online, intro, setAccountOpen]);
 
   function colorsEqual(a, b) {
     if (!a || !b) return false;
@@ -1249,13 +1247,9 @@ export default function App({ entryAction = null }) {
         winner={winner}
         onCloseWinPopup={() => setShowWinPopup(false)}
         onPlayAgain={handlePlayAgain}
-        playAgainLabel={botUnlock.reward && botUnlock.reward.selectedBot
-          ? `Play ${botUnlock.reward.selectedBot.name}`
-          : 'Play Again'}
-        botUnlockReward={didUserBeatBot ? botUnlock.reward : null}
-        onChooseBot={botUnlock.choose}
-        onRequireBotAccess={() => setAccountOpen(true, 'bot_unlock')}
-        onSignInForBots={() => setAccountOpen(true, 'bot_unlock')}
+        botUnlockReward={completedHumanMatch ? botUnlock.reward : null}
+        onRetryBotUnlock={botUnlock.retry}
+        onPlayUnlockedBot={(bot) => handleStartGame({ ...gameSettings, gameMode: 'ai', aiBotId: bot.id, aiDifficulty: bot.tier })}
         onGameReview={handlePostGameReview}
         reviewAccess={postGameReviewAccess}
         reviewNotice={postGameReviewNotice}
