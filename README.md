@@ -1,12 +1,17 @@
 # Quantum Chess
 
+**[Play Quantum Chess live at quantumchess.ninja](https://quantumchess.ninja)**
+
 Chess where every piece begins as a superposition of all six piece types and
 collapses as it moves. Every move zaps the enemies it touches and heals the
 friends it protects; victory comes by classical checkmate on a revealed
 King, while Zap protects the final King possibility. Quantum castling, quantum
 promotion, census conservation — deterministic throughout, no dice anywhere.
 
-- **Live:** https://quantumchess.ninja
+https://github.com/user-attachments/assets/3fc0868e-4ac5-411f-adf9-17b81247f2f2
+
+[Watch or download the hype video](artifacts/ernest-smyslov-vs-cecilia-chigorin-social.mp4)
+
 - **Status:** built and deployed, but **NOT LAUNCHED** — zero promotion so
   far, not even friends-and-family. The site has no real users or paying
   customers **because nobody has been told it exists yet**, not because it
